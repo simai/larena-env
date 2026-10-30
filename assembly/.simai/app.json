@@ -4,7 +4,7 @@
   "php": "8.3",
   "db": { "engine": "mysql" },
   "migrate": true,
-  "scheduler": false,
+  "scheduler": true,
   "workers": [],
   "health": { "path": "/up" }
 }
