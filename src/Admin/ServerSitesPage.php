@@ -8,7 +8,7 @@ use Larena\Admin\Runtime\AdminDataviewPage;
 use Larena\Env\Server\ServerOverview;
 use Larena\Env\Server\SiteSummary;
 
-/** The sites as the admin's shared data view, with rows in place: the page holds them already. Read-only, no row actions. */
+/** The sites as the admin's shared data view, with rows in place: the page holds them already. A row opens the site's own screen. */
 final class ServerSitesPage
 {
     private const array COLUMNS = ['domain', 'profile', 'php', 'ssl', 'owner', 'database', 'release'];
@@ -28,6 +28,7 @@ final class ServerSitesPage
             pageId: 'page.admin.env-server',
             rows: array_map(static fn (SiteSummary $site): array => self::row($site, $text), $overview->sites),
             perPage: 100,
+            rowLinks: ['view' => '/admin/server/sites/__ID__'],
             countLabel: $text('sites.count'),
             tableViewLabel: $text('sites.table_view'),
         );

@@ -32,9 +32,16 @@ env_assert($without['operation_owner'] === 'larena/env', 'The right is declared 
 $with = env_boot('with');
 env_assert($with['admin_loadable'] === true, 'The admin must be installed for development.');
 env_assert($with['navigation'] === ['env.server'] && $with['navigation_valid'] === [true], 'With the admin there is one valid menu entry.');
-env_assert(array_keys($with['routes']) === ['larena.env.admin.index'] && $with['routes']['larena.env.admin.index']['uri'] === 'admin/server', 'With the admin there is one screen.');
-foreach (['web', 'larena-auth.entry', 'larena-auth.admin-required', 'larena-admin.locale', 'access:env.server.read'] as $middleware) {
-    env_assert(in_array($middleware, $with['routes']['larena.env.admin.index']['middleware'], true), "The screen lost {$middleware}.");
+env_assert(array_keys($with['routes']) === ['larena.env.admin.index', 'larena.env.admin.site', 'larena.env.admin.job',
+    'larena.env.admin.site.plan', 'larena.env.admin.site.run', 'larena.env.admin.job.cancel'], 'The screens of the panel: '.implode(', ', array_keys($with['routes'])));
+env_assert($with['routes']['larena.env.admin.index']['uri'] === 'admin/server', 'The server screen keeps its address.');
+foreach ($with['routes'] as $name => $route) {
+    foreach (['web', 'larena-auth.entry', 'larena-auth.admin-required', 'larena-admin.locale', 'access:env.server.read'] as $middleware) {
+        env_assert(in_array($middleware, $route['middleware'], true), "{$name} lost {$middleware}.");
+    }
+    // Changing the server is a right of its own, and only the three addresses that change it ask for it.
+    $changes = str_ends_with($name, '.plan') || str_ends_with($name, '.run') || str_ends_with($name, '.cancel');
+    env_assert(in_array('access:env.server.operate', $route['middleware'], true) === $changes, "{$name} asks for the wrong right.");
 }
 env_assert($with['commands'] === [RegisterServerAreaCommand::class] && $with['sites'] === 4, 'The rest does not change.');
 

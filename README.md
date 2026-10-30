@@ -1,7 +1,8 @@
 # Larena Env
 
 The main package of the **Larena Panel** edition: the server area of a hosting panel. simai-env stays the only component
-that changes the host; this package asks it through the panel gateway and shows the answers. Stage 0 only reads.
+that changes the host; this package asks it through the panel gateway and shows the answers. An action is never done by
+the panel: it is planned, confirmed by a person, and run by the server as a job the panel follows.
 
 ## Parts
 
@@ -15,9 +16,16 @@ that changes the host; this package asks it through the panel gateway and shows 
 - `Gateway\SudoGateway`: the same protocol to the gateway on this server, `sudo -n /usr/local/sbin/simai-panel-gate` with no
   arguments and one JSON line on stdin; the default, the way a panel installed by `panel install` reaches it.
 - `Server\ServerOverviewReader`: `self:describe` as typed data, without paths and database names.
+- `Server\SiteDetailsReader`: one site (`site:describe`) and its nginx log (`logs:nginx`), typed the same way: a backup is
+  named by its own name, never by its path on the host.
+- `Operations\PanelOperations`: the one way an action happens — `plan()` says what it would do, `start()` runs it only
+  after a person confirmed that plan, `view()` follows the job it started and `cancel()` stops one that still runs.
+- `Operations\SiteOperation`: the actions a site's screen offers, and which of them suit it: a site without a certificate
+  has nothing to renew, without a previous release nothing to roll back to, without workers no queue to restart.
 - `Area\ServerArea`: the main scope `organization:server`. `php artisan larena:env:area` registers it; a panel assembly
   sets `larena-core.first_run` to `ServerArea::firstRunDeclaration()`.
-- `/admin/server`: one screen, composed only where larena/admin is installed. Right: `env.server.read`.
+- `/admin/server`, `/admin/server/sites/<domain>` and `/admin/server/jobs/<id>`: the screens, composed only where
+  larena/admin is installed. Reading them is `env.server.read`; planning, confirming and stopping is `env.server.operate`.
 
 ## Settings
 

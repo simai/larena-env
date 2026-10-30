@@ -2,7 +2,7 @@ package: larena/env
 title: Larena Env
 status: coding_started
 cluster: hosting
-batch: env-panel-skeleton
+batch: env-panel-actions
 features:
   - env.gateway_contract
   - env.recorded_answers
@@ -12,6 +12,10 @@ features:
   - env.server_overview
   - env.server_area
   - env.admin_server_screen
+  - env.site_screen
+  - env.nginx_logs
+  - env.site_operations
+  - env.action_jobs
 runtime:
   php: "^8.3"
   laravel: "^13.0"
@@ -20,9 +24,10 @@ dependencies:
   - larena/core
 access_operations:
   - env.server.read
+  - env.server.operate
 audit_events: []
 evidence:
-  path: docs/project-management/evidence/env-panel-skeleton/
+  path: docs/project-management/evidence/env-panel-actions/
 nonclaims:
   production_ready: false
   frontend_complete: false

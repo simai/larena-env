@@ -4,7 +4,8 @@ package: larena/env
 storage_owner: larena/audit
 retention: security
 atomic_completion: true
-# Only reads so far: the gateway logs each request on its side, access audits a denial. Actions bring their own events.
+# The panel keeps no events of its own yet. The gateway logs every request, a read and an action alike, with its
+# request id, the actor and the simai-env operation id; access audits a denial of env.server.read and env.server.operate.
 events: []
 forbidden_payload_fields:
   - password

@@ -9,6 +9,7 @@ final readonly class PanelAnswer
 {
     private const array KINDS = ['result', 'plan', 'job'];
     private const string REASON_PATTERN = '/\A[A-Za-z0-9][A-Za-z0-9._-]{0,127}\z/D';
+    private const string JOB_ID_PATTERN = '/\A[a-f0-9]{24}\z/D';
 
     /** @param array<array-key, mixed> $data */
     private function __construct(
@@ -19,6 +20,8 @@ final readonly class PanelAnswer
         public ?string $reason = null,
         public ?string $commandStatus = null,
         public ?string $operationId = null,
+        /** The started action's job, on an answer of kind `job` and nowhere else. */
+        public ?string $jobId = null,
     ) {
     }
 
@@ -56,8 +59,14 @@ final readonly class PanelAnswer
         if (!in_array($kind, self::KINDS, true) || !is_array($data) || ($kind === 'result' && !isset($document['data']))) {
             return self::failed($requestId, PanelReason::ANSWER_INVALID);
         }
+        // A started action carries its job beside the answer, not inside `data`.
+        $jobId = $document['job_id'] ?? null;
+        if ($kind === 'job' && (!is_string($jobId) || preg_match(self::JOB_ID_PATTERN, $jobId) !== 1)) {
+            return self::failed($requestId, PanelReason::ANSWER_INVALID);
+        }
 
-        return new self($requestId, $status, $kind, $data, null, self::text($document['command_status'] ?? null), self::text($document['operation_id'] ?? null));
+        return new self($requestId, $status, $kind, $data, null, self::text($document['command_status'] ?? null),
+            self::text($document['operation_id'] ?? null), $kind === 'job' ? (string) $jobId : null);
     }
 
     private static function text(mixed $value): ?string

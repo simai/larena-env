@@ -1,0 +1,27 @@
+{
+    "schema": "larena.package_launch_record",
+    "schema_version": 1,
+    "package": "larena/env",
+    "batch": "env-panel-actions",
+    "source": "larena-specs docs/architecture/2026-10-29-sites-work-plan.md, stage 10; simai-env docs/architecture/panel-gate.md, gateway stage 2 (1.21.0), answers recorded with 1.25.0",
+    "gateway_protocol": {
+        "request": "simai-panel-request/1",
+        "answer": "simai-panel-answer/1",
+        "recorded_with_simai_env": "1.25.0",
+        "fixture_set_version": 3
+    },
+    "scope": "the site's own screen (certificate, backups, nginx log) and the actions that belong to it: a plan is shown, a person confirms it, the gateway starts a job and the panel follows it with job:status and job:log",
+    "actions": [
+        "ssl:letsencrypt",
+        "ssl:renew",
+        "backup:data",
+        "site:deploy-rollback",
+        "site:service-restart",
+        "queue:restart"
+    ],
+    "known_limitations": [
+        "the panel keeps no audit trail of its own yet: every request is logged by the gateway with its request id, and the screen shows the operation id",
+        "a running job is followed by opening the screen again, not by the page refreshing itself",
+        "deploys, creating and removing sites (gateway stage 3-4) are not offered"
+    ]
+}

@@ -1,0 +1,5 @@
+{
+    "package": "larena/env",
+    "canonical_update_allowed": false,
+    "proposal": "Add the features env.site_screen, env.nginx_logs, env.site_operations and env.action_jobs to the larena/env entry, owned by the Larena Panel edition."
+}

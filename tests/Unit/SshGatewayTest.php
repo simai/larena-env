@@ -111,10 +111,11 @@ $unreadable = new SshGateway(new SshGatewayTarget('127.0.0.1', 'simai-panel', 22
 env_assert($unreadable->ask(new PanelRequest('r5', $actor, 'self:describe'))->reason === 'gateway_credentials_unreadable', 'An unreadable key is a reason.');
 env_assert($untouched->recorded() === [], 'Nothing ran.');
 
-// The manifest declares reads only.
+// The manifest declares exactly this package's table: the screens' commands and nothing else.
 $manifest = (new SshGatewayAdapter($target))->manifest();
 env_assert($manifest->commands === PanelCommands::names() && $manifest->protocol === 'simai-panel' && $manifest->protocolVersion === 1, 'The adapter declares the protocol and the commands.');
-env_assert(!$manifest->allows('site:remove') && !$manifest->allows('ssl:renew'), 'No action can pass the runner.');
+env_assert($manifest->allows('ssl:renew') && $manifest->allows('job:status'), 'The screens\' own commands pass the runner.');
+env_assert(!$manifest->allows('site:remove') && !$manifest->allows('site:deploy') && !$manifest->allows('owner:create'), 'Deploys, removals and owners do not.');
 
 // The target refuses what could become an option or leave the configured form.
 foreach ([

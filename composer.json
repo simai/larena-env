@@ -20,19 +20,110 @@
         "php": "^8.3"
     },
     "repositories": [
-        {"type": "path", "url": "../access", "options": {"symlink": true, "reference": "auto"}},
-        {"type": "path", "url": "../admin", "options": {"symlink": true, "reference": "auto"}},
-        {"type": "path", "url": "../audit", "options": {"symlink": true, "reference": "auto"}},
-        {"type": "path", "url": "../auth", "options": {"symlink": true, "reference": "auto"}},
-        {"type": "path", "url": "../core", "options": {"symlink": true, "reference": "auto"}},
-        {"type": "path", "url": "../dataview", "options": {"symlink": true, "reference": "auto"}},
-        {"type": "path", "url": "../filesystem", "options": {"symlink": true, "reference": "auto"}},
-        {"type": "path", "url": "../lang", "options": {"symlink": true, "reference": "auto"}},
-        {"type": "path", "url": "../layout", "options": {"symlink": true, "reference": "auto"}},
-        {"type": "path", "url": "../licensing", "options": {"symlink": true, "reference": "auto"}},
-        {"type": "path", "url": "../property", "options": {"symlink": true, "reference": "auto"}},
-        {"type": "path", "url": "../setting", "options": {"symlink": true, "reference": "auto"}},
-        {"type": "path", "url": "../ui", "options": {"symlink": true, "reference": "auto"}}
+        {
+            "type": "path",
+            "url": "../access",
+            "options": {
+                "symlink": true,
+                "reference": "auto"
+            }
+        },
+        {
+            "type": "path",
+            "url": "../admin",
+            "options": {
+                "symlink": true,
+                "reference": "auto"
+            }
+        },
+        {
+            "type": "path",
+            "url": "../audit",
+            "options": {
+                "symlink": true,
+                "reference": "auto"
+            }
+        },
+        {
+            "type": "path",
+            "url": "../auth",
+            "options": {
+                "symlink": true,
+                "reference": "auto"
+            }
+        },
+        {
+            "type": "path",
+            "url": "../core",
+            "options": {
+                "symlink": true,
+                "reference": "auto"
+            }
+        },
+        {
+            "type": "path",
+            "url": "../dataview",
+            "options": {
+                "symlink": true,
+                "reference": "auto"
+            }
+        },
+        {
+            "type": "path",
+            "url": "../filesystem",
+            "options": {
+                "symlink": true,
+                "reference": "auto"
+            }
+        },
+        {
+            "type": "path",
+            "url": "../lang",
+            "options": {
+                "symlink": true,
+                "reference": "auto"
+            }
+        },
+        {
+            "type": "path",
+            "url": "../layout",
+            "options": {
+                "symlink": true,
+                "reference": "auto"
+            }
+        },
+        {
+            "type": "path",
+            "url": "../licensing",
+            "options": {
+                "symlink": true,
+                "reference": "auto"
+            }
+        },
+        {
+            "type": "path",
+            "url": "../property",
+            "options": {
+                "symlink": true,
+                "reference": "auto"
+            }
+        },
+        {
+            "type": "path",
+            "url": "../setting",
+            "options": {
+                "symlink": true,
+                "reference": "auto"
+            }
+        },
+        {
+            "type": "path",
+            "url": "../ui",
+            "options": {
+                "symlink": true,
+                "reference": "auto"
+            }
+        }
     ],
     "autoload": {
         "psr-4": {
@@ -69,7 +160,9 @@
             "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/ServerOverviewReaderTest.php",
             "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/ServerAreaTest.php",
             "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/EnvBootTest.php",
-            "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/ServerScreenTest.php"
+            "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/ServerScreenTest.php",
+            "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/SiteScreenTest.php",
+            "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PanelOperationsTest.php"
         ],
         "test:unit": [
             "@test"

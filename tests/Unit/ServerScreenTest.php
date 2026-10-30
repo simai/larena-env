@@ -56,10 +56,11 @@ env_assert($overview instanceof ServerOverview, 'The recording reads.');
 
 $page = ServerSitesPage::of($overview, $text);
 env_assert($page->total === 4 && $page->rows !== null && $page->portUrl === null, 'The sites are rows in place.');
-env_assert($page->instanceId === 'env-server-sites' && $page->selectable === false && $page->rowWrites === [] && $page->rowLinks === [], 'The list only shows.');
+env_assert($page->instanceId === 'env-server-sites' && $page->selectable === false && $page->rowWrites === [], 'The list writes nothing.');
+env_assert($page->rowLinks === ['view' => '/admin/server/sites/__ID__'], 'A row opens the site\'s own screen.');
 $byDomain = array_column($page->rows, null, 'id');
 env_assert($byDomain['demo-php.test']['database'] === 'mysql' && $byDomain['demo-owned.test']['owner'] === 'demo', 'The cells.');
-env_assert($byDomain['demo-redirect.test']['php'] === '—' && $byDomain['demo-static.test']['release'] === '20261028183200', 'Empty values and the release.');
+env_assert($byDomain['demo-redirect.test']['php'] === '—' && $byDomain['demo-static.test']['release'] === '20261030173846', 'Empty values and the release.');
 
 // The admin's real presenter draws the list, as the controller asks it to.
 $manager = SmartManager::withDefaults();
@@ -90,7 +91,7 @@ $factory->addExtension('blade.php', 'blade');
 $factory->addNamespace('larena-admin', dirname(__DIR__).'/Support/admin-views');
 $factory->addNamespace('larena-env', dirname(__DIR__, 2).'/resources/views');
 
-$hostile = new ServerOverview('now', '1.23.0', '<img src=x onerror=alert(1)>', '24.04', [], ['8.3'], []);
+$hostile = new ServerOverview('now', '1.25.0', '<img src=x onerror=alert(1)>', '24.04', [], ['8.3'], []);
 $state = static fn (array $data): string => $factory->make('larena-env::admin.index', $data + ['source' => 'ssh', 'overview' => null, 'refused' => false, 'reason' => null, 'reasonText' => null, 'sitesView' => null])->render();
 
 $ok = $state(['source' => 'recorded', 'overview' => $overview, 'sitesView' => ['stub' => true]]);

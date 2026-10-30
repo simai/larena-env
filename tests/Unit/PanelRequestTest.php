@@ -41,9 +41,19 @@ env_assert(str_contains($empty, '"args":{}'), 'Empty args stay an object, the ga
 env_assert(preg_match('/\Apanel-[a-f0-9]{24}\z/', PanelRequest::read($actor, 'self:describe')->requestId) === 1, 'A generated id fits the gateway\'s pattern.');
 env_assert(PanelRequest::read($actor, 'self:describe')->requestId !== PanelRequest::read($actor, 'self:describe')->requestId, 'Each request has its own id.');
 
-foreach (['ssl:renew', 'site:deploy', 'site:remove', 'owner:create', 'job:cancel', 'nonsense', ''] as $command) {
-    env_assert(env_refusal(static fn () => new PanelRequest('r', $actor, $command)) === 'not_allowed', "Only reads may be asked here, not {$command}.");
+// Deploys, sites, owners and anything else are outside this package's table, whatever is sent.
+foreach (['site:deploy', 'site:remove', 'site:add', 'owner:create', 'self:bootstrap', 'nonsense', ''] as $command) {
+    env_assert(env_refusal(static fn () => new PanelRequest('r', $actor, $command, ['domain' => 'example.com'])) === 'not_allowed', "This package may not ask for {$command}.");
 }
+// The actions and job commands of the screens are allowed, and only an action is ever confirmed.
+env_assert(env_refusal(static fn () => new PanelRequest('r', $actor, 'ssl:renew', ['domain' => 'example.com'])) === null, 'An action may be planned.');
+env_assert(env_refusal(static fn () => new PanelRequest('r', $actor, 'ssl:renew', ['domain' => 'example.com'], true)) === null, 'And confirmed.');
+env_assert(env_refusal(static fn () => new PanelRequest('r', $actor, 'job:cancel', ['job_id' => str_repeat('a', 24)])) === null, 'A job may be followed.');
+env_assert(env_refusal(static fn () => new PanelRequest('r', $actor, 'site:describe', ['domain' => 'example.com'], true)) === 'not_allowed', 'A read is never confirmed.');
+env_assert(env_refusal(static fn () => new PanelRequest('r', $actor, 'job:cancel', ['job_id' => str_repeat('a', 24)], true)) === 'not_allowed', 'A job command is never confirmed.');
+env_assert(env_refusal(static fn () => new PanelRequest('r', $actor, 'job:status', ['job_id' => 'NOTHEX0000000000000000'])) === 'invalid_argument', 'A job id is checked.');
+env_assert(env_refusal(static fn () => new PanelRequest('r', $actor, 'ssl:letsencrypt', ['domain' => 'example.com'])) === 'invalid_argument', 'The certificate needs an email.');
+env_assert(env_refusal(static fn () => new PanelRequest('r', $actor, 'logs:nginx', ['domain' => 'example.com', 'lines' => '5000'])) === 'invalid_argument', 'At most a thousand lines.');
 
 foreach (['a;rm -rf /', '$(id).test', '`id`.test', '-oProxyCommand=x', "ok.test\n", 'nodot', "ok.test\0", 'a b.test', '../etc.test'] as $domain) {
     env_assert(env_refusal(static fn () => new PanelRequest('r', $actor, 'site:describe', ['domain' => $domain])) === 'invalid_argument', 'A hostile domain is refused: '.addcslashes($domain, "\n\0"));

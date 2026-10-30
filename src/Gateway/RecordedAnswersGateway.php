@@ -41,12 +41,24 @@ final readonly class RecordedAnswersGateway implements PanelGateway
             }
         }
 
-        return $this->replay($request, $this->fileFor($request, $domain));
+        $answer = $this->replay($request, $this->fileFor($request, $domain));
+        // The set holds one job; a question about another one is missing, never answered with this one's.
+        $recordedJob = is_string($answer->data['job_id'] ?? null) ? $answer->data['job_id'] : null;
+        $askedJob = $request->args['job_id'] ?? null;
+        if ($askedJob !== null && $recordedJob !== null && $recordedJob !== $askedJob) {
+            return $this->unavailable($request, PanelReason::RECORDING_MISSING);
+        }
+
+        return $answer;
     }
 
     private function fileFor(PanelRequest $request, ?string $domain): string
     {
         $name = str_replace(':', '-', $request->command);
+        // An action is recorded twice: what it would do, and the start of the one job the recording holds.
+        if (PanelCommands::kind($request->command) === PanelCommands::ACTION) {
+            return $request->confirm ? 'job-start.json' : "plan.{$name}.json";
+        }
         if ($domain !== null) {
             return "{$name}.{$domain}.json";
         }

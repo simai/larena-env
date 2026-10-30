@@ -39,7 +39,7 @@ $recorded = new ServerOverviewReader(new RecordedAnswersGateway(env_recorded_pat
 $result = $recorded->read('admin@example.com');
 $overview = $result->overview;
 env_assert($overview !== null && $result->reason === null && $result->source === 'recorded', 'The recording reads.');
-env_assert($overview->envVersion === '1.23.0' && $overview->osId === 'ubuntu' && $overview->osVersion === '24.04', 'The server\'s status is typed.');
+env_assert($overview->envVersion === '1.25.0' && $overview->osId === 'ubuntu' && $overview->osVersion === '24.04', 'The server\'s status is typed.');
 env_assert($overview->phpVersions === ['8.3'], 'PHP versions.');
 $states = [];
 foreach ($overview->services as $service) {
@@ -52,7 +52,7 @@ env_assert($domains === ['demo-owned.test', 'demo-php.test', 'demo-redirect.test
 [$owned, $php, $redirect, $static] = $overview->sites;
 env_assert($owned->owner === 'demo' && $php->owner === null, 'Owners.');
 env_assert($php->databaseEngine === 'mysql' && $owned->databaseEngine === null, 'Only the database\'s engine.');
-env_assert($static->release === '20261028183200' && $php->release === null, 'The current release.');
+env_assert($static->release === '20261030173846' && $php->release === null, 'The current release.');
 env_assert($redirect->profile === 'redirect' && $redirect->php === 'none' && $redirect->ssl === 'none', 'A redirect site.');
 
 $typed = serialize($overview);

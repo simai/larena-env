@@ -5,3 +5,7 @@ operations:
   - code: env.server.read
     risk: normal
     audit: denial
+  # Certificates, backups, releases and services: a plan is shown and confirmed before anything is asked of the server.
+  - code: env.server.operate
+    risk: high
+    audit: denial

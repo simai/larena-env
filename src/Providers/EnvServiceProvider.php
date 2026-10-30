@@ -15,7 +15,9 @@ use Larena\Env\Console\RegisterServerAreaCommand;
 use Larena\Env\Contracts\PanelGateway;
 use Larena\Env\Gateway\PanelGatewayFactory;
 use Larena\Env\Navigation\ServerAdminNavigationContributor;
+use Larena\Env\Operations\PanelOperations;
 use Larena\Env\Server\ServerOverviewReader;
+use Larena\Env\Server\SiteDetailsReader;
 
 final class EnvServiceProvider extends ServiceProvider
 {
@@ -33,6 +35,8 @@ final class EnvServiceProvider extends ServiceProvider
             );
         });
         $this->app->bind(ServerOverviewReader::class, static fn (Application $app): ServerOverviewReader => new ServerOverviewReader($app->make(PanelGateway::class)));
+        $this->app->bind(SiteDetailsReader::class, static fn (Application $app): SiteDetailsReader => new SiteDetailsReader($app->make(PanelGateway::class)));
+        $this->app->bind(PanelOperations::class, static fn (Application $app): PanelOperations => new PanelOperations($app->make(PanelGateway::class)));
         $this->app->afterResolving(
             AccessOperationRegistry::class,
             static fn (AccessOperationRegistry $registry): bool => self::registerAccessOperations($registry),
@@ -68,9 +72,10 @@ final class EnvServiceProvider extends ServiceProvider
         return class_exists(AdminNavigationRegistry::class);
     }
 
+    /** Reading the server is one right; changing it is another, and the screens ask for them apart. */
     private static function registerAccessOperations(AccessOperationRegistry $registry): bool
     {
-        return $registry->register(new AccessOperationDescriptor(
+        $read = $registry->register(new AccessOperationDescriptor(
             code: 'env.server.read',
             ownerPackage: 'larena/env',
             labelKey: 'larena-env::operations.server_read',
@@ -79,5 +84,16 @@ final class EnvServiceProvider extends ServiceProvider
             risk: 'normal',
             auditDenials: true,
         ));
+        $operate = $registry->register(new AccessOperationDescriptor(
+            code: 'env.server.operate',
+            ownerPackage: 'larena/env',
+            labelKey: 'larena-env::operations.server_operate',
+            target: 'env.server:all',
+            requiredGrant: 'write',
+            risk: 'high',
+            auditDenials: true,
+        ));
+
+        return $read && $operate;
     }
 }
