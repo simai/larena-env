@@ -1,0 +1,9 @@
+version = 1
+SPDX-PackageName = "Larena Env"
+SPDX-PackageSupplier = "Rim Zabarov <rim@zabarov.com>"
+
+[[annotations]]
+path = "**"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Rim Zabarov"
+SPDX-License-Identifier = "LicenseRef-Larena-Unset"

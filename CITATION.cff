@@ -1,0 +1,9 @@
+cff-version: 1.2.0
+message: "If you refer to Larena Env, please cite it as below."
+title: "Larena Env"
+abstract: "Larena Env: the hosting panel's server area, read through the simai-env panel gateway."
+type: software
+authors:
+  - family-names: "Zabarov"
+    given-names: "Rim"
+    email: "rim@zabarov.com"
