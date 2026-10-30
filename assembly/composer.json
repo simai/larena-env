@@ -1,0 +1,67 @@
+{
+    "name": "simai/larena-panel",
+    "description": "Larena Panel: the application a release archive carries. Exact package revisions; built by scripts/build-panel-archive.sh.",
+    "type": "project",
+    "license": "Apache-2.0",
+    "require": {
+        "php": "^8.3",
+        "ext-ctype": "*",
+        "ext-dom": "*",
+        "ext-fileinfo": "*",
+        "ext-filter": "*",
+        "ext-hash": "*",
+        "ext-iconv": "*",
+        "ext-json": "*",
+        "ext-libxml": "*",
+        "ext-mbstring": "*",
+        "ext-openssl": "*",
+        "ext-pcre": "*",
+        "ext-pdo": "*",
+        "ext-pdo_mysql": "*",
+        "ext-session": "*",
+        "ext-tokenizer": "*",
+        "laravel/framework": "^13.8",
+        "larena/access": "dev-main#1704d76f0f0ce53fa9c462f90275aa128e4dcfc9",
+        "larena/admin": "dev-main#b89361e971b9b8bf24a7f50c0492046b92b12d8c",
+        "larena/audit": "dev-main#990889c0761bc1bf94021cce872d52612384e8dc",
+        "larena/auth": "dev-main#66e8a5463f2d09d22035e3d03738b28880d60625",
+        "larena/core": "dev-main#416be8f7870766586204829c0d02008a1d4cff34",
+        "larena/dataview": "dev-main#b1ede1d014c644984b5b1914cf8ee5b694f7b105",
+        "larena/env": "dev-main",
+        "larena/filesystem": "dev-main#2635072d9896c7771b5b47841b5d027f07197f8e",
+        "larena/layout": "dev-main#0ba40695b78bfae8fb7eb004b7dbf33e9780ffda",
+        "larena/property": "dev-main#70436cd8e7ef587b7938b3fb7b4132f7d7548991",
+        "larena/setting": "dev-main#498d3900e534dc72f7aeae3231041c7e32dc720e",
+        "larena/ui": "dev-main#001531a4c18857111426a6669309a388725b9ca0"
+    },
+    "repositories": [
+        {"type": "path", "url": "../env-source", "options": {"symlink": false, "reference": "none", "versions": {"larena/env": "dev-main"}}},
+        {"type": "vcs", "url": "https://github.com/simai/larena-access.git"},
+        {"type": "vcs", "url": "https://github.com/simai/larena-admin.git"},
+        {"type": "vcs", "url": "https://github.com/simai/larena-audit.git"},
+        {"type": "vcs", "url": "https://github.com/simai/larena-auth.git"},
+        {"type": "vcs", "url": "https://github.com/simai/larena-core.git"},
+        {"type": "vcs", "url": "https://github.com/simai/larena-dataview.git"},
+        {"type": "vcs", "url": "https://github.com/simai/larena-filesystem.git"},
+        {"type": "vcs", "url": "https://github.com/simai/larena-layout.git"},
+        {"type": "vcs", "url": "https://github.com/simai/larena-property.git"},
+        {"type": "vcs", "url": "https://github.com/simai/larena-setting.git"},
+        {"type": "vcs", "url": "https://github.com/simai/larena-ui.git"}
+    ],
+    "extra": {
+        "laravel": {
+            "dont-discover": ["larena/auth", "larena/setting"]
+        }
+    },
+    "config": {
+        "allow-plugins": {},
+        "optimize-autoloader": true,
+        "platform": {
+            "php": "8.3.31"
+        },
+        "preferred-install": "dist",
+        "sort-packages": true
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}

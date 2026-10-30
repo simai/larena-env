@@ -7,6 +7,8 @@ features:
   - env.gateway_contract
   - env.recorded_answers
   - env.ssh_gateway
+  - env.sudo_gateway
+  - env.panel_edition
   - env.server_overview
   - env.server_area
   - env.admin_server_screen

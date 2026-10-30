@@ -21,6 +21,8 @@ use Larena\Env\Server\ServerOverviewReader;
 require dirname(__DIR__, 2).'/vendor/autoload.php';
 require_once __DIR__.'/AdminPresenceHost.php';
 
+putenv('LARENA_ENV_GATEWAY=recorded');
+
 $mode = $argv[1] ?? '';
 if ($mode !== 'with') {
     foreach (ClassLoader::getRegisteredLoaders() as $loader) {

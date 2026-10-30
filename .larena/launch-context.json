@@ -12,6 +12,8 @@
     "env.gateway_contract",
     "env.recorded_answers",
     "env.ssh_gateway",
+    "env.sudo_gateway",
+    "env.panel_edition",
     "env.server_overview",
     "env.server_area",
     "env.admin_server_screen"
@@ -23,7 +25,9 @@
     "CITATION.cff",
     "AUTHORS",
     ".env.example",
+    ".gitignore",
     ".githooks/*",
+    "assembly/*",
     ".github/*",
     ".larena/*",
     "CHANGELOG.md",

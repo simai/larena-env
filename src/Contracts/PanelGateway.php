@@ -16,6 +16,6 @@ interface PanelGateway
 {
     public function ask(PanelRequest $request): PanelAnswer;
 
-    /** Where the answers come from: `recorded`, `ssh` or `none`. The screen says so, recorded data is never taken for a live server. */
+    /** Where the answers come from: `recorded`, `sudo`, `ssh` or `none`. The screen says so, recorded data is never taken for a live server. */
     public function source(): string;
 }

@@ -1,0 +1,5 @@
+{
+  "version": "0.1.0",
+  "root_revision": "028c1a0ae20d9999e0a7e10d0268ad52ab6828e5",
+  "packages": ["access", "admin", "audit", "auth", "core", "dataview", "env", "filesystem", "layout", "property", "setting", "ui"]
+}

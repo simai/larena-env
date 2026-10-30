@@ -11,7 +11,7 @@ use Larena\Env\Contracts\PanelGateway;
 
 /**
  * Picks the driver from the configuration and fails closed: recorded answers only where the environment allows them, so
- * a production panel can never show demo sites as its server; an incomplete SSH target is no gateway at all.
+ * a production panel can never show demo sites as its server; an incomplete target is no gateway at all.
  */
 final class PanelGatewayFactory
 {
@@ -40,6 +40,19 @@ final class PanelGatewayFactory
                     knownHostsPath: (string) ($ssh['known_hosts_path'] ?? ''),
                     binary: (string) ($ssh['binary'] ?? '/usr/bin/ssh'),
                     timeoutSeconds: (float) ($ssh['timeout_seconds'] ?? 30),
+                ), $executor());
+            } catch (InvalidArgumentException) {
+                return new UnconfiguredGateway();
+            }
+        }
+
+        $sudo = $settings['sudo'] ?? null;
+        if ($driver === 'sudo' && is_array($sudo)) {
+            try {
+                return new SudoGateway(new SudoGatewayTarget(
+                    binary: (string) ($sudo['binary'] ?? SudoGatewayTarget::SUDO),
+                    gate: (string) ($sudo['gate'] ?? SudoGatewayTarget::GATE),
+                    timeoutSeconds: (float) ($sudo['timeout_seconds'] ?? 30),
                 ), $executor());
             } catch (InvalidArgumentException) {
                 return new UnconfiguredGateway();

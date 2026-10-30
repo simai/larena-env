@@ -1,0 +1,10 @@
+{
+  "schema": "simai-app/1",
+  "profile": "laravel",
+  "php": "8.3",
+  "db": { "engine": "mysql" },
+  "migrate": true,
+  "scheduler": false,
+  "workers": [],
+  "health": { "path": "/up" }
+}
