@@ -1,0 +1,19 @@
+schema: larena.audit.package-events
+schema_version: 1
+package: larena/env
+storage_owner: larena/audit
+retention: security
+atomic_completion: true
+# Only reads so far: the gateway logs each request on its side, access audits a denial. Actions bring their own events.
+events: []
+forbidden_payload_fields:
+  - password
+  - password_hash
+  - private_key
+  - key_path
+  - token
+  - secret
+nonclaims:
+  production_ready: false
+  frontend_complete: false
+  all_packages_ready: false

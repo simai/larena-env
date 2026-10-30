@@ -1,0 +1,14 @@
+{
+  "schema": "larena.package_launch_record",
+  "schema_version": 1,
+  "package": "larena/env",
+  "batch": "env-panel-skeleton",
+  "source": "larena-specs docs/architecture/2026-10-29-sites-work-plan.md, stage 10; Larena Panel stage 0",
+  "gateway_protocol": {
+    "request": "simai-panel-request/1",
+    "answer": "simai-panel-answer/1",
+    "recorded_with_simai_env": "1.23.0",
+    "fixture_set_version": 3
+  },
+  "scope": "read-only skeleton: gateway contract with recorded and SSH drivers, typed server overview, organization:server, one admin screen"
+}

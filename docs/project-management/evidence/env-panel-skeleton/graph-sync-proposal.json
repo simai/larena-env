@@ -1,0 +1,5 @@
+{
+  "package": "larena/env",
+  "canonical_update_allowed": false,
+  "proposal": "Add a package entry for larena/env with the features of module.yaml, owned by the Larena Panel edition."
+}

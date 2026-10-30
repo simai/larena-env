@@ -1,0 +1,79 @@
+{
+  "schema": "larena.package_launch_context",
+  "schema_version": 1,
+  "package": "larena/env",
+  "repository_class": "new_repository",
+  "repository_contains_prior_implementation": false,
+  "launch_record_ref": "docs/project-management/launch-records/env-panel-skeleton.json",
+  "specs_repo": "simai/larena-specs",
+  "specs_commit": "abb90706838bb242b575db0eb13cc6cca055c07e",
+  "base_commit": "397e0a63609ec6d5a5ee219d48b505192b5315aa",
+  "selected_features": [
+    "env.gateway_contract",
+    "env.recorded_answers",
+    "env.ssh_gateway",
+    "env.server_overview",
+    "env.server_area",
+    "env.admin_server_screen"
+  ],
+  "allowed_files": [
+    ".env.example",
+    ".githooks/*",
+    ".github/*",
+    ".larena/*",
+    "CHANGELOG.md",
+    "README.md",
+    "access.yaml",
+    "audit.yaml",
+    "composer.json",
+    "composer.lock",
+    "config/*",
+    "docs/project-management/launch-records/env-panel-skeleton.json",
+    "module.yaml",
+    "phpstan.neon.dist",
+    "resources/*",
+    "routes/*",
+    "scripts/*",
+    "src/*",
+    "tests/*",
+    "tools/*"
+  ],
+  "forbidden_files": [
+    "../*"
+  ],
+  "forbidden_behavior": [
+    "host_change_outside_the_gateway",
+    "shell_string_with_request_data",
+    "credential_value_in_config_or_log",
+    "gateway_action_or_confirm",
+    "existing_application_database_write",
+    "production_readiness_claim"
+  ],
+  "required_tests": [
+    "protocol request shape and local refusals",
+    "recorded answers against their manifest",
+    "ssh driver through an injected process executor",
+    "typed overview and reason codes",
+    "server area registration",
+    "boot with and without the admin",
+    "server screen in its three states"
+  ],
+  "required_evidence_files": [
+    "README.md",
+    "deviations.json",
+    "graph-sync-proposal.json"
+  ],
+  "evidence_path": "docs/project-management/evidence/env-panel-skeleton/",
+  "graph_sync_proposal_path": "docs/project-management/evidence/env-panel-skeleton/graph-sync-proposal.json",
+  "status": "coding_started",
+  "coding_allowed": true,
+  "coding_started": true,
+  "repository_enforcement_installed": true,
+  "review_completed": false,
+  "next_transition": "owner_includes_the_package",
+  "coding_branch": "main",
+  "test_database_policy": {
+    "environment": "no_database_in_tests",
+    "existing_application_database": "forbidden"
+  }
+}

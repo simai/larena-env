@@ -1,0 +1,100 @@
+{
+    "name": "larena/env",
+    "description": "Larena Env: the hosting panel's server area, read through the simai-env panel gateway. The main package of the Larena Panel edition.",
+    "type": "library",
+    "license": "proprietary",
+    "authors": [
+        {
+            "name": "Rim Zabarov",
+            "homepage": "https://github.com/zabarov",
+            "role": "Author"
+        }
+    ],
+    "require": {
+        "illuminate/console": "^13.0",
+        "illuminate/contracts": "^13.0",
+        "illuminate/http": "^13.0",
+        "illuminate/support": "^13.0",
+        "larena/access": "dev-main",
+        "larena/core": "dev-main",
+        "php": "^8.3"
+    },
+    "repositories": [
+        {"type": "path", "url": "../access", "options": {"symlink": true, "reference": "auto"}},
+        {"type": "path", "url": "../admin", "options": {"symlink": true, "reference": "auto"}},
+        {"type": "path", "url": "../audit", "options": {"symlink": true, "reference": "auto"}},
+        {"type": "path", "url": "../auth", "options": {"symlink": true, "reference": "auto"}},
+        {"type": "path", "url": "../core", "options": {"symlink": true, "reference": "auto"}},
+        {"type": "path", "url": "../dataview", "options": {"symlink": true, "reference": "auto"}},
+        {"type": "path", "url": "../filesystem", "options": {"symlink": true, "reference": "auto"}},
+        {"type": "path", "url": "../lang", "options": {"symlink": true, "reference": "auto"}},
+        {"type": "path", "url": "../layout", "options": {"symlink": true, "reference": "auto"}},
+        {"type": "path", "url": "../licensing", "options": {"symlink": true, "reference": "auto"}},
+        {"type": "path", "url": "../property", "options": {"symlink": true, "reference": "auto"}},
+        {"type": "path", "url": "../setting", "options": {"symlink": true, "reference": "auto"}},
+        {"type": "path", "url": "../ui", "options": {"symlink": true, "reference": "auto"}}
+    ],
+    "autoload": {
+        "psr-4": {
+            "Larena\\Env\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Larena\\Env\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Larena\\Env\\Providers\\EnvServiceProvider"
+            ]
+        }
+    },
+    "require-dev": {
+        "illuminate/view": "^13.0",
+        "larena/admin": "dev-main",
+        "phpstan/phpstan": "^2.0"
+    },
+    "suggest": {
+        "larena/admin": "The server screen and its menu entry (/admin/server). Env contributes them only where the admin is installed; the gateway and the typed reads work without it."
+    },
+    "scripts": {
+        "test": [
+            "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PanelRequestTest.php",
+            "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/RecordedAnswersGatewayTest.php",
+            "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/SshGatewayTest.php",
+            "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/ServerOverviewReaderTest.php",
+            "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/ServerAreaTest.php",
+            "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/EnvBootTest.php",
+            "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/ServerScreenTest.php"
+        ],
+        "test:unit": [
+            "@test"
+        ],
+        "lint": "php scripts/lint.php",
+        "analyse": "php scripts/analyse.php",
+        "validate:larena": "php scripts/validate-larena-package.php",
+        "evidence:check": "php scripts/check-evidence.php",
+        "scope:check": "php tools/larena-scope-check.php",
+        "quality:gate": [
+            "@validate:larena",
+            "@lint",
+            "@analyse",
+            "@test",
+            "@larena:metadata:check",
+            "@evidence:check",
+            "@scope:check"
+        ],
+        "larena:metadata:check": "php scripts/check-metadata-sync.php"
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {},
+        "platform": {
+            "php": "8.3.31"
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}

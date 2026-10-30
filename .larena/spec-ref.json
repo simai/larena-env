@@ -1,0 +1,11 @@
+{
+  "schema": "larena.package_specs_reference",
+  "schema_version": 1,
+  "package": "larena/env",
+  "specs_repo": "simai/larena-specs",
+  "specs_commit": "abb90706838bb242b575db0eb13cc6cca055c07e",
+  "package_spec": null,
+  "package_spec_note": "Specs has no package entry for larena/env yet; docs/architecture/larena-product-profiles.md names it (Larena Panel, organization:server).",
+  "canonical_update_allowed": false,
+  "graph_sync_proposal_required": true
+}

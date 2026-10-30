@@ -1,0 +1,7 @@
+schema: larena.access.descriptor
+schema_version: 1
+package: larena/env
+operations:
+  - code: env.server.read
+    risk: normal
+    audit: denial
