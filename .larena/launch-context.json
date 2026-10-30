@@ -17,6 +17,11 @@
     "env.admin_server_screen"
   ],
   "allowed_files": [
+    "REUSE.toml",
+    "NOTICE",
+    "LICENSE",
+    "CITATION.cff",
+    "AUTHORS",
     ".env.example",
     ".githooks/*",
     ".github/*",

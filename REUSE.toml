@@ -1,9 +1,10 @@
 version = 1
-SPDX-PackageName = "Larena Env"
+SPDX-PackageName = "Larena Panel"
 SPDX-PackageSupplier = "Rim Zabarov <rim@zabarov.com>"
+SPDX-PackageDownloadLocation = "https://github.com/simai/larena-env"
 
 [[annotations]]
 path = "**"
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 Rim Zabarov"
-SPDX-License-Identifier = "LicenseRef-Larena-Unset"
+SPDX-License-Identifier = "Apache-2.0"

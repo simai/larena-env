@@ -2,7 +2,7 @@
     "name": "larena/env",
     "description": "Larena Env: the hosting panel's server area, read through the simai-env panel gateway. The main package of the Larena Panel edition.",
     "type": "library",
-    "license": "proprietary",
+    "license": "Apache-2.0",
     "authors": [
         {
             "name": "Rim Zabarov",
