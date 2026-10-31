@@ -28,7 +28,7 @@ env_assert(PanelCommands::kind('site:describe') === PanelCommands::READ, 'A read
 env_assert(PanelCommands::kind('backup:data') === PanelCommands::ACTION, 'An action.');
 env_assert(PanelCommands::kind('job:status') === PanelCommands::JOB, 'A job command.');
 env_assert(PanelCommands::kind('site:remove') === null && PanelCommands::kind('self:bootstrap') === null, 'Commands this package may not send.');
-env_assert(count(PanelCommands::actions()) === 6, 'The six actions of the certificates, backups, releases and services screens.');
+env_assert(count(PanelCommands::actions()) === 9, 'The six actions of the site\'s card, its PHP version, a new site and a new owner.');
 
 // Only an action is ever confirmed.
 $refusedConfirm = null;
@@ -42,42 +42,42 @@ env_assert(PanelRequest::plan(new PanelActor($user), 'backup:data', ['domain' =>
 env_assert(PanelRequest::confirmed(new PanelActor($user), 'backup:data', ['domain' => 'demo-owned.test'])->toDocument()['confirm'] === true, 'A confirmation says so.');
 
 // What the action would do, in the plan's own words. Nothing has run.
-$plan = $operations->plan($user, null, SiteOperation::Backup, 'demo-owned.test', ['db' => 'no']);
+$plan = $operations->plan(new PanelActor($user), SiteOperation::Backup, 'demo-owned.test', ['db' => 'no']);
 env_assert($plan->reason === null && $plan->plan !== null, 'The plan reads: '.(string) $plan->reason);
 env_assert($plan->plan->command === 'backup:data' && $plan->plan->target === 'demo-owned.test', 'The plan names its command and target.');
 env_assert($plan->plan->effects === 'write' && $plan->plan->lock === 'site' && $plan->plan->args['db'] === 'no', 'Effects, lock and arguments.');
 env_assert($plan->plan->description !== '', 'The plan says what it would do.');
 
 // A value the gateway would refuse never leaves this package.
-$badEmail = $operations->plan($user, null, SiteOperation::CertificateIssue, 'demo-owned.test', ['email' => 'not an address']);
+$badEmail = $operations->plan(new PanelActor($user), SiteOperation::CertificateIssue, 'demo-owned.test', ['email' => 'not an address']);
 env_assert($badEmail->plan === null && $badEmail->refused && $badEmail->reason === PanelReason::INVALID_ARGUMENT, 'A mistyped email is refused in words.');
-$badDomain = $operations->plan($user, null, SiteOperation::CertificateRenew, 'not a domain', []);
+$badDomain = $operations->plan(new PanelActor($user), SiteOperation::CertificateRenew, 'not a domain', []);
 env_assert($badDomain->plan === null && $badDomain->reason === PanelReason::INVALID_ARGUMENT, 'A mistyped address too.');
 
 // Confirmed: the gateway starts it and answers a job.
-$started = $operations->start($user, null, SiteOperation::Backup, 'demo-owned.test', ['db' => 'no']);
+$started = $operations->start(new PanelActor($user), SiteOperation::Backup, 'demo-owned.test', ['db' => 'no']);
 env_assert($started->jobId === '000000000000000000000000' && $started->reason === null, 'The confirmation starts a job.');
 
 // The job's screen: where it stands and what it printed.
-$view = $operations->view($user, null, $started->jobId);
+$view = $operations->view(new PanelActor($user), $started->jobId);
 env_assert($view->status !== null && $view->status->state === JobState::Succeeded && $view->status->state->isOver(), 'The job is over.');
 env_assert($view->status->command === 'backup:data' && $view->status->exitCode === 0 && $view->status->actor === 'admin@stand.test', 'What it was and who started it.');
 env_assert($view->log !== null && $view->log->next === 18 && count($view->log->lines) === 18, 'The output and the cursor to read on from.');
 env_assert(str_contains(implode("\n", $view->log->lines), 'Data backup'), 'The output is the command\'s own.');
 
 // A job the recording does not hold is said to be missing, never invented.
-$unknown = $operations->view($user, null, 'ffffffffffffffffffffffff');
+$unknown = $operations->view(new PanelActor($user), 'ffffffffffffffffffffffff');
 env_assert($unknown->status === null && $unknown->reason === PanelReason::RECORDING_MISSING, 'An unknown job: '.(string) $unknown->reason);
 
 // Stopping one is asked of the gateway; this recording has no answer for it, and the screen says so.
-$cancelled = $operations->cancel($user, null, $started->jobId);
+$cancelled = $operations->cancel(new PanelActor($user), $started->jobId);
 env_assert($cancelled->status === null && $cancelled->reason === PanelReason::RECORDING_MISSING, 'Cancelling is honest about what it does not know.');
 
 // The screen offers only what the site can be asked for.
-$site = (new SiteDetailsReader($gateway))->read($user, null, 'demo-php.test')->site;
+$site = (new SiteDetailsReader($gateway))->read(new PanelActor($user), 'demo-php.test')->site;
 env_assert($site instanceof SiteDetails, 'The site reads.');
 $offered = array_map(static fn (SiteOperation $operation): string => $operation->value, SiteOperation::offeredFor($site));
-env_assert($offered === ['certificate-issue', 'backup'], 'Without a certificate, a previous release, workers or a service: '.implode(',', $offered));
+env_assert($offered === ['certificate-issue', 'backup', 'php-version'], 'Without a certificate, a previous release, workers or a service: '.implode(',', $offered));
 env_assert(SiteOperation::Backup->arguments('demo-php.test', ['db' => 'yes', 'files' => ''])  === ['domain' => 'demo-php.test', 'db' => 'yes'], 'An empty field is simply not sent.');
 env_assert(SiteOperation::CertificateIssue->fields() === ['email', 'redirect', 'hsts', 'staging'], 'The fields the certificate asks for.');
 

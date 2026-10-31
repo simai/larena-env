@@ -11,13 +11,15 @@ use Larena\Env\Server\SiteSummary;
 /** The sites as the admin's shared data view, with rows in place: the page holds them already. A row opens the site's own screen. */
 final class ServerSitesPage
 {
-    private const array COLUMNS = ['domain', 'profile', 'php', 'ssl', 'owner', 'database', 'release'];
+    // What a person checks first (Panel plan 2.1): whose the site is, what it runs, its certificate and its backups.
+    // Whether it answers and the disk it takes come when the gateway reports them (asked of simai-env).
+    private const array COLUMNS = ['domain', 'owner', 'profile', 'php', 'certificate', 'backups'];
 
     private function __construct()
     {
     }
 
-    /** @param callable(string): string $text */
+    /** @param callable(string, array<string, string>=): string $text */
     public static function of(ServerOverview $overview, callable $text): AdminDataviewPage
     {
         return new AdminDataviewPage(
@@ -35,7 +37,7 @@ final class ServerSitesPage
     }
 
     /**
-     * @param callable(string): string $text
+     * @param callable(string, array<string, string>=): string $text
      * @return array<string, string>
      */
     private static function row(SiteSummary $site, callable $text): array
@@ -43,12 +45,13 @@ final class ServerSitesPage
         return [
             'id' => $site->domain,
             'domain' => $site->domain,
+            'owner' => $site->owner ?? '—',
             'profile' => $site->profile,
             'php' => $site->php === 'none' ? '—' : $site->php,
-            'ssl' => $site->certificateDaysLeft !== null ? $site->ssl.' · '.$site->certificateDaysLeft.' '.$text('sites.days_left') : ($site->ssl === 'none' ? '—' : $site->ssl),
-            'owner' => $site->owner ?? '—',
-            'database' => $site->databaseEngine ?? '—',
-            'release' => $site->release ?? '—',
+            'certificate' => $site->certificateDaysLeft !== null
+                ? $text($site->certificateDaysLeft <= 14 ? 'sites.certificate_ends' : 'sites.certificate_left', ['days' => (string) $site->certificateDaysLeft])
+                : ($site->ssl === 'none' ? $text('sites.certificate_none') : $site->ssl),
+            'backups' => $text($site->backupSchedule ? 'sites.backups_scheduled' : 'sites.backups_unscheduled'),
         ];
     }
 }

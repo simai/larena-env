@@ -25,9 +25,12 @@ require_once dirname(__DIR__).'/Support/env-test.php';
 
 $lines = require dirname(__DIR__, 2).'/resources/lang/en/admin.php';
 $lines = ['admin' => $lines];
-$text = static function (string $key) use ($lines): string {
+$text = static function (string $key, array $replace = []) use ($lines): string {
     $value = data_get($lines['admin'], $key);
     env_assert(is_string($value), "No English text for {$key}.");
+    foreach ($replace as $name => $with) {
+        $value = str_replace(':'.$name, $with, $value);
+    }
 
     return $value;
 };
@@ -51,7 +54,7 @@ $russian = require dirname(__DIR__, 2).'/resources/lang/ru/admin.php';
 $flatten = static fn (array $tree): array => array_keys(Illuminate\Support\Arr::dot($tree));
 env_assert($flatten($lines['admin']) === $flatten($russian), 'en and ru must have the same keys.');
 
-$overview = (new ServerOverviewReader(new RecordedAnswersGateway(env_recorded_path())))->read('admin@example.com')->overview;
+$overview = (new ServerOverviewReader(new RecordedAnswersGateway(env_recorded_path())))->read(new \Larena\Env\Gateway\PanelActor('admin@example.com'))->overview;
 env_assert($overview instanceof ServerOverview, 'The recording reads.');
 
 $page = ServerSitesPage::of($overview, $text);
@@ -60,8 +63,13 @@ env_assert(count($overview->withoutSites(['DEMO-php.test'])->sites) === 3 && cou
 env_assert($page->instanceId === 'env-server-sites' && $page->selectable === false && $page->rowWrites === [], 'The list writes nothing.');
 env_assert($page->rowLinks === ['view' => '/admin/server/sites/__ID__'], 'A row opens the site\'s own screen.');
 $byDomain = array_column($page->rows, null, 'id');
-env_assert($byDomain['demo-php.test']['database'] === 'mysql' && $byDomain['demo-owned.test']['owner'] === 'demo', 'The cells.');
-env_assert($byDomain['demo-redirect.test']['php'] === '—' && $byDomain['demo-static.test']['release'] === '20261030173846', 'Empty values and the release.');
+env_assert(array_column($page->columns, 'key') === ['domain', 'owner', 'profile', 'php', 'certificate', 'backups'], 'Whose, what it runs, its certificate and its backups.');
+env_assert($byDomain['demo-owned.test']['owner'] === 'demo' && $byDomain['demo-php.test']['owner'] === '—', 'The owner, or none.');
+env_assert($byDomain['demo-redirect.test']['php'] === '—' && $byDomain['demo-php.test']['certificate'] === $text('sites.certificate_none'), 'Empty values in words.');
+env_assert($byDomain['demo-php.test']['backups'] === $text('sites.backups_unscheduled'), 'A site without a schedule says so.');
+$soon = new ServerOverview('now', '1', 'ubuntu', '24.04', [], [], [new \Larena\Env\Server\SiteSummary('a.test', 'static', 'none', 'letsencrypt', null, null, null, 9, true)]);
+$soonRow = ServerSitesPage::of($soon, $text)->rows[0];
+env_assert($soonRow['certificate'] === $text('sites.certificate_ends', ['days' => '9']) && $soonRow['backups'] === $text('sites.backups_scheduled'), 'A certificate that ends soon is said so.');
 
 // The admin's real presenter draws the list, as the controller asks it to.
 $manager = SmartManager::withDefaults();

@@ -4,9 +4,18 @@ package: larena/env
 storage_owner: larena/audit
 retention: security
 atomic_completion: true
-# The panel keeps no events of its own yet. The gateway logs every request, a read and an action alike, with its
-# request id, the actor and the simai-env operation id; access audits a denial of env.server.read and env.server.operate.
-events: []
+# The gateway logs every request, a read and an action alike, with its request id, the actor and the simai-env
+# operation id; access audits a denial of the panel's operations. The panel keeps who gives a person a space and who
+# looks at the panel as someone else.
+events:
+  - type: env.person.owner_assigned
+    severity: notice
+  - type: env.person.owner_released
+    severity: notice
+  - type: env.acting_as.started
+    severity: notice
+  - type: env.acting_as.stopped
+    severity: notice
 forbidden_payload_fields:
   - password
   - password_hash

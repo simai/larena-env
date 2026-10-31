@@ -23,6 +23,14 @@ final class PanelCommands
     private const string LOG_KIND = '/\A(?:access|error)\z/D';
     private const string JOB_ID = '/\A[a-f0-9]{24}\z/D';
     private const string CURSOR = '/\A[0-9]{1,7}\z/D';
+    private const string OWNER = '/\A[a-z][a-z0-9_-]{0,31}\z/D';
+    private const string PHP = '/\A[5-9]\.[0-9]\z/D';
+    private const string PROFILE = '/\A(?:static|generic|laravel|wordpress|node|redirect)\z/D';
+    private const string ENGINE = '/\A(?:mysql|pgsql)\z/D';
+    private const string ORIGIN = '/\Ahttps?:\/\/[A-Za-z0-9.-]{1,253}(?::[0-9]{1,5})?\z/D';
+    private const string CODE = '/\A30[1278]\z/D';
+    private const string KEEP_DROP = '/\A(?:keep|drop)\z/D';
+    private const string PUBKEY = '/\A(?:ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp(?:256|384|521)|sk-ssh-ed25519@openssh\.com) [A-Za-z0-9+\/]{20,8192}={0,3}(?: [ -~]{0,200})?\z/D';
 
     /** @var array<string, array{args: array<string, string>, required: list<string>, kind: string}> */
     private const array COMMANDS = [
@@ -42,6 +50,12 @@ final class PanelCommands
         'site:deploy-rollback' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'kind' => self::ACTION],
         'site:service-restart' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'kind' => self::ACTION],
         'queue:restart' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'kind' => self::ACTION],
+        // A new site and its PHP; a new owner, the space of a person at the panel's user level (simai-env 1.22.0).
+        'site:add' => ['args' => ['domain' => self::DOMAIN, 'profile' => self::PROFILE, 'php' => self::PHP, 'owner' => self::OWNER,
+            'create-db' => self::YES_NO, 'db-engine' => self::ENGINE, 'redirect-to' => self::ORIGIN, 'redirect-code' => self::CODE,
+            'redirect-path' => self::KEEP_DROP], 'required' => ['domain'], 'kind' => self::ACTION],
+        'site:set-php' => ['args' => ['domain' => self::DOMAIN, 'php' => self::PHP], 'required' => ['domain', 'php'], 'kind' => self::ACTION],
+        'owner:create' => ['args' => ['name' => self::OWNER, 'pubkey' => self::PUBKEY], 'required' => ['name'], 'kind' => self::ACTION],
         'job:status' => ['args' => ['job_id' => self::JOB_ID], 'required' => ['job_id'], 'kind' => self::JOB],
         'job:log' => ['args' => ['job_id' => self::JOB_ID, 'after' => self::CURSOR], 'required' => ['job_id'], 'kind' => self::JOB],
         'job:cancel' => ['args' => ['job_id' => self::JOB_ID], 'required' => ['job_id'], 'kind' => self::JOB],

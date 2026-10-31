@@ -13,9 +13,14 @@ use Larena\Admin\Navigation\AdminNavigationRegistry;
 use Larena\Core\Process\ProcessExecutor;
 use Larena\Env\Console\RegisterServerAreaCommand;
 use Larena\Env\Contracts\PanelGateway;
+use Larena\Env\Gateway\PanelActor;
 use Larena\Env\Gateway\PanelGatewayFactory;
+use Larena\Env\Http\Middleware\ResolvePanelActor;
+use Larena\Env\Http\Support\PanelActorResolver;
 use Larena\Env\Navigation\ServerAdminNavigationContributor;
 use Larena\Env\Operations\PanelOperations;
+use Larena\Env\People\PanelAudit;
+use Larena\Env\People\PersonOwners;
 use Larena\Env\Server\ServerOverviewReader;
 use Larena\Env\Server\SiteDetailsReader;
 
@@ -37,6 +42,13 @@ final class EnvServiceProvider extends ServiceProvider
         $this->app->bind(ServerOverviewReader::class, static fn (Application $app): ServerOverviewReader => new ServerOverviewReader($app->make(PanelGateway::class)));
         $this->app->bind(SiteDetailsReader::class, static fn (Application $app): SiteDetailsReader => new SiteDetailsReader($app->make(PanelGateway::class)));
         $this->app->bind(PanelOperations::class, static fn (Application $app): PanelOperations => new PanelOperations($app->make(PanelGateway::class)));
+        // Which owner of the server a person at the user level works as (Panel plan 2.4).
+        $this->app->bind(PersonOwners::class, static fn (Application $app): PersonOwners => new PersonOwners($app->make('db')->connection()));
+        $this->app->bind(PanelAudit::class, static fn (Application $app): PanelAudit => new PanelAudit($app));
+        $this->app->bind(PanelActorResolver::class, static fn (Application $app): PanelActorResolver => new PanelActorResolver(
+            $app->make(\Larena\Access\Runtime\AccessOperationAuthorizer::class),
+            $app->bound('db') ? $app->make(PersonOwners::class) : null,
+        ));
         $this->app->afterResolving(
             AccessOperationRegistry::class,
             static fn (AccessOperationRegistry $registry): bool => self::registerAccessOperations($registry),
@@ -47,6 +59,21 @@ final class EnvServiceProvider extends ServiceProvider
     {
         $this->loadTranslationsFrom(__DIR__.'/../../resources/lang', 'larena-env');
         $this->loadViewsFrom(__DIR__.'/../../resources/views', 'larena-env');
+        $this->loadMigrationsFrom(__DIR__.'/../../database/migrations');
+        // Every panel screen says when a person of the whole server is looking at it as someone else.
+        if ($this->app->bound('view')) {
+            $app = $this->app;
+            $this->app->make('view')->composer('larena-env::admin.*', static function ($view) use ($app): void {
+                $request = $app->bound('request') ? $app->make('request') : null;
+                if (!$request instanceof \Illuminate\Http\Request) {
+                    return;
+                }
+                $actor = $request->attributes->get(ResolvePanelActor::ATTRIBUTE);
+                $view->with('acting', $actor instanceof PanelActor && $actor->impersonatedBy !== null
+                    ? ['label' => (string) ($request->hasSession() ? $request->session()->get(PanelActorResolver::ACTING_AS_LABEL, $actor->user) : $actor->user),
+                        'owner' => (string) $actor->owner] : null);
+            });
+        }
         if ($this->composesAdmin()) {
             if ($this->app->bound(AdminNavigationRegistry::class)) {
                 $this->app->make(AdminNavigationRegistry::class)->registerContributor(new ServerAdminNavigationContributor());

@@ -54,7 +54,8 @@
         "src/Http/Support/PanelActorResolver.php",
         "src/Http/Middleware/ResolvePanelActor.php",
         "assembly/config/larena-product.php",
-        "scripts/check-panel-install.sh"
+        "scripts/check-panel-install.sh",
+        "database/*"
     ],
     "forbidden_files": [
         "../*"

@@ -19,11 +19,11 @@ final readonly class ServerOverviewReader
     {
     }
 
-    public function read(string $user, ?string $owner = null): ServerOverviewResult
+    public function read(PanelActor $actor): ServerOverviewResult
     {
         $source = $this->gateway->source();
         try {
-            $request = PanelRequest::read(new PanelActor($user, $owner), 'self:describe');
+            $request = PanelRequest::read($actor, 'self:describe');
         } catch (PanelRefused $refused) {
             return new ServerOverviewResult($source, null, $refused->reasonCode, true);
         }

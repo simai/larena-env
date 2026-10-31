@@ -26,15 +26,35 @@ final readonly class PanelOperations
     }
 
     /**
-     * What the action would do. Nothing runs.
+     * What the site's action would do. Nothing runs.
      *
      * @param array<string, string> $input the form's own fields, as typed
      */
-    public function plan(string $user, ?string $owner, SiteOperation $operation, string $domain, array $input = []): PlanResult
+    public function plan(PanelActor $actor, SiteOperation $operation, string $domain, array $input = []): PlanResult
+    {
+        return $this->planCommand($actor, $operation->command(), $operation->arguments($domain, $input));
+    }
+
+    /**
+     * The same action, confirmed by the person who saw its plan: the gateway starts it and answers a job.
+     *
+     * @param array<string, string> $input
+     */
+    public function start(PanelActor $actor, SiteOperation $operation, string $domain, array $input = []): JobStartResult
+    {
+        return $this->startCommand($actor, $operation->command(), $operation->arguments($domain, $input));
+    }
+
+    /**
+     * What any action of the command table would do (a new site, a new owner), with its gateway arguments. Nothing runs.
+     *
+     * @param array<string, string> $args
+     */
+    public function planCommand(PanelActor $actor, string $command, array $args): PlanResult
     {
         $source = $this->gateway->source();
         try {
-            $answer = $this->gateway->ask(PanelRequest::plan(new PanelActor($user, $owner), $operation->command(), $operation->arguments($domain, $input)));
+            $answer = $this->gateway->ask(PanelRequest::plan($actor, $command, $args));
         } catch (PanelRefused $refused) {
             return new PlanResult($source, null, $refused->reasonCode, true);
         }
@@ -52,15 +72,15 @@ final readonly class PanelOperations
     }
 
     /**
-     * The same action, confirmed by the person who saw its plan: the gateway starts it and answers a job.
+     * That action confirmed: the gateway starts it and answers a job.
      *
-     * @param array<string, string> $input
+     * @param array<string, string> $args
      */
-    public function start(string $user, ?string $owner, SiteOperation $operation, string $domain, array $input = []): JobStartResult
+    public function startCommand(PanelActor $actor, string $command, array $args): JobStartResult
     {
         $source = $this->gateway->source();
         try {
-            $answer = $this->gateway->ask(PanelRequest::confirmed(new PanelActor($user, $owner), $operation->command(), $operation->arguments($domain, $input)));
+            $answer = $this->gateway->ask(PanelRequest::confirmed($actor, $command, $args));
         } catch (PanelRefused $refused) {
             return new JobStartResult($source, null, $refused->reasonCode, true);
         }
@@ -75,10 +95,9 @@ final readonly class PanelOperations
     }
 
     /** Where a started action stands and what it has printed after the cursor the screen last saw. */
-    public function view(string $user, ?string $owner, string $jobId, int $after = 0): JobViewResult
+    public function view(PanelActor $actor, string $jobId, int $after = 0): JobViewResult
     {
         $source = $this->gateway->source();
-        $actor = new PanelActor($user, $owner);
         try {
             $statusAnswer = $this->gateway->ask(PanelRequest::read($actor, 'job:status', ['job_id' => $jobId]));
         } catch (PanelRefused $refused) {
@@ -111,18 +130,18 @@ final readonly class PanelOperations
     }
 
     /** Stops a job that is still running; a finished one is refused with `not_running`, which the screen says. */
-    public function cancel(string $user, ?string $owner, string $jobId): JobViewResult
+    public function cancel(PanelActor $actor, string $jobId): JobViewResult
     {
         $source = $this->gateway->source();
         try {
-            $answer = $this->gateway->ask(PanelRequest::read(new PanelActor($user, $owner), 'job:cancel', ['job_id' => $jobId]));
+            $answer = $this->gateway->ask(PanelRequest::read($actor, 'job:cancel', ['job_id' => $jobId]));
         } catch (PanelRefused $refused) {
             return new JobViewResult($source, null, null, $refused->reasonCode, true);
         }
         $failure = self::cancelFailure($answer);
 
         return $failure === null
-            ? $this->view($user, $owner, $jobId)
+            ? $this->view($actor, $jobId)
             : new JobViewResult($source, null, null, $failure[0], $failure[1]);
     }
 

@@ -20,11 +20,11 @@ final readonly class SiteDetailsReader
     {
     }
 
-    public function read(string $user, ?string $owner, string $domain): SiteDetailsResult
+    public function read(PanelActor $actor, string $domain): SiteDetailsResult
     {
         $source = $this->gateway->source();
         try {
-            $answer = $this->gateway->ask(PanelRequest::read(new PanelActor($user, $owner), 'site:describe', ['domain' => $domain]));
+            $answer = $this->gateway->ask(PanelRequest::read($actor, 'site:describe', ['domain' => $domain]));
         } catch (PanelRefused $refused) {
             return new SiteDetailsResult($source, null, $refused->reasonCode, true);
         }
@@ -40,11 +40,11 @@ final readonly class SiteDetailsReader
     }
 
     /** The last lines of the site's nginx log; `kind` is `access` or `error`, as the gateway names them. */
-    public function log(string $user, ?string $owner, string $domain, string $kind, int $lines = 200): NginxLogResult
+    public function log(PanelActor $actor, string $domain, string $kind, int $lines = 200): NginxLogResult
     {
         $source = $this->gateway->source();
         try {
-            $answer = $this->gateway->ask(PanelRequest::read(new PanelActor($user, $owner), 'logs:nginx',
+            $answer = $this->gateway->ask(PanelRequest::read($actor, 'logs:nginx',
                 ['domain' => $domain, 'kind' => $kind, 'lines' => (string) $lines]));
         } catch (PanelRefused $refused) {
             return new NginxLogResult($source, null, $refused->reasonCode, true);
@@ -57,6 +57,24 @@ final readonly class SiteDetailsReader
             return new NginxLogResult($source, NginxLogTail::fromData($answer->data));
         } catch (UnexpectedValueException) {
             return new NginxLogResult($source, null, PanelReason::ANSWER_SHAPE_INVALID);
+        }
+    }
+
+    /** simai-env's check of the site: its state and what did not pass. Null when the gateway did not answer it. */
+    public function doctor(PanelActor $actor, string $domain): ?SiteDoctor
+    {
+        try {
+            $answer = $this->gateway->ask(PanelRequest::read($actor, 'site:doctor', ['domain' => $domain]));
+        } catch (PanelRefused) {
+            return null;
+        }
+        if (self::failureOf($answer) !== null) {
+            return null;
+        }
+        try {
+            return SiteDoctor::fromData($answer->data);
+        } catch (UnexpectedValueException) {
+            return null;
         }
     }
 

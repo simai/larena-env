@@ -34,6 +34,8 @@ final readonly class SiteDetails
         public ?string $service,
         public array $workers,
         public bool $scheduler,
+        // The account the site's code runs as: its own, or its owner's (simai-env's isolation).
+        public ?string $runsAs = null,
     ) {
     }
 
@@ -85,6 +87,7 @@ final readonly class SiteDetails
             service: is_string($data['service'] ?? null) && $data['service'] !== '' ? $data['service'] : null,
             workers: $workers,
             scheduler: ($data['scheduler'] ?? false) === true,
+            runsAs: is_string($data['runs_as'] ?? null) && $data['runs_as'] !== '' ? $data['runs_as'] : null,
         );
     }
 }

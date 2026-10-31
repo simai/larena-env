@@ -9,6 +9,7 @@ use Illuminate\Contracts\View\Factory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
+use Larena\Env\Http\Support\NoticeRedirect;
 use Larena\Env\Operations\PanelOperations;
 
 /**
@@ -26,9 +27,9 @@ final readonly class ServerJobController
 
     public function show(Request $request, string $job): mixed
     {
-        [$user, $owner] = ResolvePanelActor::of($request);
+        $actor = ResolvePanelActor::of($request);
         $after = (int) $request->query('after', '0');
-        $result = $this->operations->view($user, $owner, $job, max(0, $after));
+        $result = $this->operations->view($actor, $job, max(0, $after));
 
         return $this->views->make('larena-env::admin.job', [
             'jobId' => $job,
@@ -43,13 +44,13 @@ final readonly class ServerJobController
 
     public function cancel(Request $request, string $job): RedirectResponse
     {
-        [$user, $owner] = ResolvePanelActor::of($request);
-        $result = $this->operations->cancel($user, $owner, $job);
+        $actor = ResolvePanelActor::of($request);
+        $result = $this->operations->cancel($actor, $job);
         $address = route('larena.env.admin.job', ['job' => $job], false);
 
         return $result->reason === null
             ? new RedirectResponse($address)
-            : (new RedirectResponse($address))->with('larena_env_notice', $this->reasonText($result->reason));
+            : NoticeRedirect::to($request, $address, $this->reasonText($result->reason));
     }
 
 

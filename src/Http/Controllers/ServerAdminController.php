@@ -24,6 +24,7 @@ final readonly class ServerAdminController
         private Translator $translator,
         private AdminDataviewPagePresenter $dataviews,
         private \Illuminate\Contracts\Config\Repository $config,
+        private ?\Larena\Access\Runtime\AccessOperationAuthorizer $authorizer = null,
     ) {
     }
 
@@ -39,15 +40,16 @@ final readonly class ServerAdminController
 
     private function page(Request $request, string $section): mixed
     {
-        [$user, $owner] = \Larena\Env\Http\Middleware\ResolvePanelActor::of($request);
-        $result = $this->reader->read($user, $owner);
-        $text = fn (string $key): string => (string) $this->translator->get('larena-env::admin.'.$key);
+        $result = $this->reader->read(\Larena\Env\Http\Middleware\ResolvePanelActor::of($request));
+        /** @param array<string, string> $replace */
+        $text = fn (string $key, array $replace = []): string => (string) $this->translator->get('larena-env::admin.'.$key, $replace);
         // The gateway lists every site of the server, the panel's own among it; it is reached by the address it answers on.
         $ownHost = parse_url((string) $this->config->get('app.url'), PHP_URL_HOST);
         $overview = $result->overview?->withoutSites(is_string($ownHost) ? [$request->getHost(), $ownHost] : [$request->getHost()]);
 
         return $this->views->make('larena-env::admin.index', [
             'section' => $section,
+            'canCreate' => $this->authorizer?->authorize($request, 'env.sites.operate')->isAllowed() ?? false,
             'source' => $result->source,
             'overview' => $overview,
             'refused' => $result->refused,

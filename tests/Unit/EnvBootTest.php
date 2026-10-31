@@ -33,9 +33,15 @@ $with = env_boot('with');
 env_assert($with['admin_loadable'] === true, 'The admin must be installed for development.');
 $navigation = $with['navigation'];
 sort($navigation);
-env_assert($navigation === ['env.server', 'env.server.overview'] && $with['navigation_valid'] === [true, true], 'With the admin the sites and the overview are valid menu entries.');
-env_assert(array_keys($with['routes']) === ['larena.env.admin.index', 'larena.env.admin.overview', 'larena.env.admin.site', 'larena.env.admin.job',
-    'larena.env.admin.site.plan', 'larena.env.admin.site.run', 'larena.env.admin.job.cancel'], 'The screens of the panel: '.implode(', ', array_keys($with['routes'])));
+env_assert($navigation === ['env.people', 'env.server', 'env.server.overview'] && $with['navigation_valid'] === [true, true, true],
+    'With the admin the sites, the overview and the spaces are valid menu entries.');
+$names = array_keys($with['routes']);
+sort($names);
+env_assert($names === ['larena.env.admin.index', 'larena.env.admin.job', 'larena.env.admin.job.cancel', 'larena.env.admin.overview',
+    'larena.env.admin.people', 'larena.env.admin.people.act', 'larena.env.admin.people.assign', 'larena.env.admin.people.owners.plan',
+    'larena.env.admin.people.owners.run', 'larena.env.admin.people.stop', 'larena.env.admin.site', 'larena.env.admin.site.plan',
+    'larena.env.admin.site.run', 'larena.env.admin.sites.new', 'larena.env.admin.sites.plan', 'larena.env.admin.sites.run'],
+    'The screens of the panel: '.implode(', ', $names));
 env_assert($with['routes']['larena.env.admin.index']['uri'] === 'admin/server', 'The sites keep their address.');
 env_assert($with['routes']['larena.env.admin.overview']['uri'] === 'admin/server/overview', 'The server\'s overview has its own address.');
 foreach ($with['routes'] as $name => $route) {
@@ -44,11 +50,14 @@ foreach ($with['routes'] as $name => $route) {
         \Larena\Env\Http\Middleware\ResolvePanelActor::class] as $middleware) {
         env_assert(in_array($middleware, $route['middleware'], true), "{$name} lost {$middleware}.");
     }
-    // Changing a site is a right of its own, and only the three addresses that change it ask for it.
-    $changes = str_ends_with($name, '.plan') || str_ends_with($name, '.run') || str_ends_with($name, '.cancel');
+    $people = str_starts_with($name, 'larena.env.admin.people');
+    // Changing a site is a right of its own: a new site, a site's action and stopping a job ask for it.
+    $changes = !$people && (str_ends_with($name, '.plan') || str_ends_with($name, '.run') || str_ends_with($name, '.cancel') || $name === 'larena.env.admin.sites.new');
     env_assert(in_array('access:env.sites.operate', $route['middleware'], true) === $changes, "{$name} asks for the wrong right.");
-    // The server's overview is the system level's.
-    env_assert(in_array('access:env.server.read', $route['middleware'], true) === ($name === 'larena.env.admin.overview'), "{$name} asks for the wrong level.");
+    // The server's overview and the people's spaces are the system level's; giving a space or acting for someone changes the server.
+    $reads = in_array($name, ['larena.env.admin.overview', 'larena.env.admin.people', 'larena.env.admin.people.stop'], true);
+    env_assert(in_array('access:env.server.read', $route['middleware'], true) === $reads, "{$name} asks for the wrong level.");
+    env_assert(in_array('access:env.server.operate', $route['middleware'], true) === ($people && !$reads), "{$name} must ask for the server's right.");
 }
 env_assert($with['commands'] === [RegisterServerAreaCommand::class] && $with['sites'] === 4, 'The rest does not change.');
 

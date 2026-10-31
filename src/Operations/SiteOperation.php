@@ -18,6 +18,7 @@ enum SiteOperation: string
     case Rollback = 'rollback';
     case ServiceRestart = 'service-restart';
     case QueueRestart = 'queue-restart';
+    case PhpVersion = 'php-version';
 
     public function command(): string
     {
@@ -28,15 +29,28 @@ enum SiteOperation: string
             self::Rollback => 'site:deploy-rollback',
             self::ServiceRestart => 'site:service-restart',
             self::QueueRestart => 'queue:restart',
+            self::PhpVersion => 'site:set-php',
         };
     }
 
-    /** The form fields this action asks for, by name: `email` is text, `db` and `files` are yes or no. */
+    /** The tab of the site's card the action stands on. */
+    public function tab(): string
+    {
+        return match ($this) {
+            self::CertificateIssue, self::CertificateRenew => 'domains',
+            self::PhpVersion, self::ServiceRestart, self::QueueRestart => 'php',
+            self::Rollback => 'releases',
+            self::Backup => 'overview',
+        };
+    }
+
+    /** The form fields this action asks for, by name: `email` is text, `php` a version of the server, `db` and `files` yes or no. */
     public function fields(): array
     {
         return match ($this) {
             self::CertificateIssue => ['email', 'redirect', 'hsts', 'staging'],
             self::Backup => ['db', 'files'],
+            self::PhpVersion => ['php'],
             default => [],
         };
     }
@@ -55,6 +69,8 @@ enum SiteOperation: string
             self::Rollback => $site->previousRelease !== null,
             self::ServiceRestart => $site->service !== null,
             self::QueueRestart => $site->workers !== [],
+            // A site without PHP (static, a redirect) has no version to change.
+            self::PhpVersion => $site->php !== 'none',
         };
     }
 

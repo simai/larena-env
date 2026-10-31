@@ -6,17 +6,7 @@
 @section('description', __('larena-env::admin.job.description'))
 
 @section('content')
-    @if ($source === 'recorded')
-        <section class="larena-panel larena-panel-padded" data-env-source="recorded" role="note">
-            <p>{{ __('larena-env::admin.recorded_notice') }}</p>
-        </section>
-    @endif
-
-    @if ($notice)
-        <section class="larena-panel larena-panel-padded" data-env-notice role="alert">
-            <p>{{ $notice }}</p>
-        </section>
-    @endif
+    @include('larena-env::admin.partials.notes')
 
     @if ($status === null)
         <section class="larena-panel larena-empty" data-env-state="{{ $refused ? 'refused' : 'failed' }}" role="alert">

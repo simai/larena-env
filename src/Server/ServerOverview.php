@@ -15,6 +15,7 @@ final readonly class ServerOverview
      * @param list<ServiceState> $services
      * @param list<string> $phpVersions
      * @param list<SiteSummary> $sites
+     * @param list<string> $owners the owners of the server (simai-env's isolation), whose spaces people work in
      */
     public function __construct(
         public string $generatedAt,
@@ -24,6 +25,7 @@ final readonly class ServerOverview
         public array $services,
         public array $phpVersions,
         public array $sites,
+        public array $owners = [],
     ) {
     }
 
@@ -37,7 +39,8 @@ final readonly class ServerOverview
         $domains = array_map('strtolower', $domains);
 
         return new self($this->generatedAt, $this->envVersion, $this->osId, $this->osVersion, $this->services, $this->phpVersions,
-            array_values(array_filter($this->sites, static fn (SiteSummary $site): bool => !in_array(strtolower($site->domain), $domains, true))));
+            array_values(array_filter($this->sites, static fn (SiteSummary $site): bool => !in_array(strtolower($site->domain), $domains, true))),
+            $this->owners);
     }
 
     /**
@@ -75,7 +78,14 @@ final readonly class ServerOverview
             $sites[] = SiteSummary::fromDescription($site);
         }
 
+        $owners = [];
+        foreach (is_array($host['isolation']['owners'] ?? null) ? $host['isolation']['owners'] : [] as $owner) {
+            if (is_array($owner) && is_string($owner['name'] ?? null) && preg_match('/\A[a-z][a-z0-9_-]{0,31}\z/D', $owner['name']) === 1) {
+                $owners[] = $owner['name'];
+            }
+        }
+
         return new self($generatedAt, $envVersion, $osId, $osVersion, $services,
-            array_values(array_filter(is_array($host['php_versions'] ?? null) ? $host['php_versions'] : [], 'is_string')), $sites);
+            array_values(array_filter(is_array($host['php_versions'] ?? null) ? $host['php_versions'] : [], 'is_string')), $sites, $owners);
     }
 }

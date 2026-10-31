@@ -115,7 +115,7 @@ env_assert($untouched->recorded() === [], 'Nothing ran.');
 $manifest = (new SshGatewayAdapter($target))->manifest();
 env_assert($manifest->commands === PanelCommands::names() && $manifest->protocol === 'simai-panel' && $manifest->protocolVersion === 1, 'The adapter declares the protocol and the commands.');
 env_assert($manifest->allows('ssl:renew') && $manifest->allows('job:status'), 'The screens\' own commands pass the runner.');
-env_assert(!$manifest->allows('site:remove') && !$manifest->allows('site:deploy') && !$manifest->allows('owner:create'), 'Deploys, removals and owners do not.');
+env_assert(!$manifest->allows('site:remove') && !$manifest->allows('site:deploy') && !$manifest->allows('owner:remove'), 'Deploys and removals do not.');
 
 // The target refuses what could become an option or leave the configured form.
 foreach ([

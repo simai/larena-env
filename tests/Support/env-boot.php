@@ -94,7 +94,7 @@ foreach ((new ReflectionProperty(Artisan::class, 'bootstrappers'))->getValue() a
     $bootstrapper($artisan);
 }
 $operation = $app->make(AccessOperationRegistry::class)->get('env.server.read');
-$overview = $app->make(ServerOverviewReader::class)->read('boot@example.com');
+$overview = $app->make(ServerOverviewReader::class)->read(new \Larena\Env\Gateway\PanelActor('boot@example.com'));
 
 echo json_encode([
     'admin_loadable' => class_exists(AdminNavigationRegistry::class),

@@ -6,12 +6,7 @@
 @section('description', __('larena-env::admin.description'))
 
 @section('content')
-    {{-- Recorded answers are never taken for a live server. --}}
-    @if ($source === 'recorded')
-        <section class="larena-panel larena-panel-padded" data-env-source="recorded" role="note">
-            <p>{{ __('larena-env::admin.recorded_notice') }}</p>
-        </section>
-    @endif
+    @include('larena-env::admin.partials.notes')
 
     @if ($overview === null)
         <section class="larena-panel larena-empty" data-env-state="{{ $refused ? 'refused' : 'failed' }}" data-env-reason="{{ $reason }}" role="alert">
@@ -35,6 +30,9 @@
             </dl>
         </section>
     @else
+        @if ($canCreate)
+            <p data-env-create-site><a class="larena-button" href="{{ route('larena.env.admin.sites.new', [], false) }}">{{ __('larena-env::admin.new_site.action') }}</a></p>
+        @endif
         @include('larena-admin::dataview.page', ['dataview' => $sitesView, 'sectionId' => 'env-server-sites', 'owner' => 'larena/env',
             'ariaLabel' => __('larena-env::admin.sites.title'), 'queryUrl' => route('larena.env.admin.index', [], false),
             'matchedCount' => count($overview->sites), 'source' => 'env_server_overview'])

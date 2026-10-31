@@ -24,6 +24,8 @@ the panel: it is planned, confirmed by a person, and run by the server as a job 
   has nothing to renew, without a previous release nothing to roll back to, without workers no queue to restart.
 - `Area\ServerArea`: the main scope `organization:server`. `php artisan larena:env:area` registers it; a panel assembly
   sets `larena-core.first_run` to `ServerArea::firstRunDeclaration()`.
+- `People\PersonOwners`: which owner of the server a person at the user level works as; `People\PanelAudit`: the
+  panel's own audit events. `/admin/server/people` gives people their spaces and lets the system level look as them.
 - `/admin/server`, `/admin/server/sites/<domain>` and `/admin/server/jobs/<id>`: the screens, composed only where
   larena/admin is installed. Reading them is `env.server.read`; planning, confirming and stopping is `env.server.operate`.
 

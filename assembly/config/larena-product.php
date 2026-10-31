@@ -19,12 +19,15 @@ return [
             'sites' => ['label' => 'larena-env::admin.menu.sites', 'icon' => 'dns', 'level' => 'site', 'kind' => 'row', 'row' => 'env.server'],
             'journal' => ['label' => 'larena-env::admin.menu.journal', 'icon' => 'history', 'level' => 'site', 'kind' => 'row', 'row' => 'audit.history'],
             // The system level: people, the server, the panel's own settings.
-            'users' => ['label' => 'larena-env::admin.menu.users', 'icon' => 'group', 'level' => 'install', 'kind' => 'row', 'row' => 'auth.users'],
+            'users' => ['label' => 'larena-env::admin.menu.users', 'icon' => 'group', 'level' => 'install', 'kind' => 'root'],
             'server' => ['label' => 'larena-env::admin.menu.server', 'icon' => 'memory', 'level' => 'install', 'kind' => 'root'],
             'settings' => ['label' => 'larena-env::admin.menu.settings', 'icon' => 'settings', 'level' => 'install', 'kind' => 'root'],
         ],
         'group_roots' => [],
         'row_roots' => [
+            // People and the spaces they work in (Panel plan 2.4): their roles and blocking, then their owners.
+            'auth.users' => 'users',
+            'env.people' => 'users',
             'env.server.overview' => 'server',
             // Sign-in diagnostics under its own name, beside the server's overview.
             'auth.diagnostics' => 'server',

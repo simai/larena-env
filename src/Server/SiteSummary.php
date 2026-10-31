@@ -18,6 +18,7 @@ final readonly class SiteSummary
         public ?string $databaseEngine,
         public ?string $release,
         public ?int $certificateDaysLeft,
+        public bool $backupSchedule = false,
     ) {
     }
 
@@ -44,6 +45,7 @@ final readonly class SiteSummary
             databaseEngine: is_array($site['database'] ?? null) && is_string($site['database']['engine'] ?? null) ? $site['database']['engine'] : null,
             release: is_array($site['release'] ?? null) && is_string($site['release']['current'] ?? null) ? $site['release']['current'] : null,
             certificateDaysLeft: is_int($days) ? $days : null,
+            backupSchedule: ($site['backup_schedule'] ?? false) === true,
         );
     }
 }

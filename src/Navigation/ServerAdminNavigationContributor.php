@@ -16,7 +16,7 @@ final class ServerAdminNavigationContributor implements AdminNavigationContribut
 
     public function navigationDescriptors(): array
     {
-        // The sites, at either level, and the server's overview, at the system level (owner decision 2026-10-31).
+        // The sites, at either level; the server's overview and the people's spaces, at the system level (owner decision 2026-10-31).
         return [new AdminNavigationDescriptor(
             id: 'env.server',
             ownerPackage: $this->ownerPackage(),
@@ -54,6 +54,25 @@ final class ServerAdminNavigationContributor implements AdminNavigationContribut
             labelKey: 'larena-env::admin.overview.navigation',
             activeRoutePattern: 'larena.env.admin.overview',
             icon: 'monitor_heart',
+        ), new AdminNavigationDescriptor(
+            id: 'env.people',
+            ownerPackage: $this->ownerPackage(),
+            label: 'Spaces',
+            routeName: 'larena.env.admin.people',
+            routeUri: '/admin/server/people',
+            category: 'operations',
+            state: 'operator_slice',
+            // The system level gives people their spaces (Panel plan 2.4).
+            accessScope: 'env.server.read',
+            auditEvent: 'env.people.viewed',
+            statusCap: 'env_panel_skeleton',
+            order: 3,
+            group: 'operations',
+            knownLimitations: ['not_production_ready'],
+            surface: 'product',
+            labelKey: 'larena-env::admin.people.navigation',
+            activeRoutePattern: 'larena.env.admin.people*',
+            icon: 'workspaces',
         )];
     }
 }
