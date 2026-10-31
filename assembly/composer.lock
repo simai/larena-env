@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "b0c4cb5614b4fd920c84ff74b90b3359",
+    "content-hash": "00f426978bd7fd4708a3608e09243eff",
     "packages": [
         {
             "name": "brick/math",
@@ -1415,12 +1415,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:simai/larena-access.git",
-                "reference": "a2f495b0832896a1fc019012a54b881955a267c8"
+                "reference": "17f2163c91dc32c7b17c5e3fcccb568f9609223d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-access/zipball/a2f495b0832896a1fc019012a54b881955a267c8",
-                "reference": "a2f495b0832896a1fc019012a54b881955a267c8",
+                "url": "https://api.github.com/repos/simai/larena-access/zipball/17f2163c91dc32c7b17c5e3fcccb568f9609223d",
+                "reference": "17f2163c91dc32c7b17c5e3fcccb568f9609223d",
                 "shasum": ""
             },
             "require": {
@@ -1564,7 +1564,7 @@
                 }
             ],
             "description": "Larena Access: Operation permissions, target providers, query scopes and explainable access decisions.",
-            "time": "2026-10-31T09:56:39+00:00"
+            "time": "2026-10-31T21:23:42+00:00"
         },
         {
             "name": "larena/admin",

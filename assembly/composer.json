@@ -21,7 +21,7 @@
         "ext-session": "*",
         "ext-tokenizer": "*",
         "laravel/framework": "^13.8",
-        "larena/access": "dev-main#a2f495b0832896a1fc019012a54b881955a267c8",
+        "larena/access": "dev-main#17f2163c91dc32c7b17c5e3fcccb568f9609223d",
         "larena/admin": "dev-main#a4ffe6c5c4b121898504d95cc4a4fa800e12447a",
         "larena/audit": "dev-main#990889c0761bc1bf94021cce872d52612384e8dc",
         "larena/auth": "dev-main#6d3876554a76b80634f3a58fd1a4365e54493d6a",
