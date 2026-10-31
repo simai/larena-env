@@ -60,6 +60,8 @@ final class EnvServiceProvider extends ServiceProvider
         $this->loadTranslationsFrom(__DIR__.'/../../resources/lang', 'larena-env');
         $this->loadViewsFrom(__DIR__.'/../../resources/views', 'larena-env');
         $this->loadMigrationsFrom(__DIR__.'/../../database/migrations');
+        // The panel's own events (spaces, acting as someone) in the change history, where larena/audit shows it.
+        $config->push('larena-audit.history_sources', ['prefix' => 'env.', 'label' => 'larena-env::admin.audit_activity']);
         // Every panel screen says when a person of the whole server is looking at it as someone else.
         if ($this->app->bound('view')) {
             $app = $this->app;

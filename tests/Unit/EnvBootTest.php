@@ -81,4 +81,12 @@ env_assert($adminNames === [
 $composer = json_decode((string) file_get_contents($root.'/composer.json'), true, 512, JSON_THROW_ON_ERROR);
 env_assert(!isset($composer['require']['larena/admin']) && isset($composer['require-dev']['larena/admin'], $composer['suggest']['larena/admin']), 'The admin is a development requirement and a suggestion.');
 
+// A page is marked by the first row whose route pattern matches it, and the sites' row matches every panel route:
+// the spaces and the overview come before it, or their pages would be named «Sites».
+$source = (string) file_get_contents($root.'/src/Navigation/ServerAdminNavigationContributor.php');
+env_assert(strpos($source, "id: 'env.people'") < strpos($source, "id: 'env.server',") && strpos($source, "id: 'env.server.overview'") < strpos($source, "id: 'env.server',"),
+    'The narrower rows come before the sites row.');
+$provider = (string) file_get_contents($root.'/src/Providers/EnvServiceProvider.php');
+env_assert(str_contains($provider, "'larena-audit.history_sources', ['prefix' => 'env.', 'label' => 'larena-env::admin.audit_activity']"), 'The panel declares its events for the change history.');
+
 echo "EnvBootTest passed.\n";

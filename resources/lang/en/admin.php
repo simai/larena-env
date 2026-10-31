@@ -4,6 +4,7 @@ return [
     // The panel's menu (assembly config/larena-product.php) and the server's overview.
     'menu' => ['sites' => 'Sites', 'journal' => 'Audit log', 'users' => 'Users', 'server' => 'Server', 'settings' => 'Panel settings'],
     'overview' => ['navigation' => 'Overview', 'title' => 'Server overview — Larena Panel', 'heading' => 'Server overview'],
+    'audit_activity' => 'Server activity',
     'navigation' => 'Sites',
     'title' => 'Sites — Larena Panel',
     'heading' => 'Sites',

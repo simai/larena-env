@@ -4,6 +4,7 @@ return [
     // The panel's menu (assembly config/larena-product.php) and the server's overview.
     'menu' => ['sites' => 'Сайты', 'journal' => 'Журнал', 'users' => 'Пользователи', 'server' => 'Сервер', 'settings' => 'Настройки панели'],
     'overview' => ['navigation' => 'Обзор', 'title' => 'Обзор сервера — Larena Panel', 'heading' => 'Обзор сервера'],
+    'audit_activity' => 'Действие на сервере',
     'navigation' => 'Сайты',
     'title' => 'Сайты — Larena Panel',
     'heading' => 'Сайты',
