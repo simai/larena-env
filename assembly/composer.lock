@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "00f426978bd7fd4708a3608e09243eff",
+    "content-hash": "7de52b1fb3eb7d6b0d0d6a70f672c15d",
     "packages": [
         {
             "name": "brick/math",
@@ -1802,12 +1802,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/simai/larena-audit.git",
-                "reference": "990889c0761bc1bf94021cce872d52612384e8dc"
+                "reference": "b862b325e0cfca098010d5b428dadc900266e17a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-audit/zipball/990889c0761bc1bf94021cce872d52612384e8dc",
-                "reference": "990889c0761bc1bf94021cce872d52612384e8dc",
+                "url": "https://api.github.com/repos/simai/larena-audit/zipball/b862b325e0cfca098010d5b428dadc900266e17a",
+                "reference": "b862b325e0cfca098010d5b428dadc900266e17a",
                 "shasum": ""
             },
             "require": {
@@ -1904,7 +1904,7 @@
                 "source": "https://github.com/simai/larena-audit/tree/main",
                 "issues": "https://github.com/simai/larena-audit/issues"
             },
-            "time": "2026-10-23T12:35:46+00:00"
+            "time": "2026-10-31T22:16:30+00:00"
         },
         {
             "name": "larena/auth",
