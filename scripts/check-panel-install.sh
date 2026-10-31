@@ -34,7 +34,10 @@ failed() {
 
 mkdir -p "$APP" "$WORK/packages/env"
 (cd "$ENV_REPO/assembly" && git ls-files -co --exclude-standard . | tar -cf - -T -) | tar -xf - -C "$APP"
-(cd "$ENV_REPO" && tar -cf - src config database resources routes composer.json module.yaml access.yaml audit.yaml LICENSE NOTICE) | tar -xf - -C "$WORK/packages/env"
+# The same parts of larena/env the release build takes (scripts/build-panel-archive.sh, ENV_PATHS), so a part the
+# release would leave out fails here too.
+eval "$(grep '^ENV_PATHS=' "$ENV_REPO/scripts/build-panel-archive.sh")"
+(cd "$ENV_REPO" && tar -cf - "${ENV_PATHS[@]}") | tar -xf - -C "$WORK/packages/env"
 git -C "$WORK/packages/env" init -q -b main && git -C "$WORK/packages/env" add -A && git -C "$WORK/packages/env" -c user.name=check -c user.email=check@example.test commit -qm check
 
 # The other packages at their workspace HEAD, on a branch main, so that dev-main names them.

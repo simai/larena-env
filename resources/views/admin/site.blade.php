@@ -138,29 +138,33 @@
                 <h2 id="env-site-operations">{{ __('larena-env::admin.operations.title') }}</h2>
                 <p>{{ __('larena-env::admin.operations.explain') }}</p>
                 @foreach ($tabOperations as $operation)
-                    <form method="post" action="{{ route('larena.env.admin.site.plan', ['domain' => $domain], false) }}" data-env-operation="{{ $operation->value }}">
+                    <form method="post" action="{{ route('larena.env.admin.site.plan', ['domain' => $domain], false) }}" class="larena-form" data-env-operation="{{ $operation->value }}">
                         @csrf
                         <input type="hidden" name="operation" value="{{ $operation->value }}">
                         <h3>{{ __('larena-env::admin.operations.'.$operation->value) }}</h3>
                         @foreach ($operation->fields() as $field)
-                            <label for="env-{{ $operation->value }}-{{ $field }}">{{ __('larena-env::admin.fields.'.$field) }}</label>
-                            @if ($field === 'email')
-                                <input type="email" id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}" required>
-                            @elseif ($field === 'php')
-                                <select id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}" required>
-                                    @foreach ($phpVersions as $version)
-                                        <option value="{{ $version }}" @if ($version === $site->php) selected @endif>{{ $version }}</option>
-                                    @endforeach
-                                </select>
-                            @else
-                                <select id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}">
-                                    <option value="">{{ __('larena-env::admin.fields.default') }}</option>
-                                    <option value="yes">{{ __('larena-env::admin.yes') }}</option>
-                                    <option value="no">{{ __('larena-env::admin.no') }}</option>
-                                </select>
-                            @endif
+                            <div class="larena-field">
+                                <label for="env-{{ $operation->value }}-{{ $field }}">{{ __('larena-env::admin.fields.'.$field) }}</label>
+                                @if ($field === 'email')
+                                    <input type="email" id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}" required>
+                                @elseif ($field === 'php')
+                                    <select id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}" required>
+                                        @foreach ($phpVersions as $version)
+                                            <option value="{{ $version }}" @if ($version === $site->php) selected @endif>{{ $version }}</option>
+                                        @endforeach
+                                    </select>
+                                @else
+                                    <select id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}">
+                                        <option value="">{{ __('larena-env::admin.fields.default') }}</option>
+                                        <option value="yes">{{ __('larena-env::admin.yes') }}</option>
+                                        <option value="no">{{ __('larena-env::admin.no') }}</option>
+                                    </select>
+                                @endif
+                            </div>
                         @endforeach
-                        <button type="submit">{{ __('larena-env::admin.operations.plan') }}</button>
+                        <div class="larena-form-actions">
+                            <button type="submit" class="larena-button">{{ __('larena-env::admin.operations.plan') }}</button>
+                        </div>
                     </form>
                 @endforeach
             </section>

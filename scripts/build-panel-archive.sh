@@ -38,7 +38,7 @@ APP="${WORK}/app"; ENV_SOURCE="${WORK}/env-source"; TOOLS="${WORK}/tools"
 mkdir -p "$APP" "$ENV_SOURCE" "$TOOLS" "$OUTPUT"
 
 # The application, and larena/env as composer's path repository (the assembly names it ../env-source).
-ENV_PATHS=(src config resources routes composer.json module.yaml access.yaml audit.yaml LICENSE NOTICE)
+ENV_PATHS=(src config database resources routes composer.json module.yaml access.yaml audit.yaml LICENSE NOTICE)
 (cd "${ENV_REPO}/assembly" && tar --exclude=./vendor --exclude=./.env -cf - .) | tar -xf - -C "$APP"
 if [[ "$DIRTY" == yes ]]; then
   (cd "$ENV_REPO" && tar -cf - "${ENV_PATHS[@]}") | tar -xf - -C "$ENV_SOURCE"
@@ -100,6 +100,13 @@ php -r '
       "php_build" => PHP_VERSION,
   ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR), "\n";
 ' "$VERSION" "$ENV_COMMIT" "$DIRTY" "$ROOT_REVISION" "$BUNDLE" >"${APP}/panel-build.json"
+
+# A package composer had to clone (a private repository has no download) keeps its history in vendor/: the release
+# carries the code, never a repository.
+find "${APP}/vendor" -mindepth 3 -maxdepth 3 -name .git -prune -exec rm -rf {} +
+if [[ -n "$(find "$APP" -name .git -prune -print)" ]]; then
+  echo "A repository in the release:" >&2; find "$APP" -name .git -prune -print >&2; exit 1
+fi
 
 # simai-env refuses special files and links that leave the release.
 if [[ -n "$(find "$APP" -type l)" ]]; then

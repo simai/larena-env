@@ -28,7 +28,7 @@
                                 @csrf
                                 <input type="hidden" name="subject" value="{{ $person['subject'] }}">
                                 <label class="larena-visually-hidden" for="env-space-{{ $loop->index }}">{{ __('larena-env::admin.people.space') }}</label>
-                                <select id="env-space-{{ $loop->index }}" name="owner">
+                                <select class="larena-relation-picker" id="env-space-{{ $loop->index }}" name="owner">
                                     <option value="">{{ __('larena-env::admin.people.no_space') }}</option>
                                     @foreach ($owners as $owner)
                                         <option value="{{ $owner }}" @if ($person['owner'] === $owner) selected @endif>{{ $owner }}</option>
@@ -37,7 +37,7 @@
                                         <option value="{{ $person['owner'] }}" selected>{{ $person['owner'] }}</option>
                                     @endif
                                 </select>
-                                <button type="submit">{{ __('larena-env::admin.people.save') }}</button>
+                                <button type="submit" class="larena-button">{{ __('larena-env::admin.people.save') }}</button>
                             </form>
                         </td>
                         <td>
@@ -45,7 +45,7 @@
                                 <form method="post" action="{{ route('larena.env.admin.people.act', [], false) }}">
                                     @csrf
                                     <input type="hidden" name="subject" value="{{ $person['subject'] }}">
-                                    <button type="submit">{{ __('larena-env::admin.people.act_as') }}</button>
+                                    <button type="submit" class="larena-button">{{ __('larena-env::admin.people.act_as') }}</button>
                                 </form>
                             @endif
                         </td>
@@ -60,13 +60,19 @@
     <section class="larena-panel larena-panel-padded" aria-labelledby="env-new-owner" data-env-new-owner-form>
         <h2 id="env-new-owner">{{ __('larena-env::admin.people.new_owner') }}</h2>
         <p>{{ __('larena-env::admin.people.new_owner_explain') }}</p>
-        <form method="post" action="{{ route('larena.env.admin.people.owners.plan', [], false) }}">
+        <form method="post" action="{{ route('larena.env.admin.people.owners.plan', [], false) }}" class="larena-form">
             @csrf
-            <label for="env-owner-name">{{ __('larena-env::admin.people.owner_name') }}</label>
-            <input type="text" id="env-owner-name" name="name" required pattern="[a-z][a-z0-9_-]{0,31}" autocomplete="off">
-            <label for="env-owner-key">{{ __('larena-env::admin.people.owner_key') }}</label>
-            <textarea id="env-owner-key" name="pubkey" rows="3"></textarea>
-            <button type="submit">{{ __('larena-env::admin.operations.plan') }}</button>
+            <div class="larena-field">
+                <label for="env-owner-name">{{ __('larena-env::admin.people.owner_name') }}</label>
+                <input type="text" id="env-owner-name" name="name" required pattern="[a-z][a-z0-9_-]{0,31}" autocomplete="off">
+            </div>
+            <div class="larena-field">
+                <label for="env-owner-key">{{ __('larena-env::admin.people.owner_key') }}</label>
+                <textarea id="env-owner-key" name="pubkey" rows="3"></textarea>
+            </div>
+            <div class="larena-form-actions">
+                <button type="submit" class="larena-button">{{ __('larena-env::admin.operations.plan') }}</button>
+            </div>
         </form>
     </section>
 @endsection

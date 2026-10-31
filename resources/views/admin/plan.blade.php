@@ -30,7 +30,7 @@
             @foreach ($hidden as $field => $value)
                 <input type="hidden" name="{{ $field }}" value="{{ $value }}">
             @endforeach
-            <button type="submit">{{ __('larena-env::admin.plan.confirm') }}</button>
+            <button type="submit" class="larena-button">{{ __('larena-env::admin.plan.confirm') }}</button>
         </form>
         <p><a href="{{ $cancelUrl }}">{{ __('larena-env::admin.plan.cancel') }}</a></p>
     </section>

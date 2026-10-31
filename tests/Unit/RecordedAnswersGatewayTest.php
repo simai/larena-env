@@ -54,4 +54,10 @@ env_assert($future->reason === 'recording_tampered', 'A set in another answer sc
 $empty = (new RecordedAnswersGateway(env_temp_directory()))->ask(new PanelRequest('r9', $admin, 'self:describe'));
 env_assert($empty->reason === 'recording_tampered', 'A folder without a manifest is refused.');
 
+// As the gateway: an owner plans a new site of any domain, and is refused making owners.
+$ownNew = $gateway->ask(PanelRequest::plan($owner, 'site:add', ['domain' => 'new.test', 'profile' => 'static']));
+env_assert($ownNew->status === PanelAnswerStatus::Ok && $ownNew->kind === 'plan', 'An owner plans a new site.');
+$ownerMakesOwner = $gateway->ask(PanelRequest::plan($owner, 'owner:create', ['name' => 'other']));
+env_assert($ownerMakesOwner->status === PanelAnswerStatus::Refused && $ownerMakesOwner->reason === 'not_allowed', 'An owner may not make owners.');
+
 echo "RecordedAnswersGatewayTest passed.\n";

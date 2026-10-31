@@ -30,7 +30,11 @@ final readonly class RecordedAnswersGateway implements PanelGateway
     {
         $owner = $request->actor->owner;
         $domain = $request->args['domain'] ?? null;
-        if ($owner !== null && $domain !== null) {
+        // As the gateway: an owner may not make owners, and a new site is always the owner's own, whatever its domain.
+        if ($owner !== null && str_starts_with($request->command, 'owner:')) {
+            return $this->replay($request, 'refused.not-allowed.json');
+        }
+        if ($owner !== null && $domain !== null && $request->command !== 'site:add') {
             $own = $this->document("self-describe.owner-{$owner}.json");
             if (is_string($own)) {
                 return $this->unavailable($request, $own);

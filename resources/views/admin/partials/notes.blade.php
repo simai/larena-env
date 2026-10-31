@@ -5,7 +5,7 @@
         <p>{{ __('larena-env::admin.acting.notice', ['person' => $acting['label'], 'owner' => $acting['owner']]) }}</p>
         <form method="post" action="{{ route('larena.env.admin.people.stop', [], false) }}">
             @csrf
-            <button type="submit">{{ __('larena-env::admin.acting.stop') }}</button>
+            <button type="submit" class="larena-button">{{ __('larena-env::admin.acting.stop') }}</button>
         </form>
     </section>
 @endif
