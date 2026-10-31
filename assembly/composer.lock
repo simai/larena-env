@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "05bede146e2778f50337055281eb8a63",
+    "content-hash": "b0c4cb5614b4fd920c84ff74b90b3359",
     "packages": [
         {
             "name": "brick/math",
@@ -1415,12 +1415,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:simai/larena-access.git",
-                "reference": "1704d76f0f0ce53fa9c462f90275aa128e4dcfc9"
+                "reference": "a2f495b0832896a1fc019012a54b881955a267c8"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-access/zipball/1704d76f0f0ce53fa9c462f90275aa128e4dcfc9",
-                "reference": "1704d76f0f0ce53fa9c462f90275aa128e4dcfc9",
+                "url": "https://api.github.com/repos/simai/larena-access/zipball/a2f495b0832896a1fc019012a54b881955a267c8",
+                "reference": "a2f495b0832896a1fc019012a54b881955a267c8",
                 "shasum": ""
             },
             "require": {
@@ -1490,9 +1490,9 @@
                     "@php tests/Unit/PersistentGlobalRoleQueryScopeProviderTest.php",
                     "@php tests/Unit/PersistentGlobalRoleQueryScopeProviderPersistentTest.php",
                     "@php tests/Unit/PersistentGlobalRoleQueryScopeProviderBindingIsolationTest.php",
-                    "@php tests/Unit/MinimalCmsDependencyContractTest.php",
-                    "@php tests/Unit/MinimalCmsOperationMatrixTest.php",
-                    "@php tests/Unit/MinimalCmsAccessBoundaryTest.php",
+                    "@php tests/Unit/DependencyContractTest.php",
+                    "@php tests/Unit/BaseOperationMatrixTest.php",
+                    "@php tests/Unit/AccessBoundaryTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/ScopeMembershipQueryScopeProviderTest.php"
                 ],
                 "test:unit": [
@@ -1516,9 +1516,9 @@
                     "@php tests/Unit/PersistentGlobalRoleQueryScopeProviderTest.php",
                     "@php tests/Unit/PersistentGlobalRoleQueryScopeProviderPersistentTest.php",
                     "@php tests/Unit/PersistentGlobalRoleQueryScopeProviderBindingIsolationTest.php",
-                    "@php tests/Unit/MinimalCmsDependencyContractTest.php",
-                    "@php tests/Unit/MinimalCmsOperationMatrixTest.php",
-                    "@php tests/Unit/MinimalCmsAccessBoundaryTest.php"
+                    "@php tests/Unit/DependencyContractTest.php",
+                    "@php tests/Unit/BaseOperationMatrixTest.php",
+                    "@php tests/Unit/AccessBoundaryTest.php"
                 ],
                 "test:global-role-query-scope": [
                     "@php tests/Unit/PersistentGlobalRoleQueryScopeProviderTest.php",
@@ -1564,11 +1564,7 @@
                 }
             ],
             "description": "Larena Access: Operation permissions, target providers, query scopes and explainable access decisions.",
-            "support": {
-                "source": "https://github.com/simai/larena-access/tree/main",
-                "issues": "https://github.com/simai/larena-access/issues"
-            },
-            "time": "2026-10-29T01:00:27+00:00"
+            "time": "2026-10-31T09:56:39+00:00"
         },
         {
             "name": "larena/admin",
@@ -1576,12 +1572,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:simai/larena-admin.git",
-                "reference": "fa8507563c092f5b82d44f77cdec0666217bb5bb"
+                "reference": "a4ffe6c5c4b121898504d95cc4a4fa800e12447a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-admin/zipball/fa8507563c092f5b82d44f77cdec0666217bb5bb",
-                "reference": "fa8507563c092f5b82d44f77cdec0666217bb5bb",
+                "url": "https://api.github.com/repos/simai/larena-admin/zipball/a4ffe6c5c4b121898504d95cc4a4fa800e12447a",
+                "reference": "a4ffe6c5c4b121898504d95cc4a4fa800e12447a",
                 "shasum": ""
             },
             "require": {
@@ -1684,7 +1680,7 @@
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Feature/AdminDataviewPageArchitectureGuardTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/JsonCollectionPageAssemblyDescriptorTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/DeclarativeAuthLoginPageRendererTest.php",
-                    "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/MinimalCmsRepresentativeFixtureCommandTest.php",
+                    "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/RepresentativeFixtureCommandTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/AdminFormPagesTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/AdminInstallerScreensTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/AdminFailsClosedTest.php",
@@ -1752,10 +1748,10 @@
                     "node --test tests/JavaScript/*.test.mjs"
                 ],
                 "test:dependency": [
-                    "@php tests/Unit/MinimalCmsDependencyContractTest.php"
+                    "@php tests/Unit/DependencyContractTest.php"
                 ],
-                "test:minimal-cms-admin": [
-                    "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/MinimalCmsGatewayTest.php"
+                "test:records-gateway": [
+                    "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/AdminRecordsGatewayTest.php"
                 ],
                 "lint": [
                     "@php scripts/lint.php"
@@ -1798,11 +1794,7 @@
                 }
             ],
             "description": "Larena Admin: Object-based, permission-aware administration platform for package contributions, screens, actions and diagnostics.",
-            "support": {
-                "source": "https://github.com/simai/larena-admin/tree/main",
-                "issues": "https://github.com/simai/larena-admin/issues"
-            },
-            "time": "2026-10-31T00:17:38+00:00"
+            "time": "2026-10-31T19:30:15+00:00"
         },
         {
             "name": "larena/audit",
@@ -1920,12 +1912,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:simai/larena-auth.git",
-                "reference": "66e8a5463f2d09d22035e3d03738b28880d60625"
+                "reference": "6d3876554a76b80634f3a58fd1a4365e54493d6a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-auth/zipball/66e8a5463f2d09d22035e3d03738b28880d60625",
-                "reference": "66e8a5463f2d09d22035e3d03738b28880d60625",
+                "url": "https://api.github.com/repos/simai/larena-auth/zipball/6d3876554a76b80634f3a58fd1a4365e54493d6a",
+                "reference": "6d3876554a76b80634f3a58fd1a4365e54493d6a",
                 "shasum": ""
             },
             "require": {
@@ -1978,13 +1970,13 @@
                 ],
                 "test": [
                     "@php -d zend.assertions=1 -d assert.exception=1 scripts/run-unit-tests.php",
-                    "@php tests/Unit/MinimalCmsDependencyContractTest.php",
-                    "@php tests/Unit/MinimalCmsAuthBoundaryTest.php"
+                    "@php tests/Unit/DependencyContractTest.php",
+                    "@php tests/Unit/AuthBoundaryTest.php"
                 ],
                 "test:unit": [
                     "@php -d zend.assertions=1 -d assert.exception=1 scripts/run-unit-tests.php",
-                    "@php tests/Unit/MinimalCmsDependencyContractTest.php",
-                    "@php tests/Unit/MinimalCmsAuthBoundaryTest.php"
+                    "@php tests/Unit/DependencyContractTest.php",
+                    "@php tests/Unit/AuthBoundaryTest.php"
                 ],
                 "test:integration": [
                     "@php -d zend.assertions=1 -d assert.exception=1 scripts/test-persistent-admin-sessions.php",
@@ -2029,11 +2021,7 @@
                 }
             ],
             "description": "Larena Auth package: entry subject resolution, authentication methods, sessions, MFA and token channel boundaries.",
-            "support": {
-                "source": "https://github.com/simai/larena-auth/tree/main",
-                "issues": "https://github.com/simai/larena-auth/issues"
-            },
-            "time": "2026-10-29T01:00:58+00:00"
+            "time": "2026-10-31T01:30:15+00:00"
         },
         {
             "name": "larena/core",
@@ -2041,12 +2029,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/simai/larena-core.git",
-                "reference": "807e5a2eb96628fbc207b37c1d994ff522a6f2de"
+                "reference": "6bdd0607b2c42dc9b63191e77c7ccafcf8e3dad0"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-core/zipball/807e5a2eb96628fbc207b37c1d994ff522a6f2de",
-                "reference": "807e5a2eb96628fbc207b37c1d994ff522a6f2de",
+                "url": "https://api.github.com/repos/simai/larena-core/zipball/6bdd0607b2c42dc9b63191e77c7ccafcf8e3dad0",
+                "reference": "6bdd0607b2c42dc9b63191e77c7ccafcf8e3dad0",
                 "shasum": ""
             },
             "require": {
@@ -2084,6 +2072,7 @@
             },
             "scripts": {
                 "test": [
+                    "@php tests/Unit/FeatureSetTest.php",
                     "@php tests/Unit/OperationRuntimeContractTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/CatalogOperationExecutionTest.php",
                     "@php tests/Unit/OperationRuntimeFailsClosedTest.php",
@@ -2110,8 +2099,8 @@
                     "@php tests/Unit/FirstRunPreflightServiceTest.php",
                     "@php tests/Unit/WebInstallStateStoreTest.php",
                     "@php tests/Unit/WebInstallCoordinatorRecoveryTest.php",
-                    "@php tests/Unit/MinimalCmsDependencyContractTest.php",
-                    "@php tests/Unit/MinimalCmsCoreBoundaryTest.php",
+                    "@php tests/Unit/DependencyContractTest.php",
+                    "@php tests/Unit/CoreBoundaryTest.php",
                     "@php tests/Unit/ScopeRefTest.php",
                     "@php tests/Unit/SchemaNameTest.php",
                     "@php tests/Unit/ScopeRegistryTest.php",
@@ -2181,8 +2170,8 @@
                     "@php tests/Unit/FirstRunPreflightServiceTest.php",
                     "@php tests/Unit/WebInstallStateStoreTest.php",
                     "@php tests/Unit/WebInstallCoordinatorRecoveryTest.php",
-                    "@php tests/Unit/MinimalCmsDependencyContractTest.php",
-                    "@php tests/Unit/MinimalCmsCoreBoundaryTest.php"
+                    "@php tests/Unit/DependencyContractTest.php",
+                    "@php tests/Unit/CoreBoundaryTest.php"
                 ],
                 "lint": [
                     "@php scripts/lint.php"
@@ -2227,7 +2216,7 @@
                 "source": "https://github.com/simai/larena-core/tree/main",
                 "issues": "https://github.com/simai/larena-core/issues"
             },
-            "time": "2026-10-30T23:16:22+00:00"
+            "time": "2026-10-31T19:18:33+00:00"
         },
         {
             "name": "larena/dataview",
@@ -2235,12 +2224,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/simai/larena-dataview.git",
-                "reference": "b1ede1d014c644984b5b1914cf8ee5b694f7b105"
+                "reference": "a7bcdb1163d7e3c2876136cbb78a994930a394bb"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-dataview/zipball/b1ede1d014c644984b5b1914cf8ee5b694f7b105",
-                "reference": "b1ede1d014c644984b5b1914cf8ee5b694f7b105",
+                "url": "https://api.github.com/repos/simai/larena-dataview/zipball/a7bcdb1163d7e3c2876136cbb78a994930a394bb",
+                "reference": "a7bcdb1163d7e3c2876136cbb78a994930a394bb",
                 "shasum": ""
             },
             "require": {
@@ -2282,7 +2271,7 @@
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/DataviewDescriptorNormalizerTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Integration/DataviewDescriptorPersistenceTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/DataviewServiceProviderTest.php",
-                    "@php tests/Unit/MinimalCmsDependencyContractTest.php",
+                    "@php tests/Unit/DependencyContractTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/RegisteredQueryBoundaryTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/RegisteredPagedSourceTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/RegisteredSearchTest.php",
@@ -2333,7 +2322,7 @@
                 "source": "https://github.com/simai/larena-dataview/tree/main",
                 "issues": "https://github.com/simai/larena-dataview/issues"
             },
-            "time": "2026-10-28T23:30:51+00:00"
+            "time": "2026-10-31T10:06:45+00:00"
         },
         {
             "name": "larena/env",
@@ -2389,10 +2378,14 @@
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/EnvBootTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/ServerScreenTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/SiteScreenTest.php",
-                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PanelOperationsTest.php"
+                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PanelOperationsTest.php",
+                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PanelActorResolverTest.php"
                 ],
                 "test:unit": [
                     "@test"
+                ],
+                "check:panel": [
+                    "bash scripts/check-panel-install.sh"
                 ],
                 "lint": [
                     "php scripts/lint.php"
@@ -2444,12 +2437,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:simai/larena-filesystem.git",
-                "reference": "2635072d9896c7771b5b47841b5d027f07197f8e"
+                "reference": "0516a162e10a02b35f872574034374e25d1398f7"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-filesystem/zipball/2635072d9896c7771b5b47841b5d027f07197f8e",
-                "reference": "2635072d9896c7771b5b47841b5d027f07197f8e",
+                "url": "https://api.github.com/repos/simai/larena-filesystem/zipball/0516a162e10a02b35f872574034374e25d1398f7",
+                "reference": "0516a162e10a02b35f872574034374e25d1398f7",
                 "shasum": ""
             },
             "require": {
@@ -2497,7 +2490,7 @@
                     "php vendor/bin/phpunit tests/Feature --colors=never",
                     "php vendor/bin/phpunit tests/Feature/FileManagerLogicalIdentityBoundaryTest.php --colors=never",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Integration/PersistentLogicalFileInspectorMySqlTest.php",
-                    "@php tests/Unit/MinimalCmsDependencyContractTest.php"
+                    "@php tests/Unit/DependencyContractTest.php"
                 ],
                 "test:persistent-inspection": [
                     "php vendor/bin/phpunit tests/Feature/PersistentLogicalFileInspectorTest.php tests/Feature/SafeFileServiceTest.php --colors=never"
@@ -2505,8 +2498,8 @@
                 "test:file-manager-identity-boundary": [
                     "php vendor/bin/phpunit tests/Feature/FileManagerLogicalIdentityBoundaryTest.php --colors=never"
                 ],
-                "test:minimal-cms-filesystem": [
-                    "php vendor/bin/phpunit tests/Feature/MinimalCmsFilesystemLifecycleTest.php tests/Feature/FileManagerLogicalIdentityBoundaryTest.php tests/Feature/PublicFileDeliveryTest.php --colors=never"
+                "test:cms-filesystem": [
+                    "php vendor/bin/phpunit tests/Feature/CmsFilesystemLifecycleTest.php tests/Feature/FileManagerLogicalIdentityBoundaryTest.php tests/Feature/PublicFileDeliveryTest.php --colors=never"
                 ],
                 "test:mysql-persistent-inspection": [
                     "LARENA_FILESYSTEM_PERSISTENT_INSPECTION_MYSQL_TEST=1 php -d zend.assertions=1 -d assert.exception=1 tests/Integration/PersistentLogicalFileInspectorMySqlTest.php"
@@ -2553,11 +2546,7 @@
                 }
             ],
             "description": "Larena Filesystem: File metadata, blob storage abstraction and safe file delivery layer used by content, storage, media, file-manager, link and search surfaces.",
-            "support": {
-                "source": "https://github.com/simai/larena-filesystem/tree/main",
-                "issues": "https://github.com/simai/larena-filesystem/issues"
-            },
-            "time": "2026-10-28T23:35:30+00:00"
+            "time": "2026-10-31T01:34:44+00:00"
         },
         {
             "name": "larena/property",
@@ -2565,12 +2554,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:simai/larena-property.git",
-                "reference": "70436cd8e7ef587b7938b3fb7b4132f7d7548991"
+                "reference": "6a8b5895d03b7c6e0492ebded943fc1410104e23"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-property/zipball/70436cd8e7ef587b7938b3fb7b4132f7d7548991",
-                "reference": "70436cd8e7ef587b7938b3fb7b4132f7d7548991",
+                "url": "https://api.github.com/repos/simai/larena-property/zipball/6a8b5895d03b7c6e0492ebded943fc1410104e23",
+                "reference": "6a8b5895d03b7c6e0492ebded943fc1410104e23",
                 "shasum": ""
             },
             "require": {
@@ -2619,13 +2608,13 @@
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PropertyPageContentTypesTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PropertyDisplayProjectorTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PropertyPresentationRegistryTest.php",
-                    "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/MinimalCmsPropertyStorageContractTest.php",
+                    "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/CmsPropertyStorageContractTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/InMemoryPropertyRuntimeTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/RegistryPropertyRuntimeTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/InMemoryPropertyRuntimeFailsClosedTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Feature/PropertyServiceProviderRegistrationTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Feature/PropertyTypeRegistryProviderTest.php",
-                    "@php tests/Unit/MinimalCmsDependencyContractTest.php"
+                    "@php tests/Unit/DependencyContractTest.php"
                 ],
                 "test:unit": [
                     "@test"
@@ -2669,11 +2658,7 @@
                 }
             ],
             "description": "Larena Property: Universal property layer for field type registry, field definitions, structured render models, validation, templates and typed value interaction across settings, admin, storage and future content models.",
-            "support": {
-                "source": "https://github.com/simai/larena-property/tree/main",
-                "issues": "https://github.com/simai/larena-property/issues"
-            },
-            "time": "2026-10-30T16:08:30+00:00"
+            "time": "2026-10-31T01:35:31+00:00"
         },
         {
             "name": "larena/setting",
@@ -2681,12 +2666,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:simai/larena-setting.git",
-                "reference": "ad04670c124bd1451c09f36f0e1dab10e253953d"
+                "reference": "6a165243fd51d3f958b3dedfe9daf40248ad0e42"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-setting/zipball/ad04670c124bd1451c09f36f0e1dab10e253953d",
-                "reference": "ad04670c124bd1451c09f36f0e1dab10e253953d",
+                "url": "https://api.github.com/repos/simai/larena-setting/zipball/6a165243fd51d3f958b3dedfe9daf40248ad0e42",
+                "reference": "6a165243fd51d3f958b3dedfe9daf40248ad0e42",
                 "shasum": ""
             },
             "require": {
@@ -2761,7 +2746,7 @@
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Feature/ViewsTransferFixturesRuntimeTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Feature/ViewsTransferRuntimeTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Integration/ViewSettingsReadCostTest.php",
-                    "@php tests/Unit/MinimalCmsDependencyContractTest.php"
+                    "@php tests/Unit/DependencyContractTest.php"
                 ],
                 "test:unit": [
                     "@test"
@@ -2805,11 +2790,7 @@
                 }
             ],
             "description": "Larena Settings: Machine-readable settings definitions, runtime value resolution, pending changes and import/export policy.",
-            "support": {
-                "source": "https://github.com/simai/larena-setting/tree/main",
-                "issues": "https://github.com/simai/larena-setting/issues"
-            },
-            "time": "2026-10-30T21:31:29+00:00"
+            "time": "2026-10-31T10:07:18+00:00"
         },
         {
             "name": "larena/ui",
@@ -2817,12 +2798,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/simai/larena-ui.git",
-                "reference": "fedf628beab96d81a63e71ba90bc7015a1643da1"
+                "reference": "9c975c230c278ae26488a3a793152f82915d7047"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-ui/zipball/fedf628beab96d81a63e71ba90bc7015a1643da1",
-                "reference": "fedf628beab96d81a63e71ba90bc7015a1643da1",
+                "url": "https://api.github.com/repos/simai/larena-ui/zipball/9c975c230c278ae26488a3a793152f82915d7047",
+                "reference": "9c975c230c278ae26488a3a793152f82915d7047",
                 "shasum": ""
             },
             "require": {
@@ -2893,9 +2874,9 @@
                     "node --test tests/JavaScript/dataview-host-lifecycle.test.mjs"
                 ],
                 "test:dependency": [
-                    "@php tests/Unit/MinimalCmsDependencyContractTest.php"
+                    "@php tests/Unit/DependencyContractTest.php"
                 ],
-                "test:minimal-cms-ui": [
+                "test:contract": [
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/InMemoryUiRuntimeTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/SmartManagerTest.php"
                 ],
@@ -2924,8 +2905,8 @@
                     "@test",
                     "@test:dataview-host",
                     "@test:composition-routing-host",
-                    "@test:minimal-cms-port-bridge",
-                    "@test:minimal-cms-composite-port",
+                    "@test:port-bridge",
+                    "@test:composite-port",
                     "@test:composition-schema",
                     "@test:composition-list",
                     "@test:dependency",
@@ -2939,11 +2920,11 @@
                 "test:composition-routing-host": [
                     "node --test tests/JavaScript/composition-routing-host.test.mjs"
                 ],
-                "test:minimal-cms-port-bridge": [
-                    "node --test tests/JavaScript/minimal-cms-port-bridge.test.mjs"
+                "test:port-bridge": [
+                    "node --test tests/JavaScript/port-bridge.test.mjs"
                 ],
-                "test:minimal-cms-composite-port": [
-                    "node --test tests/JavaScript/minimal-cms-composite-port.test.mjs"
+                "test:composite-port": [
+                    "node --test tests/JavaScript/composite-port.test.mjs"
                 ],
                 "test:composition-schema": [
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/FrameworkDocumentSchemaValidatorTest.php"
@@ -2961,10 +2942,10 @@
             ],
             "description": "Larena UI: Universal UI/frontend package for Larena smart components, backend-first rendering, hydration, design packs, UI asset graph, component registry, playground and frontend behavior contracts.",
             "support": {
-                "source": "https://github.com/simai/larena-ui/tree/main",
+                "source": "https://github.com/simai/larena-ui/tree/larena-5a2ae14a0ea0",
                 "issues": "https://github.com/simai/larena-ui/issues"
             },
-            "time": "2026-10-31T00:17:15+00:00"
+            "time": "2026-10-31T10:05:58+00:00"
         },
         {
             "name": "league/commonmark",
