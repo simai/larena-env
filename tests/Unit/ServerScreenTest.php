@@ -56,6 +56,7 @@ env_assert($overview instanceof ServerOverview, 'The recording reads.');
 
 $page = ServerSitesPage::of($overview, $text);
 env_assert($page->total === 4 && $page->rows !== null && $page->portUrl === null, 'The sites are rows in place.');
+env_assert(count($overview->withoutSites(['DEMO-php.test'])->sites) === 3 && count($overview->withoutSites([])->sites) === 4, 'The panel leaves its own site out.');
 env_assert($page->instanceId === 'env-server-sites' && $page->selectable === false && $page->rowWrites === [], 'The list writes nothing.');
 env_assert($page->rowLinks === ['view' => '/admin/server/sites/__ID__'], 'A row opens the site\'s own screen.');
 $byDomain = array_column($page->rows, null, 'id');

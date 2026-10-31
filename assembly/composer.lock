@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "1dafb14bd1dae675c110359ca25abc83",
+    "content-hash": "05bede146e2778f50337055281eb8a63",
     "packages": [
         {
             "name": "brick/math",
@@ -1576,12 +1576,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:simai/larena-admin.git",
-                "reference": "b89361e971b9b8bf24a7f50c0492046b92b12d8c"
+                "reference": "fa8507563c092f5b82d44f77cdec0666217bb5bb"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-admin/zipball/b89361e971b9b8bf24a7f50c0492046b92b12d8c",
-                "reference": "b89361e971b9b8bf24a7f50c0492046b92b12d8c",
+                "url": "https://api.github.com/repos/simai/larena-admin/zipball/fa8507563c092f5b82d44f77cdec0666217bb5bb",
+                "reference": "fa8507563c092f5b82d44f77cdec0666217bb5bb",
                 "shasum": ""
             },
             "require": {
@@ -1596,7 +1596,6 @@
                 "larena/core": "dev-main",
                 "larena/dataview": "dev-main",
                 "larena/filesystem": "dev-main",
-                "larena/layout": "dev-main",
                 "larena/property": "dev-main",
                 "larena/setting": "dev-main",
                 "larena/ui": "dev-main",
@@ -1604,6 +1603,7 @@
             },
             "require-dev": {
                 "larena/cockpit": "dev-main",
+                "larena/layout": "dev-main",
                 "larena/licensing": "dev-main",
                 "larena/link": "dev-main",
                 "larena/monitoring": "dev-main",
@@ -1615,6 +1615,7 @@
             },
             "suggest": {
                 "larena/lang": "Names the languages a site may choose from (setting site.languages). Without it the choice is the configured languages, by code.",
+                "larena/layout": "Page assembly: site blocks, the sign-in page resolved live from its recipe and the /admin/ui developer pages. Without it the admin draws the sign-in page from its prebuilt document.",
                 "larena/monitoring": "Runtime metrics of the packages: /admin/monitoring lists each declared metric with its verdict.",
                 "larena/notification": "Keeps the person's notifications: the menu counts the unread ones and /admin/notifications lists them.",
                 "larena/storage": "The Site pages screen (/admin/site/pages) reads the site's pages from Storage, and Storage brings its own Storage section (/admin/storage) into the admin. Without it the admin runs without them."
@@ -1801,7 +1802,7 @@
                 "source": "https://github.com/simai/larena-admin/tree/main",
                 "issues": "https://github.com/simai/larena-admin/issues"
             },
-            "time": "2026-10-30T16:10:48+00:00"
+            "time": "2026-10-31T00:17:38+00:00"
         },
         {
             "name": "larena/audit",
@@ -2040,12 +2041,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/simai/larena-core.git",
-                "reference": "416be8f7870766586204829c0d02008a1d4cff34"
+                "reference": "807e5a2eb96628fbc207b37c1d994ff522a6f2de"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-core/zipball/416be8f7870766586204829c0d02008a1d4cff34",
-                "reference": "416be8f7870766586204829c0d02008a1d4cff34",
+                "url": "https://api.github.com/repos/simai/larena-core/zipball/807e5a2eb96628fbc207b37c1d994ff522a6f2de",
+                "reference": "807e5a2eb96628fbc207b37c1d994ff522a6f2de",
                 "shasum": ""
             },
             "require": {
@@ -2226,7 +2227,7 @@
                 "source": "https://github.com/simai/larena-core/tree/main",
                 "issues": "https://github.com/simai/larena-core/issues"
             },
-            "time": "2026-10-30T16:07:15+00:00"
+            "time": "2026-10-30T23:16:22+00:00"
         },
         {
             "name": "larena/dataview",
@@ -2381,10 +2382,14 @@
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PanelRequestTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/RecordedAnswersGatewayTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/SshGatewayTest.php",
+                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/SudoGatewayTest.php",
+                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PanelEditionTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/ServerOverviewReaderTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/ServerAreaTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/EnvBootTest.php",
-                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/ServerScreenTest.php"
+                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/ServerScreenTest.php",
+                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/SiteScreenTest.php",
+                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PanelOperationsTest.php"
                 ],
                 "test:unit": [
                     "@test"
@@ -2555,105 +2560,6 @@
             "time": "2026-10-28T23:35:30+00:00"
         },
         {
-            "name": "larena/layout",
-            "version": "dev-main",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/simai/larena-layout.git",
-                "reference": "0ba40695b78bfae8fb7eb004b7dbf33e9780ffda"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-layout/zipball/0ba40695b78bfae8fb7eb004b7dbf33e9780ffda",
-                "reference": "0ba40695b78bfae8fb7eb004b7dbf33e9780ffda",
-                "shasum": ""
-            },
-            "require": {
-                "illuminate/database": "^13.0",
-                "illuminate/support": "^13.0",
-                "larena/core": "dev-main",
-                "php": "^8.3"
-            },
-            "require-dev": {
-                "larena/property": "dev-main",
-                "phpstan/phpstan": "^2.0"
-            },
-            "suggest": {
-                "larena/property": "The blocks of a Property content@1 value (a site page's blocks): Layout checks them against its block components (PageContentBlockValidator) and registers the check into the Property type registry. Only where Property is installed; without it Layout runs as before."
-            },
-            "default-branch": true,
-            "type": "library",
-            "extra": {
-                "laravel": {
-                    "providers": [
-                        "Larena\\Layout\\Providers\\LayoutServiceProvider"
-                    ]
-                }
-            },
-            "autoload": {
-                "psr-4": {
-                    "Larena\\Layout\\": "src/"
-                }
-            },
-            "autoload-dev": {
-                "psr-4": {
-                    "Larena\\Layout\\Tests\\": "tests/"
-                }
-            },
-            "scripts": {
-                "test": [
-                    "@php -d zend.assertions=1 -d assert.exception=1 scripts/run-unit-tests.php",
-                    "@php tests/Unit/MinimalCmsDependencyContractTest.php"
-                ],
-                "test:unit": [
-                    "@php -d zend.assertions=1 -d assert.exception=1 scripts/run-unit-tests.php",
-                    "@php tests/Unit/MinimalCmsDependencyContractTest.php"
-                ],
-                "test:minimal-cms-layout": [
-                    "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/MinimalCmsRenderPlanTest.php"
-                ],
-                "lint": [
-                    "@php scripts/lint.php"
-                ],
-                "analyse": [
-                    "@php scripts/analyse.php"
-                ],
-                "validate:larena": [
-                    "@php scripts/validate-larena-package.php"
-                ],
-                "evidence:check": [
-                    "@php scripts/check-evidence.php"
-                ],
-                "scope:check": [
-                    "@php tools/larena-scope-check.php"
-                ],
-                "quality:gate": [
-                    "@validate:larena",
-                    "@lint",
-                    "@analyse",
-                    "@test",
-                    "@evidence:check",
-                    "@scope:check"
-                ]
-            },
-            "license": [
-                "Apache-2.0"
-            ],
-            "authors": [
-                {
-                    "name": "Rim Zabarov",
-                    "homepage": "https://github.com/zabarov",
-                    "role": "Author"
-                }
-            ],
-            "description": "Larena Layout: Universal layout and page composition engine for public pages, admin pages, dashboards, forms, lists, detail pages, documentation pages and widgets in Larena.",
-            "support": {
-                "source": "https://github.com/simai/larena-layout/tree/main",
-                "issues": "https://github.com/simai/larena-layout/issues"
-            },
-            "time": "2026-10-30T00:19:20+00:00"
-        },
-        {
             "name": "larena/property",
             "version": "dev-main",
             "source": {
@@ -2775,12 +2681,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:simai/larena-setting.git",
-                "reference": "498d3900e534dc72f7aeae3231041c7e32dc720e"
+                "reference": "ad04670c124bd1451c09f36f0e1dab10e253953d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-setting/zipball/498d3900e534dc72f7aeae3231041c7e32dc720e",
-                "reference": "498d3900e534dc72f7aeae3231041c7e32dc720e",
+                "url": "https://api.github.com/repos/simai/larena-setting/zipball/ad04670c124bd1451c09f36f0e1dab10e253953d",
+                "reference": "ad04670c124bd1451c09f36f0e1dab10e253953d",
                 "shasum": ""
             },
             "require": {
@@ -2903,7 +2809,7 @@
                 "source": "https://github.com/simai/larena-setting/tree/main",
                 "issues": "https://github.com/simai/larena-setting/issues"
             },
-            "time": "2026-10-30T16:07:58+00:00"
+            "time": "2026-10-30T21:31:29+00:00"
         },
         {
             "name": "larena/ui",
@@ -2911,23 +2817,26 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/simai/larena-ui.git",
-                "reference": "001531a4c18857111426a6669309a388725b9ca0"
+                "reference": "fedf628beab96d81a63e71ba90bc7015a1643da1"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-ui/zipball/001531a4c18857111426a6669309a388725b9ca0",
-                "reference": "001531a4c18857111426a6669309a388725b9ca0",
+                "url": "https://api.github.com/repos/simai/larena-ui/zipball/fedf628beab96d81a63e71ba90bc7015a1643da1",
+                "reference": "fedf628beab96d81a63e71ba90bc7015a1643da1",
                 "shasum": ""
             },
             "require": {
                 "illuminate/console": "^13.0",
                 "larena/core": "dev-main",
                 "larena/dataview": "dev-main",
-                "larena/layout": "dev-main",
                 "php": "^8.3"
             },
             "require-dev": {
+                "larena/layout": "dev-main",
                 "phpstan/phpstan": "^2.0"
+            },
+            "suggest": {
+                "larena/layout": "Layout's recipes and page assembly name the same collection utilities as this package; nothing here needs it to run."
             },
             "default-branch": true,
             "type": "library",
@@ -3052,10 +2961,10 @@
             ],
             "description": "Larena UI: Universal UI/frontend package for Larena smart components, backend-first rendering, hydration, design packs, UI asset graph, component registry, playground and frontend behavior contracts.",
             "support": {
-                "source": "https://github.com/simai/larena-ui/tree/larena-38785a0ab850",
+                "source": "https://github.com/simai/larena-ui/tree/main",
                 "issues": "https://github.com/simai/larena-ui/issues"
             },
-            "time": "2026-10-30T04:22:15+00:00"
+            "time": "2026-10-31T00:17:15+00:00"
         },
         {
             "name": "league/commonmark",
@@ -7768,7 +7677,6 @@
         "larena/dataview": 20,
         "larena/env": 20,
         "larena/filesystem": 20,
-        "larena/layout": 20,
         "larena/property": 20,
         "larena/setting": 20,
         "larena/ui": 20

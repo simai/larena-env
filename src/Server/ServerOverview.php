@@ -28,6 +28,19 @@ final readonly class ServerOverview
     }
 
     /**
+     * The overview without the sites on these domains: the panel leaves its own site out of the sites it manages.
+     *
+     * @param list<string> $domains
+     */
+    public function withoutSites(array $domains): self
+    {
+        $domains = array_map('strtolower', $domains);
+
+        return new self($this->generatedAt, $this->envVersion, $this->osId, $this->osVersion, $this->services, $this->phpVersions,
+            array_values(array_filter($this->sites, static fn (SiteSummary $site): bool => !in_array(strtolower($site->domain), $domains, true))));
+    }
+
+    /**
      * @param array<array-key, mixed> $host
      *
      * @throws UnexpectedValueException

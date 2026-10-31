@@ -20,6 +20,7 @@ final readonly class ServerAdminController
         private Factory $views,
         private Translator $translator,
         private AdminDataviewPagePresenter $dataviews,
+        private \Illuminate\Contracts\Config\Repository $config,
     ) {
     }
 
@@ -27,15 +28,18 @@ final readonly class ServerAdminController
     {
         $result = $this->reader->read((string) $request->attributes->get('larena_access_actor', ''));
         $text = fn (string $key): string => (string) $this->translator->get('larena-env::admin.'.$key);
+        // The gateway lists every site of the server, the panel's own among it; it is reached by the address it answers on.
+        $ownHost = parse_url((string) $this->config->get('app.url'), PHP_URL_HOST);
+        $overview = $result->overview?->withoutSites(is_string($ownHost) ? [$request->getHost(), $ownHost] : [$request->getHost()]);
 
         return $this->views->make('larena-env::admin.index', [
             'source' => $result->source,
-            'overview' => $result->overview,
+            'overview' => $overview,
             'refused' => $result->refused,
             'reason' => $result->reason,
             'reasonText' => $result->reason === null ? null : $this->reasonText($result->reason),
-            'sitesView' => $result->overview === null ? null : $this->dataviews->present(
-                ServerSitesPage::of($result->overview, $text),
+            'sitesView' => $overview === null ? null : $this->dataviews->present(
+                ServerSitesPage::of($overview, $text),
                 AdminProductAssetManifest::dataviewActivation(),
             ),
         ]);

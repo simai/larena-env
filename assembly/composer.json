@@ -22,17 +22,16 @@
         "ext-tokenizer": "*",
         "laravel/framework": "^13.8",
         "larena/access": "dev-main#1704d76f0f0ce53fa9c462f90275aa128e4dcfc9",
-        "larena/admin": "dev-main#b89361e971b9b8bf24a7f50c0492046b92b12d8c",
+        "larena/admin": "dev-main#fa8507563c092f5b82d44f77cdec0666217bb5bb",
         "larena/audit": "dev-main#990889c0761bc1bf94021cce872d52612384e8dc",
         "larena/auth": "dev-main#66e8a5463f2d09d22035e3d03738b28880d60625",
-        "larena/core": "dev-main#416be8f7870766586204829c0d02008a1d4cff34",
+        "larena/core": "dev-main#807e5a2eb96628fbc207b37c1d994ff522a6f2de",
         "larena/dataview": "dev-main#b1ede1d014c644984b5b1914cf8ee5b694f7b105",
         "larena/env": "dev-main",
         "larena/filesystem": "dev-main#2635072d9896c7771b5b47841b5d027f07197f8e",
-        "larena/layout": "dev-main#0ba40695b78bfae8fb7eb004b7dbf33e9780ffda",
         "larena/property": "dev-main#70436cd8e7ef587b7938b3fb7b4132f7d7548991",
-        "larena/setting": "dev-main#498d3900e534dc72f7aeae3231041c7e32dc720e",
-        "larena/ui": "dev-main#001531a4c18857111426a6669309a388725b9ca0"
+        "larena/setting": "dev-main#ad04670c124bd1451c09f36f0e1dab10e253953d",
+        "larena/ui": "dev-main#fedf628beab96d81a63e71ba90bc7015a1643da1"
     },
     "repositories": [
         {"type": "path", "url": "../env-source", "options": {"symlink": false, "reference": "none", "versions": {"larena/env": "dev-main"}}},
@@ -43,7 +42,6 @@
         {"type": "vcs", "url": "https://github.com/simai/larena-core.git"},
         {"type": "vcs", "url": "https://github.com/simai/larena-dataview.git"},
         {"type": "vcs", "url": "https://github.com/simai/larena-filesystem.git"},
-        {"type": "vcs", "url": "https://github.com/simai/larena-layout.git"},
         {"type": "vcs", "url": "https://github.com/simai/larena-property.git"},
         {"type": "vcs", "url": "https://github.com/simai/larena-setting.git"},
         {"type": "vcs", "url": "https://github.com/simai/larena-ui.git"}
