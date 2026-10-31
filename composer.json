@@ -167,6 +167,7 @@
         "test:unit": [
             "@test"
         ],
+        "check:panel": "bash scripts/check-panel-install.sh",
         "lint": "php scripts/lint.php",
         "analyse": "php scripts/analyse.php",
         "validate:larena": "php scripts/validate-larena-package.php",

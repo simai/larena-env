@@ -53,7 +53,8 @@
         "tools/*",
         "src/Http/Support/PanelActorResolver.php",
         "src/Http/Middleware/ResolvePanelActor.php",
-        "assembly/config/larena-product.php"
+        "assembly/config/larena-product.php",
+        "scripts/check-panel-install.sh"
     ],
     "forbidden_files": [
         "../*"
