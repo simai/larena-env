@@ -29,7 +29,6 @@ final class PanelEnvironment
         'LARENA_ADMIN_CANONICAL_ENTRY_ROUTES' => 'true',
         'LARENA_ADMIN_INTERNAL_PREVIEW_ROUTES' => 'false',
         'LARENA_ADMIN_WEB_INSTALL' => 'false',
-        'LARENA_ADMIN_SITE_PAGES' => 'false',
     ];
 
     private function __construct()

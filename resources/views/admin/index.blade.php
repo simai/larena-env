@@ -1,7 +1,7 @@
 @extends('larena-admin::layouts.app')
 
-@section('title', __('larena-env::admin.title'))
-@section('heading', __('larena-env::admin.heading'))
+@section('title', $section === 'overview' ? __('larena-env::admin.overview.title') : __('larena-env::admin.title'))
+@section('heading', $section === 'overview' ? __('larena-env::admin.overview.heading') : __('larena-env::admin.heading'))
 @section('eyebrow', __('larena-env::admin.eyebrow'))
 @section('description', __('larena-env::admin.description'))
 
@@ -18,7 +18,7 @@
             <h2>{{ $refused ? __('larena-env::admin.refused_title') : __('larena-env::admin.failed_title') }}</h2>
             <p>{{ $reasonText }}</p>
         </section>
-    @else
+    @elseif ($section === 'overview')
         <section class="larena-panel larena-panel-padded" data-env-state="ok" aria-labelledby="env-server-status">
             <h2 id="env-server-status">{{ __('larena-env::admin.status.title') }}</h2>
             <dl class="larena-recipe-facts">
@@ -34,6 +34,7 @@
                 @endforeach
             </dl>
         </section>
+    @else
         @include('larena-admin::dataview.page', ['dataview' => $sitesView, 'sectionId' => 'env-server-sites', 'owner' => 'larena/env',
             'ariaLabel' => __('larena-env::admin.sites.title'), 'queryUrl' => route('larena.env.admin.index', [], false),
             'matchedCount' => count($overview->sites), 'source' => 'env_server_overview'])

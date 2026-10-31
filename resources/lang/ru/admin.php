@@ -1,11 +1,14 @@
 <?php
 
 return [
-    'navigation' => 'Сервер',
-    'title' => 'Сервер — Larena Panel',
-    'heading' => 'Сервер',
+    // The panel's menu (assembly config/larena-product.php) and the server's overview.
+    'menu' => ['sites' => 'Сайты', 'journal' => 'Журнал', 'users' => 'Пользователи', 'server' => 'Сервер', 'settings' => 'Настройки панели'],
+    'overview' => ['navigation' => 'Обзор', 'title' => 'Обзор сервера — Larena Panel', 'heading' => 'Обзор сервера'],
+    'navigation' => 'Сайты',
+    'title' => 'Сайты — Larena Panel',
+    'heading' => 'Сайты',
     'eyebrow' => 'Хостинг',
-    'description' => 'Состояние сервера и его сайты по данным simai-env.',
+    'description' => 'Сайты сервера по данным simai-env.',
     'recorded_notice' => 'Это записанные ответы для показа, а не настоящий сервер.',
     'refused_title' => 'Сервер отказал в запросе',
     'failed_title' => 'Данные сервера недоступны',
@@ -115,6 +118,7 @@ return [
         ],
     ],
     'reasons' => [
+        'owner_unmapped' => 'Вы ещё не привязаны к владельцу на этом сервере. Попросите администратора выделить вам пространство.',
         'unknown' => 'Шлюз ответил кодом :reason.',
         'unknown_job' => 'Сервер больше не знает об этом выполнении.',
         'not_running' => 'Это выполнение уже закончилось.',

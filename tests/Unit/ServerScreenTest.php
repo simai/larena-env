@@ -93,11 +93,13 @@ $factory->addNamespace('larena-admin', dirname(__DIR__).'/Support/admin-views');
 $factory->addNamespace('larena-env', dirname(__DIR__, 2).'/resources/views');
 
 $hostile = new ServerOverview('now', '1.25.0', '<img src=x onerror=alert(1)>', '24.04', [], ['8.3'], []);
-$state = static fn (array $data): string => $factory->make('larena-env::admin.index', $data + ['source' => 'ssh', 'overview' => null, 'refused' => false, 'reason' => null, 'reasonText' => null, 'sitesView' => null])->render();
+$state = static fn (array $data): string => $factory->make('larena-env::admin.index', $data + ['section' => 'sites', 'source' => 'ssh', 'overview' => null, 'refused' => false, 'reason' => null, 'reasonText' => null, 'sitesView' => null])->render();
 
-$ok = $state(['source' => 'recorded', 'overview' => $overview, 'sitesView' => ['stub' => true]]);
+$ok = $state(['section' => 'overview', 'source' => 'recorded', 'overview' => $overview]);
 env_assert(str_contains($ok, 'data-env-state="ok"') && str_contains($ok, 'data-env-source="recorded"'), 'The recorded data is marked as recorded: '.$ok);
-env_assert(str_contains($ok, 'ubuntu 24.04') && str_contains($ok, 'data-env-service="nginx"') && str_contains($ok, 'stub-dataview env-server-sites larena/env 4'), 'Status and the sites list are drawn.');
+env_assert(str_contains($ok, 'ubuntu 24.04') && str_contains($ok, 'data-env-service="nginx"') && !str_contains($ok, 'stub-dataview'), 'The overview draws the status, not the sites.');
+$sites = $state(['source' => 'recorded', 'overview' => $overview, 'sitesView' => ['stub' => true]]);
+env_assert(str_contains($sites, 'stub-dataview env-server-sites larena/env 4') && !str_contains($sites, 'data-env-service'), 'The sites screen draws the sites, not the server\'s status.');
 
 $live = $state(['overview' => $overview, 'sitesView' => ['stub' => true]]);
 env_assert(!str_contains($live, 'data-env-source'), 'A live server has no such notice.');
@@ -109,7 +111,7 @@ env_assert(!str_contains($refused, 'stub-dataview'), 'A refusal shows no list.')
 $failed = $state(['reason' => 'gateway_not_configured', 'reasonText' => 'Not configured.']);
 env_assert(str_contains($failed, 'data-env-state="failed"') && str_contains($failed, 'data is unavailable') && str_contains($failed, 'Not configured.'), 'A failure shows its reason: '.$failed);
 
-$escaped = $state(['overview' => $hostile, 'sitesView' => ['stub' => true]]);
+$escaped = $state(['section' => 'overview', 'overview' => $hostile]);
 env_assert(!str_contains($escaped, '<img') && str_contains($escaped, '&lt;img'), 'What the server says is escaped.');
 
 $source = (string) file_get_contents(dirname(__DIR__, 2).'/resources/views/admin/index.blade.php');

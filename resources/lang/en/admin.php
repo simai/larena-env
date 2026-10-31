@@ -1,11 +1,14 @@
 <?php
 
 return [
-    'navigation' => 'Server',
-    'title' => 'Server — Larena Panel',
-    'heading' => 'Server',
+    // The panel's menu (assembly config/larena-product.php) and the server's overview.
+    'menu' => ['sites' => 'Sites', 'journal' => 'Audit log', 'users' => 'Users', 'server' => 'Server', 'settings' => 'Panel settings'],
+    'overview' => ['navigation' => 'Overview', 'title' => 'Server overview — Larena Panel', 'heading' => 'Server overview'],
+    'navigation' => 'Sites',
+    'title' => 'Sites — Larena Panel',
+    'heading' => 'Sites',
     'eyebrow' => 'Hosting',
-    'description' => 'The server\'s status and its sites, as simai-env reports them.',
+    'description' => 'The server\'s sites, as simai-env reports them.',
     'recorded_notice' => 'These are recorded answers for demonstration, not a live server.',
     'refused_title' => 'The server refused this request',
     'failed_title' => 'The server\'s data is unavailable',
@@ -115,6 +118,7 @@ return [
         ],
     ],
     'reasons' => [
+        'owner_unmapped' => 'You are not tied to an owner of this server yet. Ask an administrator to give you your space.',
         'unknown' => 'The gateway answered with the code :reason.',
         'unknown_job' => 'The server does not know this job any more.',
         'not_running' => 'This job has already finished.',

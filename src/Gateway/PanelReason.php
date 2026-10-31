@@ -12,6 +12,8 @@ namespace Larena\Env\Gateway;
 final class PanelReason
 {
     public const string BAD_ACTOR = 'bad_actor';
+    /** A person at the user level who is not tied to an owner of the server yet. */
+    public const string OWNER_UNMAPPED = 'owner_unmapped';
     public const string BAD_REQUEST = 'bad_request';
     public const string INVALID_ARGUMENT = 'invalid_argument';
     public const string NOT_ALLOWED = 'not_allowed';

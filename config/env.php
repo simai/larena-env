@@ -32,6 +32,8 @@ return [
     'admin' => [
         'enabled' => true,
         'prefix' => 'admin/server',
-        'middleware' => ['web', 'larena-auth.entry', 'larena-auth.admin-required', 'larena-admin.locale', 'access:env.server.read'],
+        // Both levels reach their sites (env.sites.read); every screen asks the gateway as the person's level.
+        'middleware' => ['web', 'larena-auth.entry', 'larena-auth.admin-required', 'larena-admin.locale', 'access:env.sites.read',
+            \Larena\Env\Http\Middleware\ResolvePanelActor::class],
     ],
 ];

@@ -31,17 +31,24 @@ env_assert($without['operation_owner'] === 'larena/env', 'The right is declared 
 
 $with = env_boot('with');
 env_assert($with['admin_loadable'] === true, 'The admin must be installed for development.');
-env_assert($with['navigation'] === ['env.server'] && $with['navigation_valid'] === [true], 'With the admin there is one valid menu entry.');
-env_assert(array_keys($with['routes']) === ['larena.env.admin.index', 'larena.env.admin.site', 'larena.env.admin.job',
+$navigation = $with['navigation'];
+sort($navigation);
+env_assert($navigation === ['env.server', 'env.server.overview'] && $with['navigation_valid'] === [true, true], 'With the admin the sites and the overview are valid menu entries.');
+env_assert(array_keys($with['routes']) === ['larena.env.admin.index', 'larena.env.admin.overview', 'larena.env.admin.site', 'larena.env.admin.job',
     'larena.env.admin.site.plan', 'larena.env.admin.site.run', 'larena.env.admin.job.cancel'], 'The screens of the panel: '.implode(', ', array_keys($with['routes'])));
-env_assert($with['routes']['larena.env.admin.index']['uri'] === 'admin/server', 'The server screen keeps its address.');
+env_assert($with['routes']['larena.env.admin.index']['uri'] === 'admin/server', 'The sites keep their address.');
+env_assert($with['routes']['larena.env.admin.overview']['uri'] === 'admin/server/overview', 'The server\'s overview has its own address.');
 foreach ($with['routes'] as $name => $route) {
-    foreach (['web', 'larena-auth.entry', 'larena-auth.admin-required', 'larena-admin.locale', 'access:env.server.read'] as $middleware) {
+    // Both levels reach their sites; every screen asks the gateway as the person's level.
+    foreach (['web', 'larena-auth.entry', 'larena-auth.admin-required', 'larena-admin.locale', 'access:env.sites.read',
+        \Larena\Env\Http\Middleware\ResolvePanelActor::class] as $middleware) {
         env_assert(in_array($middleware, $route['middleware'], true), "{$name} lost {$middleware}.");
     }
-    // Changing the server is a right of its own, and only the three addresses that change it ask for it.
+    // Changing a site is a right of its own, and only the three addresses that change it ask for it.
     $changes = str_ends_with($name, '.plan') || str_ends_with($name, '.run') || str_ends_with($name, '.cancel');
-    env_assert(in_array('access:env.server.operate', $route['middleware'], true) === $changes, "{$name} asks for the wrong right.");
+    env_assert(in_array('access:env.sites.operate', $route['middleware'], true) === $changes, "{$name} asks for the wrong right.");
+    // The server's overview is the system level's.
+    env_assert(in_array('access:env.server.read', $route['middleware'], true) === ($name === 'larena.env.admin.overview'), "{$name} asks for the wrong level.");
 }
 env_assert($with['commands'] === [RegisterServerAreaCommand::class] && $with['sites'] === 4, 'The rest does not change.');
 

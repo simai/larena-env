@@ -94,6 +94,27 @@ final class EnvServiceProvider extends ServiceProvider
             auditDenials: true,
         ));
 
-        return $read && $operate;
+        // The sites a person reaches at either level (owner decision 2026-10-31): the whole server's, or an owner's,
+        // which the gateway narrows to.
+        $sitesRead = $registry->register(new AccessOperationDescriptor(
+            code: 'env.sites.read',
+            ownerPackage: 'larena/env',
+            labelKey: 'larena-env::operations.sites_read',
+            target: 'env.sites:own',
+            requiredGrant: 'read',
+            risk: 'normal',
+            auditDenials: true,
+        ));
+        $sitesOperate = $registry->register(new AccessOperationDescriptor(
+            code: 'env.sites.operate',
+            ownerPackage: 'larena/env',
+            labelKey: 'larena-env::operations.sites_operate',
+            target: 'env.sites:own',
+            requiredGrant: 'write',
+            risk: 'high',
+            auditDenials: true,
+        ));
+
+        return $read && $operate && $sitesRead && $sitesOperate;
     }
 }

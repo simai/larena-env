@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- The panel's two levels (owner decision 2026-10-31): `env.sites.read` and `env.sites.operate` reach a person's sites,
+  `env.server.read` stays the whole server's. Every screen asks the gateway through `ResolvePanelActor`: the system level as
+  the whole server, anyone else only as an owner, refused (`owner_unmapped`) until people are tied to owners. The server's
+  status and services move to their own screen, /admin/server/overview; /admin/server is the sites.
+- The assembly is a product (config/larena-product.php): no optional admin feature, and the menu Сайты, Журнал,
+  Пользователи, Сервер (Обзор, sign-in diagnostics) and Настройки панели (general settings, backgrounds).
 - The assembly has no larena/layout: the sign-in page draws from admin's prebuilt document. The first run speaks of the
   panel and asks no site name; the panel leaves its own site out of the list; /admin/ui is gone from production.
 - Skeleton of the package: the panel gateway contract with recorded answers and SSH drivers (simai-panel-request/1), the

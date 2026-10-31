@@ -50,7 +50,10 @@
         "scripts/*",
         "src/*",
         "tests/*",
-        "tools/*"
+        "tools/*",
+        "src/Http/Support/PanelActorResolver.php",
+        "src/Http/Middleware/ResolvePanelActor.php",
+        "assembly/config/larena-product.php"
     ],
     "forbidden_files": [
         "../*"

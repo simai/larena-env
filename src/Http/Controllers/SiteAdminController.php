@@ -8,6 +8,7 @@ use Illuminate\Contracts\Translation\Translator;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Operations\PanelOperations;
 use Larena\Env\Operations\SiteOperation;
 use Larena\Env\Server\SiteDetailsReader;
@@ -32,9 +33,10 @@ final readonly class SiteAdminController
 
     public function show(Request $request, string $domain): mixed
     {
-        $result = $this->sites->read(self::actor($request), null, $domain);
+        [$user, $owner] = ResolvePanelActor::of($request);
+        $result = $this->sites->read($user, $owner, $domain);
         $kind = in_array($request->query('log'), self::LOG_KINDS, true) ? (string) $request->query('log') : 'access';
-        $log = $result->site === null ? null : $this->sites->log(self::actor($request), null, $domain, $kind, self::LOG_LINES);
+        $log = $result->site === null ? null : $this->sites->log($user, $owner, $domain, $kind, self::LOG_LINES);
 
         return $this->views->make('larena-env::admin.site', [
             'domain' => $domain,
@@ -54,12 +56,13 @@ final readonly class SiteAdminController
     /** What the action would do, with a confirmation that starts it and nothing else. */
     public function plan(Request $request, string $domain): mixed
     {
+        [$user, $owner] = ResolvePanelActor::of($request);
         $operation = SiteOperation::tryFrom((string) $request->input('operation'));
         if ($operation === null) {
             return $this->back($domain, 'not_allowed');
         }
         $input = self::input($request, $operation);
-        $result = $this->operations->plan(self::actor($request), null, $operation, $domain, $input);
+        $result = $this->operations->plan($user, $owner, $operation, $domain, $input);
         if ($result->plan === null) {
             return $this->back($domain, $result->reason ?? 'answer_shape_invalid');
         }
@@ -76,11 +79,12 @@ final readonly class SiteAdminController
     /** The confirmation itself: the gateway starts the action and the screen follows the job it answers. */
     public function run(Request $request, string $domain): RedirectResponse
     {
+        [$user, $owner] = ResolvePanelActor::of($request);
         $operation = SiteOperation::tryFrom((string) $request->input('operation'));
         if ($operation === null) {
             return $this->back($domain, 'not_allowed');
         }
-        $started = $this->operations->start(self::actor($request), null, $operation, $domain, self::input($request, $operation));
+        $started = $this->operations->start($user, $owner, $operation, $domain, self::input($request, $operation));
         if ($started->jobId === null) {
             return $this->back($domain, $started->reason ?? 'answer_shape_invalid');
         }
@@ -106,10 +110,6 @@ final readonly class SiteAdminController
         return $input;
     }
 
-    private static function actor(Request $request): string
-    {
-        return (string) $request->attributes->get('larena_access_actor', '');
-    }
 
     private function back(string $domain, string $reason): RedirectResponse
     {
