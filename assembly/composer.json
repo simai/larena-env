@@ -22,7 +22,7 @@
         "ext-tokenizer": "*",
         "laravel/framework": "^13.8",
         "larena/access": "dev-main#17f2163c91dc32c7b17c5e3fcccb568f9609223d",
-        "larena/admin": "dev-main#a4ffe6c5c4b121898504d95cc4a4fa800e12447a",
+        "larena/admin": "dev-main#2ec6a166de738879ea76295ef166ae1516c3fdb4",
         "larena/audit": "dev-main#b862b325e0cfca098010d5b428dadc900266e17a",
         "larena/auth": "dev-main#6d3876554a76b80634f3a58fd1a4365e54493d6a",
         "larena/core": "dev-main#6bdd0607b2c42dc9b63191e77c7ccafcf8e3dad0",

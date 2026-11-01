@@ -192,15 +192,18 @@ assert 'data-env-plan="site:add"' in planned, "a new site is planned"
 for tab in ("overview", "domains", "php", "database", "backups", "releases", "log", "access"):
     status, card = get("/admin/server/sites/demo-php.test?tab=" + tab)
     assert status == 200 and 'data-env-tab="' + tab + '"' in card, ("tab", tab)
-    # The recorded server (simai-env 1.26.1, no list of its own) has no restore, SFTP or php.ini commands: none is offered.
-    for hiddenAction in ("backup-restore", "sftp-create", "php-setting", "database-password"):
-        assert 'data-env-operation="' + hiddenAction + '"' not in card, ("not offered", hiddenAction)
+    # The recorded server (simai-env 1.28.0) lists its commands: SFTP is not among them, so it is never offered.
+    assert 'data-env-operation="sftp-create"' not in card, ("not offered", "sftp-create")
+    # Its own tab offers what 1.28.0 does: restoring the database, unpacking files, php.ini, a new database password.
+    for shownAction, onTab in (("backup-restore-database", "backups"), ("backup-extract-files", "backups"), ("php-setting", "php"), ("database-password", "database")):
+        if tab == onTab:
+            assert 'data-env-operation="' + shownAction + '"' in card, ("offered", shownAction)
 _, logged = get("/admin/server/sites/demo-static.test?tab=log&q=curl&group=2xx&lines=500")
 assert "data-env-log-rows" in logged and 'data-env-log-row="200"' in logged, "the log narrows"
 _, overview = get("/admin/server")
 assert "HTTP 200" in overview, "a site that answers says so"
 _, spaces = get("/admin/server/people")
-assert 'data-env-owner="demo"' in spaces and 'name="action" value="block"' not in spaces, "no blocking on a server without it" 
+assert 'data-env-owner="demo"' in spaces and 'name="action" value="block"' in spaces, "a space can be blocked on a server that has it (1.27.0)"
 
 # The person signs in: their space only, no system screen.
 jar.clear()

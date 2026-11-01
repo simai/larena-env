@@ -40,12 +40,13 @@ final readonly class SiteDetailsReader
     }
 
     /** The last lines of the site's nginx log; `kind` is `access` or `error`, as the gateway names them. */
-    public function log(PanelActor $actor, string $domain, string $kind, int $lines = 200): NginxLogResult
+    /** With $match the server searches its last 20000 lines for that fixed string (simai-env 1.28.0). */
+    public function log(PanelActor $actor, string $domain, string $kind, int $lines = 200, ?string $match = null): NginxLogResult
     {
         $source = $this->gateway->source();
         try {
             $answer = $this->gateway->ask(PanelRequest::read($actor, 'logs:nginx',
-                ['domain' => $domain, 'kind' => $kind, 'lines' => (string) $lines]));
+                ['domain' => $domain, 'kind' => $kind, 'lines' => (string) $lines] + ($match === null ? [] : ['match' => $match])));
         } catch (PanelRefused $refused) {
             return new NginxLogResult($source, null, $refused->reasonCode, true);
         }

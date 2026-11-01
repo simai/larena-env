@@ -28,7 +28,7 @@ env_assert(PanelCommands::kind('site:describe') === PanelCommands::READ, 'A read
 env_assert(PanelCommands::kind('backup:data') === PanelCommands::ACTION, 'An action.');
 env_assert(PanelCommands::kind('job:status') === PanelCommands::JOB, 'A job command.');
 env_assert(PanelCommands::kind('site:remove') === null && PanelCommands::kind('self:bootstrap') === null, 'Commands this package may not send.');
-env_assert(count(PanelCommands::actions()) === 24, 'The card\'s actions, a new site, and creating, blocking and unblocking an owner.');
+env_assert(count(PanelCommands::actions()) === 23, 'The card\'s actions, a new site, and creating, blocking and unblocking an owner.');
 
 // Only an action is ever confirmed.
 $refusedConfirm = null;
@@ -79,7 +79,8 @@ env_assert($site instanceof SiteDetails, 'The site reads.');
 $capabilities = (new \Larena\Env\Server\ServerOverviewReader($gateway))->read(new PanelActor($user))->overview?->capabilities;
 env_assert($capabilities instanceof \Larena\Env\Gateway\PanelCapabilities, 'The server says what its gateway has.');
 $offered = array_map(static fn (SiteOperation $operation): string => $operation->value, SiteOperation::offeredFor($site, $capabilities));
-env_assert($offered === ['certificate-issue', 'backup', 'php-version'], 'Without a certificate, a previous release, workers or a service: '.implode(',', $offered));
+env_assert($offered === ['certificate-issue', 'backup', 'backup-restore-database', 'backup-extract-files', 'backup-verify', 'backup-schedule', 'php-version',
+    'php-setting', 'php-setting-remove', 'database-password', 'database-export'], 'Without a certificate, a previous release, workers or a service; with 1.28.0\'s backups, php.ini and database: '.implode(',', $offered));
 env_assert(SiteOperation::offeredFor($site) === [], 'Without knowing the server, nothing is offered.');
 
 // What no simai-env release has yet is offered only when the server lists it among its gateway's commands.
@@ -89,7 +90,7 @@ env_assert(\Larena\Env\Gateway\PanelCapabilities::fromHostDescription(['simai_en
 $listed = \Larena\Env\Gateway\PanelCapabilities::fromHostDescription(['simai_env' => ['version' => '1.27.0'], 'gate' => ['commands' => ['site:describe', 'backup:data', 'backup:data-restore', 'site:db-rotate']]]);
 env_assert($listed->allows('backup:data-restore') && !$listed->allows('site:set-php') && !$listed->allows('site:remove'), 'The server\'s own list wins, and only for commands this panel knows.');
 $withRestore = array_map(static fn (SiteOperation $operation): string => $operation->value, SiteOperation::offeredFor($site, $listed));
-env_assert($withRestore === ['backup', 'backup-restore', 'database-password'], 'A listed command appears where the site suits it: '.implode(',', $withRestore));
+env_assert($withRestore === ['backup', 'backup-restore-database', 'backup-extract-files', 'database-password', 'database-export'], 'A listed command appears where the site suits it: '.implode(',', $withRestore));
 
 // SFTP access names its account; a site's own new access names the site.
 env_assert(SiteOperation::SftpDisable->arguments('demo-php.test', ['login' => 'dev']) === ['login' => 'dev'], 'An account\'s own action does not send the site.');

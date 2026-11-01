@@ -67,7 +67,7 @@ $site = $result->site;
 env_assert($site instanceof SiteDetails && $result->reason === null, 'The site reads.');
 env_assert($site->profile === 'generic' && $site->php === '8.3' && $site->ssl === 'none' && $site->databaseEngine === 'mysql', 'What it runs on.');
 env_assert($site->certificate === null && $site->backupSchedule === null && $site->release === null, 'No certificate, no daily backup, no release.');
-env_assert(count($site->backups) === 1 && $site->backups[0]->name === '20261031-213210' && $site->backups[0]->sizeBytes === 4345, 'A backup is named by its own name, not its path.');
+env_assert(count($site->backups) === 1 && $site->backups[0]->name === '20261101-001500' && $site->backups[0]->sizeBytes === 4346, 'A backup is named by its own name, not its path.');
 env_assert($site->answersChecked && $site->diskBytes !== null, 'Whether it answers and its disk (simai-env 1.27.0).');
 env_assert($site->backups[0]->parts === ['config', 'db', 'files'] && $site->backups[0]->encrypted === false, 'What the backup holds.');
 $typed = serialize($site);
@@ -112,12 +112,14 @@ env_assert(str_contains($ok, 'data-env-answers="') && str_contains($ok, 'data-en
 env_assert(substr_count($ok, 'data-env-tab=') === 8 && preg_match('/data-env-tab="overview"\s+aria-current="page"/', $ok) === 1, 'The eight tabs, the current one marked.');
 
 // Backups have their tab: the list, «Back up now», and restoring and checking only where the server has them.
-$backups = $screen(['site' => $site, 'tab' => 'backups', 'tabOperations' => $onTab('backups')]);
-env_assert(str_contains($backups, 'data-env-backup="20261031-213210"') && str_contains($backups, '4.2 KB') && str_contains($backups, 'data-env-operation="backup"'), 'The backups and «Back up now».');
-env_assert(!str_contains($backups, 'data-env-operation="backup-restore"'), 'No restore while the server\'s gateway has none.');
-$more = \Larena\Env\Gateway\PanelCapabilities::fromHostDescription(['simai_env' => ['version' => '1.27.0'], 'gate' => ['commands' => ['backup:data', 'backup:data-restore', 'backup:data-schedule', 'site:db-rotate', 'site:db-export', 'site:php-ini-set', 'access:create-project', 'access:disable']]]);
+$older = \Larena\Env\Gateway\PanelCapabilities::fromHostDescription(['simai_env' => ['version' => '1.27.0']]);
+$backups = $screen(['site' => $site, 'tab' => 'backups', 'tabOperations' => $onTab('backups', $older)]);
+env_assert(str_contains($backups, 'data-env-backup="20261101-001500"') && str_contains($backups, '4.2 KB') && str_contains($backups, 'data-env-operation="backup"'), 'The backups and «Back up now».');
+env_assert(!str_contains($backups, 'data-env-operation="backup-restore-database"'), 'No restore while the server\'s gateway has none.');
+$more = \Larena\Env\Gateway\PanelCapabilities::fromHostDescription(['simai_env' => ['version' => '1.27.0'], 'gate' => ['commands' => ['backup:data', 'backup:data-restore', 'backup:data-schedule', 'site:db-rotate', 'site:php-ini-set', 'access:create-project', 'access:disable']]]);
 $restore = $screen(['site' => $site, 'tab' => 'backups', 'tabOperations' => $onTab('backups', $more)]);
-env_assert(str_contains($restore, 'data-env-operation="backup-restore"') && str_contains($restore, '<option value="20261031-213210">') && str_contains($restore, 'data-env-restore-note'), 'Restoring chooses a backup and says a copy is taken first.');
+env_assert(str_contains($restore, 'data-env-operation="backup-restore-database"') && str_contains($restore, 'data-env-operation="backup-extract-files"')
+    && str_contains($restore, '<option value="20261101-001500">') && str_contains($restore, 'data-env-restore-note'), 'Restoring chooses a backup and says a copy is taken first.');
 env_assert(str_contains($restore, 'data-env-operation="backup-schedule"') && str_contains($restore, 'type="time"'), 'The daily backup, at a time of day.');
 
 // The database: its engine, its actions where the server has them, and never a password.
@@ -138,11 +140,20 @@ env_assert(!str_contains($ok, 'data-env-log=') && !str_contains($ok, 'data-env-o
 $domains = $screen(['site' => $site, 'tab' => 'domains', 'tabOperations' => $onTab('domains')]);
 env_assert(str_contains($domains, 'data-env-certificate="none"') && str_contains($domains, 'data-env-operation="certificate-issue"')
     && !str_contains($domains, 'data-env-operation="certificate-renew"'), 'A site without a certificate says so and offers to get one, not to renew.');
-$php = $screen(['site' => $site, 'tab' => 'php', 'tabOperations' => $onTab('php'),
+$php = $screen(['site' => $site, 'tab' => 'php', 'tabOperations' => $onTab('php', $older),
     'phpSettings' => [\Larena\Env\Server\PhpSetting::fromData(['key' => 'memory_limit', 'value' => '256M', 'source' => 'site'])],
     'phpExtensions' => [\Larena\Env\Server\PhpExtension::fromData(['name' => 'intl', 'enabled' => true])]]);
 env_assert(str_contains($php, 'data-env-php-setting="memory_limit"') && str_contains($php, 'data-env-php-extension="intl"'), 'PHP settings and extensions, when the server reports them.');
 env_assert(!str_contains($php, 'data-env-operation="php-setting"'), 'Changing a setting only where the server allows it.');
+$phpNow = $screen(['site' => $site, 'tab' => 'php', 'tabOperations' => $onTab('php', $more)]);
+env_assert(str_contains($phpNow, 'data-env-operation="php-setting"') && str_contains($phpNow, 'name="name"') && !str_contains($phpNow, 'name="key"'),
+    'A php.ini setting is sent as the gateway names it (`name`, simai-env 1.28.0).');
+env_assert(SiteOperation::BackupSchedule->arguments('demo-php.test', ['enabled' => 'yes', 'time' => '03:00', 'keep' => '7'])
+    === ['domain' => 'demo-php.test', 'enabled' => 'yes', 'time' => '03:00', 'keep' => '7'], 'The daily backup is `enabled`, as the gateway names it.');
+env_assert(SiteOperation::BackupRestoreDatabase->arguments('demo-php.test', ['backup' => 'b1', 'files' => 'yes'])
+    === ['domain' => 'demo-php.test', 'db' => 'yes', 'files' => 'no', 'backup' => 'b1'], 'Restoring the database never touches the files.');
+env_assert(SiteOperation::DatabaseExport->command() === 'backup:data' && SiteOperation::DatabaseExport->arguments('demo-php.test', [])
+    === ['domain' => 'demo-php.test', 'db' => 'yes', 'files' => 'no'], 'A database dump is a backup without the files.');
 env_assert(str_contains($php, 'data-env-operation="php-version"') && preg_match('/<option value="8\.3"\s+selected\s*>/', $php) === 1, 'PHP offers the server\'s versions, the current one chosen.');
 env_assert(!str_contains($php, 'data-env-operation="queue-restart"'), 'And nothing the site cannot be asked for.');
 $logged = $screen(['site' => $site, 'tab' => 'log', 'log' => \Larena\Env\Server\SiteLogView::of($log->log)]);

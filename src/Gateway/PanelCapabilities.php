@@ -31,6 +31,15 @@ final readonly class PanelCapabilities
         return new self('0', []);
     }
 
+    /**
+     * Whether the server searches a log itself (`match` of logs:nginx, simai-env 1.28.0, the release that also began
+     * to list its gateway's commands).
+     */
+    public function searchesLogs(): bool
+    {
+        return $this->listed !== null || version_compare($this->envVersion, '1.28.0', '>=');
+    }
+
     public function allows(string $command): bool
     {
         if (PanelCommands::kind($command) === null) {

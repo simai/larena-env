@@ -60,7 +60,9 @@ final readonly class SiteAdminController
         $overview = $site === null ? null : $this->overviews->read($actor)->overview;
         $capabilities = $overview->capabilities ?? PanelCapabilities::none();
         // Each tab asks the gateway only for what it shows.
-        $log = $site === null || $tab !== 'log' ? null : $this->sites->log($actor, $domain, $kind, $lines);
+        // A search goes to the server, which looks through far more lines than are shown, when its release can.
+        $match = $search !== '' && preg_match('/\A[ -~]{1,200}\z/D', $search) === 1 && $capabilities->searchesLogs() ? $search : null;
+        $log = $site === null || $tab !== 'log' ? null : $this->sites->log($actor, $domain, $kind, $lines, $match);
         $doctor = $site === null || $tab !== 'overview' ? null : $this->sites->doctor($actor, $domain);
         $operations = $site === null ? [] : SiteOperation::offeredFor($site, $capabilities);
         $ask = static fn (string $command, string $onTab): bool => $site !== null && $tab === $onTab && $capabilities->allows($command);

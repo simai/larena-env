@@ -59,6 +59,10 @@ final readonly class RecordedAnswersGateway implements PanelGateway
     private function fileFor(PanelRequest $request, ?string $domain): string
     {
         $name = str_replace(':', '-', $request->command);
+        // A searched log is recorded once, for the search the recording made.
+        if ($request->command === 'logs:nginx' && isset($request->args['match'])) {
+            return 'logs-nginx.match.json';
+        }
         // An action is recorded twice: what it would do, and the start of the one job the recording holds.
         if (PanelCommands::kind($request->command) === PanelCommands::ACTION) {
             return $request->confirm ? 'job-start.json' : "plan.{$name}.json";

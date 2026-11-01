@@ -37,6 +37,8 @@ final class PanelCommands
     private const string INI_KEY = '/\A[a-z][a-z0-9_.]{0,63}\z/D';
     private const string INI_VALUE = '/\A[A-Za-z0-9 ._:\/+-]{0,128}\z/D';
     private const string LOGIN = '/\A[a-z][a-z0-9_-]{0,31}\z/D';
+    // A fixed string the log's lines are searched for: printable ASCII, up to 200 characters (simai-env 1.28.0).
+    private const string MATCH = '/\A[ -~]{1,200}\z/D';
 
     /**
      * `since`: the first simai-env release whose gateway allows the command; null for one no release has yet.
@@ -49,7 +51,7 @@ final class PanelCommands
         'site:describe' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => '1.20.0', 'kind' => self::READ],
         'site:doctor' => ['args' => ['domain' => self::DOMAIN, 'strict' => self::YES_NO, 'include-target' => self::YES_NO],
             'required' => ['domain'], 'since' => '1.20.0', 'kind' => self::READ],
-        'logs:nginx' => ['args' => ['domain' => self::DOMAIN, 'kind' => self::LOG_KIND, 'lines' => self::LINES],
+        'logs:nginx' => ['args' => ['domain' => self::DOMAIN, 'kind' => self::LOG_KIND, 'lines' => self::LINES, 'match' => self::MATCH],
             'required' => ['domain'], 'since' => '1.21.0', 'kind' => self::READ],
         // Actions of the certificates, backups, releases and services screens (simai-env 1.21.0).
         'ssl:letsencrypt' => ['args' => ['domain' => self::DOMAIN, 'email' => self::EMAIL, 'redirect' => self::YES_NO,
@@ -70,19 +72,20 @@ final class PanelCommands
         'owner:block' => ['args' => ['name' => self::OWNER], 'required' => ['name'], 'since' => '1.27.0', 'kind' => self::ACTION],
         'owner:unblock' => ['args' => ['name' => self::OWNER], 'required' => ['name'], 'since' => '1.27.0', 'kind' => self::ACTION],
         'site:db-create' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => '1.22.0', 'kind' => self::ACTION],
-        // Panel plan stage 3, asked of simai-env: no release has them yet ('since' null), so they are offered only when
-        // the server lists them among its gateway's commands.
+        // Panel plan stage 3 (simai-env 1.28.0): restore, check and schedule backups, PHP's extensions and php.ini, the
+        // server's load (administrator only), the databases and a new database password.
         'backup:data-restore' => ['args' => ['domain' => self::DOMAIN, 'backup' => self::BACKUP, 'db' => self::YES_NO, 'files' => self::YES_NO],
-            'required' => ['domain', 'backup'], 'since' => null, 'kind' => self::ACTION],
-        'backup:data-schedule' => ['args' => ['domain' => self::DOMAIN, 'time' => self::TIME, 'keep' => self::KEEP, 'enable' => self::YES_NO],
-            'required' => ['domain', 'enable'], 'since' => null, 'kind' => self::ACTION],
-        'backup:data-verify' => ['args' => ['domain' => self::DOMAIN, 'backup' => self::BACKUP], 'required' => ['domain', 'backup'], 'since' => null, 'kind' => self::ACTION],
-        'php:extensions' => ['args' => ['php' => self::PHP], 'required' => ['php'], 'since' => null, 'kind' => self::READ],
-        'site:php-ini-list' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => null, 'kind' => self::READ],
-        'site:php-ini-set' => ['args' => ['domain' => self::DOMAIN, 'key' => self::INI_KEY, 'value' => self::INI_VALUE],
-            'required' => ['domain', 'key', 'value'], 'since' => null, 'kind' => self::ACTION],
-        'site:php-ini-unset' => ['args' => ['domain' => self::DOMAIN, 'key' => self::INI_KEY], 'required' => ['domain', 'key'], 'since' => null, 'kind' => self::ACTION],
-        'self:metrics' => ['args' => [], 'required' => [], 'since' => null, 'kind' => self::READ],
+            'required' => ['domain', 'backup'], 'since' => '1.28.0', 'kind' => self::ACTION],
+        'backup:data-schedule' => ['args' => ['domain' => self::DOMAIN, 'enabled' => self::YES_NO, 'time' => self::TIME, 'keep' => self::KEEP],
+            'required' => ['domain', 'enabled'], 'since' => '1.28.0', 'kind' => self::ACTION],
+        'backup:data-verify' => ['args' => ['domain' => self::DOMAIN, 'backup' => self::BACKUP], 'required' => ['domain', 'backup'], 'since' => '1.28.0', 'kind' => self::ACTION],
+        'php:extensions' => ['args' => ['php' => self::PHP], 'required' => ['php'], 'since' => '1.28.0', 'kind' => self::READ],
+        'site:php-ini-list' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => '1.28.0', 'kind' => self::READ],
+        'site:php-ini-set' => ['args' => ['domain' => self::DOMAIN, 'name' => self::INI_KEY, 'value' => self::INI_VALUE],
+            'required' => ['domain', 'name', 'value'], 'since' => '1.28.0', 'kind' => self::ACTION],
+        'site:php-ini-unset' => ['args' => ['domain' => self::DOMAIN, 'name' => self::INI_KEY], 'required' => ['domain', 'name'], 'since' => '1.28.0', 'kind' => self::ACTION],
+        'self:metrics' => ['args' => [], 'required' => [], 'since' => '1.28.0', 'kind' => self::READ],
+        // SFTP is not in a release yet: offered only when the server lists it.
         'access:list' => ['args' => ['domain' => self::DOMAIN], 'required' => [], 'since' => null, 'kind' => self::READ],
         'access:create-project' => ['args' => ['domain' => self::DOMAIN, 'login' => self::LOGIN, 'pubkey' => self::PUBKEY],
             'required' => ['domain', 'login', 'pubkey'], 'since' => null, 'kind' => self::ACTION],
@@ -90,9 +93,8 @@ final class PanelCommands
         'access:disable' => ['args' => ['login' => self::LOGIN], 'required' => ['login'], 'since' => null, 'kind' => self::ACTION],
         'access:enable' => ['args' => ['login' => self::LOGIN], 'required' => ['login'], 'since' => null, 'kind' => self::ACTION],
         'access:remove' => ['args' => ['login' => self::LOGIN], 'required' => ['login'], 'since' => null, 'kind' => self::ACTION],
-        'db:list' => ['args' => [], 'required' => [], 'since' => null, 'kind' => self::READ],
-        'site:db-rotate' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => null, 'kind' => self::ACTION],
-        'site:db-export' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => null, 'kind' => self::ACTION],
+        'db:list' => ['args' => [], 'required' => [], 'since' => '1.28.0', 'kind' => self::READ],
+        'site:db-rotate' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => '1.28.0', 'kind' => self::ACTION],
         'job:status' => ['args' => ['job_id' => self::JOB_ID], 'required' => ['job_id'], 'since' => '1.21.0', 'kind' => self::JOB],
         'job:log' => ['args' => ['job_id' => self::JOB_ID, 'after' => self::CURSOR], 'required' => ['job_id'], 'since' => '1.21.0', 'kind' => self::JOB],
         'job:cancel' => ['args' => ['job_id' => self::JOB_ID], 'required' => ['job_id'], 'since' => '1.21.0', 'kind' => self::JOB],

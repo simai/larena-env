@@ -16,7 +16,10 @@ enum SiteOperation: string
     case CertificateIssue = 'certificate-issue';
     case CertificateRenew = 'certificate-renew';
     case Backup = 'backup';
-    case BackupRestore = 'backup-restore';
+    // A restore is two actions with their own words: the database (after the server backs up the current one) or the
+    // files, unpacked beside the site for review; the live files are never replaced.
+    case BackupRestoreDatabase = 'backup-restore-database';
+    case BackupExtractFiles = 'backup-extract-files';
     case BackupVerify = 'backup-verify';
     case BackupSchedule = 'backup-schedule';
     case Rollback = 'rollback';
@@ -40,7 +43,7 @@ enum SiteOperation: string
             self::CertificateIssue => 'ssl:letsencrypt',
             self::CertificateRenew => 'ssl:renew',
             self::Backup => 'backup:data',
-            self::BackupRestore => 'backup:data-restore',
+            self::BackupRestoreDatabase, self::BackupExtractFiles => 'backup:data-restore',
             self::BackupVerify => 'backup:data-verify',
             self::BackupSchedule => 'backup:data-schedule',
             self::Rollback => 'site:deploy-rollback',
@@ -51,7 +54,8 @@ enum SiteOperation: string
             self::PhpSettingRemove => 'site:php-ini-unset',
             self::DatabaseCreate => 'site:db-create',
             self::DatabasePassword => 'site:db-rotate',
-            self::DatabaseExport => 'site:db-export',
+            // A database dump to keep is a backup without the files (simai-env 1.28.0).
+            self::DatabaseExport => 'backup:data',
             self::SftpCreate => 'access:create-project',
             self::SftpAddKey => 'access:add-key',
             self::SftpDisable => 'access:disable',
@@ -67,7 +71,7 @@ enum SiteOperation: string
             self::CertificateIssue, self::CertificateRenew => 'domains',
             self::PhpVersion, self::PhpSetting, self::PhpSettingRemove, self::ServiceRestart, self::QueueRestart => 'php',
             self::DatabaseCreate, self::DatabasePassword, self::DatabaseExport => 'database',
-            self::Backup, self::BackupRestore, self::BackupVerify, self::BackupSchedule => 'backups',
+            self::Backup, self::BackupRestoreDatabase, self::BackupExtractFiles, self::BackupVerify, self::BackupSchedule => 'backups',
             self::Rollback => 'releases',
             self::SftpCreate, self::SftpAddKey, self::SftpDisable, self::SftpEnable, self::SftpRemove => 'access',
         };
@@ -75,8 +79,8 @@ enum SiteOperation: string
 
     /**
      * The form fields this action asks for, by name: `email`, `login` and `value` are text, `pubkey` a public key,
-     * `php` a version of the server, `backup` a backup of the site, `key` a `php.ini` setting, `time` a time of day,
-     * `keep` a number of backups, and `db`, `files`, `enable` yes or no.
+     * `php` a version of the server, `backup` a backup of the site, `name` a `php.ini` setting, `time` a time of day,
+     * `keep` a number of backups, and `db`, `files`, `enabled` yes or no.
      *
      * @return list<string>
      */
@@ -85,12 +89,12 @@ enum SiteOperation: string
         return match ($this) {
             self::CertificateIssue => ['email', 'redirect', 'hsts', 'staging'],
             self::Backup => ['db', 'files'],
-            self::BackupRestore => ['backup', 'db', 'files'],
+            self::BackupRestoreDatabase, self::BackupExtractFiles => ['backup'],
             self::BackupVerify => ['backup'],
-            self::BackupSchedule => ['enable', 'time', 'keep'],
+            self::BackupSchedule => ['enabled', 'time', 'keep'],
             self::PhpVersion => ['php'],
-            self::PhpSetting => ['key', 'value'],
-            self::PhpSettingRemove => ['key'],
+            self::PhpSetting => ['name', 'value'],
+            self::PhpSettingRemove => ['name'],
             self::SftpCreate => ['login', 'pubkey'],
             self::SftpAddKey => ['login', 'pubkey'],
             self::SftpDisable, self::SftpEnable, self::SftpRemove => ['login'],
@@ -120,8 +124,11 @@ enum SiteOperation: string
             self::PhpVersion, self::PhpSetting, self::PhpSettingRemove => $site->php !== 'none',
             // A database is made for a site that runs code and has none yet.
             self::DatabaseCreate => $site->databaseEngine === null && $site->php !== 'none',
-            self::DatabasePassword, self::DatabaseExport => $site->databaseEngine !== null,
-            self::BackupRestore, self::BackupVerify => $site->backups !== [],
+            // The server keeps the password of a WordPress or Bitrix site in the site's own config: it refuses to change it.
+            self::DatabasePassword => $site->databaseEngine !== null && !in_array($site->profile, ['wordpress', 'bitrix'], true),
+            self::DatabaseExport => $site->databaseEngine !== null,
+            self::BackupRestoreDatabase => $site->backups !== [] && $site->databaseEngine !== null,
+            self::BackupExtractFiles, self::BackupVerify => $site->backups !== [],
             default => true,
         };
     }
@@ -137,6 +144,13 @@ enum SiteOperation: string
     public function arguments(string $domain, array $input): array
     {
         $args = $this->namesSite() ? ['domain' => $domain] : [];
+        // What the action itself fixes, whatever the form says.
+        $args += match ($this) {
+            self::BackupRestoreDatabase => ['db' => 'yes', 'files' => 'no'],
+            self::BackupExtractFiles => ['db' => 'no', 'files' => 'yes'],
+            self::DatabaseExport => ['db' => 'yes', 'files' => 'no'],
+            default => [],
+        };
         foreach ($this->fields() as $field) {
             $value = $input[$field] ?? null;
             if (is_string($value) && $value !== '') {

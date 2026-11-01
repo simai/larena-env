@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "7de52b1fb3eb7d6b0d0d6a70f672c15d",
+    "content-hash": "b2f45ddc87347c1c1df7cafb983fa12a",
     "packages": [
         {
             "name": "brick/math",
@@ -1572,12 +1572,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:simai/larena-admin.git",
-                "reference": "a4ffe6c5c4b121898504d95cc4a4fa800e12447a"
+                "reference": "2ec6a166de738879ea76295ef166ae1516c3fdb4"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-admin/zipball/a4ffe6c5c4b121898504d95cc4a4fa800e12447a",
-                "reference": "a4ffe6c5c4b121898504d95cc4a4fa800e12447a",
+                "url": "https://api.github.com/repos/simai/larena-admin/zipball/2ec6a166de738879ea76295ef166ae1516c3fdb4",
+                "reference": "2ec6a166de738879ea76295ef166ae1516c3fdb4",
                 "shasum": ""
             },
             "require": {
@@ -1652,6 +1652,7 @@
                 "test": [
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/AdminAuthDiagnosticsSurfaceTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/AdminSearchTest.php",
+                    "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/AdminNavigationOpenRowTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Feature/AdminGroupsAndSitePagesRouteTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/AdminWithoutStorageSourceTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Feature/AdminWithoutStorageBootTest.php",
@@ -1794,7 +1795,7 @@
                 }
             ],
             "description": "Larena Admin: Object-based, permission-aware administration platform for package contributions, screens, actions and diagnostics.",
-            "time": "2026-10-31T19:30:15+00:00"
+            "time": "2026-11-01T00:41:19+00:00"
         },
         {
             "name": "larena/audit",

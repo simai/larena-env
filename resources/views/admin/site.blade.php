@@ -297,11 +297,11 @@
                                     <input type="time" id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}" value="{{ $site->backupSchedule?->time ?? '03:00' }}">
                                 @elseif ($field === 'keep')
                                     <input type="number" id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}" min="1" max="90" value="{{ $site->backupSchedule?->keep ?? '7' }}">
-                                @elseif (in_array($field, ['login', 'key', 'value'], true))
+                                @elseif (in_array($field, ['login', 'name', 'value'], true))
                                     <input type="text" id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}" @if ($field !== 'value') required @endif maxlength="128">
                                 @else
-                                    <select id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}" @if ($field === 'enable') required @endif>
-                                        @if ($field !== 'enable')
+                                    <select id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}" @if ($field === 'enabled') required @endif>
+                                        @if ($field !== 'enabled')
                                             <option value="">{{ __('larena-env::admin.fields.default') }}</option>
                                         @endif
                                         <option value="yes">{{ __('larena-env::admin.yes') }}</option>
@@ -310,8 +310,10 @@
                                 @endif
                             </div>
                         @endforeach
-                        @if (in_array($operation->value, ['backup-restore'], true))
+                        @if ($operation === \Larena\Env\Operations\SiteOperation::BackupRestoreDatabase)
                             <p data-env-restore-note>{{ __('larena-env::admin.backups.restore_note') }}</p>
+                        @elseif ($operation === \Larena\Env\Operations\SiteOperation::BackupExtractFiles)
+                            <p data-env-restore-note>{{ __('larena-env::admin.backups.extract_note') }}</p>
                         @endif
                         <div class="larena-form-actions">
                             <button type="submit" class="larena-button">{{ __('larena-env::admin.operations.plan') }}</button>
