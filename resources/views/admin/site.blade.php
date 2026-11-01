@@ -26,7 +26,7 @@
         @if ($tab === 'overview')
             <section class="larena-panel larena-panel-padded" data-env-state="ok" aria-labelledby="env-site-facts">
                 <h2 id="env-site-facts">{{ __('larena-env::admin.site.facts') }}</h2>
-                <dl class="larena-recipe-facts" style="grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 1px;">
+                <dl class="larena-recipe-facts">
                     <div data-env-answers="{{ $site->answersChecked ? ($site->answers ?? 'none') : 'unchecked' }}"><dt>{{ __('larena-env::admin.sites.answers') }}</dt><dd>{{ !$site->answersChecked ? '—' : ($site->answers === null ? __('larena-env::admin.sites.answers_none') : __('larena-env::admin.sites.answers_code', ['code' => (string) $site->answers])) }}</dd></div>
                     <div><dt>{{ __('larena-env::admin.sites.owner') }}</dt><dd>{{ $site->owner ?? '—' }}</dd></div>
                     <div><dt>{{ __('larena-env::admin.sites.profile') }}</dt><dd>{{ $site->profile }}</dd></div>
@@ -58,7 +58,7 @@
                 @if ($site->certificate === null)
                     <p>{{ __('larena-env::admin.certificate.none') }}</p>
                 @else
-                    <dl class="larena-recipe-facts" style="grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 1px;">
+                    <dl class="larena-recipe-facts">
                         <div><dt>{{ __('larena-env::admin.certificate.names') }}</dt><dd>{{ implode(', ', $site->certificate->names) }}</dd></div>
                         <div><dt>{{ __('larena-env::admin.certificate.issuer') }}</dt><dd>{{ $site->certificate->issuer ?? '—' }}</dd></div>
                         <div><dt>{{ __('larena-env::admin.certificate.not_after') }}</dt><dd>{{ $site->certificate->notAfter ?? '—' }}</dd></div>
@@ -73,7 +73,7 @@
         @elseif ($tab === 'php')
             <section class="larena-panel larena-panel-padded" data-env-runtime aria-labelledby="env-site-runtime">
                 <h2 id="env-site-runtime">{{ __('larena-env::admin.runtime.title') }}</h2>
-                <dl class="larena-recipe-facts" style="grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 1px;">
+                <dl class="larena-recipe-facts">
                     <div><dt>{{ __('larena-env::admin.sites.php') }}</dt><dd>{{ $site->php }}</dd></div>
                     <div><dt>{{ __('larena-env::admin.runtime.service') }}</dt><dd>{{ $site->service ?? '—' }}</dd></div>
                     <div><dt>{{ __('larena-env::admin.runtime.workers') }}</dt><dd>{{ $site->workers === [] ? '—' : implode(', ', $site->workers) }}</dd></div>
@@ -85,7 +85,7 @@
                     @if ($phpSettings === [])
                         <p>{{ __('larena-env::admin.runtime.settings_none') }}</p>
                     @else
-                        <dl class="larena-recipe-facts" style="grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 1px;">
+                        <dl class="larena-recipe-facts">
                             @foreach ($phpSettings as $setting)
                                 <div data-env-php-setting="{{ $setting->key }}"><dt>{{ $setting->key }}</dt><dd>{{ $setting->value }}@if ($setting->source !== null) · {{ $setting->source }}@endif</dd></div>
                             @endforeach
@@ -109,7 +109,7 @@
                 @if ($site->databaseEngine === null)
                     <p>{{ __('larena-env::admin.database.none') }}</p>
                 @else
-                    <dl class="larena-recipe-facts" style="grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 1px;">
+                    <dl class="larena-recipe-facts">
                         <div><dt>{{ __('larena-env::admin.database.engine') }}</dt><dd>{{ $site->databaseEngine }}</dd></div>
                     </dl>
                     @if ($databases !== null)
@@ -146,7 +146,7 @@
         @elseif ($tab === 'releases')
             <section class="larena-panel larena-panel-padded" data-env-releases aria-labelledby="env-site-releases">
                 <h2 id="env-site-releases">{{ __('larena-env::admin.releases.title') }}</h2>
-                <dl class="larena-recipe-facts" style="grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 1px;">
+                <dl class="larena-recipe-facts">
                     <div><dt>{{ __('larena-env::admin.sites.release') }}</dt><dd>{{ $site->release ?? '—' }}</dd></div>
                     <div><dt>{{ __('larena-env::admin.site.previous_release') }}</dt><dd>{{ $site->previousRelease ?? '—' }}</dd></div>
                 </dl>
@@ -238,7 +238,7 @@
         @elseif ($tab === 'access')
             <section class="larena-panel larena-panel-padded" data-env-access aria-labelledby="env-site-access">
                 <h2 id="env-site-access">{{ __('larena-env::admin.access.title') }}</h2>
-                <dl class="larena-recipe-facts" style="grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 1px;">
+                <dl class="larena-recipe-facts">
                     <div><dt>{{ __('larena-env::admin.sites.owner') }}</dt><dd>{{ $site->owner ?? __('larena-env::admin.access.own_account') }}</dd></div>
                     <div><dt>{{ __('larena-env::admin.access.runs_as') }}</dt><dd>{{ $site->runsAs ?? '—' }}</dd></div>
                 </dl>

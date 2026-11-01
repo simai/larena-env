@@ -31,6 +31,10 @@ final class PanelWarnings
     public const string BACKUP_STALE = 'backup_stale';
     public const string BACKUP_UNSCHEDULED = 'backup_unscheduled';
 
+    /** Every kind, each recorded as the notification source "env:warning:<kind>". */
+    public const array KINDS = [self::DISK_FULL, self::CERTIFICATE_ENDING, self::CERTIFICATE_EXPIRED, self::CERTIFICATE_MISSING,
+        self::SITE_DOWN, self::SITE_ERROR, self::BACKUP_NONE, self::BACKUP_STALE, self::BACKUP_UNSCHEDULED];
+
     public const int DISK_PERCENT = 90;
     public const int DISK_ERROR_PERCENT = 95;
     public const int CERTIFICATE_DAYS = 14;

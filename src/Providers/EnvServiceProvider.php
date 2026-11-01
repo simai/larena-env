@@ -26,7 +26,9 @@ use Larena\Env\People\PanelAudit;
 use Larena\Env\People\PersonOwners;
 use Larena\Env\Server\ServerOverviewReader;
 use Larena\Env\Server\SiteDetailsReader;
+use Larena\Env\Warnings\PanelWarnings;
 use Larena\Env\Warnings\WarningLedger;
+use Larena\Notification\Runtime\NotificationSources;
 
 final class EnvServiceProvider extends ServiceProvider
 {
@@ -70,6 +72,14 @@ final class EnvServiceProvider extends ServiceProvider
         $this->loadMigrationsFrom(__DIR__.'/../../database/migrations');
         // The panel's own events (spaces, acting as someone) in the change history, where larena/audit shows it.
         $config->push('larena-audit.history_sources', ['prefix' => 'env.', 'label' => 'larena-env::admin.audit_activity']);
+        // Its warnings in people's notifications read by what they are about, where larena/notification is installed.
+        if (class_exists(NotificationSources::class)) {
+            $this->callAfterResolving(NotificationSources::class, static function (NotificationSources $sources): void {
+                foreach (PanelWarnings::KINDS as $kind) {
+                    $sources->declare('env:warning:'.$kind, 'larena-env::admin.notification_sources.'.$kind);
+                }
+            });
+        }
         // Every panel screen says when a person of the whole server is looking at it as someone else.
         if ($this->app->bound('view')) {
             $app = $this->app;

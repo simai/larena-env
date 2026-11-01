@@ -16,7 +16,7 @@
     @else
         <section class="larena-panel larena-panel-padded" data-env-job="{{ $status->jobId }}" data-env-job-state="{{ $status->state->value }}" aria-labelledby="env-job">
             <h2 id="env-job">{{ __('larena-env::admin.job.states.'.$status->state->value) }}</h2>
-            <dl class="larena-recipe-facts" style="grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 1px;">
+            <dl class="larena-recipe-facts">
                 <div><dt>{{ __('larena-env::admin.plan.command') }}</dt><dd>{{ $status->command }}</dd></div>
                 <div><dt>{{ __('larena-env::admin.job.started_at') }}</dt><dd>{{ \Larena\Env\Server\Moment::human($status->createdAt) }}</dd></div>
                 <div><dt>{{ __('larena-env::admin.job.started_by') }}</dt><dd>{{ $status->actor ?? '—' }}</dd></div>

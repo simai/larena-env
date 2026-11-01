@@ -68,8 +68,8 @@
             @if (($dailyBackup ?? null) !== null)
                 <div class="larena-field">
                     <input type="hidden" name="daily-backup" value="no">
-                    <label for="env-new-daily-backup" style="display: flex; align-items: center; gap: .625rem; min-height: 2.75rem;">
-                        <input type="checkbox" style="flex: none; width: 1.25rem; height: 1.25rem; margin: 0; padding: 0;" id="env-new-daily-backup" name="daily-backup" value="yes" data-env-new-daily-backup @if ($dailyBackup) checked @endif>
+                    <label for="env-new-daily-backup">
+                        <input type="checkbox" id="env-new-daily-backup" name="daily-backup" value="yes" data-env-new-daily-backup @if ($dailyBackup) checked @endif>
                         {{ __('larena-env::admin.new_site.daily_backup') }}
                     </label>
                     <p>{{ __('larena-env::admin.new_site.daily_backup_hint') }}</p>

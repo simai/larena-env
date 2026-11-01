@@ -170,4 +170,17 @@ env_assert($inbox->list('test:boris')->total === 0, 'Another space hears nothing
 env_assert(str_contains($run(), 'new or reminded: 0, notifications: 0'), 'Five minutes on, nothing is told again.');
 env_assert($connection->table(MetricSamples::TABLE)->count() === 2, 'Each check measures the server.');
 
+// Each kind is a notification source the panel names in both languages, and KINDS lists every kind.
+$constants = array_filter((new ReflectionClass(PanelWarnings::class))->getConstants(), 'is_string');
+env_assert(array_values($constants) === PanelWarnings::KINDS, 'KINDS lists every kind of warning.');
+foreach (['en', 'ru'] as $locale) {
+    $lines = require dirname(__DIR__, 2).'/resources/lang/'.$locale.'/admin.php';
+    env_assert(array_keys($lines['notification_sources']) === PanelWarnings::KINDS, 'Every kind has a source name in '.$locale.'.');
+}
+$sources = new Larena\Notification\Runtime\NotificationSources();
+foreach (PanelWarnings::KINDS as $kind) {
+    $sources->declare('env:warning:'.$kind, 'larena-env::admin.notification_sources.'.$kind);
+}
+env_assert($sources->name('env:warning:backup_none') === 'env:warning:backup_none', 'Without a translator the source stays its key.');
+
 echo "PanelWarningsTest passed.\n";

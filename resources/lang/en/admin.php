@@ -228,6 +228,18 @@ return [
         'backup_stale' => 'The newest backup of :domain is from :time, more than two days ago.',
         'backup_unscheduled' => 'The site :domain has no daily backup: copies are made only by hand.',
     ],
+    // What a person's notifications call the panel's warnings (the source env:warning:<kind>).
+    'notification_sources' => [
+        'disk_full' => 'Server disk',
+        'certificate_ending' => 'Certificate ends soon',
+        'certificate_expired' => 'Certificate expired',
+        'certificate_missing' => 'No certificate',
+        'site_down' => 'Site does not answer',
+        'site_error' => 'Site error',
+        'backup_none' => 'No backup',
+        'backup_stale' => 'Old backup',
+        'backup_unscheduled' => 'No daily backup',
+    ],
     'history' => [
         'title' => 'Load history',
         'day' => 'Last 24 hours',

@@ -228,6 +228,18 @@ return [
         'backup_stale' => 'Последняя копия :domain сделана :time, больше двух суток назад.',
         'backup_unscheduled' => 'У сайта :domain нет ежедневной копии: копии делаются только вручную.',
     ],
+    // What a person's notifications call the panel's warnings (the source env:warning:<kind>).
+    'notification_sources' => [
+        'disk_full' => 'Диск сервера',
+        'certificate_ending' => 'Сертификат скоро закончится',
+        'certificate_expired' => 'Сертификат истёк',
+        'certificate_missing' => 'Нет сертификата',
+        'site_down' => 'Сайт не отвечает',
+        'site_error' => 'Ошибка сайта',
+        'backup_none' => 'Нет копии',
+        'backup_stale' => 'Давняя копия',
+        'backup_unscheduled' => 'Нет ежедневной копии',
+    ],
     'history' => [
         'title' => 'История нагрузки',
         'day' => 'Последние сутки',

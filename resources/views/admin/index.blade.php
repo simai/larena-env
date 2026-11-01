@@ -17,14 +17,14 @@
         @include('larena-env::admin.partials.warnings')
         <section class="larena-panel larena-panel-padded" data-env-state="ok" aria-labelledby="env-server-status">
             <h2 id="env-server-status">{{ __('larena-env::admin.status.title') }}</h2>
-            <dl class="larena-recipe-facts" style="grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 1px;">
+            <dl class="larena-recipe-facts">
                 <div><dt>{{ __('larena-env::admin.status.os') }}</dt><dd>{{ $overview->osId }} {{ $overview->osVersion }}</dd></div>
                 <div><dt>{{ __('larena-env::admin.status.env') }}</dt><dd>{{ $overview->envVersion }}</dd></div>
                 <div><dt>{{ __('larena-env::admin.status.php') }}</dt><dd>{{ implode(', ', $overview->phpVersions) }}</dd></div>
                 <div><dt>{{ __('larena-env::admin.status.generated_at') }}</dt><dd>{{ \Larena\Env\Server\Moment::human($overview->generatedAt) }}</dd></div>
             </dl>
             <h3>{{ __('larena-env::admin.status.services') }}</h3>
-            <dl class="larena-recipe-facts" style="grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 1px;">
+            <dl class="larena-recipe-facts">
                 @foreach ($overview->services as $service)
                     <div data-env-service="{{ $service->name }}"><dt>{{ $service->name }}</dt><dd>{{ $service->state }}</dd></div>
                 @endforeach
@@ -33,7 +33,7 @@
         @if (($metrics ?? null) !== null)
             <section class="larena-panel larena-panel-padded" data-env-metrics aria-labelledby="env-server-metrics">
                 <h2 id="env-server-metrics">{{ __('larena-env::admin.metrics.title') }}</h2>
-                <dl class="larena-recipe-facts" style="grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 1px;">
+                <dl class="larena-recipe-facts">
                     <div><dt>{{ __('larena-env::admin.metrics.cores') }}</dt><dd>{{ $metrics->cores ?? '—' }}</dd></div>
                     <div><dt>{{ __('larena-env::admin.metrics.load') }}</dt><dd>{{ $metrics->load === null ? '—' : implode(' · ', array_map(static fn (float $value): string => number_format($value, 2), $metrics->load)) }}</dd></div>
                     @if ($metrics->memoryTotal !== null && $metrics->memoryUsed !== null)
