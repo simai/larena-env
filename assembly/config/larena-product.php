@@ -36,6 +36,10 @@ return [
             'env.alerts.channel' => 'settings',
             // A safe update of simai-env and of the panel (simai-env 1.32.0).
             'env.update' => 'server',
+            // The services and the firewall beside the server, who reaches the panel among its settings (Panel plan 5.1–5.3).
+            'env.services' => 'server',
+            'env.firewall' => 'server',
+            'env.panel.access' => 'settings',
             // Sign-in diagnostics under its own name, beside the server's overview.
             'auth.diagnostics' => 'server',
             'admin.settings_general' => 'settings',

@@ -14,6 +14,9 @@ return [
             'allowed_environments' => ['local', 'testing'],
             // A folder that stands in for the sites' files, which no recording has yet (Panel plan 6.1): empty, off.
             'files' => getenv('LARENA_ENV_RECORDED_FILES') ?: '',
+            // A folder for the state of a stand-in for the services, scheduled jobs, firewall and panel's access (Panel
+            // plan stage 5), which no recording has yet either: empty, off.
+            'tools' => getenv('LARENA_ENV_RECORDED_TOOLS') ?: '',
         ],
         'sudo' => [
             'binary' => getenv('LARENA_ENV_SUDO_BINARY') ?: '/usr/bin/sudo',

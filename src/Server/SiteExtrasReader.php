@@ -91,6 +91,50 @@ final readonly class SiteExtrasReader
         return $data === null ? null : UpdatePlan::fromData($data);
     }
 
+    /** @return list<string>|null the last lines of a service's journal (Panel plan 5.1, administrator only) */
+    public function serviceLog(PanelActor $actor, string $name, int $lines = 100): ?array
+    {
+        $data = $this->data($actor, 'service:log', ['name' => $name, 'lines' => (string) $lines]);
+        if ($data === null) {
+            return null;
+        }
+        $log = is_array($data['lines'] ?? null) ? $data['lines'] : [];
+
+        return array_values(array_filter($log, 'is_string'));
+    }
+
+    /** @return list<SiteProfile>|null the kinds of site the server makes, with their arguments (Panel plan 5.5) */
+    public function profiles(PanelActor $actor): ?array
+    {
+        return $this->list($actor, 'self:profiles', [], 'profiles', SiteProfile::fromData(...));
+    }
+
+    /** @return list<\Larena\Env\Cron\CronJob>|null a site's own scheduled jobs (Panel plan 5.4); an owner's own sites only */
+    public function cronJobs(PanelActor $actor, string $domain): ?array
+    {
+        return $this->list($actor, 'cron:list', ['domain' => $domain], 'jobs', \Larena\Env\Cron\CronJob::fromData(...));
+    }
+
+    /** @return list<\Larena\Env\Cron\CronRun>|null a job's last runs, the newest first */
+    public function cronRuns(PanelActor $actor, string $id): ?array
+    {
+        $runs = $this->list($actor, 'cron:job-runs', ['id' => $id], 'runs', \Larena\Env\Cron\CronRun::fromData(...));
+
+        if ($runs !== null) {
+            usort($runs, static fn (\Larena\Env\Cron\CronRun $a, \Larena\Env\Cron\CronRun $b): int => strcmp((string) $b->startedAt, (string) $a->startedAt));
+        }
+
+        return $runs;
+    }
+
+    /** The firewall, its rules and blocks, the changes waiting to be kept, and who reaches the panel (5.2, 5.3). */
+    public function firewall(PanelActor $actor): ?\Larena\Env\Firewall\FirewallStatus
+    {
+        $data = $this->data($actor, 'firewall:status', []);
+
+        return $data === null ? null : \Larena\Env\Firewall\FirewallStatus::fromData($data);
+    }
+
     /**
      * @template T
      *

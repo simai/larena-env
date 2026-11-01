@@ -25,6 +25,8 @@ final readonly class ServerJobController
         private PanelOperations $operations,
         private Factory $views,
         private Translator $translator,
+        private ?\Larena\Env\Server\ServerOverviewReader $overviews = null,
+        private ?\Larena\Access\Runtime\AccessOperationAuthorizer $authorizer = null,
     ) {
     }
 
@@ -44,8 +46,16 @@ final readonly class ServerJobController
             $updating = $result->status->args['target'] ?? 'env';
         }
 
+        // A timed change (the firewall, who reaches the panel): how long is left, and keeping it, where the person may.
+        $change = $result->status?->change;
+        $canKeep = $change !== null && ($this->authorizer?->authorize($request, 'env.server.operate')->isAllowed() ?? false)
+            && ($this->overviews?->read($actor)->overview?->capabilities?->allows('change:confirm') ?? false);
+
         return $this->views->make('larena-env::admin.job', [
             'jobId' => $job,
+            'change' => $change,
+            'canKeep' => $canKeep,
+            'now' => new \DateTimeImmutable(),
             'updating' => is_string($updating) ? $updating : null,
             'source' => $result->source,
             'status' => $result->status,

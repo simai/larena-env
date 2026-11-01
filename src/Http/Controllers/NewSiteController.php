@@ -21,10 +21,18 @@ use Larena\Env\Server\ServerOverviewReader;
  */
 final readonly class NewSiteController
 {
-    /** The kinds simai-env creates (site:add profiles); a plain reverse proxy waits for simai-env to have one. */
+    /**
+     * The kinds every simai-env since 1.22.0 creates (site:add profiles). A server that lists its own (self:profiles,
+     * Panel plan 5.5) is asked instead: then bitrix and a reverse proxy to a port of this server come with it.
+     */
     public const array PROFILES = ['static', 'generic', 'laravel', 'wordpress', 'node', 'redirect'];
+    /** The kinds the panel has words for; any other the server lists is shown by its name and the server's line. */
+    public const array KNOWN_PROFILES = [...self::PROFILES, 'bitrix', 'proxy'];
     private const array PHP_PROFILES = ['generic', 'laravel', 'wordpress'];
-    private const array FIELDS = ['domain', 'profile', 'php', 'owner', 'create-db', 'db-engine', 'redirect-to'];
+    private const array FIELDS = ['domain', 'profile', 'php', 'owner', 'create-db', 'db-engine', 'redirect-to', 'upstream-port', 'upstream-path', 'websockets'];
+    /** The form's groups of fields and the site:add arguments each sends, asked only of a kind that takes them. */
+    public const array FIELD_GROUPS = ['php' => ['php'], 'database' => ['create-db', 'db-engine'], 'redirect' => ['redirect-to'],
+        'proxy' => ['upstream-port', 'upstream-path', 'websockets']];
     /** The session key that holds, by job, the new site whose daily backup is turned on once the site is made. */
     public const string AFTER_JOB = 'larena_env.after_job';
 
@@ -33,6 +41,7 @@ final readonly class NewSiteController
         private PanelOperations $operations,
         private Factory $views,
         private Translator $translator,
+        private ?\Larena\Env\Server\SiteExtrasReader $extras = null,
     ) {
     }
 
@@ -40,16 +49,20 @@ final readonly class NewSiteController
     {
         $actor = ResolvePanelActor::of($request);
         $overview = $this->overviews->read($actor)->overview;
+        $server = $this->serverProfiles($actor, $overview);
+        $profiles = $server === null ? self::PROFILES : array_keys($server);
 
         return $this->views->make('larena-env::admin.new-site', [
-            'profiles' => self::PROFILES,
+            'profiles' => $profiles,
             'phpProfiles' => self::PHP_PROFILES,
+            // The server's own kinds (Panel plan 5.5): what each is called and which fields it asks.
+            'serverProfiles' => $server === null ? null : $this->described($server),
             'phpVersions' => $overview->phpVersions ?? [],
             // Only the whole server chooses whose the site is; a person's own site is theirs.
             'owners' => $actor->owner === null ? ($overview->owners ?? []) : null,
-            'old' => self::input($request, $actor),
+            'old' => self::input($request, $actor, $server),
             // What it runs is chosen first; the form then asks only what that kind takes.
-            'kind' => in_array($request->query('profile'), self::PROFILES, true) ? (string) $request->query('profile') : 'static',
+            'kind' => in_array($request->query('profile'), $profiles, true) ? (string) $request->query('profile') : ($profiles[0] ?? 'static'),
             // A new site gets its daily backup by default (Panel plan 4.1), where the server's gateway can set one.
             'dailyBackup' => $this->schedules($overview) ? self::dailyBackup($request) : null,
             'notice' => $request->session()->get('larena_env_notice'),
@@ -60,7 +73,7 @@ final readonly class NewSiteController
     {
         $actor = ResolvePanelActor::of($request);
         $overview = $this->overviews->read($actor)->overview;
-        $input = self::withBackup(self::input($request, $actor), $request, $overview);
+        $input = self::withBackup(self::input($request, $actor, $this->serverProfiles($actor, $overview)), $request, $overview);
         $result = $this->operations->planCommand($actor, 'site:add', $input);
         if ($result->plan === null) {
             return $this->back($request, $result->reason ?? 'answer_shape_invalid', $input);
@@ -84,7 +97,7 @@ final readonly class NewSiteController
     {
         $actor = ResolvePanelActor::of($request);
         $overview = $this->overviews->read($actor)->overview;
-        $input = self::withBackup(self::input($request, $actor), $request, $overview);
+        $input = self::withBackup(self::input($request, $actor, $this->serverProfiles($actor, $overview)), $request, $overview);
         $started = $this->operations->startCommand($actor, 'site:add', $input);
         if ($started->jobId === null) {
             return $this->back($request, $started->reason ?? 'answer_shape_invalid', $input);
@@ -135,13 +148,15 @@ final readonly class NewSiteController
     }
 
     /**
-     * The gateway's arguments from the form, as typed; the command table refuses anything the gateway would. PHP and a
-     * database go only with a PHP profile, the database only when asked, the redirect target only with a redirect, and the owner
-     * only from the whole server.
+     * The gateway's arguments from the form, as typed; the command table refuses anything the gateway would. Each kind
+     * sends only the fields it takes (PHP and a database for a PHP profile, the target for a redirect, the local port
+     * for a proxy), the database engine only when one is asked for, and the owner only from the whole server.
+     *
+     * @param array<string, \Larena\Env\Server\SiteProfile>|null $server the server's own kinds, when it lists them
      *
      * @return array<string, string>
      */
-    private static function input(Request $request, PanelActor $actor): array
+    private static function input(Request $request, PanelActor $actor, ?array $server = null): array
     {
         $input = [];
         foreach (self::FIELDS as $field) {
@@ -151,23 +166,95 @@ final readonly class NewSiteController
             }
         }
         $profile = $input['profile'] ?? null;
-        if (!in_array($profile, self::PHP_PROFILES, true)) {
-            unset($input['php']);
-        }
-        if (!in_array($profile, self::PHP_PROFILES, true)) {
-            unset($input['create-db']);
+        $groups = self::groupsOf(is_string($profile) ? $profile : '', $server);
+        foreach (self::FIELD_GROUPS as $group => $fields) {
+            if (!in_array($group, $groups, true)) {
+                foreach ($fields as $field) {
+                    unset($input[$field]);
+                }
+            }
         }
         if (($input['create-db'] ?? null) !== 'yes') {
             unset($input['db-engine']);
-        }
-        if ($profile !== 'redirect') {
-            unset($input['redirect-to']);
         }
         if ($actor->owner !== null) {
             unset($input['owner']);
         }
 
         return $input;
+    }
+
+    /**
+     * The groups of fields a kind asks: from the server's own description of it where the server lists its kinds,
+     * else what the panel knows of the six every server has.
+     *
+     * @param array<string, \Larena\Env\Server\SiteProfile>|null $server
+     *
+     * @return list<string>
+     */
+    public static function groupsOf(string $profile, ?array $server): array
+    {
+        if ($server !== null) {
+            $described = $server[$profile] ?? null;
+            if ($described === null) {
+                return [];
+            }
+
+            return array_values(array_filter(array_keys(self::FIELD_GROUPS), static fn (string $group): bool => array_filter(self::FIELD_GROUPS[$group],
+                static fn (string $field): bool => $described->takes($field)) !== []));
+        }
+
+        return match (true) {
+            in_array($profile, self::PHP_PROFILES, true) => ['php', 'database'],
+            $profile === 'redirect' => ['redirect'],
+            default => [],
+        };
+    }
+
+    /**
+     * The kinds this server makes, by name, when it lists them (self:profiles); null when it does not, or the list
+     * cannot be read: the six every server has are offered then.
+     *
+     * @return array<string, \Larena\Env\Server\SiteProfile>|null
+     */
+    private function serverProfiles(PanelActor $actor, ?\Larena\Env\Server\ServerOverview $overview): ?array
+    {
+        if ($overview?->capabilities?->allows('self:profiles') !== true || $this->extras === null) {
+            return null;
+        }
+        $profiles = $this->extras->profiles($actor);
+        if ($profiles === null || $profiles === []) {
+            return null;
+        }
+        $named = [];
+        foreach ($profiles as $profile) {
+            $named[$profile->name] = $profile;
+        }
+
+        return $named;
+    }
+
+    /**
+     * What the wizard says of each of the server's kinds: the panel's words for one it knows, else its name and the
+     * server's own line; and which fields it asks.
+     *
+     * @param array<string, \Larena\Env\Server\SiteProfile> $server
+     *
+     * @return array<string, array{label: string, hint: string, groups: list<string>}>
+     */
+    private function described(array $server): array
+    {
+        $described = [];
+        foreach ($server as $name => $profile) {
+            $known = in_array($name, self::KNOWN_PROFILES, true);
+            $described[$name] = [
+                'label' => $known ? (string) $this->translator->get('larena-env::admin.new_site.profiles.'.$name) : $name,
+                'hint' => $known ? (string) $this->translator->get('larena-env::admin.new_site.profile_hints.'.$name) : ($profile->description ?? ''),
+                'groups' => self::groupsOf($name, $server),
+            ];
+        }
+
+        return $described;
     }
 
     /** @param array<string, string> $input */

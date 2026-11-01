@@ -148,9 +148,9 @@ roots = [item["key"] for item in items]
 print("menu roots:", roots)
 assert roots == ["sites", "journal", "users", "server", "settings"], roots
 children = {item["key"]: [row["key"] for row in item.get("children", []) if row.get("kind") == "page"] for item in items}
-assert sorted(children["server"]) == ["auth.diagnostics", "env.dns", "env.server.overview", "env.update"], children
+assert sorted(children["server"]) == ["auth.diagnostics", "env.dns", "env.firewall", "env.server.overview", "env.services", "env.update"], children
 assert sorted(children["users"]) == ["auth.users", "env.people"], children
-assert sorted(children["settings"]) == ["admin.settings_general", "admin.site_backgrounds", "env.alerts.channel", "env.dns.connection"], children
+assert sorted(children["settings"]) == ["admin.settings_general", "admin.site_backgrounds", "env.alerts.channel", "env.dns.connection", "env.panel.access"], children
 assert "site-switch" not in json.dumps(menu.get("capabilities", [])), "the panel has no site switcher"
 hrefs = [item["href"] for item in items if item.get("href")] + [row["href"] for item in items for row in item.get("children", []) if row.get("href")]
 for href in hrefs:
@@ -224,6 +224,13 @@ _, overview = get("/admin/server/overview")
 assert 'data-env-update-hint-target="env"' in overview, "the overview hints at the update"
 _, updating = post("/admin/server/update/plan", {"_token": form_token(update), "target": "env"})
 assert 'data-env-plan="self:update"' in updating and 'data-env-update-facts="env"' in updating and 'name="target" value="env"' in updating, "the update is planned"
+# Stage 5 (simai-env 1.33.0 to 1.35.0, not yet released): the screens open and say a newer simai-env is needed.
+status, services = get("/admin/server/services")
+assert status == 200 and 'data-env-service="nginx"' in services and "data-env-services-unsupported" in services and "data-env-service-op" not in services, "the services, state only"
+status, walls = get("/admin/server/firewall")
+assert status == 200 and "data-env-firewall-unsupported" in walls, "the firewall waits for its release"
+status, reach = get("/admin/server/panel-access")
+assert status == 200 and "data-env-panel-access-unsupported" in reach, "who reaches the panel waits for its release"
 print("stage 4:", "ok", unread, "unread")
 
 # The second level: a person at the user level (the editor role), made the way an administrator's tooling would.

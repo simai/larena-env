@@ -23,6 +23,9 @@
     @else
         <section class="larena-panel larena-panel-padded" data-env-job="{{ $status->jobId }}" data-env-job-state="{{ $status->state->value }}" aria-labelledby="env-job">
             <h2 id="env-job">{{ __('larena-env::admin.job.states.'.$status->state->value) }}</h2>
+            @if (($change ?? null) !== null)
+                @include('larena-env::admin.partials.timed-change', ['change' => $change, 'canKeep' => $canKeep ?? false, 'now' => $now ?? new \DateTimeImmutable()])
+            @endif
             <dl class="larena-recipe-facts">
                 <div><dt>{{ __('larena-env::admin.plan.command') }}</dt><dd>{{ $status->command }}</dd></div>
                 <div><dt>{{ __('larena-env::admin.job.started_at') }}</dt><dd>{{ \Larena\Env\Server\Moment::human($status->createdAt) }}</dd></div>

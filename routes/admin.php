@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 use Larena\Env\Http\Controllers\AlertsController;
 use Larena\Env\Http\Controllers\DnsController;
+use Larena\Env\Http\Controllers\FirewallController;
 use Larena\Env\Http\Controllers\NewSiteController;
 use Larena\Env\Http\Controllers\PeopleController;
 use Larena\Env\Http\Controllers\ServerAdminController;
 use Larena\Env\Http\Controllers\ServerJobController;
+use Larena\Env\Http\Controllers\ServicesController;
+use Larena\Env\Http\Controllers\SiteCronController;
 use Larena\Env\Http\Controllers\SiteAdminController;
 use Larena\Env\Http\Controllers\SiteFilesController;
 use Larena\Env\Http\Controllers\UpdateController;
@@ -58,6 +61,20 @@ $router->middleware(['access:env.server.operate'])->group(static function ($rout
     $router->post('/update/plan', [UpdateController::class, 'plan'])->name('larena.env.admin.update.plan');
     $router->post('/update/run', [UpdateController::class, 'run'])->name('larena.env.admin.update.run');
 });
+// The server's services, its firewall and who reaches the panel (Panel plan 5.1–5.3): the administrator's alone.
+$router->middleware(['access:env.server.read'])->group(static function ($router): void {
+    $router->get('/services', [ServicesController::class, 'index'])->name('larena.env.admin.services');
+    $router->get('/firewall', [FirewallController::class, 'index'])->name('larena.env.admin.firewall');
+    $router->get('/panel-access', [FirewallController::class, 'access'])->name('larena.env.admin.panel.access');
+});
+$router->middleware(['access:env.server.operate'])->group(static function ($router): void {
+    $router->post('/services/plan', [ServicesController::class, 'plan'])->name('larena.env.admin.services.plan');
+    $router->post('/services/run', [ServicesController::class, 'run'])->name('larena.env.admin.services.run');
+    $router->post('/firewall/plan', [FirewallController::class, 'plan'])->name('larena.env.admin.firewall.plan');
+    $router->post('/firewall/run', [FirewallController::class, 'run'])->name('larena.env.admin.firewall.run');
+    // Keeping a timed change in time, from the panel over the new rules (change:confirm).
+    $router->post('/changes/keep', [FirewallController::class, 'keep'])->name('larena.env.admin.change.keep');
+});
 $router->middleware(['access:env.sites.operate'])->group(static function ($router): void {
     $router->post('/alerts/ack/plan', [AlertsController::class, 'ackPlan'])->name('larena.env.admin.alerts.ack.plan');
     $router->post('/alerts/ack/run', [AlertsController::class, 'ackRun'])->name('larena.env.admin.alerts.ack.run');
@@ -78,6 +95,9 @@ $router->middleware(['access:env.sites.operate'])->group(static function ($route
     // A site's own domain pointed at this server, at either level (Panel plan, stage 7).
     $router->post('/sites/{domain}/dns/plan', [DnsController::class, 'sitePlan'])->where('domain', $domain)->name('larena.env.admin.site.dns.plan');
     $router->post('/sites/{domain}/dns/run', [DnsController::class, 'siteRun'])->where('domain', $domain)->name('larena.env.admin.site.dns.run');
+    // A site's own scheduled jobs, at either level (Panel plan 5.4).
+    $router->post('/sites/{domain}/cron/plan', [SiteCronController::class, 'plan'])->where('domain', $domain)->name('larena.env.admin.site.cron.plan');
+    $router->post('/sites/{domain}/cron/run', [SiteCronController::class, 'run'])->where('domain', $domain)->name('larena.env.admin.site.cron.run');
     // A site's files, at either level (Panel plan 6.1).
     $router->post('/sites/{domain}/files/plan', [SiteFilesController::class, 'plan'])->where('domain', $domain)->name('larena.env.admin.site.files.plan');
     $router->post('/sites/{domain}/files/run', [SiteFilesController::class, 'run'])->where('domain', $domain)->name('larena.env.admin.site.files.run');

@@ -197,6 +197,8 @@
                     </ul>
                 @endif
             </section>
+        @elseif ($tab === 'cron' && ($cron ?? null) !== null)
+            @include('larena-env::admin.partials.cron')
         @elseif ($tab === 'files')
             @include('larena-env::admin.partials.files')
         @elseif ($tab === 'nginx')

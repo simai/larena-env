@@ -31,6 +31,22 @@
   {change_id}` (with `change:status`) instead of a command of its own, and `fs:archive` takes its paths as a list of
   up to 100, the one list argument.
 
+- Stage 5 on the panel's side, the server's tools, as agreed with simai-env (1.33.0 to 1.35.0): no release has the
+  commands yet, so they show only where a server lists them in `gate.commands`; elsewhere the screens say a newer
+  simai-env is needed, with no buttons. «Сервер › Службы» (system level): each service's state, «Перезапустить» and,
+  for nginx and PHP-FPM, «Перечитать настройки», by plan and a job (`service:restart|reload`), and its journal
+  (`service:log`). A site's «Планировщик» tab, at either level for the person's own sites, where the server lists
+  `cron:list`: the jobs with their schedule in words, on or off, the last run and its output; add one by a preset or
+  five cron fields and a one-line command, turn it off and on, remove it, all by plan. «Сервер › Файрвол» (system
+  level): the rules, SSH and the panel's port locked and never offered for removal, open a port, block an address for
+  an hour, a day, a week or for good, unblock; every change is applied for a while and comes back by itself unless
+  «Оставить» is pressed in time, with the time left on the job's page and on the screen (the shared `change:confirm`).
+  «Настройки панели › Доступ к панели»: anyone or a list of addresses and networks, kept the same way, and a warning
+  before anything changes when your own address is not in the list. The new-site wizard takes the kinds from
+  `self:profiles` where the server lists it, with 1C-Bitrix and «Приложение на порту», which asks for the local port
+  only (and the path, and websockets). No new rights: `env.server.read`/`operate` and `env.sites.operate`. A stand-in on
+  recorded answers (`LARENA_ENV_RECORDED_TOOLS`) lets the tests exercise them.
+
 - Stage 6 on the panel's side, files and nginx directives, as agreed with simai-env (after 1.35.0: 1.37.0 the files and
   the download, 1.38.0 archives and the directives). No release has the commands yet, so they show only where a server
   lists them in `gate.commands`; elsewhere the new «Файлы» tab says the server cannot yet, with no buttons. A site's

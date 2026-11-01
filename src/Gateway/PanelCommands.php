@@ -25,7 +25,8 @@ final class PanelCommands
     private const string CURSOR = '/\A[0-9]{1,7}\z/D';
     private const string OWNER = '/\A[a-z][a-z0-9_-]{0,31}\z/D';
     private const string PHP = '/\A[5-9]\.[0-9]\z/D';
-    private const string PROFILE = '/\A(?:static|generic|laravel|wordpress|node|redirect)\z/D';
+    // bitrix and proxy only where the server lists its profiles (self:profiles, Panel plan 5.5).
+    private const string PROFILE = '/\A(?:static|generic|laravel|wordpress|node|redirect|bitrix|proxy)\z/D';
     private const string ENGINE = '/\A(?:mysql|pgsql)\z/D';
     private const string ORIGIN = '/\Ahttps?:\/\/[A-Za-z0-9.-]{1,253}(?::[0-9]{1,5})?\z/D';
     private const string CODE = '/\A30[1278]\z/D';
@@ -57,8 +58,31 @@ final class PanelCommands
     private const string PERIOD = '/\A(?:day|week|month)\z/D';
     // What a safe update replaces: simai-env itself, or the panel's build (simai-env 1.32.0).
     private const string UPDATE_TARGET = '/\A(?:env|panel)\z/D';
-    /** The one argument the gateway takes as a list: fs:archive's paths, up to 100, each checked as a path. */
-    private const array LIST_ARGUMENTS = ['fs:archive' => ['paths' => 100]];
+    // Panel plan stage 5 (simai-env, after 1.32.0). A service of the server's fixed list, resolved on the host.
+    private const string SERVICE = '/\A(?:nginx|php[5-9]\.[0-9]-fpm|mysql|mariadb|postgresql|redis-server|redis|cron)\z/D';
+    // A proxy site forwards to a port of this same server only (127.0.0.1), and a path on it.
+    private const string PORT = '/\A(?:[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])\z/D';
+    private const string UPSTREAM_PATH = '/\A\/[A-Za-z0-9._~\/-]{0,200}\z/D';
+    // A site's own scheduled job: five fields, no more often than every minute (the server checks it again), and one
+    // line of printable text run by the site's user.
+    private const string CRON_SCHEDULE = '/\A[0-9A-Za-z*\/,-]{1,40}(?: [0-9A-Za-z*\/,-]{1,40}){4}\z/D';
+    private const string CRON_COMMAND = '/\A[^\x00-\x1f\x7f]{1,1000}\z/Du';
+    private const string CRON_ID = '/\A[A-Za-z0-9][A-Za-z0-9._-]{0,63}\z/D';
+    // The firewall (ufw): a port or a range, a protocol, where from, and what to do; an address or a network to block.
+    private const string FW_PORT = '/\A[1-9][0-9]{0,4}(?::[1-9][0-9]{0,4})?\z/D';
+    private const string FW_PROTO = '/\A(?:tcp|udp|any)\z/D';
+    private const string FW_ACTION = '/\A(?:allow|deny)\z/D';
+    private const string ADDRESS = '/\A(?:[0-9]{1,3}(?:\.[0-9]{1,3}){3}(?:\/(?:[0-9]|[12][0-9]|3[0-2]))?|[0-9A-Fa-f]{0,4}(?::[0-9A-Fa-f]{0,4}){2,7}(?:\/[0-9]{1,3})?)\z/D';
+    private const string FW_FROM = '/\A(?:any|[0-9]{1,3}(?:\.[0-9]{1,3}){3}(?:\/(?:[0-9]|[12][0-9]|3[0-2]))?|[0-9A-Fa-f]{0,4}(?::[0-9A-Fa-f]{0,4}){2,7}(?:\/[0-9]{1,3})?)\z/D';
+    private const string FW_RULE_ID = '/\A[A-Za-z0-9][A-Za-z0-9._-]{0,63}\z/D';
+    private const string TTL = '/\A[1-9][0-9]{0,7}\z/D';
+    // Who reaches the panel: `any`, or a list of addresses and networks (panel:access, the list's one argument).
+    private const string PANEL_ALLOW = '/\A(?:any|[0-9]{1,3}(?:\.[0-9]{1,3}){3}(?:\/(?:[0-9]|[12][0-9]|3[0-2]))?|[0-9A-Fa-f]{0,4}(?::[0-9A-Fa-f]{0,4}){2,7}(?:\/[0-9]{1,3})?)\z/D';
+    /**
+     * The arguments the gateway takes as a list: fs:archive's paths, up to 100, each checked as a path; the addresses
+     * that reach the panel (panel:access), up to 50.
+     */
+    private const array LIST_ARGUMENTS = ['fs:archive' => ['paths' => 100], 'panel:access' => ['allow' => 50]];
 
     /**
      * `since`: the first simai-env release whose gateway allows the command; null for one no release has yet.
@@ -85,7 +109,8 @@ final class PanelCommands
         // A new site and its PHP; a new owner, the space of a person at the panel's user level (simai-env 1.22.0).
         'site:add' => ['args' => ['domain' => self::DOMAIN, 'profile' => self::PROFILE, 'php' => self::PHP, 'owner' => self::OWNER,
             'create-db' => self::YES_NO, 'db-engine' => self::ENGINE, 'redirect-to' => self::ORIGIN, 'redirect-code' => self::CODE,
-            'redirect-path' => self::KEEP_DROP, 'backup' => self::YES_NO], 'required' => ['domain'], 'since' => '1.22.0', 'kind' => self::ACTION],
+            'redirect-path' => self::KEEP_DROP, 'backup' => self::YES_NO, 'upstream-port' => self::PORT, 'upstream-path' => self::UPSTREAM_PATH,
+            'websockets' => self::YES_NO], 'required' => ['domain'], 'since' => '1.22.0', 'kind' => self::ACTION],
         'site:set-php' => ['args' => ['domain' => self::DOMAIN, 'php' => self::PHP], 'required' => ['domain', 'php'], 'since' => '1.22.0', 'kind' => self::ACTION],
         'owner:create' => ['args' => ['name' => self::OWNER, 'pubkey' => self::PUBKEY], 'required' => ['name'], 'since' => '1.22.0', 'kind' => self::ACTION],
         // Blocking a space: SSH, SFTP and requests as that owner stop, its sites keep serving (simai-env 1.27.0).
@@ -127,6 +152,27 @@ final class PanelCommands
         'access:remove' => ['args' => ['login' => self::LOGIN], 'required' => ['login'], 'since' => '1.30.0', 'kind' => self::ACTION],
         'db:list' => ['args' => [], 'required' => [], 'since' => '1.28.0', 'kind' => self::READ],
         'site:db-rotate' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => '1.28.0', 'kind' => self::ACTION],
+        // Panel plan stage 5 (simai-env, after 1.32.0): the server's services, the administrator's; the kinds of site the
+        // server makes, with their arguments; a site's own scheduled jobs, as its user; the firewall and who reaches
+        // the panel, each change undone by the server itself unless it is kept in time (change:confirm).
+        'service:restart' => ['args' => ['name' => self::SERVICE], 'required' => ['name'], 'since' => null, 'kind' => self::ACTION],
+        'service:reload' => ['args' => ['name' => self::SERVICE], 'required' => ['name'], 'since' => null, 'kind' => self::ACTION],
+        'service:log' => ['args' => ['name' => self::SERVICE, 'lines' => self::LINES], 'required' => ['name'], 'since' => null, 'kind' => self::READ],
+        'self:profiles' => ['args' => [], 'required' => [], 'since' => null, 'kind' => self::READ],
+        'cron:list' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => null, 'kind' => self::READ],
+        'cron:job-add' => ['args' => ['domain' => self::DOMAIN, 'schedule' => self::CRON_SCHEDULE, 'command' => self::CRON_COMMAND],
+            'required' => ['domain', 'schedule', 'command'], 'since' => null, 'kind' => self::ACTION],
+        'cron:job-remove' => ['args' => ['id' => self::CRON_ID], 'required' => ['id'], 'since' => null, 'kind' => self::ACTION],
+        'cron:job-enable' => ['args' => ['id' => self::CRON_ID], 'required' => ['id'], 'since' => null, 'kind' => self::ACTION],
+        'cron:job-disable' => ['args' => ['id' => self::CRON_ID], 'required' => ['id'], 'since' => null, 'kind' => self::ACTION],
+        'cron:job-runs' => ['args' => ['id' => self::CRON_ID], 'required' => ['id'], 'since' => null, 'kind' => self::READ],
+        'firewall:status' => ['args' => [], 'required' => [], 'since' => null, 'kind' => self::READ],
+        'firewall:rule-add' => ['args' => ['port' => self::FW_PORT, 'proto' => self::FW_PROTO, 'from' => self::FW_FROM, 'action' => self::FW_ACTION],
+            'required' => ['port', 'action'], 'since' => null, 'kind' => self::ACTION],
+        'firewall:rule-remove' => ['args' => ['id' => self::FW_RULE_ID], 'required' => ['id'], 'since' => null, 'kind' => self::ACTION],
+        'firewall:block' => ['args' => ['address' => self::ADDRESS, 'ttl' => self::TTL], 'required' => ['address'], 'since' => null, 'kind' => self::ACTION],
+        'firewall:unblock' => ['args' => ['address' => self::ADDRESS], 'required' => ['address'], 'since' => null, 'kind' => self::ACTION],
+        'panel:access' => ['args' => ['allow' => self::PANEL_ALLOW], 'required' => ['allow'], 'since' => null, 'kind' => self::ACTION],
         // Files of a site, as its own user and inside its root only (simai-env, after 1.35.0; Panel plan 6.1, 6.2).
         'fs:list' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH], 'required' => ['domain', 'path'], 'since' => null, 'kind' => self::READ],
         'fs:read' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH, 'max_bytes' => self::FS_MAX_BYTES], 'required' => ['domain', 'path'], 'since' => null, 'kind' => self::READ],

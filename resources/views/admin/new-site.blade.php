@@ -18,13 +18,19 @@
                     <li>
                         <a href="{{ route('larena.env.admin.sites.new', [], false) }}?profile={{ $profile }}" data-env-profile="{{ $profile }}" @if ($profile === ($kind ?? 'static')) aria-current="true" @endif
                             style="display: block; min-height: 2.75rem; padding: .625rem .875rem; border: 1px solid {{ $profile === ($kind ?? 'static') ? 'var(--sf-primary)' : 'var(--larena-line)' }}; border-radius: .625rem; text-decoration: none; color: inherit;{{ $profile === ($kind ?? 'static') ? ' background: var(--sf-primary-container); color: var(--sf-on-primary-container);' : '' }}">
-                            <strong>{{ __('larena-env::admin.new_site.profiles.'.$profile) }}</strong><br>
-                            <span data-env-profile-hint="{{ $profile }}">{{ __('larena-env::admin.new_site.profile_hints.'.$profile) }}</span>
+                            @if (($serverProfiles ?? null) !== null)
+                                <strong>{{ $serverProfiles[$profile]['label'] }}</strong><br>
+                                <span data-env-profile-hint="{{ $profile }}">{{ $serverProfiles[$profile]['hint'] }}</span>
+                            @else
+                                <strong>{{ __('larena-env::admin.new_site.profiles.'.$profile) }}</strong><br>
+                                <span data-env-profile-hint="{{ $profile }}">{{ __('larena-env::admin.new_site.profile_hints.'.$profile) }}</span>
+                            @endif
                         </a>
                     </li>
                 @endforeach
             </ul>
         </nav>
+        {{-- The fields the chosen kind asks: the server's own description of it where it lists its kinds (Panel plan 5.5). --}}
         <form method="post" action="{{ route('larena.env.admin.sites.plan', [], false) }}" class="larena-form" data-env-new-site>
             @csrf
             <div class="larena-field">
@@ -32,7 +38,7 @@
                 <input type="text" id="env-new-domain" name="domain" value="{{ $old['domain'] ?? '' }}" required autocomplete="off" placeholder="example.com">
             </div>
             <input type="hidden" name="profile" value="{{ $kind ?? 'static' }}" data-env-new-profile="{{ $kind ?? 'static' }}">
-            @if (in_array($kind ?? 'static', $phpProfiles ?? [], true))
+            @if (in_array('php', ($serverProfiles ?? null) !== null ? ($serverProfiles[$kind ?? 'static']['groups'] ?? []) : \Larena\Env\Http\Controllers\NewSiteController::groupsOf($kind ?? 'static', null), true))
                 <div class="larena-field" data-env-field="php">
                     <label for="env-new-php">{{ __('larena-env::admin.new_site.php') }}</label>
                     <select id="env-new-php" name="php">
@@ -43,6 +49,8 @@
                     </select>
                     <p>{{ __('larena-env::admin.new_site.php_hint') }}</p>
                 </div>
+            @endif
+            @if (in_array('database', ($serverProfiles ?? null) !== null ? ($serverProfiles[$kind ?? 'static']['groups'] ?? []) : \Larena\Env\Http\Controllers\NewSiteController::groupsOf($kind ?? 'static', null), true))
                 <div class="larena-field" data-env-field="database">
                     <label for="env-new-db">{{ __('larena-env::admin.new_site.database') }}</label>
                     <select id="env-new-db" name="create-db">
@@ -59,10 +67,29 @@
                     </select>
                 </div>
             @endif
-            @if (($kind ?? 'static') === 'redirect')
+            @if (in_array('redirect', ($serverProfiles ?? null) !== null ? ($serverProfiles[$kind ?? 'static']['groups'] ?? []) : \Larena\Env\Http\Controllers\NewSiteController::groupsOf($kind ?? 'static', null), true))
                 <div class="larena-field" data-env-field="redirect">
                     <label for="env-new-redirect">{{ __('larena-env::admin.new_site.redirect_to') }}</label>
                     <input type="url" id="env-new-redirect" name="redirect-to" value="{{ $old['redirect-to'] ?? '' }}" placeholder="https://example.org">
+                </div>
+            @endif
+            @if (in_array('proxy', ($serverProfiles ?? null) !== null ? ($serverProfiles[$kind ?? 'static']['groups'] ?? []) : \Larena\Env\Http\Controllers\NewSiteController::groupsOf($kind ?? 'static', null), true))
+                {{-- A reverse proxy forwards to a port of this same server only (127.0.0.1): nothing outside it. --}}
+                <div class="larena-field" data-env-field="proxy">
+                    <label for="env-new-upstream-port">{{ __('larena-env::admin.new_site.upstream_port') }}</label>
+                    <input type="number" id="env-new-upstream-port" name="upstream-port" value="{{ $old['upstream-port'] ?? '' }}" min="1" max="65535" inputmode="numeric" required placeholder="3000">
+                    <p>{{ __('larena-env::admin.new_site.upstream_port_hint') }}</p>
+                </div>
+                <div class="larena-field" data-env-field="proxy-path">
+                    <label for="env-new-upstream-path">{{ __('larena-env::admin.new_site.upstream_path') }}</label>
+                    <input type="text" id="env-new-upstream-path" name="upstream-path" value="{{ $old['upstream-path'] ?? '' }}" autocomplete="off" placeholder="/">
+                </div>
+                <div class="larena-field" data-env-field="websockets">
+                    <input type="hidden" name="websockets" value="no">
+                    <label for="env-new-websockets">
+                        <input type="checkbox" id="env-new-websockets" name="websockets" value="yes" @if (($old['websockets'] ?? null) === 'yes') checked @endif>
+                        {{ __('larena-env::admin.new_site.websockets') }}
+                    </label>
                 </div>
             @endif
             @if (($dailyBackup ?? null) !== null && ($kind ?? '') !== 'redirect')

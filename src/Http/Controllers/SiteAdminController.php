@@ -34,12 +34,14 @@ final readonly class SiteAdminController
 {
     /**
      * The card's tabs (Panel plan 2.3 and 3): its state and problems, domains and certificate, PHP, its database, its
-     * backups, releases, log, access; its domain's DNS records (stage 7); its files and, for the system level only, its
-     * own nginx directives (stage 6).
+     * backups, releases, log, access; its domain's DNS records (stage 7); its own scheduled jobs (5.4); its files and,
+     * for the system level only, its own nginx directives (stage 6).
      */
-    public const array TABS = ['overview', 'domains', 'dns', 'php', 'database', 'backups', 'files', 'releases', 'log', 'access', 'nginx'];
+    public const array TABS = ['overview', 'domains', 'dns', 'php', 'database', 'backups', 'cron', 'files', 'releases', 'log', 'access', 'nginx'];
     /** The tabs only the system level has. */
     private const array SYSTEM_TABS = ['nginx'];
+    /** The tabs shown only where the server lists the command they read. */
+    private const array LISTED_TABS = ['cron' => 'cron:list'];
     private const array LOG_KINDS = ['access', 'error'];
     /** How many of the last lines the log reads; the gateway gives at most 1000. */
     public const array LOG_LINES = [200, 500, 1000];
@@ -69,16 +71,17 @@ final readonly class SiteAdminController
         $actor = ResolvePanelActor::of($request);
         $result = $this->sites->read($actor, $domain);
         $site = $result->site;
-        $tabs = $actor->owner === null ? self::TABS : array_values(array_diff(self::TABS, self::SYSTEM_TABS));
+        // What this server's gateway allows, and its PHP versions: the card offers only what will not be refused.
+        $overview = $site === null ? null : $this->overviews->read($actor)->overview;
+        $capabilities = $overview->capabilities ?? PanelCapabilities::none();
+        $tabs = array_values(array_filter($actor->owner === null ? self::TABS : array_diff(self::TABS, self::SYSTEM_TABS),
+            static fn (string $name): bool => !isset(self::LISTED_TABS[$name]) || $capabilities->allows(self::LISTED_TABS[$name])));
         $tab = in_array($request->query('tab'), $tabs, true) ? (string) $request->query('tab') : self::TABS[0];
         $kind = in_array($request->query('log'), self::LOG_KINDS, true) ? (string) $request->query('log') : 'access';
         $lines = in_array((int) $request->query('lines'), self::LOG_LINES, true) ? (int) $request->query('lines') : self::LOG_LINES[0];
         $search = mb_substr(trim((string) $request->query('q')), 0, 128);
         $groups = $kind === 'error' ? SiteLogView::LEVELS : SiteLogView::STATUS_GROUPS;
         $group = in_array($request->query('group'), $groups, true) ? (string) $request->query('group') : '';
-        // What this server's gateway allows, and its PHP versions: the card offers only what will not be refused.
-        $overview = $site === null ? null : $this->overviews->read($actor)->overview;
-        $capabilities = $overview->capabilities ?? PanelCapabilities::none();
         // Each tab asks the gateway only for what it shows.
         // A search goes to the server, which looks through far more lines than are shown, when its release can.
         $match = $search !== '' && preg_match('/\A[ -~]{1,200}\z/D', $search) === 1 && $capabilities->searchesLogs() ? $search : null;
@@ -110,6 +113,8 @@ final readonly class SiteAdminController
             'overlayAllows' => ['set' => $capabilities->allows('site:nginx-overlay-set'), 'clear' => $capabilities->allows('site:nginx-overlay-clear'),
                 'confirm' => $capabilities->allows('change:confirm')],
             'siteDns' => $site !== null && $tab === 'dns' ? $this->dns?->forSite($domain) : null,
+            // The site's own scheduled jobs (Panel plan 5.4), and the runs of one of them when it is opened.
+            'cron' => $site !== null && $tab === 'cron' ? $this->cronTab($request, $actor, $domain, $capabilities) : null,
             'wholeServer' => $actor->owner === null,
             // An account's own action chooses among the accounts it suits; with none, the action is not offered.
             'sftpChoices' => array_combine(array_map(static fn (SiteOperation $operation): string => $operation->value, $operations),
@@ -187,6 +192,54 @@ final readonly class SiteAdminController
             'fileModes' => FileModes::FILE,
             'dirModes' => FileModes::DIR,
         ];
+    }
+
+    /**
+     * What the «Планировщик» tab shows: the site's jobs, each schedule in words, the last run, and the runs of one job
+     * when it is opened; the changes this server allows and the schedules offered instead of five fields.
+     *
+     * @return array<string, mixed>
+     */
+    private function cronTab(Request $request, PanelActor $actor, string $domain, PanelCapabilities $capabilities): array
+    {
+        $jobs = $this->extras->cronJobs($actor, $domain);
+        $open = $request->query('runs');
+        $opened = null;
+        foreach ($jobs ?? [] as $job) {
+            if ($job->id === $open) {
+                $opened = $job;
+            }
+        }
+        $canOperate = $this->canOperate($request);
+        $allows = [];
+        foreach (SiteCronController::OPERATIONS as $op => $command) {
+            $allows[$op] = $canOperate && $capabilities->allows($command);
+        }
+
+        return [
+            'jobs' => $jobs,
+            'opened' => $opened,
+            'runs' => $opened !== null && $capabilities->allows('cron:job-runs') ? $this->extras->cronRuns($actor, $opened->id) : null,
+            'allows' => $allows + ['runs' => $capabilities->allows('cron:job-runs')],
+            'presets' => \Larena\Env\Cron\CronSchedule::PRESETS,
+            // Each schedule in words; one the panel has no words for is shown as written.
+            'when' => array_combine(array_map(static fn (\Larena\Env\Cron\CronJob $job): string => $job->id, $jobs ?? []),
+                array_map(fn (\Larena\Env\Cron\CronJob $job): string => $this->scheduleText($job->schedule), $jobs ?? [])),
+        ];
+    }
+
+    private function scheduleText(string $schedule): string
+    {
+        $words = \Larena\Env\Cron\CronSchedule::words($schedule);
+        if ($words === null) {
+            return (string) $this->translator->get('larena-env::admin.cron.as_written', ['schedule' => $schedule]);
+        }
+        [$key, $replace] = $words;
+        if (isset($replace['weekday'])) {
+            $replace['weekday'] = (string) $this->translator->get('larena-env::admin.cron.weekdays.'.$replace['weekday']);
+        }
+
+        return (string) $this->translator->get('larena-env::admin.cron.presets.'.$key, $replace);
     }
 
     /** What the action would do, with a confirmation that starts it and nothing else. */

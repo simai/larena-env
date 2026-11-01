@@ -18,6 +18,9 @@ final readonly class PanelJobStatus
         public ?int $exitCode,
         public ?string $createdAt,
         public ?string $actor,
+        // A change the server undoes by itself unless it is kept in time: every timed set command answers its
+        // change_id and expires_at in its job's result (the firewall, who reaches the panel, nginx directives).
+        public ?\Larena\Env\Firewall\TimedChange $change = null,
     ) {
     }
 
@@ -50,6 +53,7 @@ final readonly class PanelJobStatus
             exitCode: is_int($data['exit_code'] ?? null) ? $data['exit_code'] : null,
             createdAt: is_string($data['created_at'] ?? null) ? $data['created_at'] : null,
             actor: is_string($actor) ? $actor : null,
+            change: is_array($data['result'] ?? null) ? \Larena\Env\Firewall\TimedChange::fromData($data['result']) : null,
         );
     }
 }
