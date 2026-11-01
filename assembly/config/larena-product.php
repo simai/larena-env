@@ -29,6 +29,9 @@ return [
             'auth.users' => 'users',
             'env.people' => 'users',
             'env.server.overview' => 'server',
+            // DNS through the provider's API (Panel plan, stage 7): the zones beside the server, the connection among the settings.
+            'env.dns' => 'server',
+            'env.dns.connection' => 'settings',
             // Sign-in diagnostics under its own name, beside the server's overview.
             'auth.diagnostics' => 'server',
             'admin.settings_general' => 'settings',

@@ -15,6 +15,11 @@ use Larena\Core\Process\ProcessExecutor;
 use Larena\Env\Console\PanelCheckCommand;
 use Larena\Env\Console\RegisterServerAreaCommand;
 use Larena\Env\Contracts\PanelGateway;
+use Larena\Env\Dns\CloudflareDnsProvider;
+use Larena\Env\Dns\DnsChangeLog;
+use Larena\Env\Dns\DnsConnection;
+use Larena\Env\Dns\DnsProvider;
+use Larena\Env\Dns\DnsService;
 use Larena\Env\Gateway\PanelActor;
 use Larena\Env\Gateway\PanelGatewayFactory;
 use Larena\Env\History\MetricSamples;
@@ -54,6 +59,14 @@ final class EnvServiceProvider extends ServiceProvider
         // The load the panel measured, and the warnings it has already told people about (Panel plan 4.5, 4.6).
         $this->app->bind(MetricSamples::class, static fn (Application $app): MetricSamples => new MetricSamples($app->make('db')->connection()));
         $this->app->bind(WarningLedger::class, static fn (Application $app): WarningLedger => new WarningLedger($app->make('db')->connection()));
+        // DNS through the provider's API (Panel plan, stage 7): Cloudflare is the one provider for now.
+        $this->app->bind(DnsProvider::class, static fn (Application $app): DnsProvider => new CloudflareDnsProvider($app->make(\Illuminate\Http\Client\Factory::class)));
+        $this->app->bind(DnsService::class, static fn (Application $app): DnsService => new DnsService(
+            $app->make(DnsProvider::class),
+            new DnsConnection($app->make('db')->connection(), $app->make('encrypter')),
+            new DnsChangeLog($app->make('db')->connection()),
+            $app->make(PanelAudit::class),
+        ));
         $this->app->bind(PanelAudit::class, static fn (Application $app): PanelAudit => new PanelAudit($app));
         $this->app->bind(PanelActorResolver::class, static fn (Application $app): PanelActorResolver => new PanelActorResolver(
             $app->make(\Larena\Access\Runtime\AccessOperationAuthorizer::class),
@@ -166,6 +179,27 @@ final class EnvServiceProvider extends ServiceProvider
             auditDenials: true,
         ));
 
-        return $read && $operate && $sitesRead && $sitesOperate;
+        // DNS through the provider's API (Panel plan, stage 7): the zones and the token are the whole server's; a
+        // person of the user level points their own site's domain through env.sites.operate.
+        $dnsRead = $registry->register(new AccessOperationDescriptor(
+            code: 'env.dns.read',
+            ownerPackage: 'larena/env',
+            labelKey: 'larena-env::operations.dns_read',
+            target: 'env.dns:all',
+            requiredGrant: 'read',
+            risk: 'normal',
+            auditDenials: true,
+        ));
+        $dnsOperate = $registry->register(new AccessOperationDescriptor(
+            code: 'env.dns.operate',
+            ownerPackage: 'larena/env',
+            labelKey: 'larena-env::operations.dns_operate',
+            target: 'env.dns:all',
+            requiredGrant: 'write',
+            risk: 'high',
+            auditDenials: true,
+        ));
+
+        return $read && $operate && $sitesRead && $sitesOperate && $dnsRead && $dnsOperate;
     }
 }

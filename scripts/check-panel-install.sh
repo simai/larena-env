@@ -146,9 +146,9 @@ roots = [item["key"] for item in items]
 print("menu roots:", roots)
 assert roots == ["sites", "journal", "users", "server", "settings"], roots
 children = {item["key"]: [row["key"] for row in item.get("children", []) if row.get("kind") == "page"] for item in items}
-assert sorted(children["server"]) == ["auth.diagnostics", "env.server.overview"], children
+assert sorted(children["server"]) == ["auth.diagnostics", "env.dns", "env.server.overview"], children
 assert sorted(children["users"]) == ["auth.users", "env.people"], children
-assert children["settings"] == ["admin.settings_general", "admin.site_backgrounds"], children
+assert sorted(children["settings"]) == ["admin.settings_general", "admin.site_backgrounds", "env.dns.connection"], children
 assert "site-switch" not in json.dumps(menu.get("capabilities", [])), "the panel has no site switcher"
 hrefs = [item["href"] for item in items if item.get("href")] + [row["href"] for item in items for row in item.get("children", []) if row.get("href")]
 for href in hrefs:
@@ -234,7 +234,7 @@ _, planned = post("/admin/server/sites/new/plan", {"_token": form_token(wizard),
 assert 'data-env-plan="site:add"' in planned and 'name="backup" value="yes"' in planned and "data-env-plan-then" not in planned, "a new site is planned with its daily backup"
 _, made = post("/admin/server/sites/new/run", {"_token": form_token(planned), "domain": "new.test", "profile": "static", "daily-backup": "yes", "backup": "yes"})
 assert "daily backup is being turned on" not in made, "the daily backup came with the site, nothing is turned on after"
-for tab in ("overview", "domains", "php", "database", "backups", "releases", "log", "access"):
+for tab in ("overview", "domains", "dns", "php", "database", "backups", "releases", "log", "access"):
     status, card = get("/admin/server/sites/demo-php.test?tab=" + tab)
     assert status == 200 and 'data-env-tab="' + tab + '"' in card, ("tab", tab)
     # SFTP is by key only (simai-env 1.30.0): no password field on any tab.
@@ -248,6 +248,14 @@ for tab in ("overview", "domains", "php", "database", "backups", "releases", "lo
     for shownAction, onTab in (("backup-restore-database", "backups"), ("backup-extract-files", "backups"), ("php-setting", "php"), ("database-password", "database")):
         if tab == onTab:
             assert 'data-env-operation="' + shownAction + '"' in card, ("offered", shownAction)
+# DNS through the provider (stage 7): with no token the screens say how to connect; nothing calls out.
+_, zones = get("/admin/server/dns")
+assert 'data-env-dns-zones="not_connected"' in zones and "/admin/server/dns/connection" in zones, "the DNS screen says how to connect"
+_, connection = get("/admin/server/dns/connection")
+assert 'data-env-dns-connection="none"' in connection and 'name="token"' in connection, "the connection asks for a token"
+_, dns_tab = get("/admin/server/sites/demo-php.test?tab=dns")
+assert 'data-env-dns="not_connected"' in dns_tab and "/admin/server/dns/connection" in dns_tab, "the site's DNS tab says how to connect"
+print("dns:", "ok")
 _, sftp = get("/admin/server/sites/demo-owned.test?tab=access")
 assert 'data-env-sftp="demo-staff"' in sftp and 'data-env-sftp-path="/site"' in sftp, "the site's own SFTP access, where it lands"
 for shownAction in ("sftp-add-key", "sftp-disable", "sftp-remove"):
@@ -272,7 +280,7 @@ status, sites = get("/admin/server")
 assert status == 200 and "demo-owned.test" in sites and "demo-php.test" not in sites, "the person sees their own owner's sites"
 status, other = get("/admin/server/sites/demo-php.test")
 assert "another owner" in other, "another owner's site is refused by the server"
-for path in ("/admin/server/people", "/admin/server/overview"):
+for path in ("/admin/server/people", "/admin/server/overview", "/admin/server/dns", "/admin/server/dns/connection"):
     try:
         status, _ = get(path)
     except urllib.error.HTTPError as error:
@@ -292,6 +300,8 @@ assert status == 200, ("the person's notification centre opens", status)
 assert 'data-env-warning-site="demo-php.test"' not in sites and 'data-env-warning="disk_full"' not in sites, "the person is warned about their own sites only"
 status, own_sftp = get("/admin/server/sites/demo-owned.test?tab=access")
 assert status == 200 and 'data-env-sftp="demo-staff"' in own_sftp and 'data-env-operation="sftp-add-key"' in own_sftp, "the person manages their own site's SFTP"
+status, own_dns = get("/admin/server/sites/demo-owned.test?tab=dns")
+assert status == 200 and 'data-env-dns="not_connected"' in own_dns and "/admin/server/dns/connection" not in own_dns, "the person sees their site's DNS tab, not the connection"
 print("both levels checked")
 PY
 python3 - "$APP/database/database.sqlite" <<'PY' >>"$LOG" 2>&1 || failed "audit"

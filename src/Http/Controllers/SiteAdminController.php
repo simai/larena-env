@@ -30,9 +30,9 @@ final readonly class SiteAdminController
 {
     /**
      * The card's tabs (Panel plan 2.3 and 3): its state and problems, domains and certificate, PHP, its database, its
-     * backups, releases, log, access.
+     * backups, releases, log, access; and its domain's DNS records (stage 7).
      */
-    public const array TABS = ['overview', 'domains', 'php', 'database', 'backups', 'releases', 'log', 'access'];
+    public const array TABS = ['overview', 'domains', 'dns', 'php', 'database', 'backups', 'releases', 'log', 'access'];
     private const array LOG_KINDS = ['access', 'error'];
     /** How many of the last lines the log reads; the gateway gives at most 1000. */
     public const array LOG_LINES = [200, 500, 1000];
@@ -44,6 +44,7 @@ final readonly class SiteAdminController
         private PanelOperations $operations,
         private Factory $views,
         private Translator $translator,
+        private ?\Larena\Env\Dns\DnsService $dns = null,
     ) {
     }
 
@@ -80,6 +81,9 @@ final readonly class SiteAdminController
             'phpExtensions' => $ask('php:extensions', 'php') && $site->php !== 'none' ? $this->extras->phpExtensions($actor, $site->php) : null,
             'databases' => $ask('db:list', 'database') ? $this->extras->databases($actor, $domain) : null,
             'sftpAccounts' => $sftpAccounts,
+            // The domain's records through the panel's DNS provider, and whether it points here (Panel plan, stage 7).
+            'siteDns' => $site !== null && $tab === 'dns' ? $this->dns?->forSite($domain) : null,
+            'wholeServer' => $actor->owner === null,
             // An account's own action chooses among the accounts it suits; with none, the action is not offered.
             'sftpChoices' => array_combine(array_map(static fn (SiteOperation $operation): string => $operation->value, $operations),
                 array_map(static fn (SiteOperation $operation): array => $operation->accountChoices($sftpAccounts ?? []), $operations)),

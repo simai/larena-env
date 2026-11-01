@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Larena\Env\Http\Controllers\DnsController;
 use Larena\Env\Http\Controllers\NewSiteController;
 use Larena\Env\Http\Controllers\PeopleController;
 use Larena\Env\Http\Controllers\ServerAdminController;
@@ -25,6 +26,20 @@ $router->middleware(['access:env.server.operate'])->group(static function ($rout
     $router->post('/people/owners/plan', [PeopleController::class, 'planOwner'])->name('larena.env.admin.people.owners.plan');
     $router->post('/people/owners/run', [PeopleController::class, 'runOwner'])->name('larena.env.admin.people.owners.run');
 });
+// DNS through the provider's API (Panel plan, stage 7): the zones and the connection are the system level's.
+$router->middleware(['access:env.dns.read'])->group(static function ($router): void {
+    $router->get('/dns', [DnsController::class, 'index'])->name('larena.env.admin.dns');
+    $router->get('/dns/connection', [DnsController::class, 'connection'])->name('larena.env.admin.dns.connection');
+    $router->get('/dns/zones/{zone}', [DnsController::class, 'zone'])->where('zone', '[a-f0-9]{32}')->name('larena.env.admin.dns.zone');
+});
+$router->middleware(['access:env.dns.operate'])->group(static function ($router): void {
+    $router->post('/dns/connection', [DnsController::class, 'connect'])->name('larena.env.admin.dns.connection.save');
+    $router->post('/dns/connection/addresses', [DnsController::class, 'addresses'])->name('larena.env.admin.dns.connection.addresses');
+    $router->post('/dns/connection/disconnect', [DnsController::class, 'disconnect'])->name('larena.env.admin.dns.connection.disconnect');
+    $router->post('/dns/zones/{zone}/plan', [DnsController::class, 'plan'])->where('zone', '[a-f0-9]{32}')->name('larena.env.admin.dns.zone.plan');
+    $router->post('/dns/zones/{zone}/undo', [DnsController::class, 'undo'])->where('zone', '[a-f0-9]{32}')->name('larena.env.admin.dns.zone.undo');
+    $router->post('/dns/run', [DnsController::class, 'run'])->name('larena.env.admin.dns.run');
+});
 $router->get('/sites/{domain}', [SiteAdminController::class, 'show'])->where('domain', $domain)->name('larena.env.admin.site');
 $router->get('/jobs/{job}', [ServerJobController::class, 'show'])->where('job', '[a-f0-9]{24}')->name('larena.env.admin.job');
 
@@ -36,5 +51,8 @@ $router->middleware(['access:env.sites.operate'])->group(static function ($route
     $router->post('/sites/new/run', [NewSiteController::class, 'run'])->name('larena.env.admin.sites.run');
     $router->post('/sites/{domain}/plan', [SiteAdminController::class, 'plan'])->where('domain', $domain)->name('larena.env.admin.site.plan');
     $router->post('/sites/{domain}/run', [SiteAdminController::class, 'run'])->where('domain', $domain)->name('larena.env.admin.site.run');
+    // A site's own domain pointed at this server, at either level (Panel plan, stage 7).
+    $router->post('/sites/{domain}/dns/plan', [DnsController::class, 'sitePlan'])->where('domain', $domain)->name('larena.env.admin.site.dns.plan');
+    $router->post('/sites/{domain}/dns/run', [DnsController::class, 'siteRun'])->where('domain', $domain)->name('larena.env.admin.site.dns.run');
     $router->post('/jobs/{job}/cancel', [ServerJobController::class, 'cancel'])->where('job', '[a-f0-9]{24}')->name('larena.env.admin.job.cancel');
 });

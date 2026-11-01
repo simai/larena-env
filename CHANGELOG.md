@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Stage 7, DNS through the provider's API (owner decision 2026-10-31: no DNS server of our own). «Настройки панели ›
+  DNS» connects a Cloudflare API token, checked by the provider and kept encrypted with the application's key; it is
+  never shown again, only its last four characters, the zones it sees and what it may do in each. The server's own
+  addresses are given there too. «Сервер › DNS» lists the zones and a zone's A, AAAA, CNAME, MX, TXT, CAA and SRV
+  records; a record is added, changed or deleted by a plan in words and a confirmation, checked before the provider is
+  asked and refused if it changed meanwhile. Each change keeps the record as it was in the panel's log and the audit
+  log (`env.dns.record_changed`), and the zone's last change can be put back. A site's «DNS» tab, at either level for
+  the person's own sites, shows the domain's and its www's records, says whether the domain points to this server, and
+  offers «Направить на этот сервер»: the domain's address records to this server, www as its alias, by plan. New rights
+  `env.dns.read` and `env.dns.operate` are the system level's. `DnsProvider` lets another provider come later.
 - simai-env 1.30.0, recorded answers set 6. SFTP on a site's «Доступ» tab, by key only: a new access, a key, turn off,
   turn on, remove, each planned and confirmed; there is no password field anywhere. The list says where an access
   lands and when it was made, and a note says that files the site must rewrite need group-writable uploads (0664).

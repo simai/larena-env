@@ -117,7 +117,7 @@ env_assert(str_contains($ok, 'data-env-answers="') && str_contains($ok, 'data-en
 $warned = $screen(['site' => $site, 'warnings' => [new \Larena\Env\Warnings\PanelWarning('backup_stale', 'warning', 'demo-php.test', ['domain' => 'demo-php.test', 'time' => '2026-01-01'])]]);
 env_assert(str_contains($warned, 'data-env-warning="backup_stale"') && str_contains($warned, 'href="?tab=backups"')
     && strpos($warned, 'data-env-warnings') < strpos($warned, 'data-env-tabs'), 'The card says what needs attention above its tabs, with the tab to deal with it.');
-env_assert(substr_count($ok, 'data-env-tab=') === 8 && preg_match('/data-env-tab="overview"\s+aria-current="page"/', $ok) === 1, 'The eight tabs, the current one marked.');
+env_assert(substr_count($ok, 'data-env-tab=') === 9 && preg_match('/data-env-tab="overview"\s+aria-current="page"/', $ok) === 1, 'The nine tabs, the current one marked.');
 
 // Backups have their tab: the list, «Back up now», and restoring and checking only where the server has them.
 $older = \Larena\Env\Gateway\PanelCapabilities::fromHostDescription(['simai_env' => ['version' => '1.27.0']]);
@@ -273,7 +273,18 @@ env_assert(str_contains($blocking, 'data-env-owner="acme" data-env-owner-blocked
     && str_contains($blocking, 'name="action" value="block"'), 'A blocked space offers unblocking, the other blocking.');
 env_assert(!str_contains($spaces(['canBlock' => false]), 'name="action" value="block"'), 'No blocking where the server\'s gateway has none.');
 
-foreach (['site', 'plan', 'job', 'new-site', 'people', 'partials/notes', 'partials/warnings', 'partials/history'] as $view) {
+// The DNS tab (Panel plan, stage 7): how to connect when nothing is, where the domain points, the records and the plan.
+$dnsZone = new \Larena\Env\Dns\DnsZone(str_repeat('a', 32), 'demo-php.test', 'active', ['#dns_records:edit']);
+$dnsRecords = [new \Larena\Env\Dns\DnsRecord(str_repeat('1', 32), 'A', 'demo-php.test', '198.51.100.7', 1)];
+$noDns = $screen(['site' => $site, 'tab' => 'dns', 'siteDns' => new \Larena\Env\Dns\SiteDns('not_connected'), 'wholeServer' => true]);
+env_assert(str_contains($noDns, 'data-env-dns="not_connected"') && str_contains($noDns, 'data-env-dns-connect') && str_contains($noDns, 'larena.env.admin.dns.connection'), 'Not connected: how to connect.');
+env_assert(!str_contains($screen(['site' => $site, 'tab' => 'dns', 'siteDns' => new \Larena\Env\Dns\SiteDns('not_connected'), 'wholeServer' => false]), 'larena.env.admin.dns.connection'), 'The user level is not sent to the connection.');
+$elsewhere = $screen(['site' => $site, 'tab' => 'dns', 'wholeServer' => false, 'siteDns' => new \Larena\Env\Dns\SiteDns('ok', $dnsZone, $dnsRecords, \Larena\Env\Dns\SiteDns::ELSEWHERE)]);
+env_assert(str_contains($elsewhere, 'data-env-dns-points="elsewhere"') && str_contains($elsewhere, 'data-env-dns-record="A"') && str_contains($elsewhere, 'data-env-dns-point'), 'Points elsewhere: the records and «point here».');
+$here = $screen(['site' => $site, 'tab' => 'dns', 'wholeServer' => true, 'siteDns' => new \Larena\Env\Dns\SiteDns('ok', $dnsZone, $dnsRecords, \Larena\Env\Dns\SiteDns::HERE)]);
+env_assert(str_contains($here, 'data-env-dns-points="here"') && !str_contains($here, 'data-env-dns-point>') && !str_contains($here, 'data-env-dns-point '), 'Points here: nothing to offer.');
+
+foreach (['site', 'plan', 'job', 'new-site', 'people', 'partials/notes', 'partials/warnings', 'partials/history', 'dns/connection', 'dns/index', 'dns/zone', 'dns/record-form', 'dns/plan'] as $view) {
     $source = (string) file_get_contents(dirname(__DIR__, 2).'/resources/views/admin/'.$view.'.blade.php');
     env_assert(!str_contains($source, '{!!') && preg_match('/<style\b|<script\b|@php\b/i', $source) !== 1, "The {$view} view prints nothing raw and holds no script.");
 }

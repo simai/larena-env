@@ -16,6 +16,13 @@ events:
     severity: notice
   - type: env.acting_as.stopped
     severity: notice
+  # DNS through the provider's API (Panel plan, stage 7): the connection, and each record changed with how it was.
+  - type: env.dns.connected
+    severity: notice
+  - type: env.dns.disconnected
+    severity: notice
+  - type: env.dns.record_changed
+    severity: notice
 forbidden_payload_fields:
   - password
   - password_hash

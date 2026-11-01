@@ -9,3 +9,10 @@ operations:
   - code: env.server.operate
     risk: high
     audit: denial
+  # DNS through the provider's API (Panel plan, stage 7): the zones and the token are the whole server's.
+  - code: env.dns.read
+    risk: normal
+    audit: denial
+  - code: env.dns.operate
+    risk: high
+    audit: denial
