@@ -22,11 +22,38 @@ final readonly class PanelRequest
         public string $command,
         public array $args = [],
         public bool $confirm = false,
+        /** The file a command of PanelCommands' attachments carries: named in the plan, sent once confirmed. */
+        public ?PanelAttachment $attachment = null,
     ) {
         if (preg_match(self::REQUEST_ID_PATTERN, $requestId) !== 1) {
             throw new PanelRefused(PanelReason::BAD_REQUEST);
         }
         PanelCommands::check($command, $args, $confirm);
+        $limit = PanelCommands::attachmentLimit($command);
+        if (($attachment === null) !== ($limit === null)) {
+            throw new PanelRefused(PanelReason::BAD_REQUEST);
+        }
+        if ($attachment !== null && $attachment->size > $limit) {
+            throw new PanelRefused(PanelReason::TOO_LARGE);
+        }
+    }
+
+    /** Whether the attachment's bytes follow the line: only for a confirmed action, a plan needs the metadata only. */
+    public function sendsBytes(): bool
+    {
+        return $this->attachment !== null && $this->confirm;
+    }
+
+    /**
+     * What the gateway reads on its stdin: the line, or the line and then the attachment as one stream.
+     *
+     * @return string|resource
+     *
+     * @throws PanelRefused
+     */
+    public function stdin(): mixed
+    {
+        return $this->sendsBytes() && $this->attachment !== null ? $this->attachment->streamAfter($this->toLine()) : $this->toLine();
     }
 
     /**
@@ -46,9 +73,9 @@ final readonly class PanelRequest
      *
      * @throws PanelRefused
      */
-    public static function plan(PanelActor $actor, string $command, array $args = []): self
+    public static function plan(PanelActor $actor, string $command, array $args = [], ?PanelAttachment $attachment = null): self
     {
-        return new self(self::newId(), $actor, $command, $args);
+        return new self(self::newId(), $actor, $command, $args, false, $attachment);
     }
 
     /**
@@ -58,20 +85,20 @@ final readonly class PanelRequest
      *
      * @throws PanelRefused
      */
-    public static function confirmed(PanelActor $actor, string $command, array $args = []): self
+    public static function confirmed(PanelActor $actor, string $command, array $args = [], ?PanelAttachment $attachment = null): self
     {
-        return new self(self::newId(), $actor, $command, $args, true);
+        return new self(self::newId(), $actor, $command, $args, true, $attachment);
     }
 
     /**
      * The request as the protocol writes it. `args` stays a JSON object when it is empty (the gateway refuses a list),
      * and `confirm` is true only for an action this package has had confirmed.
      *
-     * @return array{schema: string, request_id: string, actor: array<string, ?string>, command: string, args: object, confirm: bool}
+     * @return array{schema: string, request_id: string, actor: array<string, ?string>, command: string, args: object, confirm: bool, attachment?: array{sha256: string, size: int}}
      */
     public function toDocument(): array
     {
-        return [
+        $document = [
             'schema' => self::SCHEMA,
             'request_id' => $this->requestId,
             'actor' => $this->actor->toDocument(),
@@ -79,6 +106,11 @@ final readonly class PanelRequest
             'args' => (object) $this->args,
             'confirm' => $this->confirm,
         ];
+        if ($this->attachment !== null) {
+            $document['attachment'] = $this->attachment->toDocument();
+        }
+
+        return $document;
     }
 
     /** The bytes for the gateway's stdin: one JSON line. JSON escapes every line break a value could hold. */

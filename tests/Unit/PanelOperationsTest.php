@@ -28,7 +28,8 @@ env_assert(PanelCommands::kind('site:describe') === PanelCommands::READ, 'A read
 env_assert(PanelCommands::kind('backup:data') === PanelCommands::ACTION, 'An action.');
 env_assert(PanelCommands::kind('job:status') === PanelCommands::JOB, 'A job command.');
 env_assert(PanelCommands::kind('site:remove') === null && PanelCommands::kind('self:bootstrap') === null, 'Commands this package may not send.');
-env_assert(count(PanelCommands::actions()) === 23, 'The card\'s actions, a new site, and creating, blocking and unblocking an owner.');
+// 23 of the card, a new site and the owners; 10 of a site's files and 3 of its nginx directives (stage 6).
+env_assert(count(PanelCommands::actions()) === 36, 'The card\'s actions, a new site, the owners, the files and the nginx directives.');
 
 // Only an action is ever confirmed.
 $refusedConfirm = null;

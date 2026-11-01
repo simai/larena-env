@@ -12,6 +12,8 @@ return [
         'recorded' => [
             'path' => getenv('LARENA_ENV_RECORDED_PATH') ?: dirname(__DIR__).'/resources/recorded-answers',
             'allowed_environments' => ['local', 'testing'],
+            // A folder that stands in for the sites' files, which no recording has yet (Panel plan 6.1): empty, off.
+            'files' => getenv('LARENA_ENV_RECORDED_FILES') ?: '',
         ],
         'sudo' => [
             'binary' => getenv('LARENA_ENV_SUDO_BINARY') ?: '/usr/bin/sudo',

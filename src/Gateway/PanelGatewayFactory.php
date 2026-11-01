@@ -27,7 +27,11 @@ final class PanelGatewayFactory
     {
         $driver = $settings['driver'] ?? null;
         if ($driver === 'recorded' && $recordedAllowed && is_string($settings['recorded']['path'] ?? null)) {
-            return new RecordedAnswersGateway($settings['recorded']['path']);
+            $recorded = new RecordedAnswersGateway($settings['recorded']['path']);
+            // Files on a local folder, where no recording of them exists yet (tests and the install check only).
+            $files = $settings['recorded']['files'] ?? null;
+
+            return is_string($files) && $files !== '' ? new FakeFilesGateway($recorded, $files) : $recorded;
         }
         $ssh = $settings['ssh'] ?? null;
         if ($driver === 'ssh' && is_array($ssh)) {

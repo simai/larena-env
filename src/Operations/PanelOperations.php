@@ -8,6 +8,7 @@ use Larena\Env\Contracts\PanelGateway;
 use Larena\Env\Gateway\PanelActor;
 use Larena\Env\Gateway\PanelAnswer;
 use Larena\Env\Gateway\PanelAnswerStatus;
+use Larena\Env\Gateway\PanelAttachment;
 use Larena\Env\Gateway\PanelReason;
 use Larena\Env\Gateway\PanelRefused;
 use Larena\Env\Gateway\PanelRequest;
@@ -49,12 +50,13 @@ final readonly class PanelOperations
      * What any action of the command table would do (a new site, a new owner), with its gateway arguments. Nothing runs.
      *
      * @param array<string, string> $args
+     * @param ?PanelAttachment $attachment a file the action carries: the plan names it, nothing is sent yet
      */
-    public function planCommand(PanelActor $actor, string $command, array $args): PlanResult
+    public function planCommand(PanelActor $actor, string $command, array $args, ?PanelAttachment $attachment = null): PlanResult
     {
         $source = $this->gateway->source();
         try {
-            $answer = $this->gateway->ask(PanelRequest::plan($actor, $command, $args));
+            $answer = $this->gateway->ask(PanelRequest::plan($actor, $command, $args, $attachment));
         } catch (PanelRefused $refused) {
             return new PlanResult($source, null, $refused->reasonCode, true);
         }
@@ -75,12 +77,13 @@ final readonly class PanelOperations
      * That action confirmed: the gateway starts it and answers a job.
      *
      * @param array<string, string> $args
+     * @param ?PanelAttachment $attachment the file the confirmed action sends after its request
      */
-    public function startCommand(PanelActor $actor, string $command, array $args): JobStartResult
+    public function startCommand(PanelActor $actor, string $command, array $args, ?PanelAttachment $attachment = null): JobStartResult
     {
         $source = $this->gateway->source();
         try {
-            $answer = $this->gateway->ask(PanelRequest::confirmed($actor, $command, $args));
+            $answer = $this->gateway->ask(PanelRequest::confirmed($actor, $command, $args, $attachment));
         } catch (PanelRefused $refused) {
             return new JobStartResult($source, null, $refused->reasonCode, true);
         }

@@ -197,6 +197,10 @@
                     </ul>
                 @endif
             </section>
+        @elseif ($tab === 'files')
+            @include('larena-env::admin.partials.files')
+        @elseif ($tab === 'nginx')
+            @include('larena-env::admin.partials.nginx')
         @elseif ($tab === 'releases')
             <section class="larena-panel larena-panel-padded" data-env-releases aria-labelledby="env-site-releases">
                 <h2 id="env-site-releases">{{ __('larena-env::admin.releases.title') }}</h2>

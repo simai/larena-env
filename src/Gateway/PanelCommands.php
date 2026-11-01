@@ -39,6 +39,15 @@ final class PanelCommands
     private const string LOGIN = '/\A[a-z][a-z0-9_-]{0,31}\z/D';
     // A fixed string the log's lines are searched for: printable ASCII, up to 200 characters (simai-env 1.28.0).
     private const string MATCH = '/\A[ -~]{1,200}\z/D';
+    // A path inside a site, from its root: never absolute, never a `..` segment, no control characters (Panel plan 6.1).
+    // `.` is the root itself. The gateway checks every component again on the host (path_outside).
+    private const string FS_PATH = '/\A(?!\/)(?!(?:.*\/)?\.\.(?:\/|\z))[^\x00-\x1f\x7f]{1,1024}\z/D';
+    private const string FS_NAME = '/\A(?!\.{1,2}\z)[^\/\x00-\x1f\x7f]{1,255}\z/D';
+    private const string FS_MODE = '/\A0?[0-7]{3}\z/D';
+    private const string FS_MAX_BYTES = '/\A[1-9][0-9]{0,6}\z/D';
+    private const string FS_TRASH_ID = '/\A[A-Za-z0-9][A-Za-z0-9._-]{0,127}\z/D';
+    private const string FS_FORMAT = '/\A(?:zip|tar\.gz)\z/D';
+    private const string CHANGE_ID = '/\A[A-Za-z0-9][A-Za-z0-9._-]{0,63}\z/D';
 
     /**
      * `since`: the first simai-env release whose gateway allows the command; null for one no release has yet.
@@ -96,6 +105,26 @@ final class PanelCommands
         'access:remove' => ['args' => ['login' => self::LOGIN], 'required' => ['login'], 'since' => '1.30.0', 'kind' => self::ACTION],
         'db:list' => ['args' => [], 'required' => [], 'since' => '1.28.0', 'kind' => self::READ],
         'site:db-rotate' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => '1.28.0', 'kind' => self::ACTION],
+        // Files of a site, as its own user and inside its root only (simai-env, after 1.35.0; Panel plan 6.1, 6.2).
+        'fs:list' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH], 'required' => ['domain', 'path'], 'since' => null, 'kind' => self::READ],
+        'fs:read' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH, 'max_bytes' => self::FS_MAX_BYTES], 'required' => ['domain', 'path'], 'since' => null, 'kind' => self::READ],
+        'fs:trash-list' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => null, 'kind' => self::READ],
+        'fs:download' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH], 'required' => ['domain', 'path'], 'since' => null, 'kind' => self::READ],
+        'fs:write' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH, 'mode' => self::FS_MODE], 'required' => ['domain', 'path'], 'since' => null, 'kind' => self::ACTION],
+        'fs:upload' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH, 'overwrite' => self::YES_NO], 'required' => ['domain', 'path'], 'since' => null, 'kind' => self::ACTION],
+        'fs:mkdir' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH], 'required' => ['domain', 'path'], 'since' => null, 'kind' => self::ACTION],
+        'fs:rename' => ['args' => ['domain' => self::DOMAIN, 'from' => self::FS_PATH, 'to' => self::FS_PATH], 'required' => ['domain', 'from', 'to'], 'since' => null, 'kind' => self::ACTION],
+        'fs:copy' => ['args' => ['domain' => self::DOMAIN, 'from' => self::FS_PATH, 'to' => self::FS_PATH], 'required' => ['domain', 'from', 'to'], 'since' => null, 'kind' => self::ACTION],
+        'fs:delete' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH, 'recursive' => self::YES_NO], 'required' => ['domain', 'path'], 'since' => null, 'kind' => self::ACTION],
+        'fs:restore' => ['args' => ['domain' => self::DOMAIN, 'id' => self::FS_TRASH_ID], 'required' => ['domain', 'id'], 'since' => null, 'kind' => self::ACTION],
+        'fs:chmod' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH, 'mode' => self::FS_MODE, 'recursive' => self::YES_NO], 'required' => ['domain', 'path', 'mode'], 'since' => null, 'kind' => self::ACTION],
+        'fs:archive' => ['args' => ['domain' => self::DOMAIN, 'paths' => self::FS_PATH, 'name' => self::FS_NAME, 'format' => self::FS_FORMAT], 'required' => ['domain', 'paths', 'name', 'format'], 'since' => null, 'kind' => self::ACTION],
+        'fs:extract' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH, 'into' => self::FS_PATH], 'required' => ['domain', 'path', 'into'], 'since' => null, 'kind' => self::ACTION],
+        // The site's own nginx directives, the system level's (Panel plan 6.3): applied, then kept only once confirmed.
+        'site:nginx-overlay-get' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => null, 'kind' => self::READ],
+        'site:nginx-overlay-set' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => null, 'kind' => self::ACTION],
+        'site:nginx-overlay-clear' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => null, 'kind' => self::ACTION],
+        'site:nginx-overlay-confirm' => ['args' => ['domain' => self::DOMAIN, 'change' => self::CHANGE_ID], 'required' => ['domain', 'change'], 'since' => null, 'kind' => self::ACTION],
         'job:status' => ['args' => ['job_id' => self::JOB_ID], 'required' => ['job_id'], 'since' => '1.21.0', 'kind' => self::JOB],
         'job:log' => ['args' => ['job_id' => self::JOB_ID, 'after' => self::CURSOR], 'required' => ['job_id'], 'since' => '1.21.0', 'kind' => self::JOB],
         'job:cancel' => ['args' => ['job_id' => self::JOB_ID], 'required' => ['job_id'], 'since' => '1.21.0', 'kind' => self::JOB],
@@ -113,8 +142,33 @@ final class PanelCommands
         'backup:data-schedule' => ['verify' => '1.30.0'],
     ];
 
+    /**
+     * Commands whose content travels as an attachment after the request line ({sha256, size}, then exactly size bytes),
+     * as site:deploy's release does; a plan carries only the metadata. With the most each one takes.
+     */
+    private const array ATTACHMENTS = [
+        'fs:write' => 5_242_880,
+        'fs:upload' => 536_870_912,
+        'site:nginx-overlay-set' => 65_536,
+    ];
+
+    /** A download answers a JSON line and then exactly `size` bytes: the most the panel takes. */
+    public const int DOWNLOAD_MAX_BYTES = 2_147_483_648;
+
     private function __construct()
     {
+    }
+
+    /** The most bytes the command's attachment may have; null for a command that takes none. */
+    public static function attachmentLimit(string $command): ?int
+    {
+        return self::ATTACHMENTS[$command] ?? null;
+    }
+
+    /** Whether the command's answer is followed by the file's bytes (fs:download): it is never asked the usual way. */
+    public static function streams(string $command): bool
+    {
+        return $command === 'fs:download';
     }
 
     /** The first simai-env release that takes the argument; that of the command for one it always took. */

@@ -8,6 +8,9 @@ use Illuminate\Contracts\Translation\Translator;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Larena\Env\Files\FileModes;
+use Larena\Env\Files\FilePath;
+use Larena\Env\Files\SiteFiles;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\NoticeRedirect;
 use Larena\Env\Operations\PanelOperations;
@@ -30,9 +33,12 @@ final readonly class SiteAdminController
 {
     /**
      * The card's tabs (Panel plan 2.3 and 3): its state and problems, domains and certificate, PHP, its database, its
-     * backups, releases, log, access; and its domain's DNS records (stage 7).
+     * backups, releases, log, access; its domain's DNS records (stage 7); its files and, for the system level only, its
+     * own nginx directives (stage 6).
      */
-    public const array TABS = ['overview', 'domains', 'dns', 'php', 'database', 'backups', 'releases', 'log', 'access'];
+    public const array TABS = ['overview', 'domains', 'dns', 'php', 'database', 'backups', 'files', 'releases', 'log', 'access', 'nginx'];
+    /** The tabs only the system level has. */
+    private const array SYSTEM_TABS = ['nginx'];
     private const array LOG_KINDS = ['access', 'error'];
     /** How many of the last lines the log reads; the gateway gives at most 1000. */
     public const array LOG_LINES = [200, 500, 1000];
@@ -45,6 +51,7 @@ final readonly class SiteAdminController
         private Factory $views,
         private Translator $translator,
         private ?\Larena\Env\Dns\DnsService $dns = null,
+        private ?SiteFiles $files = null,
     ) {
     }
 
@@ -53,7 +60,8 @@ final readonly class SiteAdminController
         $actor = ResolvePanelActor::of($request);
         $result = $this->sites->read($actor, $domain);
         $site = $result->site;
-        $tab = in_array($request->query('tab'), self::TABS, true) ? (string) $request->query('tab') : self::TABS[0];
+        $tabs = $actor->owner === null ? self::TABS : array_values(array_diff(self::TABS, self::SYSTEM_TABS));
+        $tab = in_array($request->query('tab'), $tabs, true) ? (string) $request->query('tab') : self::TABS[0];
         $kind = in_array($request->query('log'), self::LOG_KINDS, true) ? (string) $request->query('log') : 'access';
         $lines = in_array((int) $request->query('lines'), self::LOG_LINES, true) ? (int) $request->query('lines') : self::LOG_LINES[0];
         $search = mb_substr(trim((string) $request->query('q')), 0, 128);
@@ -70,11 +78,12 @@ final readonly class SiteAdminController
         $operations = $site === null ? [] : SiteOperation::offeredFor($site, $capabilities);
         $ask = static fn (string $command, string $onTab): bool => $site !== null && $tab === $onTab && $capabilities->allows($command);
         $sftpAccounts = $ask('access:list', 'access') ? $this->extras->sftpAccounts($actor, $domain) : null;
+        $overlay = $ask('site:nginx-overlay-get', 'nginx') && $actor->owner === null ? $this->files?->overlay($actor, $domain) : null;
 
         return $this->views->make('larena-env::admin.site', [
             'domain' => $domain,
             'tab' => $tab,
-            'tabs' => self::TABS,
+            'tabs' => $tabs,
             'doctor' => $doctor,
             'phpVersions' => $tab === 'php' ? ($overview->phpVersions ?? []) : [],
             'phpSettings' => $ask('site:php-ini-list', 'php') ? $this->extras->phpSettings($actor, $domain) : null,
@@ -82,6 +91,13 @@ final readonly class SiteAdminController
             'databases' => $ask('db:list', 'database') ? $this->extras->databases($actor, $domain) : null,
             'sftpAccounts' => $sftpAccounts,
             // The domain's records through the panel's DNS provider, and whether it points here (Panel plan, stage 7).
+            // The site's files (Panel plan 6.1): a folder, a file open in the editor, or the trash.
+            'files' => $site !== null && $tab === 'files' ? $this->filesTab($request, $actor, $domain, $capabilities) : null,
+            'overlay' => is_array($overlay) ? $overlay : null,
+            'overlayProblem' => is_string($overlay) ? $this->filesReasonText($overlay) : null,
+            'overlaySupported' => $capabilities->allows('site:nginx-overlay-get'),
+            'overlayAllows' => ['set' => $capabilities->allows('site:nginx-overlay-set'), 'clear' => $capabilities->allows('site:nginx-overlay-clear'),
+                'confirm' => $capabilities->allows('site:nginx-overlay-confirm')],
             'siteDns' => $site !== null && $tab === 'dns' ? $this->dns?->forSite($domain) : null,
             'wholeServer' => $actor->owner === null,
             // An account's own action chooses among the accounts it suits; with none, the action is not offered.
@@ -106,6 +122,57 @@ final readonly class SiteAdminController
             'logReasonText' => $log === null || $log->reason === null ? null : $this->reasonText($log->reason),
             'notice' => $request->session()->get('larena_env_notice'),
         ]);
+    }
+
+    /**
+     * What the «Файлы» tab shows: nothing but a sentence on a server without the file commands; otherwise the folder,
+     * a file open in the editor, or the trash, and the changes this server allows.
+     *
+     * @return array<string, mixed>
+     */
+    private function filesTab(Request $request, PanelActor $actor, string $domain, PanelCapabilities $capabilities): array
+    {
+        if (!$capabilities->allows('fs:list') || $this->files === null) {
+            return ['supported' => false];
+        }
+        $path = FilePath::clean($request->query('path')) ?? '.';
+        $view = $request->query('view') === null ? null : FilePath::clean($request->query('view'));
+        $trash = $request->query('trash') === '1' && $capabilities->allows('fs:trash-list');
+        $allows = [];
+        foreach (SiteFilesController::FILE_OPERATIONS as $op => $command) {
+            $allows[$op] = $capabilities->allows($command);
+        }
+        $allows['download'] = $capabilities->allows('fs:download');
+        $allows['read'] = $capabilities->allows('fs:read');
+        $allows['trash'] = $capabilities->allows('fs:trash-list');
+
+        $text = $view !== null && $view !== '.' && $allows['read'] ? $this->files->text($actor, $domain, $view) : null;
+        $trashed = $trash ? $this->files->trash($actor, $domain) : null;
+        $folder = $trash || ($view !== null && $view !== '.') ? null : $this->files->folder($actor, $domain, $path);
+        $problem = null;
+        foreach ([$folder, $text, $trashed] as $read) {
+            if (is_string($read)) {
+                $problem = $this->filesReasonText($read);
+            }
+        }
+
+        return [
+            'supported' => true,
+            // The tab's own address, to which a folder's path or a file's is added.
+            'base' => route('larena.env.admin.site', ['domain' => $domain], false).'?tab=files',
+            'problem' => $problem,
+            'path' => $path,
+            'crumbs' => FilePath::crumbs($path),
+            'parent' => $path === '.' ? null : FilePath::parent($path),
+            'view' => $view !== null && $view !== '.' && $allows['read'] ? $view : null,
+            'text' => is_array($text) ? $text : null,
+            'trash' => is_array($trashed) ? $trashed : null,
+            'trashOpen' => $trash,
+            'folder' => is_array($folder) ? $folder : null,
+            'allows' => $allows,
+            'fileModes' => FileModes::FILE,
+            'dirModes' => FileModes::DIR,
+        ];
     }
 
     /** What the action would do, with a confirmation that starts it and nothing else. */
@@ -222,6 +289,15 @@ final readonly class SiteAdminController
         $capabilities = $this->overviews->read($actor)->overview->capabilities ?? PanelCapabilities::none();
 
         return $operation !== null && $capabilities->allows($operation->command()) ? $operation : null;
+    }
+
+    /** A file's reason in words: those of the file commands first (path_outside, exists, ...), then the gateway's. */
+    private function filesReasonText(string $reason): string
+    {
+        $key = 'larena-env::admin.files.reasons.'.$reason;
+        $line = (string) $this->translator->get($key);
+
+        return $line !== $key ? $line : $this->reasonText($reason);
     }
 
     private function reasonText(string $reason): string

@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+- Stage 6 on the panel's side, files and nginx directives, as agreed with simai-env (after 1.35.0: 1.37.0 the files and
+  the download, 1.38.0 archives and the directives). No release has the commands yet, so they show only where a server
+  lists them in `gate.commands`; elsewhere the new «Файлы» tab says the server cannot yet, with no buttons. A site's
+  «Файлы» tab, at either level for the person's own sites: the folder with a breadcrumb, folders first, size, change
+  time and permissions; a text file up to 1 MB opens in an editor and is saved by plan and confirmation (5 MB at most,
+  the previous version to the trash); upload (512 MB), new folder, rename, copy, move to the trash, permissions within
+  the gateway's limits only (files 0400–0664, folders 0500–0775), pack and unpack; the trash, restored by plan
+  (`exists` when the place is taken); a download checked against the size and sha256 the server named before a byte
+  reaches the browser, served as an attachment. `path_outside`, `exists` and the other refusals are said in words. A
+  saved text or upload waits on the panel's disk between plan and confirmation, named in the person's session by its
+  sha256, and is removed once sent. The system level's «nginx» tab keeps a site's own directives: what is allowed in
+  one line, applied by plan, then kept by a confirmation in time or undone by the server itself. The gateway drivers
+  send an attachment after the request line as one stream (`PanelAttachment`), read a download into a file and check
+  it (`PanelDownload`); `FakeFilesGateway` stands in for the commands on recorded answers (`LARENA_ENV_RECORDED_FILES`,
+  local and testing only). The install check covers both: the recorded server without them, then the stand-in.
+
 - Stage 7, DNS through the provider's API (owner decision 2026-10-31: no DNS server of our own). «Настройки панели ›
   DNS» connects a Cloudflare API token, checked by the provider and kept encrypted with the application's key; it is
   never shown again, only its last four characters, the zones it sees and what it may do in each. The server's own

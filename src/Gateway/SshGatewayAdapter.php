@@ -34,6 +34,9 @@ final readonly class SshGatewayAdapter implements GatewayAdapter
         if (!is_string($line)) {
             throw new GatewayRejected('gateway_request_invalid', 'The request carries no protocol line.');
         }
+        // A confirmed upload or save sends its file after the line, as one stream (PanelRequest::stdin()).
+        $stdin = $request->arguments['stdin'] ?? $line;
+        $timeout = max($this->target->timeoutSeconds, (float) ($request->arguments['timeout'] ?? 0));
 
         return new ProcessSpecification(
             argv: [
@@ -57,9 +60,9 @@ final readonly class SshGatewayAdapter implements GatewayAdapter
             ],
             workingDirectory: '/',
             environment: [],
-            stdin: $line,
+            stdin: $stdin,
             stdoutLimitBytes: PanelAnswerDecoder::STDOUT_LIMIT_BYTES,
-            timeoutSeconds: $this->target->timeoutSeconds,
+            timeoutSeconds: $timeout,
         );
     }
 

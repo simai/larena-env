@@ -11,7 +11,9 @@
 #      row's address opens;
 #   5. peace of mind (stage 4): a new site gets its daily backup, each copy is checked, a restore says what it replaces, the check measures
 #      and tells the administrator, the sites, card and overview say what needs attention and draw the load;
-#   6. the two levels (Panel plan, stage 2): the administrator gives a person of the user level a space (an owner of
+#   6. files (stage 6): the recorded server, which has no file commands, says so; then a stand-in for them lists a site's
+#      folder, saves, deletes, restores and hands a file over, each change by plan, and keeps a site's nginx directives;
+#   7. the two levels (Panel plan, stage 2): the administrator gives a person of the user level a space (an owner of
 #      the server), looks at the panel as them (marked in the audit log), plans a new site and opens a site's tabs; the
 #      person signs in and sees only their own owner's sites, and none of the system level's screens.
 #
@@ -234,11 +236,16 @@ _, planned = post("/admin/server/sites/new/plan", {"_token": form_token(wizard),
 assert 'data-env-plan="site:add"' in planned and 'name="backup" value="yes"' in planned and "data-env-plan-then" not in planned, "a new site is planned with its daily backup"
 _, made = post("/admin/server/sites/new/run", {"_token": form_token(planned), "domain": "new.test", "profile": "static", "daily-backup": "yes", "backup": "yes"})
 assert "daily backup is being turned on" not in made, "the daily backup came with the site, nothing is turned on after"
-for tab in ("overview", "domains", "dns", "php", "database", "backups", "releases", "log", "access"):
+for tab in ("overview", "domains", "dns", "php", "database", "backups", "files", "releases", "log", "access", "nginx"):
     status, card = get("/admin/server/sites/demo-php.test?tab=" + tab)
     assert status == 200 and 'data-env-tab="' + tab + '"' in card, ("tab", tab)
     # SFTP is by key only (simai-env 1.30.0): no password field on any tab.
     assert 'type="password"' not in card and 'name="password"' not in card, ("no password", tab)
+    # The recorded server has no file commands (no simai-env release has them yet): said, with no dead buttons.
+    if tab == "files":
+        assert 'data-env-files="unsupported"' in card and "data-env-files-op" not in card, "no file commands: said, nothing offered"
+    if tab == "nginx":
+        assert 'data-env-nginx="unsupported"' in card and "data-env-nginx-op" not in card, "no nginx directives: said, nothing offered"
     if tab == "access":
         assert 'data-env-operation="sftp-create"' in card and "data-env-sftp-uploads" in card, "a new SFTP access by key, and the note on uploads"
         assert 'data-env-operation="sftp-disable"' not in card, "a site without accounts has none to turn off"
@@ -256,6 +263,62 @@ assert 'data-env-dns-connection="none"' in connection and 'name="token"' in conn
 _, dns_tab = get("/admin/server/sites/demo-php.test?tab=dns")
 assert 'data-env-dns="not_connected"' in dns_tab and "/admin/server/dns/connection" in dns_tab, "the site's DNS tab says how to connect"
 print("dns:", "ok")
+# Files (Panel plan, stage 6) on a stand-in for the file commands, which no recording has yet: the server lists them now.
+import os
+fake = sys.argv[3] + "/fake-files"
+with open(sys.argv[5] + "/.env", "a") as dotenv:
+    dotenv.write("LARENA_ENV_RECORDED_FILES=" + fake + "\n")
+def confirm_fields(html):
+    form = re.search(r'<form method="post" action="([^"]+)" data-env-confirm="[^"]*">(.*?)</form>', html, re.S)
+    assert form, "a plan with its confirmation"
+    fields = {html_lib.unescape(n): html_lib.unescape(v) for n, v in re.findall(r'<input type="hidden" name="([^"]+)" value="([^"]*)">', form.group(2))}
+    return html_lib.unescape(form.group(1)), fields
+def plan_and_run(path, fields):
+    _, planned = post(path, fields)
+    action, hidden = confirm_fields(planned)
+    hidden["_token"] = form_token(planned)
+    _, done = post(action, hidden)
+    return planned, done
+_, files = get("/admin/server/sites/demo-php.test?tab=files")
+assert 'data-env-files="on"' in files and 'data-env-file="public"' in files and 'data-env-file="notes.txt"' in files, "a site's folder"
+assert 'data-env-files-op="upload"' in files and 'data-env-files-op="mkdir"' in files and "data-env-files-trash-link" in files, "its changes and the trash"
+_, opened = get("/admin/server/sites/demo-php.test?tab=files&view=notes.txt")
+assert "data-env-files-editor" in opened and "Notes of demo-php.test" in opened, "a text file opens in the editor"
+planned, done = plan_and_run("/admin/server/sites/demo-php.test/files/plan", {"_token": form_token(opened), "op": "write", "path": "notes.txt", "content": "Saved from the panel\r\n"})
+assert 'data-env-plan="fs:write"' in planned and "data-env-plan-replaces" in planned, "a save is planned and says what it replaces"
+assert 'data-env-job-state="succeeded"' in done, "the save runs as a job"
+_, reopened = get("/admin/server/sites/demo-php.test?tab=files&view=notes.txt")
+assert "Saved from the panel\n</textarea>" in reopened, "the file holds the saved text, with the server's line ends"
+_, trash = get("/admin/server/sites/demo-php.test?tab=files&trash=1")
+assert re.search(r'data-env-trash-item="[^"]+"', trash) and "notes.txt.bak-" in trash, "the previous version is in the trash"
+planned, done = plan_and_run("/admin/server/sites/demo-php.test/files/plan", {"_token": form_token(files), "op": "delete", "path": "notes.txt", "folder": "."})
+assert 'data-env-plan="fs:delete"' in planned and 'data-env-job-state="succeeded"' in done, "deleting goes to the trash by plan"
+_, after = get("/admin/server/sites/demo-php.test?tab=files")
+assert 'data-env-file="notes.txt"' not in after, "deleted from the folder"
+_, trash = get("/admin/server/sites/demo-php.test?tab=files&trash=1")
+item = re.search(r'<li data-env-trash-item="([^"]+)"[^>]*>\s*<span>notes\.txt[ ·<]', trash)
+assert item, "the deleted file is in the trash"
+planned, done = plan_and_run("/admin/server/sites/demo-php.test/files/plan", {"_token": form_token(trash), "op": "restore", "id": item.group(1)})
+assert 'data-env-plan="fs:restore"' in planned and 'data-env-job-state="succeeded"' in done, "restored by plan"
+_, back = get("/admin/server/sites/demo-php.test?tab=files")
+assert 'data-env-file="notes.txt"' in back, "back where it was"
+with web.open(base + "/admin/server/sites/demo-php.test/files/download?path=notes.txt") as answer:
+    assert answer.read() == b"Saved from the panel\n" and "attachment" in answer.headers.get("Content-Disposition", ""), "a download, checked and handed over"
+os.symlink("/etc", fake + "/sites/demo-php.test/escape")
+_, outside = get("/admin/server/sites/demo-php.test?tab=files&path=escape")
+assert "data-env-files-problem" in outside and "outside the site" in outside, "a link out of the site is refused in words"
+_, nginx = get("/admin/server/sites/demo-php.test?tab=nginx")
+assert 'data-env-nginx="on"' in nginx and "data-env-nginx-allowlist" in nginx, "the nginx directives, with what is allowed"
+planned, done = plan_and_run("/admin/server/sites/demo-php.test/nginx/plan", {"_token": form_token(nginx), "op": "overlay-set", "content": "add_header X-Check 1;\n"})
+assert 'data-env-plan="site:nginx-overlay-set"' in planned and "data-env-plan-replaces" in planned and 'data-env-job-state="succeeded"' in done, "directives applied by plan"
+_, pending = get("/admin/server/sites/demo-php.test?tab=nginx")
+change = re.search(r'data-env-nginx-pending="([^"]+)"', pending)
+assert change and 'name="op" value="overlay-confirm"' in pending, "applied, waiting to be kept"
+planned, done = plan_and_run("/admin/server/sites/demo-php.test/nginx/plan", {"_token": form_token(pending), "op": "overlay-confirm", "change": change.group(1)})
+assert 'data-env-job-state="succeeded"' in done, "kept once confirmed"
+_, kept = get("/admin/server/sites/demo-php.test?tab=nginx")
+assert "data-env-nginx-pending" not in kept and "add_header X-Check 1;" in kept, "the change is kept"
+print("files:", "ok")
 _, sftp = get("/admin/server/sites/demo-owned.test?tab=access")
 assert 'data-env-sftp="demo-staff"' in sftp and 'data-env-sftp-path="/site"' in sftp, "the site's own SFTP access, where it lands"
 for shownAction in ("sftp-add-key", "sftp-disable", "sftp-remove"):
@@ -300,6 +363,17 @@ assert status == 200, ("the person's notification centre opens", status)
 assert 'data-env-warning-site="demo-php.test"' not in sites and 'data-env-warning="disk_full"' not in sites, "the person is warned about their own sites only"
 status, own_sftp = get("/admin/server/sites/demo-owned.test?tab=access")
 assert status == 200 and 'data-env-sftp="demo-staff"' in own_sftp and 'data-env-operation="sftp-add-key"' in own_sftp, "the person manages their own site's SFTP"
+status, own_files = get("/admin/server/sites/demo-owned.test?tab=files")
+assert status == 200 and 'data-env-files="on"' in own_files and 'data-env-file="public"' in own_files, "the person's own site's files"
+_, others = get("/admin/server/sites/demo-php.test?tab=files")
+assert 'data-env-files="on"' not in others, "another owner's files are not shown"
+_, own_nginx = get("/admin/server/sites/demo-owned.test?tab=nginx")
+assert 'data-env-tab="nginx"' not in own_nginx and "data-env-nginx" not in own_nginx, "the nginx directives are the system level's"
+try:
+    status, _ = post("/admin/server/sites/demo-owned.test/nginx/plan", {"_token": form_token(own_files), "op": "overlay-clear"})
+except urllib.error.HTTPError as error:
+    status = error.code
+assert status == 403, ("the person cannot plan nginx directives", status)
 status, own_dns = get("/admin/server/sites/demo-owned.test?tab=dns")
 assert status == 200 and 'data-env-dns="not_connected"' in own_dns and "/admin/server/dns/connection" not in own_dns, "the person sees their site's DNS tab, not the connection"
 print("both levels checked")

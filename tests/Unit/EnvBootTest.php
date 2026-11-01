@@ -42,7 +42,9 @@ env_assert($names === ['larena.env.admin.dns', 'larena.env.admin.dns.connection'
     'larena.env.admin.dns.connection.disconnect', 'larena.env.admin.dns.connection.save', 'larena.env.admin.dns.run', 'larena.env.admin.dns.zone',
     'larena.env.admin.dns.zone.plan', 'larena.env.admin.dns.zone.undo', 'larena.env.admin.index', 'larena.env.admin.job', 'larena.env.admin.job.cancel', 'larena.env.admin.overview',
     'larena.env.admin.people', 'larena.env.admin.people.act', 'larena.env.admin.people.assign', 'larena.env.admin.people.owners.plan',
-    'larena.env.admin.people.owners.run', 'larena.env.admin.people.stop', 'larena.env.admin.site', 'larena.env.admin.site.dns.plan', 'larena.env.admin.site.dns.run', 'larena.env.admin.site.plan',
+    'larena.env.admin.people.owners.run', 'larena.env.admin.people.stop', 'larena.env.admin.site', 'larena.env.admin.site.dns.plan', 'larena.env.admin.site.dns.run',
+    'larena.env.admin.site.files.download', 'larena.env.admin.site.files.plan', 'larena.env.admin.site.files.run', 'larena.env.admin.site.nginx.plan',
+    'larena.env.admin.site.nginx.run', 'larena.env.admin.site.plan',
     'larena.env.admin.site.run', 'larena.env.admin.sites.new', 'larena.env.admin.sites.plan', 'larena.env.admin.sites.run'],
     'The screens of the panel: '.implode(', ', $names));
 env_assert($with['routes']['larena.env.admin.index']['uri'] === 'admin/server', 'The sites keep their address.');
@@ -59,13 +61,15 @@ foreach ($with['routes'] as $name => $route) {
     $dnsReads = in_array($name, ['larena.env.admin.dns', 'larena.env.admin.dns.connection', 'larena.env.admin.dns.zone'], true);
     env_assert(in_array('access:env.dns.read', $route['middleware'], true) === $dnsReads, "{$name} asks for the wrong DNS right.");
     env_assert(in_array('access:env.dns.operate', $route['middleware'], true) === ($dns && !$dnsReads), "{$name} must ask for the DNS right.");
+    // A site's own nginx directives can break the sites' isolation: the server's right, not a site's (Panel plan 6.3).
+    $nginx = str_starts_with($name, 'larena.env.admin.site.nginx');
     // Changing a site is a right of its own: a new site, a site's action and stopping a job ask for it.
-    $changes = !$people && !$dns && (str_ends_with($name, '.plan') || str_ends_with($name, '.run') || str_ends_with($name, '.cancel') || $name === 'larena.env.admin.sites.new');
+    $changes = !$people && !$dns && !$nginx && (str_ends_with($name, '.plan') || str_ends_with($name, '.run') || str_ends_with($name, '.cancel') || $name === 'larena.env.admin.sites.new');
     env_assert(in_array('access:env.sites.operate', $route['middleware'], true) === $changes, "{$name} asks for the wrong right.");
     // The server's overview and the people's spaces are the system level's; giving a space or acting for someone changes the server.
     $reads = in_array($name, ['larena.env.admin.overview', 'larena.env.admin.people', 'larena.env.admin.people.stop'], true);
     env_assert(in_array('access:env.server.read', $route['middleware'], true) === $reads, "{$name} asks for the wrong level.");
-    env_assert(in_array('access:env.server.operate', $route['middleware'], true) === ($people && !$reads), "{$name} must ask for the server's right.");
+    env_assert(in_array('access:env.server.operate', $route['middleware'], true) === (($people && !$reads) || $nginx), "{$name} must ask for the server's right.");
 }
 env_assert($with['commands'] === [RegisterServerAreaCommand::class, PanelCheckCommand::class] && $with['sites'] === 4, 'The rest does not change.');
 

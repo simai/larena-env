@@ -8,6 +8,7 @@ use Larena\Env\Http\Controllers\PeopleController;
 use Larena\Env\Http\Controllers\ServerAdminController;
 use Larena\Env\Http\Controllers\ServerJobController;
 use Larena\Env\Http\Controllers\SiteAdminController;
+use Larena\Env\Http\Controllers\SiteFilesController;
 
 /** @var Illuminate\Routing\Router $router */
 $domain = '[A-Za-z0-9]([A-Za-z0-9-]{0,62}[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+';
@@ -41,6 +42,8 @@ $router->middleware(['access:env.dns.operate'])->group(static function ($router)
     $router->post('/dns/run', [DnsController::class, 'run'])->name('larena.env.admin.dns.run');
 });
 $router->get('/sites/{domain}', [SiteAdminController::class, 'show'])->where('domain', $domain)->name('larena.env.admin.site');
+// A site's file, handed over once checked (Panel plan 6.2); the server keeps the owner's scope.
+$router->get('/sites/{domain}/files/download', [SiteFilesController::class, 'download'])->where('domain', $domain)->name('larena.env.admin.site.files.download');
 $router->get('/jobs/{job}', [ServerJobController::class, 'show'])->where('job', '[a-f0-9]{24}')->name('larena.env.admin.job');
 
 // Everything that changes the server needs its own right, and goes through a plan and a confirmation.
@@ -54,5 +57,13 @@ $router->middleware(['access:env.sites.operate'])->group(static function ($route
     // A site's own domain pointed at this server, at either level (Panel plan, stage 7).
     $router->post('/sites/{domain}/dns/plan', [DnsController::class, 'sitePlan'])->where('domain', $domain)->name('larena.env.admin.site.dns.plan');
     $router->post('/sites/{domain}/dns/run', [DnsController::class, 'siteRun'])->where('domain', $domain)->name('larena.env.admin.site.dns.run');
+    // A site's files, at either level (Panel plan 6.1).
+    $router->post('/sites/{domain}/files/plan', [SiteFilesController::class, 'plan'])->where('domain', $domain)->name('larena.env.admin.site.files.plan');
+    $router->post('/sites/{domain}/files/run', [SiteFilesController::class, 'run'])->where('domain', $domain)->name('larena.env.admin.site.files.run');
     $router->post('/jobs/{job}/cancel', [ServerJobController::class, 'cancel'])->where('job', '[a-f0-9]{24}')->name('larena.env.admin.job.cancel');
+});
+// A site's own nginx directives, the system level's only: they can break the sites' isolation (Panel plan 6.3).
+$router->middleware(['access:env.server.operate'])->group(static function ($router) use ($domain): void {
+    $router->post('/sites/{domain}/nginx/plan', [SiteFilesController::class, 'plan'])->where('domain', $domain)->name('larena.env.admin.site.nginx.plan');
+    $router->post('/sites/{domain}/nginx/run', [SiteFilesController::class, 'run'])->where('domain', $domain)->name('larena.env.admin.site.nginx.run');
 });

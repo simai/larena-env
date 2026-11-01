@@ -17,6 +17,9 @@ final class PanelReason
     public const string BAD_REQUEST = 'bad_request';
     public const string INVALID_ARGUMENT = 'invalid_argument';
     public const string NOT_ALLOWED = 'not_allowed';
+    public const string TOO_LARGE = 'too_large';
+    /** A download whose bytes did not match the size or sha256 its answer named (Panel plan 6.2). */
+    public const string DOWNLOAD_MISMATCH = 'download_mismatch';
 
     public const string NOT_CONFIGURED = 'gateway_not_configured';
     public const string CREDENTIALS_UNREADABLE = 'gateway_credentials_unreadable';

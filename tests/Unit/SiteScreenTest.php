@@ -117,7 +117,7 @@ env_assert(str_contains($ok, 'data-env-answers="') && str_contains($ok, 'data-en
 $warned = $screen(['site' => $site, 'warnings' => [new \Larena\Env\Warnings\PanelWarning('backup_stale', 'warning', 'demo-php.test', ['domain' => 'demo-php.test', 'time' => '2026-01-01'])]]);
 env_assert(str_contains($warned, 'data-env-warning="backup_stale"') && str_contains($warned, 'href="?tab=backups"')
     && strpos($warned, 'data-env-warnings') < strpos($warned, 'data-env-tabs'), 'The card says what needs attention above its tabs, with the tab to deal with it.');
-env_assert(substr_count($ok, 'data-env-tab=') === 9 && preg_match('/data-env-tab="overview"\s+aria-current="page"/', $ok) === 1, 'The nine tabs, the current one marked.');
+env_assert(substr_count($ok, 'data-env-tab=') === count(\Larena\Env\Http\Controllers\SiteAdminController::TABS) && preg_match('/data-env-tab="overview"\s+aria-current="page"/', $ok) === 1, 'Every tab, the current one marked.');
 
 // Backups have their tab: the list, «Back up now», and restoring and checking only where the server has them.
 $older = \Larena\Env\Gateway\PanelCapabilities::fromHostDescription(['simai_env' => ['version' => '1.27.0']]);
@@ -284,7 +284,40 @@ env_assert(str_contains($elsewhere, 'data-env-dns-points="elsewhere"') && str_co
 $here = $screen(['site' => $site, 'tab' => 'dns', 'wholeServer' => true, 'siteDns' => new \Larena\Env\Dns\SiteDns('ok', $dnsZone, $dnsRecords, \Larena\Env\Dns\SiteDns::HERE)]);
 env_assert(str_contains($here, 'data-env-dns-points="here"') && !str_contains($here, 'data-env-dns-point>') && !str_contains($here, 'data-env-dns-point '), 'Points here: nothing to offer.');
 
-foreach (['site', 'plan', 'job', 'new-site', 'people', 'partials/notes', 'partials/warnings', 'partials/history', 'dns/connection', 'dns/index', 'dns/zone', 'dns/record-form', 'dns/plan'] as $view) {
+// The files (Panel plan 6.1, 6.2): a server without the commands says so with no dead buttons; otherwise a folder, the
+// editor, the trash, each change a plan. The nginx directives (6.3) say what is allowed and that they undo themselves.
+$filesBase = ['supported' => true, 'base' => '/admin/server/sites/demo-php.test?tab=files', 'problem' => null, 'path' => 'public', 'crumbs' => \Larena\Env\Files\FilePath::crumbs('public'),
+    'parent' => '.', 'view' => null, 'text' => null, 'trash' => null, 'trashOpen' => false, 'folder' => null,
+    'allows' => array_fill_keys(['write', 'upload', 'mkdir', 'rename', 'copy', 'delete', 'restore', 'chmod', 'archive', 'extract', 'download', 'read', 'trash'], true),
+    'fileModes' => \Larena\Env\Files\FileModes::FILE, 'dirModes' => \Larena\Env\Files\FileModes::DIR];
+$unsupported = $screen(['site' => $site, 'tab' => 'files', 'files' => ['supported' => false]]);
+env_assert(str_contains($unsupported, 'data-env-files="unsupported"') && str_contains($unsupported, 'data-env-files-unsupported') && !str_contains($unsupported, 'data-env-files-op'), 'No file commands: said, and nothing offered.');
+$folder = $screen(['site' => $site, 'tab' => 'files', 'files' => ['folder' => ['entries' => [
+    \Larena\Env\Files\FileEntry::fromData(['name' => 'assets', 'type' => 'dir', 'mode' => '0755']),
+    \Larena\Env\Files\FileEntry::fromData(['name' => 'index.html', 'type' => 'file', 'size' => 2048, 'mode' => '0644', 'mtime' => '2026-01-01T00:00:00Z']),
+    \Larena\Env\Files\FileEntry::fromData(['name' => '<b>x', 'type' => 'file', 'size' => 1]),
+], 'truncated' => true]] + $filesBase]);
+env_assert(str_contains($folder, 'data-env-file="index.html"') && str_contains($folder, 'data-env-file-type="dir"') && str_contains($folder, 'path=public%2Fassets')
+    && str_contains($folder, 'view=public%2Findex.html') && str_contains($folder, '2026-01-01 00:00 UTC') && str_contains($folder, 'data-env-files-truncated'), 'A folder: its entries, folders open, files open in the editor.');
+env_assert(str_contains($folder, 'data-env-files-op="mkdir"') && str_contains($folder, 'data-env-files-op="upload"') && str_contains($folder, 'enctype="multipart/form-data"')
+    && str_contains($folder, 'data-env-files-choice="delete"') && str_contains($folder, 'data-env-files-trash-link') && !str_contains($folder, '<b>x'), 'Its changes, the trash, and names escaped.');
+env_assert(!str_contains($folder, 'value="0666"') && !str_contains($folder, 'value="0777"') && str_contains($folder, 'value="0644"'), 'Only modes within the limits are offered.');
+$editor = $screen(['site' => $site, 'tab' => 'files', 'files' => ['view' => 'public/index.html', 'text' => ['content' => "<h1>hi</h1>\n", 'binary' => false, 'size' => 12]] + $filesBase]);
+env_assert(str_contains($editor, 'data-env-files-editor') && str_contains($editor, '&lt;h1&gt;hi&lt;/h1&gt;') && str_contains($editor, 'name="op" value="write"') && str_contains($editor, 'data-env-files-download'), 'A text file in the editor, saved by a plan.');
+$binary = $screen(['site' => $site, 'tab' => 'files', 'files' => ['view' => 'public/logo.png', 'text' => ['content' => null, 'binary' => true, 'size' => 5]] + $filesBase]);
+env_assert(str_contains($binary, 'data-env-files-binary') && !str_contains($binary, 'data-env-files-editor'), 'Not text: downloaded, not edited.');
+$trashed = $screen(['site' => $site, 'tab' => 'files', 'files' => ['trashOpen' => true, 'trash' => [\Larena\Env\Files\TrashItem::fromData(['id' => '20260101-a1', 'path' => 'notes.txt', 'deleted_at' => '2026-01-01T00:00:00Z'])]] + $filesBase]);
+env_assert(str_contains($trashed, 'data-env-trash-item="20260101-a1"') && str_contains($trashed, 'name="op" value="restore"'), 'The trash, each item restored by a plan.');
+$outside = $screen(['site' => $site, 'tab' => 'files', 'files' => ['problem' => 'That path leads outside the site\'s folder: the server refuses it.'] + $filesBase]);
+env_assert(str_contains($outside, 'data-env-files-problem') && str_contains($outside, 'outside the site'), 'A refusal is said in words.');
+$nginx = $screen(['site' => $site, 'tab' => 'nginx', 'overlaySupported' => true, 'overlay' => ['content' => "add_header X-Test 1;\n", 'pending' => 'c1'],
+    'overlayProblem' => null, 'overlayAllows' => ['set' => true, 'clear' => true, 'confirm' => true]]);
+env_assert(str_contains($nginx, 'data-env-nginx-allowlist') && str_contains($nginx, 'data-env-nginx-pending="c1"') && str_contains($nginx, 'name="op" value="overlay-confirm"')
+    && str_contains($nginx, 'data-env-nginx-op="overlay-clear"'), 'The nginx directives: what is allowed, a change to keep in time.');
+$noNginx = $screen(['site' => $site, 'tab' => 'nginx', 'overlaySupported' => false, 'overlay' => null, 'overlayProblem' => null, 'overlayAllows' => ['set' => false, 'clear' => false, 'confirm' => false]]);
+env_assert(str_contains($noNginx, 'data-env-nginx-unsupported') && !str_contains($noNginx, 'data-env-nginx-op'), 'No directives command: said, nothing offered.');
+
+foreach (['site', 'plan', 'job', 'new-site', 'people', 'partials/notes', 'partials/warnings', 'partials/history', 'partials/files', 'partials/nginx', 'dns/connection', 'dns/index', 'dns/zone', 'dns/record-form', 'dns/plan'] as $view) {
     $source = (string) file_get_contents(dirname(__DIR__, 2).'/resources/views/admin/'.$view.'.blade.php');
     env_assert(!str_contains($source, '{!!') && preg_match('/<style\b|<script\b|@php\b/i', $source) !== 1, "The {$view} view prints nothing raw and holds no script.");
 }
