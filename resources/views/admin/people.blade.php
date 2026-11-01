@@ -17,18 +17,18 @@
         @if ($people === [])
             <p data-env-people-empty>{{ __('larena-env::admin.people.empty') }}</p>
         @else
-            <table class="larena-table">
+            <table class="larena-table larena-table-stack">
                 <thead><tr><th>{{ __('larena-env::admin.people.person') }}</th><th>{{ __('larena-env::admin.people.space') }}</th><th></th></tr></thead>
                 <tbody>
                 @foreach ($people as $person)
                     <tr data-env-person="{{ $person['subject'] }}">
-                        <td>{{ $person['label'] }}</td>
-                        <td>
+                        <td data-label="{{ __('larena-env::admin.people.person') }}">{{ $person['label'] }}</td>
+                        <td data-label="{{ __('larena-env::admin.people.space') }}">
                             <form method="post" action="{{ route('larena.env.admin.people.assign', [], false) }}">
                                 @csrf
                                 <input type="hidden" name="subject" value="{{ $person['subject'] }}">
                                 <label class="larena-visually-hidden" for="env-space-{{ $loop->index }}">{{ __('larena-env::admin.people.space') }}</label>
-                                <select class="larena-relation-picker" id="env-space-{{ $loop->index }}" name="owner">
+                                <select id="env-space-{{ $loop->index }}" name="owner" style="width: 100%; min-height: 2.75rem; margin-bottom: .5rem; padding: 0 .75rem; border: 1px solid var(--larena-line); border-radius: .5rem; background: transparent; color: inherit; font: inherit;">
                                     <option value="">{{ __('larena-env::admin.people.no_space') }}</option>
                                     @foreach ($owners as $owner)
                                         <option value="{{ $owner }}" @if ($person['owner'] === $owner) selected @endif>{{ $owner }}</option>
@@ -40,7 +40,7 @@
                                 <button type="submit" class="larena-button">{{ __('larena-env::admin.people.save') }}</button>
                             </form>
                         </td>
-                        <td>
+                        <td data-env-person-actions>
                             @if ($person['owner'] !== null)
                                 <form method="post" action="{{ route('larena.env.admin.people.act', [], false) }}">
                                     @csrf

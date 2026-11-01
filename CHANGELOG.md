@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- The panel from a phone (Panel plan, promise 6), checked at 375 px on both levels. A site's tabs are a row of chips
+  that wraps, the open one marked; its facts keep their grid inside a panel; the log and the spaces read as cards; a
+  person's space is a full-size choice; a checkbox sits beside its words; a job's output scrolls sideways instead of
+  being cut. Times the server writes read as `2026-01-01 00:00 UTC` in warnings, backups, a restore, a job and the
+  overview; the load history's legend sits on its lines.
+- Stage 5 groundwork: «Создать сайт» first asks what the site runs, each kind with what the server sets up for it, and
+  then only what that kind takes: PHP and a database for PHP, Laravel and WordPress (a database on by default for the
+  last two), the target for a redirect. A database is asked of no other kind.
 - Stage 4 of the Panel plan, on what simai-env 1.28.0 gives. A new site gets its daily backup by default: the wizard's
   «Ежедневная резервная копия» is ticked, its plan says so, and once `site:add` has made the site the panel starts
   `backup:data-schedule {enabled: yes}` (only where the server lists that command). A restore says before it is

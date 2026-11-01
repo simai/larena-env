@@ -16,9 +16,9 @@
     @else
         <section class="larena-panel larena-panel-padded" data-env-job="{{ $status->jobId }}" data-env-job-state="{{ $status->state->value }}" aria-labelledby="env-job">
             <h2 id="env-job">{{ __('larena-env::admin.job.states.'.$status->state->value) }}</h2>
-            <dl class="larena-recipe-facts">
+            <dl class="larena-recipe-facts" style="grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 1px;">
                 <div><dt>{{ __('larena-env::admin.plan.command') }}</dt><dd>{{ $status->command }}</dd></div>
-                <div><dt>{{ __('larena-env::admin.job.started_at') }}</dt><dd>{{ $status->createdAt ?? '—' }}</dd></div>
+                <div><dt>{{ __('larena-env::admin.job.started_at') }}</dt><dd>{{ \Larena\Env\Server\Moment::human($status->createdAt) }}</dd></div>
                 <div><dt>{{ __('larena-env::admin.job.started_by') }}</dt><dd>{{ $status->actor ?? '—' }}</dd></div>
                 <div><dt>{{ __('larena-env::admin.job.exit_code') }}</dt><dd>{{ $status->exitCode ?? '—' }}</dd></div>
             </dl>
@@ -35,7 +35,7 @@
             @if ($log === null)
                 <p>{{ $reasonText ?? __('larena-env::admin.job.no_log') }}</p>
             @else
-                <pre data-env-job-log-lines>{{ implode("\n", $log->lines) }}</pre>
+                <pre data-env-job-log-lines tabindex="0" style="max-width: 100%; overflow-x: auto;">{{ implode("\n", $log->lines) }}</pre>
                 @if (! $status->state->isOver())
                     <p><a href="{{ route('larena.env.admin.job', ['job' => $status->jobId], false) }}?after={{ $log->next }}">{{ __('larena-env::admin.job.more') }}</a></p>
                 @endif

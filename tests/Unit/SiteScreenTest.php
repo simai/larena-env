@@ -214,6 +214,12 @@ env_assert((new PanelOperations($gateway))->planCommand(new PanelActor($user), '
 $wizard = $factory->make('larena-env::admin.new-site', ['profiles' => \Larena\Env\Http\Controllers\NewSiteController::PROFILES,
     'phpProfiles' => ['generic'], 'phpVersions' => ['8.3'], 'owners' => ['demo'], 'old' => [], 'notice' => null, 'source' => 'recorded'])->render();
 env_assert(substr_count($wizard, 'data-env-profile=') === 6 && str_contains($wizard, 'data-env-new-owner') && preg_match('/<option value="demo"\s*>/', $wizard) === 1, 'The wizard: the kinds and, for the whole server, whose the site is.');
+$kindWizard = static fn (string $kind): string => $factory->make('larena-env::admin.new-site', ['profiles' => \Larena\Env\Http\Controllers\NewSiteController::PROFILES,
+    'phpProfiles' => ['generic', 'laravel', 'wordpress'], 'phpVersions' => ['8.3'], 'owners' => null, 'old' => [], 'notice' => null, 'kind' => $kind])->render();
+env_assert(substr_count($kindWizard('static'), 'data-env-profile-hint=') === 6 && !str_contains($kindWizard('static'), 'data-env-field='), 'Each kind says what it is; a static site asks nothing more.');
+env_assert(str_contains($kindWizard('laravel'), 'data-env-field="php"') && str_contains($kindWizard('laravel'), 'data-env-field="database"')
+    && !str_contains($kindWizard('laravel'), 'data-env-field="redirect"') && str_contains($kindWizard('laravel'), 'data-env-new-profile="laravel"'), 'Laravel asks for PHP and a database.');
+env_assert(str_contains($kindWizard('redirect'), 'data-env-field="redirect"') && !str_contains($kindWizard('redirect'), 'data-env-field="php"'), 'A redirect asks only where to.');
 $ownWizard = $factory->make('larena-env::admin.new-site', ['profiles' => ['static'], 'phpProfiles' => [], 'phpVersions' => [], 'owners' => null,
     'old' => [], 'notice' => null])->render();
 env_assert(!str_contains($ownWizard, 'data-env-new-owner') && str_contains($ownWizard, 'data-env-new-own-space'), 'A person\'s site is in their space.');

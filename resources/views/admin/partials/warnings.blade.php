@@ -1,7 +1,7 @@
 {{-- What needs attention (Panel plan 4.4), said before anyone asks: errors first, each with the place it is dealt with.
      $warnings is a list of Larena\Env\Warnings\PanelWarning; nothing is drawn when it is null (not read). --}}
 @if (($warnings ?? null) !== null)
-    <section class="larena-panel larena-panel-padded" data-env-warnings="{{ count($warnings) }}" aria-labelledby="env-warnings"
+    <section class="larena-panel larena-panel-padded" data-env-warnings="{{ count($warnings) }}" aria-labelledby="env-warnings" style="margin-bottom: 1rem;"
         @if (array_filter($warnings, static fn ($warning): bool => $warning->severity === 'error') !== []) role="alert" @endif>
         <h2 id="env-warnings">{{ __('larena-env::admin.warnings.title') }}</h2>
         @if ($warnings === [])

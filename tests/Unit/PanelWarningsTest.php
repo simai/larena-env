@@ -47,6 +47,7 @@ env_assert(PanelWarnings::forSite($site('a.test', ['ssl' => 'letsencrypt', 'cert
 env_assert($kinds(PanelWarnings::forSite($site('a.test', ['lastBackup' => null, 'backupSchedule' => false]), $now)) === ['backup_none:warning'], 'No backup, no daily one.');
 env_assert(PanelWarnings::forSite($site('a.test', ['lastBackup' => null]), $now) === [], 'A daily backup set and none yet: the first comes tonight.');
 env_assert($kinds(PanelWarnings::forSite($site('a.test', ['lastBackup' => '2026-10-29T00:00:00']), $now)) === ['backup_stale:warning'], 'Older than two days.');
+env_assert(PanelWarnings::forSite($site('a.test', ['lastBackup' => '2026-10-29T00:00:00']), $now)[0]->replace['time'] === '2026-10-29 00:00 UTC', 'The time reads as a person reads it.');
 env_assert($kinds(PanelWarnings::forSite($site('a.test', ['backupSchedule' => false]), $now)) === ['backup_unscheduled:warning'], 'Fresh, but only by hand.');
 env_assert(PanelWarnings::forSite($site('a.test', ['profile' => 'redirect', 'lastBackup' => null, 'backupSchedule' => false]), $now) === [], 'A redirect keeps nothing to back up.');
 

@@ -14,6 +14,7 @@ use Larena\Env\Operations\PanelOperations;
 use Larena\Env\Gateway\PanelActor;
 use Larena\Env\Gateway\PanelCapabilities;
 use Larena\Env\Operations\SiteOperation;
+use Larena\Env\Server\Moment;
 use Larena\Env\Server\ServerOverviewReader;
 use Larena\Env\Server\SiteDetailsReader;
 use Larena\Env\Server\SiteExtrasReader;
@@ -148,7 +149,7 @@ final readonly class SiteAdminController
 
         return (string) $this->translator->get('larena-env::admin.plan.'.$key, [
             'domain' => $domain,
-            'time' => $backup->createdAt ?? (string) $name,
+            'time' => $backup->createdAt !== null ? Moment::human($backup->createdAt) : (string) $name,
             'size' => \Larena\Env\Server\Bytes::human($backup?->sizeBytes),
         ]);
     }

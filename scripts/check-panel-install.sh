@@ -182,6 +182,7 @@ _, overview = get("/admin/server/overview")
 assert "data-env-history" in overview and 'data-env-history-chart="day"' in overview and "data-env-warnings=" in overview, "the overview draws the load"
 _, card = get("/admin/server/sites/demo-php.test")
 assert 'data-env-warning="backup_stale"' in card, "the card says its own"
+assert "2026-01-01 00:00 UTC" in card and "data-env-tabs" in card, "the card reads its times as a person does"
 request = urllib.request.Request(base + "/admin/navigation/menu", method="POST",
     data=json.dumps({"intent": "navigation.load", "payload": {"reason": "connected", "site": None}, "page": "/admin/server"}).encode(),
     headers={"Content-Type": "application/json", "Accept": "application/json", "X-CSRF-TOKEN": csrf})
@@ -218,6 +219,13 @@ assert 'data-env-acting' not in whole and "demo-php.test" in whole, "back to the
 status, wizard = get("/admin/server/sites/new")
 assert status == 200 and "data-env-new-owner" in wizard, "the wizard, with whose the site is"
 assert re.search(r'name="daily-backup" value="yes" data-env-new-daily-backup\s+checked', wizard), "a new site gets its daily backup by default"
+for kind in ("static", "generic", "laravel", "wordpress", "node", "redirect"):
+    assert 'data-env-profile-hint="' + kind + '"' in wizard, ("each kind says what it is", kind)
+assert 'data-env-new-profile="static"' in wizard and 'data-env-field=' not in wizard, "a static site asks for no PHP, database or target"
+_, laravel = get("/admin/server/sites/new?profile=laravel")
+assert 'data-env-new-profile="laravel"' in laravel and all('data-env-field="' + field + '"' in laravel for field in ("php", "database", "engine")) and 'data-env-field="redirect"' not in laravel, "Laravel asks for PHP and a database"
+_, redirect = get("/admin/server/sites/new?profile=redirect")
+assert 'data-env-field="redirect"' in redirect and 'data-env-field="php"' not in redirect, "a redirect asks only where to"
 _, planned = post("/admin/server/sites/new/plan", {"_token": form_token(wizard), "domain": "new.test", "profile": "static", "daily-backup": "yes"})
 assert 'data-env-plan="site:add"' in planned and "data-env-plan-then" in planned and 'name="daily-backup" value="yes"' in planned, "a new site is planned, its daily backup after"
 _, made = post("/admin/server/sites/new/run", {"_token": form_token(planned), "domain": "new.test", "profile": "static", "daily-backup": "yes"})
@@ -233,6 +241,7 @@ for tab in ("overview", "domains", "php", "database", "backups", "releases", "lo
             assert 'data-env-operation="' + shownAction + '"' in card, ("offered", shownAction)
 _, logged = get("/admin/server/sites/demo-static.test?tab=log&q=curl&group=2xx&lines=500")
 assert "data-env-log-rows" in logged and 'data-env-log-row="200"' in logged, "the log narrows"
+assert "larena-table-stack" in logged and 'data-label="' in logged, "the log reads as cards on a phone"
 _, overview = get("/admin/server")
 assert "HTTP 200" in overview, "a site that answers says so"
 _, spaces = get("/admin/server/people")

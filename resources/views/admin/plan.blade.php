@@ -18,7 +18,7 @@
         @foreach ($then ?? [] as $after)
             <p data-env-plan-then>{{ $after }}</p>
         @endforeach
-        <dl class="larena-recipe-facts">
+        <dl class="larena-recipe-facts" style="grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 1px;">
             <div><dt>{{ __('larena-env::admin.plan.command') }}</dt><dd>{{ $plan->command }}</dd></div>
             <div><dt>{{ __('larena-env::admin.plan.target') }}</dt><dd>{{ $plan->target ?? $target }}</dd></div>
             <div><dt>{{ __('larena-env::admin.plan.effects') }}</dt><dd>{{ $plan->effects }}</dd></div>
@@ -26,7 +26,7 @@
         </dl>
         @if ($plan->args !== [])
             <h3>{{ __('larena-env::admin.plan.arguments') }}</h3>
-            <dl class="larena-recipe-facts">
+            <dl class="larena-recipe-facts" style="grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 1px;">
                 @foreach ($plan->args as $name => $value)
                     <div data-env-plan-argument="{{ $name }}"><dt>{{ $name }}</dt><dd>{{ $value }}</dd></div>
                 @endforeach

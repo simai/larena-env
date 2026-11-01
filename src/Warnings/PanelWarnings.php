@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use DateTimeZone;
 use Exception;
 use Larena\Env\Server\Bytes;
+use Larena\Env\Server\Moment;
 use Larena\Env\Server\ServerMetrics;
 use Larena\Env\Server\ServerOverview;
 use Larena\Env\Server\SiteSummary;
@@ -114,7 +115,7 @@ final class PanelWarnings
             return $site->backupSchedule ? null : new PanelWarning(self::BACKUP_NONE, PanelWarning::WARNING, $domain, ['domain' => $domain]);
         }
         if ($now->getTimestamp() - $last->getTimestamp() > self::BACKUP_HOURS * 3600) {
-            return new PanelWarning(self::BACKUP_STALE, PanelWarning::WARNING, $domain, ['domain' => $domain, 'time' => (string) $site->lastBackup]);
+            return new PanelWarning(self::BACKUP_STALE, PanelWarning::WARNING, $domain, ['domain' => $domain, 'time' => Moment::human($site->lastBackup)]);
         }
 
         return $site->backupSchedule ? null : new PanelWarning(self::BACKUP_UNSCHEDULED, PanelWarning::WARNING, $domain, ['domain' => $domain]);

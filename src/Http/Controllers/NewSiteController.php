@@ -48,6 +48,8 @@ final readonly class NewSiteController
             // Only the whole server chooses whose the site is; a person's own site is theirs.
             'owners' => $actor->owner === null ? ($overview->owners ?? []) : null,
             'old' => self::input($request, $actor),
+            // What it runs is chosen first; the form then asks only what that kind takes.
+            'kind' => in_array($request->query('profile'), self::PROFILES, true) ? (string) $request->query('profile') : 'static',
             // A new site gets its daily backup by default (Panel plan 4.1), where the server's gateway can set one.
             'dailyBackup' => $this->schedules($overview) ? self::dailyBackup($request) : null,
             'notice' => $request->session()->get('larena_env_notice'),
@@ -106,8 +108,8 @@ final readonly class NewSiteController
     }
 
     /**
-     * The gateway's arguments from the form, as typed; the command table refuses anything the gateway would. PHP goes
-     * only with a PHP profile, the database only when asked, the redirect target only with a redirect, and the owner
+     * The gateway's arguments from the form, as typed; the command table refuses anything the gateway would. PHP and a
+     * database go only with a PHP profile, the database only when asked, the redirect target only with a redirect, and the owner
      * only from the whole server.
      *
      * @return array<string, string>
@@ -124,6 +126,9 @@ final readonly class NewSiteController
         $profile = $input['profile'] ?? null;
         if (!in_array($profile, self::PHP_PROFILES, true)) {
             unset($input['php']);
+        }
+        if (!in_array($profile, self::PHP_PROFILES, true)) {
+            unset($input['create-db']);
         }
         if (($input['create-db'] ?? null) !== 'yes') {
             unset($input['db-engine']);

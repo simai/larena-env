@@ -14,18 +14,18 @@
                     <line x1="0" y1="12" x2="600" y2="12" stroke="currentColor" stroke-opacity="0.15" stroke-width="1" />
                     @foreach (array_values($line->lines) as $index => $points)
                         @if (count($points) === 1)
-                            <circle cx="{{ number_format($points[0][0] * 600, 1, '.', '') }}" cy="{{ number_format(120 - min(100, max(0, $points[0][1])) * 1.2, 1, '.', '') }}" r="2.5" fill="currentColor" />
+                            <circle cx="{{ number_format(min(596, max(4, $points[0][0] * 600)), 1, '.', '') }}" cy="{{ number_format(120 - min(100, max(0, $points[0][1])) * 1.2, 1, '.', '') }}" r="2.5" fill="currentColor" />
                         @else
                             <polyline fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="{{ ['', '6 4', '2 3', '8 3 2 3'][$index % 4] }}" points="{{ \Larena\Env\History\MetricHistory::polyline($points, 600, 120) }}" />
                         @endif
                     @endforeach
                 </svg>
-                <ul class="larena-list" data-env-history-legend="{{ $period }}">
+                <ul class="larena-list" style="list-style: none; padding-inline-start: 0;" data-env-history-legend="{{ $period }}">
                     @foreach ($line->lines as $name => $points)
-                        <li data-env-history-line="{{ $name }}"><svg width="24" height="6" aria-hidden="true"><line x1="0" y1="3" x2="24" y2="3" stroke="currentColor" stroke-width="1.5" stroke-dasharray="{{ ['', '6 4', '2 3', '8 3 2 3'][$loop->index % 4] }}" /></svg> {{ str_starts_with($name, 'disk:') ? __('larena-env::admin.history.disk', ['mount' => substr($name, 5)]) : __('larena-env::admin.history.'.$name) }} · {{ (string) round(end($points)[1]) }}%</li>
+                        <li data-env-history-line="{{ $name }}"><svg width="24" height="6" aria-hidden="true" style="display: inline-block; vertical-align: middle;"><line x1="0" y1="3" x2="24" y2="3" stroke="currentColor" stroke-width="1.5" stroke-dasharray="{{ ['', '6 4', '2 3', '8 3 2 3'][$loop->index % 4] }}" /></svg> {{ str_starts_with($name, 'disk:') ? __('larena-env::admin.history.disk', ['mount' => substr($name, 5)]) : __('larena-env::admin.history.'.$name) }} · {{ (string) round(end($points)[1]) }}%</li>
                     @endforeach
                 </ul>
-                <p>{{ __('larena-env::admin.history.points', ['count' => (string) $line->count, 'from' => (string) $line->from, 'to' => (string) $line->to]) }}</p>
+                <p>{{ __('larena-env::admin.history.points', ['count' => (string) $line->count, 'from' => \Larena\Env\Server\Moment::human($line->from), 'to' => \Larena\Env\Server\Moment::human($line->to)]) }}</p>
             @endif
         @endforeach
     </section>

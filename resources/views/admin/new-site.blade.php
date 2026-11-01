@@ -10,21 +10,30 @@
 
     <section class="larena-panel larena-panel-padded" aria-labelledby="env-new-site">
         <h2 id="env-new-site">{{ __('larena-env::admin.new_site.heading') }}</h2>
+        {{-- First what it runs, each kind with what the server sets up; the form below asks only what that kind takes. --}}
+        <nav aria-labelledby="env-new-kind" data-env-new-kinds>
+            <h3 id="env-new-kind">{{ __('larena-env::admin.new_site.profile') }}</h3>
+            <ul class="larena-list" style="list-style: none; padding-inline-start: 0; display: grid; gap: .5rem;">
+                @foreach ($profiles as $profile)
+                    <li>
+                        <a href="{{ route('larena.env.admin.sites.new', [], false) }}?profile={{ $profile }}" data-env-profile="{{ $profile }}" @if ($profile === ($kind ?? 'static')) aria-current="true" @endif
+                            style="display: block; min-height: 2.75rem; padding: .625rem .875rem; border: 1px solid {{ $profile === ($kind ?? 'static') ? 'var(--sf-primary)' : 'var(--larena-line)' }}; border-radius: .625rem; text-decoration: none; color: inherit;{{ $profile === ($kind ?? 'static') ? ' background: var(--sf-primary-container); color: var(--sf-on-primary-container);' : '' }}">
+                            <strong>{{ __('larena-env::admin.new_site.profiles.'.$profile) }}</strong><br>
+                            <span data-env-profile-hint="{{ $profile }}">{{ __('larena-env::admin.new_site.profile_hints.'.$profile) }}</span>
+                        </a>
+                    </li>
+                @endforeach
+            </ul>
+        </nav>
         <form method="post" action="{{ route('larena.env.admin.sites.plan', [], false) }}" class="larena-form" data-env-new-site>
             @csrf
             <div class="larena-field">
                 <label for="env-new-domain">{{ __('larena-env::admin.new_site.domain') }}</label>
                 <input type="text" id="env-new-domain" name="domain" value="{{ $old['domain'] ?? '' }}" required autocomplete="off" placeholder="example.com">
             </div>
-            <div class="larena-field">
-                <label for="env-new-profile">{{ __('larena-env::admin.new_site.profile') }}</label>
-                <select id="env-new-profile" name="profile" required>
-                    @foreach ($profiles as $profile)
-                        <option value="{{ $profile }}" data-env-profile="{{ $profile }}" @if (($old['profile'] ?? 'static') === $profile) selected @endif>{{ __('larena-env::admin.new_site.profiles.'.$profile) }}</option>
-                    @endforeach
-                </select>
-            </div>
-                <div class="larena-field">
+            <input type="hidden" name="profile" value="{{ $kind ?? 'static' }}" data-env-new-profile="{{ $kind ?? 'static' }}">
+            @if (in_array($kind ?? 'static', $phpProfiles ?? [], true))
+                <div class="larena-field" data-env-field="php">
                     <label for="env-new-php">{{ __('larena-env::admin.new_site.php') }}</label>
                     <select id="env-new-php" name="php">
                         <option value="">{{ __('larena-env::admin.fields.default') }}</option>
@@ -34,29 +43,33 @@
                     </select>
                     <p>{{ __('larena-env::admin.new_site.php_hint') }}</p>
                 </div>
-                <div class="larena-field">
+                <div class="larena-field" data-env-field="database">
                     <label for="env-new-db">{{ __('larena-env::admin.new_site.database') }}</label>
                     <select id="env-new-db" name="create-db">
                         <option value="no">{{ __('larena-env::admin.no') }}</option>
-                        <option value="yes" @if (($old['create-db'] ?? null) === 'yes') selected @endif>{{ __('larena-env::admin.yes') }}</option>
+                        <option value="yes" @if (($old['create-db'] ?? (in_array($kind ?? 'static', ['laravel', 'wordpress'], true) ? 'yes' : null)) === 'yes') selected @endif>{{ __('larena-env::admin.yes') }}</option>
                     </select>
+                    <p>{{ __('larena-env::admin.new_site.database_hint') }}</p>
                 </div>
-                <div class="larena-field">
+                <div class="larena-field" data-env-field="engine">
                     <label for="env-new-engine">{{ __('larena-env::admin.new_site.engine') }}</label>
                     <select id="env-new-engine" name="db-engine">
                         <option value="mysql">MySQL</option>
                         <option value="pgsql" @if (($old['db-engine'] ?? null) === 'pgsql') selected @endif>PostgreSQL</option>
                     </select>
                 </div>
-                <div class="larena-field">
+            @endif
+            @if (($kind ?? 'static') === 'redirect')
+                <div class="larena-field" data-env-field="redirect">
                     <label for="env-new-redirect">{{ __('larena-env::admin.new_site.redirect_to') }}</label>
                     <input type="url" id="env-new-redirect" name="redirect-to" value="{{ $old['redirect-to'] ?? '' }}" placeholder="https://example.org">
                 </div>
+            @endif
             @if (($dailyBackup ?? null) !== null)
                 <div class="larena-field">
                     <input type="hidden" name="daily-backup" value="no">
-                    <label for="env-new-daily-backup">
-                        <input type="checkbox" id="env-new-daily-backup" name="daily-backup" value="yes" data-env-new-daily-backup @if ($dailyBackup) checked @endif>
+                    <label for="env-new-daily-backup" style="display: flex; align-items: center; gap: .625rem; min-height: 2.75rem;">
+                        <input type="checkbox" style="flex: none; width: 1.25rem; height: 1.25rem; margin: 0; padding: 0;" id="env-new-daily-backup" name="daily-backup" value="yes" data-env-new-daily-backup @if ($dailyBackup) checked @endif>
                         {{ __('larena-env::admin.new_site.daily_backup') }}
                     </label>
                     <p>{{ __('larena-env::admin.new_site.daily_backup_hint') }}</p>

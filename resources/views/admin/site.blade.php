@@ -16,16 +16,17 @@
         </section>
     @else
         @include('larena-env::admin.partials.warnings', ['linkSites' => false])
-        <nav class="larena-panel larena-panel-padded" aria-label="{{ __('larena-env::admin.site.tabs_label') }}" data-env-tabs>
+        <nav class="larena-panel larena-panel-padded" aria-label="{{ __('larena-env::admin.site.tabs_label') }}" data-env-tabs style="display: flex; flex-wrap: wrap; gap: .5rem;">
             @foreach ($tabs as $name)
-                <a href="{{ route('larena.env.admin.site', ['domain' => $domain], false) }}?tab={{ $name }}" data-env-tab="{{ $name }}" @if ($name === $tab) aria-current="page" @endif>{{ __('larena-env::admin.site.tabs.'.$name) }}</a>
+                <a href="{{ route('larena.env.admin.site', ['domain' => $domain], false) }}?tab={{ $name }}" data-env-tab="{{ $name }}" @if ($name === $tab) aria-current="page" @endif
+                    style="display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0 .875rem; border: 1px solid {{ $name === $tab ? 'var(--sf-primary)' : 'var(--larena-line)' }}; border-radius: 999px; text-decoration: none;{{ $name === $tab ? ' background: var(--sf-primary-container); color: var(--sf-on-primary-container);' : '' }}">{{ __('larena-env::admin.site.tabs.'.$name) }}</a>
             @endforeach
         </nav>
 
         @if ($tab === 'overview')
             <section class="larena-panel larena-panel-padded" data-env-state="ok" aria-labelledby="env-site-facts">
                 <h2 id="env-site-facts">{{ __('larena-env::admin.site.facts') }}</h2>
-                <dl class="larena-recipe-facts">
+                <dl class="larena-recipe-facts" style="grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 1px;">
                     <div data-env-answers="{{ $site->answersChecked ? ($site->answers ?? 'none') : 'unchecked' }}"><dt>{{ __('larena-env::admin.sites.answers') }}</dt><dd>{{ !$site->answersChecked ? '—' : ($site->answers === null ? __('larena-env::admin.sites.answers_none') : __('larena-env::admin.sites.answers_code', ['code' => (string) $site->answers])) }}</dd></div>
                     <div><dt>{{ __('larena-env::admin.sites.owner') }}</dt><dd>{{ $site->owner ?? '—' }}</dd></div>
                     <div><dt>{{ __('larena-env::admin.sites.profile') }}</dt><dd>{{ $site->profile }}</dd></div>
@@ -57,7 +58,7 @@
                 @if ($site->certificate === null)
                     <p>{{ __('larena-env::admin.certificate.none') }}</p>
                 @else
-                    <dl class="larena-recipe-facts">
+                    <dl class="larena-recipe-facts" style="grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 1px;">
                         <div><dt>{{ __('larena-env::admin.certificate.names') }}</dt><dd>{{ implode(', ', $site->certificate->names) }}</dd></div>
                         <div><dt>{{ __('larena-env::admin.certificate.issuer') }}</dt><dd>{{ $site->certificate->issuer ?? '—' }}</dd></div>
                         <div><dt>{{ __('larena-env::admin.certificate.not_after') }}</dt><dd>{{ $site->certificate->notAfter ?? '—' }}</dd></div>
@@ -72,7 +73,7 @@
         @elseif ($tab === 'php')
             <section class="larena-panel larena-panel-padded" data-env-runtime aria-labelledby="env-site-runtime">
                 <h2 id="env-site-runtime">{{ __('larena-env::admin.runtime.title') }}</h2>
-                <dl class="larena-recipe-facts">
+                <dl class="larena-recipe-facts" style="grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 1px;">
                     <div><dt>{{ __('larena-env::admin.sites.php') }}</dt><dd>{{ $site->php }}</dd></div>
                     <div><dt>{{ __('larena-env::admin.runtime.service') }}</dt><dd>{{ $site->service ?? '—' }}</dd></div>
                     <div><dt>{{ __('larena-env::admin.runtime.workers') }}</dt><dd>{{ $site->workers === [] ? '—' : implode(', ', $site->workers) }}</dd></div>
@@ -84,7 +85,7 @@
                     @if ($phpSettings === [])
                         <p>{{ __('larena-env::admin.runtime.settings_none') }}</p>
                     @else
-                        <dl class="larena-recipe-facts">
+                        <dl class="larena-recipe-facts" style="grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 1px;">
                             @foreach ($phpSettings as $setting)
                                 <div data-env-php-setting="{{ $setting->key }}"><dt>{{ $setting->key }}</dt><dd>{{ $setting->value }}@if ($setting->source !== null) · {{ $setting->source }}@endif</dd></div>
                             @endforeach
@@ -108,7 +109,7 @@
                 @if ($site->databaseEngine === null)
                     <p>{{ __('larena-env::admin.database.none') }}</p>
                 @else
-                    <dl class="larena-recipe-facts">
+                    <dl class="larena-recipe-facts" style="grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 1px;">
                         <div><dt>{{ __('larena-env::admin.database.engine') }}</dt><dd>{{ $site->databaseEngine }}</dd></div>
                     </dl>
                     @if ($databases !== null)
@@ -135,7 +136,7 @@
                     <ul class="larena-list">
                         @foreach ($site->backups as $backup)
                             <li data-env-backup="{{ $backup->name }}">
-                                {{ $backup->createdAt ?? $backup->name }} · {{ \Larena\Env\Server\Bytes::human($backup->sizeBytes) }} · {{ implode(', ', $backup->parts) }}
+                                {{ $backup->createdAt !== null ? \Larena\Env\Server\Moment::human($backup->createdAt) : $backup->name }} · {{ \Larena\Env\Server\Bytes::human($backup->sizeBytes) }} · {{ implode(', ', $backup->parts) }}
                                 @if ($backup->encrypted) · {{ __('larena-env::admin.backups.encrypted') }} @endif
                             </li>
                         @endforeach
@@ -145,7 +146,7 @@
         @elseif ($tab === 'releases')
             <section class="larena-panel larena-panel-padded" data-env-releases aria-labelledby="env-site-releases">
                 <h2 id="env-site-releases">{{ __('larena-env::admin.releases.title') }}</h2>
-                <dl class="larena-recipe-facts">
+                <dl class="larena-recipe-facts" style="grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 1px;">
                     <div><dt>{{ __('larena-env::admin.sites.release') }}</dt><dd>{{ $site->release ?? '—' }}</dd></div>
                     <div><dt>{{ __('larena-env::admin.site.previous_release') }}</dt><dd>{{ $site->previousRelease ?? '—' }}</dd></div>
                 </dl>
@@ -199,7 +200,7 @@
                     <p data-env-log-count>{{ __('larena-env::admin.log.count', ['shown' => (string) count($log->rows), 'total' => (string) $log->total]) }}</p>
                     @if ($log->rows !== [])
                         <div class="larena-table-scroll">
-                            <table class="larena-table" data-env-log-rows>
+                            <table class="larena-table larena-table-stack" data-env-log-rows>
                                 <thead>
                                     <tr>
                                         <th scope="col">{{ __('larena-env::admin.log.time') }}</th>
@@ -216,16 +217,16 @@
                                 <tbody>
                                     @foreach ($log->rows as $row)
                                         <tr data-env-log-row="{{ $row['status'] ?? $row['level'] ?? 'text' }}">
-                                            <td>{{ $row['time'] ?? '—' }}</td>
+                                            <td data-label="{{ __('larena-env::admin.log.time') }}">{{ $row['time'] ?? '—' }}</td>
                                             @if ($logKind === 'error')
-                                                <td>{{ $row['level'] ?? '—' }}</td>
+                                                <td data-label="{{ __('larena-env::admin.log.level') }}">{{ $row['level'] ?? '—' }}</td>
                                             @else
-                                                <td>{{ $row['status'] ?? '—' }}</td>
-                                                <td>{{ $row['method'] === null ? '—' : $row['method'].' '.$row['path'] }}</td>
-                                                <td>{{ $row['ip'] ?? '—' }}</td>
+                                                <td data-label="{{ __('larena-env::admin.log.status') }}">{{ $row['status'] ?? '—' }}</td>
+                                                <td data-label="{{ __('larena-env::admin.log.request') }}">{{ $row['method'] === null ? '—' : $row['method'].' '.$row['path'] }}</td>
+                                                <td data-label="{{ __('larena-env::admin.log.address') }}">{{ $row['ip'] ?? '—' }}</td>
                                             @endif
                                             {{-- A request read into its parts needs no copy of its line; a line in another form, or an error's message, is the line. --}}
-                                            <td>@if ($logKind === 'error' || $row['time'] === null)<code>{{ $row['text'] }}</code>@endif</td>
+                                            <td data-label="{{ __('larena-env::admin.log.'.($logKind === 'error' ? 'message' : 'line')) }}">@if ($logKind === 'error' || $row['time'] === null)<code>{{ $row['text'] }}</code>@endif</td>
                                         </tr>
                                     @endforeach
                                 </tbody>
@@ -237,7 +238,7 @@
         @elseif ($tab === 'access')
             <section class="larena-panel larena-panel-padded" data-env-access aria-labelledby="env-site-access">
                 <h2 id="env-site-access">{{ __('larena-env::admin.access.title') }}</h2>
-                <dl class="larena-recipe-facts">
+                <dl class="larena-recipe-facts" style="grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 1px;">
                     <div><dt>{{ __('larena-env::admin.sites.owner') }}</dt><dd>{{ $site->owner ?? __('larena-env::admin.access.own_account') }}</dd></div>
                     <div><dt>{{ __('larena-env::admin.access.runs_as') }}</dt><dd>{{ $site->runsAs ?? '—' }}</dd></div>
                 </dl>
@@ -280,7 +281,7 @@
                                 @elseif ($field === 'backup')
                                     <select id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}" required>
                                         @foreach ($site->backups as $backup)
-                                            <option value="{{ $backup->name }}">{{ $backup->createdAt ?? $backup->name }}</option>
+                                            <option value="{{ $backup->name }}">{{ $backup->createdAt !== null ? \Larena\Env\Server\Moment::human($backup->createdAt) : $backup->name }}</option>
                                         @endforeach
                                     </select>
                                 @elseif ($field === 'login' && $operation !== \Larena\Env\Operations\SiteOperation::SftpCreate)
