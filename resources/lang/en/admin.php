@@ -95,6 +95,7 @@ return [
         'request' => 'Request',
         'address' => 'From',
         'line' => 'Line',
+        'message' => 'Message',
     ],
     'fields' => [
         'email' => 'Email for the certificate authority',

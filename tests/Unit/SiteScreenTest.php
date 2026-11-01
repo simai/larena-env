@@ -147,7 +147,7 @@ env_assert(str_contains($php, 'data-env-operation="php-version"') && preg_match(
 env_assert(!str_contains($php, 'data-env-operation="queue-restart"'), 'And nothing the site cannot be asked for.');
 $logged = $screen(['site' => $site, 'tab' => 'log', 'log' => \Larena\Env\Server\SiteLogView::of($log->log)]);
 env_assert(str_contains($logged, 'data-env-log="access"') && str_contains($logged, 'data-env-log-filter') && str_contains($logged, 'name="tab" value="log"'), 'The log keeps its tab and can be narrowed.');
-env_assert(str_contains($logged, 'data-env-log-row="200"') && str_contains($logged, 'GET /'), 'A request line is read into its parts.');
+env_assert(str_contains($logged, 'data-env-log-row="200"') && str_contains($logged, 'GET /') && !str_contains($logged, '<code>127.0.0.1'), 'A request line is read into its parts, not repeated.');
 
 // The log narrowed: by words, by the answer's group, by an error's level; newest first.
 $tail = new \Larena\Env\Server\NginxLogTail('a.test', 'access', [

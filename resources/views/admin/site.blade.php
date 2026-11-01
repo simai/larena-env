@@ -212,7 +212,7 @@
                                             <th scope="col">{{ __('larena-env::admin.log.request') }}</th>
                                             <th scope="col">{{ __('larena-env::admin.log.address') }}</th>
                                         @endif
-                                        <th scope="col">{{ __('larena-env::admin.log.line') }}</th>
+                                        <th scope="col">{{ __('larena-env::admin.log.'.($logKind === 'error' ? 'message' : 'line')) }}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -226,7 +226,8 @@
                                                 <td>{{ $row['method'] === null ? '—' : $row['method'].' '.$row['path'] }}</td>
                                                 <td>{{ $row['ip'] ?? '—' }}</td>
                                             @endif
-                                            <td><code>{{ $row['text'] }}</code></td>
+                                            {{-- A request read into its parts needs no copy of its line; a line in another form, or an error's message, is the line. --}}
+                                            <td>@if ($logKind === 'error' || $row['time'] === null)<code>{{ $row['text'] }}</code>@endif</td>
                                         </tr>
                                     @endforeach
                                 </tbody>
