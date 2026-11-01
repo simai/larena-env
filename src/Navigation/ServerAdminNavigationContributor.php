@@ -17,8 +17,8 @@ final class ServerAdminNavigationContributor implements AdminNavigationContribut
     public function navigationDescriptors(): array
     {
         // The sites, at either level; the server's overview and the people's spaces, at the system level (owner decision 2026-10-31).
-        // The sites' row matches every panel route, and a page is marked by the first row that matches it: the
-        // narrower rows go first so the overview and the spaces name their own page. The menu orders rows by `order`.
+        // The sites' row matches every panel route; the row that names a page most closely marks it (larena/admin
+        // AdminNavigationDescriptor::matchStrength), so the overview and the spaces name their own page.
         return [new AdminNavigationDescriptor(
             id: 'env.people',
             ownerPackage: $this->ownerPackage(),
@@ -49,7 +49,6 @@ final class ServerAdminNavigationContributor implements AdminNavigationContribut
             accessScope: 'env.server.read',
             auditEvent: 'env.server.overview_viewed',
             statusCap: 'env_panel_skeleton',
-            // Before the sites, whose pattern covers every panel page: the overview is matched as the current row first.
             order: 4,
             group: 'operations',
             knownLimitations: ['not_production_ready'],

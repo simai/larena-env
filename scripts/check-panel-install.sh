@@ -154,6 +154,20 @@ for href in hrefs:
     assert status == 200, (href, status)
 print("menu rows open:", hrefs)
 
+# The breadcrumbs name the page's own place: Users › Spaces and Server › Overview, never the package's «Sites».
+def crumbs(html):
+    tag = re.search(r'<sf-breadcrumbs\b[^>]*>', html)
+    assert tag, "breadcrumbs are drawn"
+    found = re.search(r'\sitems="([^"]*)"', tag.group(0))
+    assert found, "breadcrumbs carry their items"
+    return [item.get("label") for item in json.loads(html_lib.unescape(found.group(1)))]
+import html as html_lib
+for path, expected in (("/admin/server/people", ["Users", "Spaces"]), ("/admin/server/overview", ["Server", "Overview"])):
+    _, page = get(path)
+    labels = crumbs(page)
+    assert labels[1:] == expected, (path, labels)
+print("breadcrumbs:", "ok")
+
 # The second level: a person at the user level (the editor role), made the way an administrator's tooling would.
 import subprocess
 subprocess.run(["php", sys.argv[3] + "/make-staff.php", sys.argv[4]], check=True)
