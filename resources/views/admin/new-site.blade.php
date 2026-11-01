@@ -92,7 +92,18 @@
                     </label>
                 </div>
             @endif
-            @if (($dailyBackup ?? null) !== null && ($kind ?? '') !== 'redirect')
+            @if (in_array('bitrix', ($serverProfiles ?? null) !== null ? ($serverProfiles[$kind ?? 'static']['groups'] ?? []) : [], true))
+                {{-- A 1C-Bitrix site's installer in its root (simai-env 1.33.0): none until needed, a new install or a restore. --}}
+                <div class="larena-field" data-env-field="bitrix-files">
+                    <label for="env-new-bitrix-files">{{ __('larena-env::admin.new_site.bitrix_files') }}</label>
+                    <select id="env-new-bitrix-files" name="bitrix-files">
+                        @foreach (\Larena\Env\Http\Controllers\NewSiteController::BITRIX_FILES as $choice)
+                            <option value="{{ $choice }}" @if (($old['bitrix-files'] ?? 'none') === $choice) selected @endif>{{ __('larena-env::admin.new_site.bitrix_files_choices.'.$choice) }}</option>
+                        @endforeach
+                    </select>
+                </div>
+            @endif
+            @if (($dailyBackup ?? null) !== null && (($serverProfiles ?? null) !== null ? ($serverProfiles[$kind ?? 'static']['backup'] ?? false) : \Larena\Env\Http\Controllers\NewSiteController::backsUp($kind ?? 'static', null)))
                 <div class="larena-field">
                     <input type="hidden" name="daily-backup" value="no">
                     <label for="env-new-daily-backup">

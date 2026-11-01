@@ -38,6 +38,10 @@ final readonly class RecordedAnswersGateway implements PanelGateway
         if ($owner !== null && str_starts_with($request->command, 'self:update')) {
             return $this->replay($request, 'refused.owner-admin-only.update.json');
         }
+        // The server's services too (simai-env 1.33.0).
+        if ($owner !== null && str_starts_with($request->command, 'service:')) {
+            return $this->replay($request, 'refused.owner-admin-only.service-restart.json');
+        }
         if ($owner !== null && $domain !== null && $request->command !== 'site:add') {
             $own = $this->document("self-describe.owner-{$owner}.json");
             if (is_string($own)) {
@@ -69,7 +73,17 @@ final readonly class RecordedAnswersGateway implements PanelGateway
         }
         // An action is recorded twice: what it would do, and the start of the one job the recording holds.
         if (PanelCommands::kind($request->command) === PanelCommands::ACTION) {
+            // A new site is recorded again for the kinds that ask more: an app on a port and a 1C-Bitrix site.
+            $profile = $request->command === 'site:add' ? ($request->args['profile'] ?? null) : null;
+            if (!$request->confirm && ($profile === 'proxy' || $profile === 'bitrix')) {
+                return "plan.{$name}-{$profile}.json";
+            }
+
             return $request->confirm ? 'job-start.json' : "plan.{$name}.json";
+        }
+        // A service's journal is recorded for nginx.
+        if ($request->command === 'service:log' && is_string($request->args['name'] ?? null)) {
+            return "{$name}.{$request->args['name']}.json";
         }
         // What an update changes is recorded for each of its targets.
         if ($request->command === 'self:update-plan' && is_string($request->args['target'] ?? null)) {

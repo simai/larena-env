@@ -31,6 +31,18 @@
   {change_id}` (with `change:status`) instead of a command of its own, and `fs:archive` takes its paths as a list of
   up to 100, the one list argument.
 
+- simai-env 1.33.0 (recorded answers set 9): the server's services and the kinds of site it makes. «Сервер › Службы»
+  lists only the services the server has (`service:list`: running or not, since when, whether it starts with the
+  server), restarts each by plan, rereads the settings only where the server says it can (nginx and PHP-FPM), and
+  shows a service's journal (`service:log`). The server checks nginx's and PHP-FPM's settings first; when the check
+  fails, the job's screen says in plain words that the settings have an error and the service keeps running as it was.
+  The new-site wizard takes the kinds from `self:profiles` (either level), the simplest first: «Приложение на порту»
+  asks for the local port only (127.0.0.1, never 80 or 443), the path and WebSockets, and has no daily backup; a
+  1C-Bitrix site also asks for its installer (none, bitrixsetup.php or restore.php, `bitrix-files`). The menu rows of
+  «Службы», «Файрвол» and «Доступ к панели» show only where the server lists their commands, read from its
+  description and kept for five minutes in the application's cache; the scheduler, the firewall and who reaches the
+  panel (1.34.0, 1.35.0) stay hidden, answered only by the tests' stand-in.
+
 - Stage 5 on the panel's side, the server's tools, as agreed with simai-env (1.33.0 to 1.35.0): no release has the
   commands yet, so they show only where a server lists them in `gate.commands`; elsewhere the screens say a newer
   simai-env is needed, with no buttons. «Сервер › Службы» (system level): each service's state, «Перезапустить» and,

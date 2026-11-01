@@ -19,11 +19,17 @@
             @endif
             <ul class="larena-list" style="list-style: none; padding-inline-start: 0; display: grid; gap: .75rem;">
                 @foreach ($services as $service)
-                    <li data-env-service="{{ $service->name }}" data-env-service-state="{{ $service->state }}"
+                    <li data-env-service="{{ $service->name }}" data-env-service-state="{{ $service->active }}"
                         style="display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; padding: .75rem; border: 1px solid var(--larena-line); border-radius: .625rem;">
                         <span style="flex: 1 1 10rem; min-width: 0; overflow-wrap: anywhere;">
                             <strong>{{ $service->name }}</strong><br>
-                            <span @if (!$service->isActive()) role="alert" @endif>{{ $service->isActive() ? __('larena-env::admin.services.running') : __('larena-env::admin.services.stopped', ['state' => $service->state]) }}</span>
+                            <span @if (!$service->isActive()) role="alert" @endif>{{ $service->isActive() ? __('larena-env::admin.services.running') : __('larena-env::admin.services.stopped', ['state' => $service->active]) }}</span>
+                            @if ($service->since !== null)
+                                <br><small data-env-service-since>{{ __('larena-env::admin.services.since', ['since' => $service->since]) }}</small>
+                            @endif
+                            @if ($service->enabled !== null && $service->enabled !== 'enabled')
+                                <br><small data-env-service-disabled>{{ __('larena-env::admin.services.not_at_boot') }}</small>
+                            @endif
                         </span>
                         @if ($allows['restart'])
                             <form method="post" action="{{ route('larena.env.admin.services.plan', [], false) }}" data-env-service-op="restart">
@@ -33,7 +39,7 @@
                                 <button type="submit" class="larena-button" style="min-height: 2.75rem;">{{ __('larena-env::admin.services.restart') }}</button>
                             </form>
                         @endif
-                        @if ($allows['reload'] && \Larena\Env\Http\Controllers\ServicesController::reloads($service->name))
+                        @if ($allows['reload'] && $service->canReload)
                             <form method="post" action="{{ route('larena.env.admin.services.plan', [], false) }}" data-env-service-op="reload">
                                 @csrf
                                 <input type="hidden" name="op" value="reload">

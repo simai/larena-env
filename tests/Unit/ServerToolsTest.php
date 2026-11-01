@@ -25,7 +25,6 @@ use Larena\Env\Gateway\PanelGatewayFactory;
 use Larena\Env\Gateway\PanelRefused;
 use Larena\Env\Gateway\PanelRequest;
 use Larena\Env\Http\Controllers\NewSiteController;
-use Larena\Env\Http\Controllers\ServicesController;
 use Larena\Env\Operations\PanelOperations;
 use Larena\Env\Server\ServerOverviewReader;
 use Larena\Env\Server\SiteExtrasReader;
@@ -74,8 +73,14 @@ $refusedWith = static function (callable $make): ?string {
     return null;
 };
 
-// Hidden until a server lists them: no release has them yet.
-foreach (['service:restart', 'service:log', 'self:profiles', 'cron:list', 'cron:job-add', 'firewall:status', 'firewall:rule-add', 'panel:access'] as $command) {
+// The services and the kinds of site came with simai-env 1.33.0; the rest wait, hidden until a server lists them.
+foreach (['service:list', 'service:restart', 'service:reload', 'service:log', 'self:profiles'] as $command) {
+    env_assert(PanelCommands::since($command) === '1.33.0' && (new PanelCapabilities('1.33.0'))->allows($command) && !(new PanelCapabilities('1.32.0'))->allows($command),
+        "{$command} from simai-env 1.33.0.");
+}
+env_assert((new PanelCapabilities('1.33.0'))->takes('site:add', 'upstream-port') && (new PanelCapabilities('1.33.0'))->takes('site:add', 'bitrix-files')
+    && !(new PanelCapabilities('1.32.0'))->takes('site:add', 'upstream-port'), 'An app on a port and a Bitrix installer from 1.33.0.');
+foreach (['cron:list', 'cron:job-add', 'firewall:status', 'firewall:rule-add', 'panel:access'] as $command) {
     env_assert(PanelCommands::since($command) === null && !(new PanelCapabilities('9.9.9'))->allows($command)
         && (new PanelCapabilities('1.32.0', [$command]))->allows($command), "{$command} only where the server lists it.");
 }
@@ -86,6 +91,7 @@ foreach ([['service:restart', ['name' => 'nginx']], ['service:reload', ['name' =
     ['cron:job-add', ['domain' => 'demo-php.test', 'schedule' => '*/5 * * * *', 'command' => 'php artisan schedule:run']],
     ['cron:job-add', ['domain' => 'demo-php.test', 'schedule' => '0 3 * * mon', 'command' => 'echo «привет»']],
     ['site:add', ['domain' => 'app.test', 'profile' => 'proxy', 'upstream-port' => '3000', 'upstream-path' => '/', 'websockets' => 'yes']],
+    ['site:add', ['domain' => 'shop.test', 'profile' => 'bitrix', 'bitrix-files' => 'restore']],
     ['firewall:rule-add', ['port' => '8000:8100', 'proto' => 'tcp', 'from' => '203.0.113.0/24', 'action' => 'allow']],
     ['firewall:block', ['address' => '2001:db8::1', 'ttl' => '3600']],
     ['panel:access', ['allow' => ['203.0.113.7', '198.51.100.0/24']]], ['panel:access', ['allow' => 'any']]] as [$command, $args]) {
@@ -95,6 +101,8 @@ foreach ([['service:restart', ['name' => 'sshd']], ['service:restart', ['name' =
     ['cron:job-add', ['domain' => 'demo-php.test', 'schedule' => '* * * *', 'command' => 'x']],
     ['cron:job-add', ['domain' => 'demo-php.test', 'schedule' => '* * * * *', 'command' => "a\nrm -rf /"]],
     ['site:add', ['domain' => 'app.test', 'profile' => 'proxy', 'upstream-port' => '70000']],
+    ['site:add', ['domain' => 'app.test', 'profile' => 'proxy', 'upstream-port' => '80']], ['site:add', ['domain' => 'app.test', 'profile' => 'proxy', 'upstream-port' => '443']],
+    ['site:add', ['domain' => 'shop.test', 'profile' => 'bitrix', 'bitrix-files' => 'download']], ['service:restart', ['name' => 'redis']],
     ['site:add', ['domain' => 'app.test', 'profile' => 'proxy', 'upstream-port' => '3000', 'upstream-path' => 'http://evil']],
     ['firewall:rule-add', ['port' => '22', 'action' => 'reject']], ['firewall:block', ['address' => 'example.com']],
     ['panel:access', ['allow' => []]], ['panel:access', ['allow' => array_fill(0, 51, '203.0.113.7')]], ['panel:access', ['allow' => ['any; drop']]]] as [$command, $args]) {
@@ -129,28 +137,45 @@ env_assert($ownListed === null || (!$ownListed->allows('service:restart') && !$o
 $operations = new PanelOperations($gateway);
 $extras = new SiteExtrasReader($gateway);
 
-// The services (5.1): planned, confirmed, a job; their journal; the administrator's alone.
+// The services (5.1, recorded set 9): only those the server has, each with whether it rereads its settings; planned,
+// confirmed, a job; the journal; the administrator's alone.
+$services = $extras->services($admin);
+env_assert(array_map(static fn ($service): string => $service->name, $services ?? []) === ['nginx', 'mysql', 'cron', 'php8.3-fpm']
+    && $services[0]->canReload && !$services[1]->canReload && $services[3]->canReload && $services[0]->isActive()
+    && $services[0]->since === 'Thu 2026-01-01 00:00:00 UTC' && $services[0]->enabled === 'enabled', 'The server\'s services (simai-services/1).');
 $planned = $operations->planCommand($admin, 'service:restart', ['name' => 'nginx']);
 env_assert($planned->plan !== null && $planned->plan->command === 'service:restart', 'A restart is planned first.');
-$restarted = $operations->startCommand($admin, 'service:restart', ['name' => 'nginx']);
-$view = $operations->view($admin, (string) $restarted->jobId);
-env_assert($view->status !== null && $view->status->change === null && in_array('Restarted nginx', $view->log->lines ?? [], true), 'Confirmed, its job says what it did.');
-env_assert($extras->serviceLog($admin, 'nginx') === ['nginx: started', 'nginx: settings checked, running'], 'The journal of a service.');
-env_assert($operations->planCommand($owner, 'service:restart', ['name' => 'nginx'])->reason === 'owner_admin_only', 'An owner cannot restart the server\'s services.');
-env_assert(ServicesController::reloads('nginx') && ServicesController::reloads('php8.3-fpm') && !ServicesController::reloads('mysql'), 'Only nginx and PHP-FPM reread settings.');
+env_assert($operations->planCommand($admin, 'service:reload', ['name' => 'nginx'])->plan?->command === 'service:reload', 'A reread too.');
+env_assert($operations->startCommand($admin, 'service:restart', ['name' => 'nginx'])->jobId !== null, 'Confirmed, a job.');
+$journal = $extras->serviceLog($admin, 'nginx');
+env_assert(count($journal ?? []) === 1 && str_contains($journal[0], 'Started nginx.service'), 'The journal of a service (simai-service-log/1).');
+env_assert($operations->planCommand($owner, 'service:restart', ['name' => 'nginx'])->reason === 'not_allowed' && $extras->services($owner) === null,
+    'An owner cannot see or restart the server\'s services.');
+env_assert($operations->planCommand($admin, 'service:restart', ['name' => 'sshd'])->reason === 'invalid_argument', 'A service off the list is refused.');
+$failed = \Larena\Env\Operations\PanelJobStatus::fromData(['job_id' => 'j1', 'state' => 'failed', 'command' => 'service:reload', 'args' => ['name' => 'nginx'], 'exit_code' => 1]);
+env_assert(\Larena\Env\Http\Controllers\ServerJobController::configFailed($failed, ['nginx: the configuration test failed; the service was not reloaded and keeps running']) === 'nginx'
+    && \Larena\Env\Http\Controllers\ServerJobController::configFailed($failed, ['Job failed: timeout']) === null, 'A broken configuration is told apart.');
 
-// The kinds of site (5.5): from the server, with the fields each asks.
+// The kinds of site (5.5, recorded set 9): from the server, only those site:add takes, with the fields each asks.
 $profiles = $extras->profiles($admin);
 $byName = [];
 foreach ($profiles ?? [] as $profile) {
     $byName[$profile->name] = $profile;
 }
-env_assert(isset($byName['proxy'], $byName['bitrix']) && $byName['proxy']->takes('upstream-port') && !$byName['static']->takes('php'), 'The server\'s kinds and their arguments.');
-env_assert(NewSiteController::groupsOf('proxy', $byName) === ['proxy'] && NewSiteController::groupsOf('bitrix', $byName) === ['php', 'database']
+env_assert(array_keys($byName) === ['bitrix', 'generic', 'laravel', 'node', 'proxy', 'redirect', 'static', 'wordpress'], 'The server\'s kinds: '.implode(', ', array_keys($byName)));
+env_assert($byName['proxy']->takes('upstream-port') && $byName['proxy']->args['upstream-port']['required'] && $byName['proxy']->values('websockets') === ['yes', 'no']
+    && !$byName['static']->takes('php') && $byName['bitrix']->values('bitrix-files') === ['none', 'setup', 'restore'] && $byName['bitrix']->title === '1C-Bitrix site'
+    && $byName['bitrix']->db === 'required' && !$byName['proxy']->takes('backup'), 'Their arguments, values and titles (simai-site-profiles/1).');
+env_assert(\Larena\Env\Server\SiteProfile::fromData(['id' => 'php', 'alias' => true, 'args' => []]) === null, 'An alias is not a kind site:add takes.');
+env_assert(NewSiteController::groupsOf('proxy', $byName) === ['proxy'] && NewSiteController::groupsOf('bitrix', $byName) === ['php', 'database', 'bitrix']
     && NewSiteController::groupsOf('redirect', $byName) === ['redirect'] && NewSiteController::groupsOf('static', $byName) === []
     && NewSiteController::groupsOf('nope', $byName) === [], 'Each kind asks only its own fields.');
+env_assert(!NewSiteController::backsUp('proxy', $byName) && NewSiteController::backsUp('static', $byName) && !NewSiteController::backsUp('redirect', null), 'A proxy and a redirect hold nothing to back up.');
 env_assert(NewSiteController::groupsOf('laravel', null) === ['php', 'database'] && NewSiteController::groupsOf('node', null) === [], 'Without the server\'s list, the six every server has.');
-env_assert(is_array($extras->profiles($owner)), 'An owner sees the kinds too: they make sites in their space.');
+env_assert(count($extras->profiles($owner) ?? []) === 8, 'An owner sees the kinds too: they make sites in their space.');
+env_assert($operations->planCommand($admin, 'site:add', ['domain' => 'demo-proxy.test', 'profile' => 'proxy', 'upstream-port' => '3000', 'websockets' => 'yes'])->plan?->args['upstream-port'] === '3000'
+    && $operations->planCommand($admin, 'site:add', ['domain' => 'demo-bitrix.test', 'profile' => 'bitrix', 'bitrix-files' => 'setup'])->plan?->args['bitrix-files'] === 'setup',
+    'An app on a port and a 1C-Bitrix site are planned.');
 
 // A site's scheduled jobs (5.4): its own, added, turned off and on, removed; its runs, the newest first; an owner's own sites only.
 $jobs = $extras->cronJobs($admin, 'demo-php.test');
@@ -206,14 +231,15 @@ $factory->addExtension('blade.php', 'blade');
 $factory->addNamespace('larena-admin', dirname(__DIR__).'/Support/admin-views');
 $factory->addNamespace('larena-env', dirname(__DIR__, 2).'/resources/views');
 $overview = (new ServerOverviewReader($gateway))->read($admin)->overview;
-$services = static fn (array $data): string => $factory->make('larena-env::admin.services', $data + ['source' => 'recorded', 'services' => $overview->services,
+$servicesPage = static fn (array $data): string => $factory->make('larena-env::admin.services', $data + ['source' => 'recorded', 'services' => $services,
     'reasonText' => null, 'allows' => ['restart' => true, 'reload' => true, 'log' => true], 'logOf' => null, 'log' => null, 'notice' => null])->render();
-$all = $services([]);
-env_assert(str_contains($all, 'data-env-service="nginx"') && str_contains($all, 'data-env-service-op="restart"') && str_contains($all, 'data-env-service-op="reload"')
-    && substr_count($all, 'data-env-service-op="reload"') === 2 && str_contains($all, 'data-env-service-state="inactive"') && str_contains($all, 'role="alert"'), 'Each service, its state, and restart or reread: '.$all);
-$readOnly = $services(['allows' => ['restart' => false, 'reload' => false, 'log' => false]]);
+$all = $servicesPage(['services' => [...$services, new \Larena\Env\Server\HostService('redis-server', 'failed', 'disabled', null, false)]]);
+env_assert(str_contains($all, 'data-env-service="nginx"') && substr_count($all, 'data-env-service-op="restart"') === 5 && substr_count($all, 'data-env-service-op="reload"') === 2
+    && str_contains($all, 'data-env-service-state="failed"') && str_contains($all, 'role="alert"') && str_contains($all, 'data-env-service-disabled')
+    && substr_count($all, 'data-env-service-since') === 4, 'Each service, its state, restart, and a reread only where it can: '.$all);
+$readOnly = $servicesPage(['allows' => ['restart' => false, 'reload' => false, 'log' => false]]);
 env_assert(str_contains($readOnly, 'data-env-services-unsupported') && !str_contains($readOnly, 'data-env-service-op') && !str_contains($readOnly, 'data-env-service-log-link'), 'A server without them: the state only.');
-env_assert(str_contains($services(['logOf' => 'nginx', 'log' => ['line <b>']]), 'line &lt;b&gt;'), 'The journal, escaped.');
+env_assert(str_contains($servicesPage(['logOf' => 'nginx', 'log' => ['line <b>']]), 'line &lt;b&gt;'), 'The journal, escaped.');
 
 $firewall = static fn (array $data): string => $factory->make('larena-env::admin.firewall', $data + ['source' => 'recorded', 'supported' => true,
     'status' => $extras->firewall($admin), 'allows' => ['rule-add' => true, 'rule-remove' => true, 'block' => true, 'unblock' => true, 'access' => true, 'keep' => true],
@@ -253,6 +279,22 @@ $wizard = $factory->make('larena-env::admin.new-site', ['profiles' => ['static',
         'bitrix' => ['label' => '1C-Bitrix', 'hint' => 'Bitrix.', 'groups' => ['php', 'database']]]])->render();
 env_assert(substr_count($wizard, 'data-env-profile=') === 3 && str_contains($wizard, 'data-env-field="proxy"') && str_contains($wizard, 'name="upstream-port"')
     && !str_contains($wizard, 'data-env-field="php"') && str_contains($wizard, 'App on a port'), 'A proxy asks for the local port only: '.$wizard);
+
+$bitrixWizard = $factory->make('larena-env::admin.new-site', ['profiles' => ['bitrix', 'proxy'], 'phpProfiles' => [], 'phpVersions' => ['8.3'], 'owners' => null,
+    'old' => [], 'notice' => null, 'kind' => 'bitrix', 'dailyBackup' => true, 'serverProfiles' => [
+        'bitrix' => ['label' => '1C-Bitrix', 'hint' => 'Bitrix.', 'groups' => ['php', 'database', 'bitrix'], 'backup' => true],
+        'proxy' => ['label' => 'App on a port', 'hint' => 'A port.', 'groups' => ['proxy'], 'backup' => false]]])->render();
+env_assert(str_contains($bitrixWizard, 'data-env-field="bitrix-files"') && substr_count($bitrixWizard, '<option value="setup"') === 1 && str_contains($bitrixWizard, 'restore.php')
+    && str_contains($bitrixWizard, 'data-env-new-daily-backup') && !str_contains($bitrixWizard, 'name="upstream-port"'), 'A 1C-Bitrix site asks for its installer: '.$bitrixWizard);
+$proxyWizard = $factory->make('larena-env::admin.new-site', ['profiles' => ['bitrix', 'proxy'], 'phpProfiles' => [], 'phpVersions' => ['8.3'], 'owners' => null,
+    'old' => [], 'notice' => null, 'kind' => 'proxy', 'dailyBackup' => true, 'serverProfiles' => [
+        'bitrix' => ['label' => '1C-Bitrix', 'hint' => 'Bitrix.', 'groups' => ['php', 'database', 'bitrix'], 'backup' => true],
+        'proxy' => ['label' => 'App on a port', 'hint' => 'A port.', 'groups' => ['proxy'], 'backup' => false]]])->render();
+env_assert(str_contains($proxyWizard, 'name="upstream-port"') && !str_contains($proxyWizard, 'data-env-new-daily-backup') && !str_contains($proxyWizard, 'bitrix-files'),
+    'An app on a port holds nothing to back up.');
+$brokenJob = $factory->make('larena-env::admin.job', ['jobId' => 'j1', 'source' => 'recorded', 'status' => $failed, 'log' => null, 'refused' => false, 'reasonText' => null,
+    'notice' => null, 'change' => null, 'configFailed' => 'nginx'])->render();
+env_assert(str_contains($brokenJob, 'data-env-job-config-failed="nginx"') && str_contains($brokenJob, 'keeps running as it was'), 'A broken configuration said in words: '.$brokenJob);
 
 foreach (['services', 'firewall', 'panel-access', 'partials/cron', 'partials/timed-change'] as $name) {
     $source = (string) file_get_contents(dirname(__DIR__, 2).'/resources/views/admin/'.$name.'.blade.php');

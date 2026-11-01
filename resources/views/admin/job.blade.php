@@ -23,6 +23,9 @@
     @else
         <section class="larena-panel larena-panel-padded" data-env-job="{{ $status->jobId }}" data-env-job-state="{{ $status->state->value }}" aria-labelledby="env-job">
             <h2 id="env-job">{{ __('larena-env::admin.job.states.'.$status->state->value) }}</h2>
+            @if (($configFailed ?? null) !== null)
+                <p role="alert" data-env-job-config-failed="{{ $configFailed }}">{{ __('larena-env::admin.services.config_failed', ['name' => $configFailed]) }}</p>
+            @endif
             @if (($change ?? null) !== null)
                 @include('larena-env::admin.partials.timed-change', ['change' => $change, 'canKeep' => $canKeep ?? false, 'now' => $now ?? new \DateTimeImmutable()])
             @endif

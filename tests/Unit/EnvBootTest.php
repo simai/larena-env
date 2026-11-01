@@ -34,9 +34,16 @@ $with = env_boot('with');
 env_assert($with['admin_loadable'] === true, 'The admin must be installed for development.');
 $navigation = $with['navigation'];
 sort($navigation);
-env_assert($navigation === ['env.alerts.channel', 'env.dns', 'env.dns.connection', 'env.firewall', 'env.panel.access', 'env.people', 'env.server', 'env.server.overview',
-    'env.services', 'env.update'] && $with['navigation_valid'] === array_fill(0, 10, true),
-    'With the admin the sites, the overview, the spaces, DNS, the alerts\' channel, the update, the services, the firewall and the panel\'s access are valid menu entries.');
+// The recording's server (simai-env 1.33.0) lists its services, not yet the firewall nor who reaches the panel: their rows wait.
+env_assert($navigation === ['env.alerts.channel', 'env.dns', 'env.dns.connection', 'env.people', 'env.server', 'env.server.overview',
+    'env.services', 'env.update'] && $with['navigation_valid'] === array_fill(0, 8, true),
+    'With the admin the sites, the overview, the spaces, DNS, the alerts\' channel, the update and the services are valid menu entries.');
+$rows = static fn (?\Closure $listed): array => array_map(static fn ($row): string => $row->id,
+    (new \Larena\Env\Navigation\ServerAdminNavigationContributor($listed))->navigationDescriptors());
+env_assert(array_intersect(['env.services', 'env.firewall', 'env.panel.access'], $rows(null)) === []
+    && array_values(array_intersect(['env.services', 'env.firewall', 'env.panel.access'], $rows(static fn (string $command): bool => true))) === ['env.services', 'env.firewall', 'env.panel.access']
+    && in_array('env.firewall', $rows(static fn (string $command): bool => $command === 'firewall:status'), true)
+    && !in_array('env.services', $rows(static fn (string $command): bool => $command === 'firewall:status'), true), 'Each row only where the server lists its command.');
 $names = array_keys($with['routes']);
 sort($names);
 env_assert($names === ['larena.env.admin.alerts.ack.plan', 'larena.env.admin.alerts.ack.run', 'larena.env.admin.alerts.channel',

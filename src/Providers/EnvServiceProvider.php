@@ -25,6 +25,7 @@ use Larena\Env\Gateway\PanelGatewayFactory;
 use Larena\Env\History\MetricSamples;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\PanelActorResolver;
+use Larena\Env\Navigation\ListedCommands;
 use Larena\Env\Navigation\ServerAdminNavigationContributor;
 use Larena\Env\Operations\PanelOperations;
 use Larena\Env\People\PanelAudit;
@@ -110,7 +111,19 @@ final class EnvServiceProvider extends ServiceProvider
         }
         if ($this->composesAdmin()) {
             if ($this->app->bound(AdminNavigationRegistry::class)) {
-                $this->app->make(AdminNavigationRegistry::class)->registerContributor(new ServerAdminNavigationContributor());
+                // A row of a screen a newer simai-env brings shows once the server lists its commands; asked on a page only.
+                $app = $this->app;
+                $listed = null;
+                $this->app->make(AdminNavigationRegistry::class)->registerContributor(new ServerAdminNavigationContributor(
+                    static function (string $command) use ($app, &$listed): bool {
+                        if ($app->runningInConsole() && !$app->runningUnitTests()) {
+                            return false;
+                        }
+                        $listed ??= new ListedCommands($app->make(ServerOverviewReader::class), $app->bound('cache') ? $app->make('cache')->store() : null);
+
+                        return $listed->allows($command);
+                    },
+                ));
             }
             if ((bool) $config->get('larena-env.admin.enabled', true)) {
                 $this->app->make('router')

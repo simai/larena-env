@@ -9,27 +9,27 @@ use Larena\Env\Contracts\PanelGateway;
 use Throwable;
 
 /**
- * A stand-in for the server's stage 5 commands (Panel plan 5.1–5.5) on recorded answers, for tests and the install check
- * only: no simai-env release has them yet, so no recording exists. It answers the services, the kinds of site, a site's
- * scheduled jobs, the firewall and who reaches the panel the way the agreed protocol does, keeps its state in a local
+ * A stand-in for the server's stage 5 commands still to be released (Panel plan 5.2–5.4: simai-env 1.34.0 and 1.35.0) on
+ * recorded answers, for tests and the install check only: no recording of them exists yet. The services and the kinds
+ * of site came with 1.33.0 and are recorded (set 9). It answers a site's scheduled jobs, the firewall and who reaches
+ * the panel the way the agreed protocol does, keeps its state in a local
  * folder, and lists the commands in the host description; everything else goes to the gateway it wraps. A firewall or
  * panel change is applied and undone by itself unless change:confirm keeps it in time, as the server does; SSH and the
  * panel's own port can never be closed.
  */
 final readonly class FakeServerToolsGateway implements PanelGateway, PanelFileGateway
 {
-    /** The commands this stand-in answers; an owner is offered the kinds of site and their own sites' jobs only. */
-    public const array COMMANDS = ['service:restart', 'service:reload', 'service:log', 'self:profiles', 'cron:list', 'cron:job-add', 'cron:job-remove',
+    /** The commands this stand-in answers; an owner is offered their own sites' jobs only. */
+    public const array COMMANDS = ['cron:list', 'cron:job-add', 'cron:job-remove',
         'cron:job-enable', 'cron:job-disable', 'cron:job-runs', 'firewall:status', 'firewall:rule-add', 'firewall:rule-remove', 'firewall:block',
         'firewall:unblock', 'panel:access', 'change:confirm', 'change:status'];
-    private const array OWNER_COMMANDS = ['self:profiles', 'cron:list', 'cron:job-add', 'cron:job-remove', 'cron:job-enable', 'cron:job-disable', 'cron:job-runs'];
+    private const array OWNER_COMMANDS = ['cron:list', 'cron:job-add', 'cron:job-remove', 'cron:job-enable', 'cron:job-disable', 'cron:job-runs'];
     /** The ports no change may close: SSH and the panel's own. */
     private const array PROTECTED_PORTS = ['22', '443'];
     /** How long an applied change waits to be kept before the stand-in puts the previous one back. */
     private const int CHANGE_SECONDS = 120;
 
     private const array DESCRIPTIONS = [
-        'service:restart' => 'Restart a service after checking its settings', 'service:reload' => 'Reload a service\'s settings after checking them',
         'cron:job-add' => 'Add a scheduled job', 'cron:job-remove' => 'Remove a scheduled job', 'cron:job-enable' => 'Turn a scheduled job on',
         'cron:job-disable' => 'Turn a scheduled job off', 'firewall:rule-add' => 'Add a firewall rule, undone unless kept in time',
         'firewall:rule-remove' => 'Remove a firewall rule, undone unless kept in time', 'firewall:block' => 'Block an address, undone unless kept in time',
@@ -122,9 +122,6 @@ final readonly class FakeServerToolsGateway implements PanelGateway, PanelFileGa
         if (!in_array($request->command, self::OWNER_COMMANDS, true)) {
             return 'owner_admin_only';
         }
-        if ($request->command === 'self:profiles') {
-            return null;
-        }
         $domain = $request->args['domain'] ?? $this->jobDomain($state, $request->args['id'] ?? '');
         if ($domain === null) {
             return 'unknown_job';
@@ -143,22 +140,6 @@ final readonly class FakeServerToolsGateway implements PanelGateway, PanelFileGa
     private function read(string $command, array $args, array $state): array
     {
         switch ($command) {
-            case 'service:log':
-                $name = (string) $args['name'];
-
-                return ['name' => $name, 'lines' => ["{$name}: started", "{$name}: settings checked, running"]];
-            case 'self:profiles':
-                return ['profiles' => [
-                    ['name' => 'static', 'args' => []],
-                    ['name' => 'generic', 'args' => [['name' => 'php'], ['name' => 'create-db'], ['name' => 'db-engine']]],
-                    ['name' => 'laravel', 'args' => [['name' => 'php'], ['name' => 'create-db', 'default' => 'yes'], ['name' => 'db-engine']]],
-                    ['name' => 'wordpress', 'args' => [['name' => 'php'], ['name' => 'create-db', 'default' => 'yes'], ['name' => 'db-engine']]],
-                    ['name' => 'bitrix', 'args' => [['name' => 'php'], ['name' => 'create-db', 'default' => 'yes'], ['name' => 'db-engine']]],
-                    ['name' => 'node', 'args' => []],
-                    ['name' => 'redirect', 'args' => [['name' => 'redirect-to', 'required' => true]]],
-                    ['name' => 'proxy', 'args' => [['name' => 'upstream-port', 'required' => true], ['name' => 'upstream-path', 'default' => '/'],
-                        ['name' => 'websockets', 'default' => 'no']]],
-                ]];
             case 'cron:list':
                 $jobs = [];
                 foreach ($state['cron'][(string) $args['domain']] ?? [] as $job) {
@@ -244,10 +225,6 @@ final readonly class FakeServerToolsGateway implements PanelGateway, PanelFileGa
         $args = $request->args;
         $timed = null;
         switch ($command) {
-            case 'service:restart':
-            case 'service:reload':
-                $lines = ["Checked the settings of {$args['name']}", ($command === 'service:restart' ? 'Restarted ' : 'Reloaded ').$args['name']];
-                break;
             case 'cron:job-add':
                 $id = substr(hash('sha256', $args['domain'].$args['schedule'].$args['command'].microtime()), 0, 12);
                 $state['cron'][$args['domain']][] = ['id' => $id, 'schedule' => $args['schedule'], 'command' => $args['command'], 'enabled' => true];

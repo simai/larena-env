@@ -9,9 +9,12 @@ use Illuminate\Contracts\View\Factory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Larena\Access\Runtime\AccessOperationAuthorizer;
+use Larena\Env\Gateway\PanelActor;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\NoticeRedirect;
 use Larena\Env\Operations\PanelOperations;
+use Larena\Env\Server\HostService;
+use Larena\Env\Server\ServerOverview;
 use Larena\Env\Server\ServerOverviewReader;
 use Larena\Env\Server\ServiceState;
 use Larena\Env\Server\SiteExtrasReader;
@@ -19,8 +22,10 @@ use Larena\Env\Server\SiteExtrasReader;
 /**
  * «Сервер › Службы» (Panel plan 5.1): each service of the server and whether it runs, a restart or a reload of its
  * settings by plan and confirmation, and the last lines of its journal. The system level's alone. It is what an
- * emergency needs from a phone, so the screen is a list of short rows with large buttons. The server checks a
- * service's settings before it restarts or reloads it (nginx -t, php-fpm -t), and ends a failed job with the journal.
+ * emergency needs from a phone, so the screen is a list of short rows with large buttons. The server checks nginx's
+ * and PHP-FPM's settings before it restarts or reloads them (nginx -t, php-fpm -t); a failed check fails the job and
+ * leaves the service running as it was. Only the services the server has are listed (service:list, simai-env 1.33.0),
+ * and a reload is offered only where the server says the service can reread its settings.
  */
 final readonly class ServicesController
 {
@@ -44,8 +49,8 @@ final readonly class ServicesController
         $actor = ResolvePanelActor::of($request);
         $read = $this->overviews->read($actor);
         $capabilities = $read->overview?->capabilities;
-        $services = $read->overview->services ?? [];
-        $names = array_map(static fn (ServiceState $service): string => $service->name, $services);
+        $services = $this->services($actor, $read->overview);
+        $names = array_map(static fn (HostService $service): string => $service->name, $services);
         $logOf = $request->query('log');
         $log = is_string($logOf) && in_array($logOf, $names, true) && $capabilities?->allows('service:log') === true
             ? $this->extras->serviceLog($actor, $logOf, self::LOG_LINES) : null;
@@ -67,10 +72,20 @@ final readonly class ServicesController
         ]);
     }
 
-    /** Whether a service rereads its settings without a restart: nginx and PHP-FPM, each after the server checks them. */
-    public static function reloads(string $name): bool
+    /**
+     * The services the server reports (service:list); a server without it, the states its description carries, with
+     * nothing to offer for them.
+     *
+     * @return list<HostService>
+     */
+    private function services(PanelActor $actor, ?ServerOverview $overview): array
     {
-        return $name === 'nginx' || preg_match('/\Aphp[5-9]\.[0-9]-fpm\z/D', $name) === 1;
+        if ($overview?->capabilities?->allows('service:list') === true) {
+            return $this->extras->services($actor) ?? [];
+        }
+
+        return array_map(static fn (ServiceState $service): HostService => new HostService($service->name, $service->state, null, null, false),
+            $overview->services ?? []);
     }
 
     /** What the restart or the reload would do, with a confirmation that does it and nothing else. */
@@ -121,7 +136,7 @@ final readonly class ServicesController
      *
      * @return array{0: ?string, 1: ?string}
      */
-    private function asked(Request $request, \Larena\Env\Gateway\PanelActor $actor): array
+    private function asked(Request $request, PanelActor $actor): array
     {
         $op = $request->input('op');
         $name = $request->input('name');
@@ -129,8 +144,8 @@ final readonly class ServicesController
         if (!is_string($op) || !isset(self::OPERATIONS[$op]) || $overview?->capabilities?->allows(self::OPERATIONS[$op]) !== true) {
             return [null, null];
         }
-        foreach ($overview->services as $service) {
-            if ($service->name === $name && ($op !== 'reload' || self::reloads($service->name))) {
+        foreach ($this->services($actor, $overview) as $service) {
+            if ($service->name === $name && ($op !== 'reload' || $service->canReload)) {
                 return [$op, $service->name];
             }
         }

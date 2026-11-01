@@ -53,6 +53,7 @@ final readonly class ServerJobController
 
         return $this->views->make('larena-env::admin.job', [
             'jobId' => $job,
+            'configFailed' => self::configFailed($result->status, $result->log->lines ?? []),
             'change' => $change,
             'canKeep' => $canKeep,
             'now' => new \DateTimeImmutable(),
@@ -64,6 +65,27 @@ final readonly class ServerJobController
             'reasonText' => $result->reason === null ? null : $this->reasonText($result->reason),
             'notice' => $request->session()->get('larena_env_notice'),
         ]);
+    }
+
+    /**
+     * The service whose restart or reread the server refused because its settings are broken (simai-env 1.33.0 says
+     * so in the job's log); the service keeps running as it was.
+     *
+     * @param list<string> $lines
+     */
+    public static function configFailed(?\Larena\Env\Operations\PanelJobStatus $status, array $lines): ?string
+    {
+        if ($status === null || $status->state !== \Larena\Env\Operations\JobState::Failed
+            || !in_array($status->command, ['service:restart', 'service:reload'], true) || !is_string($status->args['name'] ?? null)) {
+            return null;
+        }
+        foreach ($lines as $line) {
+            if (str_contains($line, 'configuration test failed')) {
+                return $status->args['name'];
+            }
+        }
+
+        return null;
     }
 
     public function cancel(Request $request, string $job): RedirectResponse

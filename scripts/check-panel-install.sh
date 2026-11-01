@@ -148,9 +148,10 @@ roots = [item["key"] for item in items]
 print("menu roots:", roots)
 assert roots == ["sites", "journal", "users", "server", "settings"], roots
 children = {item["key"]: [row["key"] for row in item.get("children", []) if row.get("kind") == "page"] for item in items}
-assert sorted(children["server"]) == ["auth.diagnostics", "env.dns", "env.firewall", "env.server.overview", "env.services", "env.update"], children
+# The services came with simai-env 1.33.0; the firewall and who reaches the panel wait for theirs, unlisted and unshown.
+assert sorted(children["server"]) == ["auth.diagnostics", "env.dns", "env.server.overview", "env.services", "env.update"], children
 assert sorted(children["users"]) == ["auth.users", "env.people"], children
-assert sorted(children["settings"]) == ["admin.settings_general", "admin.site_backgrounds", "env.alerts.channel", "env.dns.connection", "env.panel.access"], children
+assert sorted(children["settings"]) == ["admin.settings_general", "admin.site_backgrounds", "env.alerts.channel", "env.dns.connection"], children
 assert "site-switch" not in json.dumps(menu.get("capabilities", [])), "the panel has no site switcher"
 hrefs = [item["href"] for item in items if item.get("href")] + [row["href"] for item in items for row in item.get("children", []) if row.get("href")]
 for href in hrefs:
@@ -224,9 +225,17 @@ _, overview = get("/admin/server/overview")
 assert 'data-env-update-hint-target="env"' in overview, "the overview hints at the update"
 _, updating = post("/admin/server/update/plan", {"_token": form_token(update), "target": "env"})
 assert 'data-env-plan="self:update"' in updating and 'data-env-update-facts="env"' in updating and 'name="target" value="env"' in updating, "the update is planned"
-# Stage 5 (simai-env 1.33.0 to 1.35.0, not yet released): the screens open and say a newer simai-env is needed.
+# The server's services (simai-env 1.33.0, set 9): only those it has, a reread only where it can, a restart by plan, the journal.
 status, services = get("/admin/server/services")
-assert status == 200 and 'data-env-service="nginx"' in services and "data-env-services-unsupported" in services and "data-env-service-op" not in services, "the services, state only"
+assert status == 200 and 'data-env-service="nginx"' in services and 'data-env-service="php8.3-fpm"' in services and "data-env-services-unsupported" not in services, "the services"
+assert services.count('data-env-service-op="restart"') == 4 and services.count('data-env-service-op="reload"') == 2, "restart each, reread nginx and PHP-FPM only"
+_, restarting = post("/admin/server/services/plan", {"_token": form_token(services), "op": "restart", "name": "nginx"})
+assert 'data-env-plan="service:restart"' in restarting and 'name="name" value="nginx"' in restarting, "a restart is planned"
+_, refused = post("/admin/server/services/plan", {"_token": form_token(services), "op": "reload", "name": "mysql"})
+assert 'data-env-plan=' not in refused, "no reread where the service cannot"
+_, journal = get("/admin/server/services?log=nginx")
+assert 'data-env-service-log="nginx"' in journal and "Started nginx.service" in journal, "the journal's lines"
+# The firewall and who reaches the panel (1.35.0, not yet released): the screens open and say a newer simai-env is needed.
 status, walls = get("/admin/server/firewall")
 assert status == 200 and "data-env-firewall-unsupported" in walls, "the firewall waits for its release"
 status, reach = get("/admin/server/panel-access")
@@ -253,13 +262,22 @@ assert 'data-env-acting' not in whole and "demo-php.test" in whole, "back to the
 status, wizard = get("/admin/server/sites/new")
 assert status == 200 and "data-env-new-owner" in wizard, "the wizard, with whose the site is"
 assert re.search(r'name="daily-backup" value="yes" data-env-new-daily-backup\s+checked', wizard), "a new site gets its daily backup by default"
-for kind in ("static", "generic", "laravel", "wordpress", "node", "redirect"):
+# The kinds from the server (self:profiles, simai-env 1.33.0): with 1C-Bitrix and an app on a port.
+for kind in ("static", "generic", "laravel", "wordpress", "node", "redirect", "bitrix", "proxy"):
     assert 'data-env-profile-hint="' + kind + '"' in wizard, ("each kind says what it is", kind)
 assert 'data-env-new-profile="static"' in wizard and 'data-env-field=' not in wizard, "a static site asks for no PHP, database or target"
 _, laravel = get("/admin/server/sites/new?profile=laravel")
 assert 'data-env-new-profile="laravel"' in laravel and all('data-env-field="' + field + '"' in laravel for field in ("php", "database", "engine")) and 'data-env-field="redirect"' not in laravel, "Laravel asks for PHP and a database"
 _, redirect = get("/admin/server/sites/new?profile=redirect")
 assert 'data-env-field="redirect"' in redirect and 'data-env-field="php"' not in redirect, "a redirect asks only where to"
+_, proxy = get("/admin/server/sites/new?profile=proxy")
+assert 'data-env-field="proxy"' in proxy and 'name="upstream-port"' in proxy and 'data-env-field="php"' not in proxy and "data-env-new-daily-backup" not in proxy, "an app on a port asks for the port only"
+_, proxied = post("/admin/server/sites/new/plan", {"_token": form_token(proxy), "domain": "demo-proxy.test", "profile": "proxy", "upstream-port": "3000", "websockets": "yes"})
+assert 'data-env-plan="site:add"' in proxied and 'name="upstream-port" value="3000"' in proxied, "an app on a port is planned"
+_, bitrix = get("/admin/server/sites/new?profile=bitrix")
+assert 'data-env-field="bitrix-files"' in bitrix and 'data-env-field="php"' in bitrix and 'data-env-field="database"' in bitrix, "1C-Bitrix asks PHP, a database and its installer"
+_, bitrixed = post("/admin/server/sites/new/plan", {"_token": form_token(bitrix), "domain": "demo-bitrix.test", "profile": "bitrix", "php": "8.3", "create-db": "yes", "bitrix-files": "setup"})
+assert 'data-env-plan="site:add"' in bitrixed and 'name="bitrix-files" value="setup"' in bitrixed, "a 1C-Bitrix site is planned with its installer"
 _, planned = post("/admin/server/sites/new/plan", {"_token": form_token(wizard), "domain": "new.test", "profile": "static", "daily-backup": "yes"})
 # simai-env 1.30.0 makes the daily backup with the site: no backup:data-schedule after it.
 assert 'data-env-plan="site:add"' in planned and 'name="backup" value="yes"' in planned and "data-env-plan-then" not in planned, "a new site is planned with its daily backup"

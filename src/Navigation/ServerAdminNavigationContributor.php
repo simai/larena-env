@@ -9,6 +9,16 @@ use Larena\Admin\Navigation\AdminNavigationDescriptor;
 
 final class ServerAdminNavigationContributor implements AdminNavigationContributor
 {
+    /**
+     * The rows of screens that only a newer simai-env can use show only where the server lists their commands; without
+     * a way to ask, they do not show.
+     *
+     * @param (\Closure(string): bool)|null $listed
+     */
+    public function __construct(private ?\Closure $listed = null)
+    {
+    }
+
     public function ownerPackage(): string
     {
         return 'larena/env';
@@ -19,7 +29,7 @@ final class ServerAdminNavigationContributor implements AdminNavigationContribut
         // The sites, at either level; the server's overview and the people's spaces, at the system level (owner decision 2026-10-31).
         // The sites' row matches every panel route; the row that names a page most closely marks it (larena/admin
         // AdminNavigationDescriptor::matchStrength), so the overview and the spaces name their own page.
-        return [new AdminNavigationDescriptor(
+        $rows = [new AdminNavigationDescriptor(
             id: 'env.people',
             ownerPackage: $this->ownerPackage(),
             label: 'Spaces',
@@ -207,5 +217,10 @@ final class ServerAdminNavigationContributor implements AdminNavigationContribut
             activeRoutePattern: 'larena.env.admin.*',
             icon: 'dns',
         )];
+        // Each row of a screen a newer simai-env brings, by the command it needs (Panel plan stage 5).
+        $needs = ['env.services' => 'service:list', 'env.firewall' => 'firewall:status', 'env.panel.access' => 'panel:access'];
+
+        return array_values(array_filter($rows, fn (AdminNavigationDescriptor $row): bool => !isset($needs[$row->id])
+            || ($this->listed !== null && ($this->listed)($needs[$row->id]))));
     }
 }

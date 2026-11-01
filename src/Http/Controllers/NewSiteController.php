@@ -29,10 +29,13 @@ final readonly class NewSiteController
     /** The kinds the panel has words for; any other the server lists is shown by its name and the server's line. */
     public const array KNOWN_PROFILES = [...self::PROFILES, 'bitrix', 'proxy'];
     private const array PHP_PROFILES = ['generic', 'laravel', 'wordpress'];
-    private const array FIELDS = ['domain', 'profile', 'php', 'owner', 'create-db', 'db-engine', 'redirect-to', 'upstream-port', 'upstream-path', 'websockets'];
+    private const array FIELDS = ['domain', 'profile', 'php', 'owner', 'create-db', 'db-engine', 'redirect-to', 'upstream-port', 'upstream-path', 'websockets',
+        'bitrix-files'];
     /** The form's groups of fields and the site:add arguments each sends, asked only of a kind that takes them. */
     public const array FIELD_GROUPS = ['php' => ['php'], 'database' => ['create-db', 'db-engine'], 'redirect' => ['redirect-to'],
-        'proxy' => ['upstream-port', 'upstream-path', 'websockets']];
+        'proxy' => ['upstream-port', 'upstream-path', 'websockets'], 'bitrix' => ['bitrix-files']];
+    /** The installer a 1C-Bitrix site may get in its root (simai-env 1.33.0): none yet, a new install, or a restore. */
+    public const array BITRIX_FILES = ['none', 'setup', 'restore'];
     /** The session key that holds, by job, the new site whose daily backup is turned on once the site is made. */
     public const string AFTER_JOB = 'larena_env.after_job';
 
@@ -73,7 +76,8 @@ final readonly class NewSiteController
     {
         $actor = ResolvePanelActor::of($request);
         $overview = $this->overviews->read($actor)->overview;
-        $input = self::withBackup(self::input($request, $actor, $this->serverProfiles($actor, $overview)), $request, $overview);
+        $server = $this->serverProfiles($actor, $overview);
+        $input = self::withBackup(self::input($request, $actor, $server), $request, $overview, $server);
         $result = $this->operations->planCommand($actor, 'site:add', $input);
         if ($result->plan === null) {
             return $this->back($request, $result->reason ?? 'answer_shape_invalid', $input);
@@ -97,14 +101,15 @@ final readonly class NewSiteController
     {
         $actor = ResolvePanelActor::of($request);
         $overview = $this->overviews->read($actor)->overview;
-        $input = self::withBackup(self::input($request, $actor, $this->serverProfiles($actor, $overview)), $request, $overview);
+        $server = $this->serverProfiles($actor, $overview);
+        $input = self::withBackup(self::input($request, $actor, $server), $request, $overview, $server);
         $started = $this->operations->startCommand($actor, 'site:add', $input);
         if ($started->jobId === null) {
             return $this->back($request, $started->reason ?? 'answer_shape_invalid', $input);
         }
 
         // The site's daily backup is turned on when its job has made it (ServerJobController), as the plan said.
-        if ($this->followsWithSchedule($request, $overview, $input) && isset($input['domain'])) {
+        if ($this->followsWithSchedule($request, $overview, $input, $server) && isset($input['domain'])) {
             $request->session()->put(self::AFTER_JOB.'.'.$started->jobId, $input['domain']);
         }
 
@@ -131,9 +136,9 @@ final readonly class NewSiteController
      *
      * @return array<string, string>
      */
-    private static function withBackup(array $input, Request $request, ?\Larena\Env\Server\ServerOverview $overview): array
+    private static function withBackup(array $input, Request $request, ?\Larena\Env\Server\ServerOverview $overview, ?array $server = null): array
     {
-        if ($overview?->capabilities?->takes('site:add', 'backup') === true && ($input['profile'] ?? null) !== 'redirect') {
+        if ($overview?->capabilities?->takes('site:add', 'backup') === true && self::backsUp($input['profile'] ?? 'static', $server)) {
             $input['backup'] = self::dailyBackup($request) ? 'yes' : 'no';
         }
 
@@ -141,9 +146,9 @@ final readonly class NewSiteController
     }
 
     /** @param array<string, string> $input */
-    private function followsWithSchedule(Request $request, ?\Larena\Env\Server\ServerOverview $overview, array $input): bool
+    private function followsWithSchedule(Request $request, ?\Larena\Env\Server\ServerOverview $overview, array $input, ?array $server = null): bool
     {
-        return self::dailyBackup($request) && !isset($input['backup']) && ($input['profile'] ?? null) !== 'redirect'
+        return self::dailyBackup($request) && !isset($input['backup']) && self::backsUp($input['profile'] ?? 'static', $server)
             && $overview?->capabilities?->allows('backup:data-schedule') === true;
     }
 
@@ -192,6 +197,21 @@ final readonly class NewSiteController
      *
      * @return list<string>
      */
+    /**
+     * Whether a kind of site gets a daily backup: not a redirect, nor a kind the server says takes none (a proxy holds
+     * no data of its own).
+     *
+     * @param array<string, \Larena\Env\Server\SiteProfile>|null $server
+     */
+    public static function backsUp(string $profile, ?array $server): bool
+    {
+        if ($server !== null && isset($server[$profile])) {
+            return $server[$profile]->takes('backup');
+        }
+
+        return $profile !== 'redirect' && $profile !== 'proxy';
+    }
+
     public static function groupsOf(string $profile, ?array $server): array
     {
         if ($server !== null) {
@@ -228,10 +248,16 @@ final readonly class NewSiteController
         }
         $named = [];
         foreach ($profiles as $profile) {
-            $named[$profile->name] = $profile;
+            // Only the kinds the panel can send; a newer kind waits for a panel that knows its fields.
+            if (in_array($profile->name, self::KNOWN_PROFILES, true)) {
+                $named[$profile->name] = $profile;
+            }
         }
 
-        return $named;
+        // In the panel's order, the simplest first, whatever order the server lists them in.
+        uksort($named, static fn (string $a, string $b): int => array_search($a, self::KNOWN_PROFILES, true) <=> array_search($b, self::KNOWN_PROFILES, true));
+
+        return $named === [] ? null : $named;
     }
 
     /**
@@ -240,7 +266,7 @@ final readonly class NewSiteController
      *
      * @param array<string, \Larena\Env\Server\SiteProfile> $server
      *
-     * @return array<string, array{label: string, hint: string, groups: list<string>}>
+     * @return array<string, array{label: string, hint: string, groups: list<string>, backup: bool}>
      */
     private function described(array $server): array
     {
@@ -248,9 +274,10 @@ final readonly class NewSiteController
         foreach ($server as $name => $profile) {
             $known = in_array($name, self::KNOWN_PROFILES, true);
             $described[$name] = [
-                'label' => $known ? (string) $this->translator->get('larena-env::admin.new_site.profiles.'.$name) : $name,
+                'label' => $known ? (string) $this->translator->get('larena-env::admin.new_site.profiles.'.$name) : ($profile->title ?? $name),
                 'hint' => $known ? (string) $this->translator->get('larena-env::admin.new_site.profile_hints.'.$name) : ($profile->description ?? ''),
                 'groups' => self::groupsOf($name, $server),
+                'backup' => self::backsUp($name, $server),
             ];
         }
 

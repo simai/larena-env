@@ -58,10 +58,12 @@ final class PanelCommands
     private const string PERIOD = '/\A(?:day|week|month)\z/D';
     // What a safe update replaces: simai-env itself, or the panel's build (simai-env 1.32.0).
     private const string UPDATE_TARGET = '/\A(?:env|panel)\z/D';
-    // Panel plan stage 5 (simai-env, after 1.32.0). A service of the server's fixed list, resolved on the host.
-    private const string SERVICE = '/\A(?:nginx|php[5-9]\.[0-9]-fpm|mysql|mariadb|postgresql|redis-server|redis|cron)\z/D';
-    // A proxy site forwards to a port of this same server only (127.0.0.1), and a path on it.
-    private const string PORT = '/\A(?:[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])\z/D';
+    // A service of the server's fixed list, only those it has (simai-env 1.33.0).
+    private const string SERVICE = '/\A(?:nginx|php[5-9]\.[0-9]-fpm|mysql|mariadb|postgresql|redis-server|cron)\z/D';
+    // A proxy site forwards to a port of this same server only (127.0.0.1), never nginx's own 80 or 443, and a path on it.
+    private const string PORT = '/\A(?!(?:80|443)\z)(?:[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])\z/D';
+    // A 1C-Bitrix site's installer in its root: none yet, bitrixsetup.php, or restore.php.
+    private const string BITRIX_FILES = '/\A(?:none|setup|restore)\z/D';
     private const string UPSTREAM_PATH = '/\A\/[A-Za-z0-9._~\/-]{0,200}\z/D';
     // A site's own scheduled job: five fields, no more often than every minute (the server checks it again), and one
     // line of printable text run by the site's user.
@@ -110,7 +112,7 @@ final class PanelCommands
         'site:add' => ['args' => ['domain' => self::DOMAIN, 'profile' => self::PROFILE, 'php' => self::PHP, 'owner' => self::OWNER,
             'create-db' => self::YES_NO, 'db-engine' => self::ENGINE, 'redirect-to' => self::ORIGIN, 'redirect-code' => self::CODE,
             'redirect-path' => self::KEEP_DROP, 'backup' => self::YES_NO, 'upstream-port' => self::PORT, 'upstream-path' => self::UPSTREAM_PATH,
-            'websockets' => self::YES_NO], 'required' => ['domain'], 'since' => '1.22.0', 'kind' => self::ACTION],
+            'websockets' => self::YES_NO, 'bitrix-files' => self::BITRIX_FILES], 'required' => ['domain'], 'since' => '1.22.0', 'kind' => self::ACTION],
         'site:set-php' => ['args' => ['domain' => self::DOMAIN, 'php' => self::PHP], 'required' => ['domain', 'php'], 'since' => '1.22.0', 'kind' => self::ACTION],
         'owner:create' => ['args' => ['name' => self::OWNER, 'pubkey' => self::PUBKEY], 'required' => ['name'], 'since' => '1.22.0', 'kind' => self::ACTION],
         // Blocking a space: SSH, SFTP and requests as that owner stop, its sites keep serving (simai-env 1.27.0).
@@ -152,13 +154,15 @@ final class PanelCommands
         'access:remove' => ['args' => ['login' => self::LOGIN], 'required' => ['login'], 'since' => '1.30.0', 'kind' => self::ACTION],
         'db:list' => ['args' => [], 'required' => [], 'since' => '1.28.0', 'kind' => self::READ],
         'site:db-rotate' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => '1.28.0', 'kind' => self::ACTION],
-        // Panel plan stage 5 (simai-env, after 1.32.0): the server's services, the administrator's; the kinds of site the
-        // server makes, with their arguments; a site's own scheduled jobs, as its user; the firewall and who reaches
-        // the panel, each change undone by the server itself unless it is kept in time (change:confirm).
-        'service:restart' => ['args' => ['name' => self::SERVICE], 'required' => ['name'], 'since' => null, 'kind' => self::ACTION],
-        'service:reload' => ['args' => ['name' => self::SERVICE], 'required' => ['name'], 'since' => null, 'kind' => self::ACTION],
-        'service:log' => ['args' => ['name' => self::SERVICE, 'lines' => self::LINES], 'required' => ['name'], 'since' => null, 'kind' => self::READ],
-        'self:profiles' => ['args' => [], 'required' => [], 'since' => null, 'kind' => self::READ],
+        // Panel plan stage 5. The server's services, the administrator's, each checked before a restart or a reload (nginx
+        // -t, php-fpm -t), and the kinds of site the server makes, with their arguments (simai-env 1.33.0); a site's own
+        // scheduled jobs, as its user (1.34.0); the firewall and who reaches the panel, each change undone by the server
+        // itself unless it is kept in time with change:confirm (1.35.0): those wait for their release, unlisted.
+        'service:list' => ['args' => [], 'required' => [], 'since' => '1.33.0', 'kind' => self::READ],
+        'service:restart' => ['args' => ['name' => self::SERVICE], 'required' => ['name'], 'since' => '1.33.0', 'kind' => self::ACTION],
+        'service:reload' => ['args' => ['name' => self::SERVICE], 'required' => ['name'], 'since' => '1.33.0', 'kind' => self::ACTION],
+        'service:log' => ['args' => ['name' => self::SERVICE, 'lines' => self::LINES], 'required' => ['name'], 'since' => '1.33.0', 'kind' => self::READ],
+        'self:profiles' => ['args' => [], 'required' => [], 'since' => '1.33.0', 'kind' => self::READ],
         'cron:list' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => null, 'kind' => self::READ],
         'cron:job-add' => ['args' => ['domain' => self::DOMAIN, 'schedule' => self::CRON_SCHEDULE, 'command' => self::CRON_COMMAND],
             'required' => ['domain', 'schedule', 'command'], 'since' => null, 'kind' => self::ACTION],
@@ -209,7 +213,8 @@ final class PanelCommands
      */
     private const array ARGUMENTS_SINCE = [
         // A new site's daily backup and the check of each scheduled copy (simai-env 1.30.0).
-        'site:add' => ['backup' => '1.30.0'],
+        // An app on a local port and a 1C-Bitrix site's installer (simai-env 1.33.0).
+        'site:add' => ['backup' => '1.30.0', 'upstream-port' => '1.33.0', 'upstream-path' => '1.33.0', 'websockets' => '1.33.0', 'bitrix-files' => '1.33.0'],
         'backup:data-schedule' => ['verify' => '1.30.0'],
     ];
 

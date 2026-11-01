@@ -92,6 +92,12 @@ final readonly class SiteExtrasReader
     }
 
     /** @return list<string>|null the last lines of a service's journal (Panel plan 5.1, administrator only) */
+    /** @return list<HostService>|null the server's services and their state (simai-env 1.33.0), the administrator's */
+    public function services(PanelActor $actor): ?array
+    {
+        return $this->list($actor, 'service:list', [], 'services', HostService::fromData(...));
+    }
+
     public function serviceLog(PanelActor $actor, string $name, int $lines = 100): ?array
     {
         $data = $this->data($actor, 'service:log', ['name' => $name, 'lines' => (string) $lines]);

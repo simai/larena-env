@@ -40,7 +40,7 @@ $recorded = new ServerOverviewReader(new RecordedAnswersGateway(env_recorded_pat
 $result = $recorded->read(new PanelActor('admin@example.com'));
 $overview = $result->overview;
 env_assert($overview !== null && $result->reason === null && $result->source === 'recorded', 'The recording reads.');
-env_assert($overview->envVersion === '1.32.0' && $overview->osId === 'ubuntu' && $overview->osVersion === '24.04', 'The server\'s status is typed.');
+env_assert($overview->envVersion === '1.33.0' && $overview->osId === 'ubuntu' && $overview->osVersion === '24.04', 'The server\'s status is typed.');
 env_assert($overview->phpVersions === ['8.3'], 'PHP versions.');
 $states = [];
 foreach ($overview->services as $service) {
@@ -53,7 +53,7 @@ env_assert($domains === ['demo-owned.test', 'demo-php.test', 'demo-redirect.test
 [$owned, $php, $redirect, $static] = $overview->sites;
 env_assert($owned->owner === 'demo' && $php->owner === null, 'Owners.');
 env_assert($php->databaseEngine === 'mysql' && $owned->databaseEngine === null, 'Only the database\'s engine.');
-env_assert($static->release === '20261101220014' && $php->release === null, 'The current release.');
+env_assert($static->release === '20261101230437' && $php->release === null, 'The current release.');
 env_assert($redirect->profile === 'redirect' && $redirect->php === 'none' && $redirect->ssl === 'none', 'A redirect site.');
 // simai-env 1.27.0: whether a site answers, its disk, its last backup, and whether a space is blocked.
 env_assert($owned->answersChecked && $owned->answers === 200 && $owned->diskBytes === 1048576 && $owned->lastBackup === null, 'Answers 200, takes 1 MB, no backup yet.');
