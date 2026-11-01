@@ -52,6 +52,16 @@
                     <label for="env-new-redirect">{{ __('larena-env::admin.new_site.redirect_to') }}</label>
                     <input type="url" id="env-new-redirect" name="redirect-to" value="{{ $old['redirect-to'] ?? '' }}" placeholder="https://example.org">
                 </div>
+            @if (($dailyBackup ?? null) !== null)
+                <div class="larena-field">
+                    <input type="hidden" name="daily-backup" value="no">
+                    <label for="env-new-daily-backup">
+                        <input type="checkbox" id="env-new-daily-backup" name="daily-backup" value="yes" data-env-new-daily-backup @if ($dailyBackup) checked @endif>
+                        {{ __('larena-env::admin.new_site.daily_backup') }}
+                    </label>
+                    <p>{{ __('larena-env::admin.new_site.daily_backup_hint') }}</p>
+                </div>
+            @endif
             @if ($owners !== null)
                 <div class="larena-field">
                     <label for="env-new-owner">{{ __('larena-env::admin.new_site.owner') }}</label>

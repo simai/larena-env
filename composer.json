@@ -102,6 +102,14 @@
         },
         {
             "type": "path",
+            "url": "../notification",
+            "options": {
+                "symlink": true,
+                "reference": "auto"
+            }
+        },
+        {
+            "type": "path",
             "url": "../property",
             "options": {
                 "symlink": true,
@@ -145,10 +153,12 @@
     "require-dev": {
         "illuminate/view": "^13.0",
         "larena/admin": "dev-main",
+        "larena/notification": "dev-main",
         "phpstan/phpstan": "^2.0"
     },
     "suggest": {
-        "larena/admin": "The server screen and its menu entry (/admin/server). Env contributes them only where the admin is installed; the gateway and the typed reads work without it."
+        "larena/admin": "The server screen and its menu entry (/admin/server). Env contributes them only where the admin is installed; the gateway and the typed reads work without it.",
+        "larena/notification": "The panel's check (larena:env-check) tells people what needs attention through their notifications; without it the check only measures the server."
     },
     "scripts": {
         "test": [
@@ -164,7 +174,8 @@
             "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/SiteScreenTest.php",
             "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/SiteExtrasReaderTest.php",
             "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PanelOperationsTest.php",
-            "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PanelActorResolverTest.php"
+            "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PanelActorResolverTest.php",
+            "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PanelWarningsTest.php"
         ],
         "test:unit": [
             "@test"

@@ -14,6 +14,7 @@
             <p>{{ $reasonText }}</p>
         </section>
     @elseif ($section === 'overview')
+        @include('larena-env::admin.partials.warnings')
         <section class="larena-panel larena-panel-padded" data-env-state="ok" aria-labelledby="env-server-status">
             <h2 id="env-server-status">{{ __('larena-env::admin.status.title') }}</h2>
             <dl class="larena-recipe-facts">
@@ -32,11 +33,6 @@
         @if (($metrics ?? null) !== null)
             <section class="larena-panel larena-panel-padded" data-env-metrics aria-labelledby="env-server-metrics">
                 <h2 id="env-server-metrics">{{ __('larena-env::admin.metrics.title') }}</h2>
-                @foreach ($metrics->disks as $disk)
-                    @if (\Larena\Env\Server\ServerMetrics::nearlyFull($disk['total'], $disk['used']))
-                        <p data-env-disk-full="{{ $disk['mount'] }}" role="alert">{{ __('larena-env::admin.metrics.nearly_full', ['mount' => $disk['mount'], 'percent' => (string) \Larena\Env\Server\Bytes::percent($disk['used'], $disk['total'])]) }}</p>
-                    @endif
-                @endforeach
                 <dl class="larena-recipe-facts">
                     <div><dt>{{ __('larena-env::admin.metrics.cores') }}</dt><dd>{{ $metrics->cores ?? '—' }}</dd></div>
                     <div><dt>{{ __('larena-env::admin.metrics.load') }}</dt><dd>{{ $metrics->load === null ? '—' : implode(' · ', array_map(static fn (float $value): string => number_format($value, 2), $metrics->load)) }}</dd></div>
@@ -53,7 +49,9 @@
                 </dl>
             </section>
         @endif
+        @include('larena-env::admin.partials.history')
     @else
+        @include('larena-env::admin.partials.warnings')
         @if ($canCreate ?? false)
             <p data-env-create-site><a class="larena-button" href="{{ route('larena.env.admin.sites.new', [], false) }}">{{ __('larena-env::admin.new_site.action') }}</a></p>
         @endif

@@ -18,6 +18,7 @@ use Larena\Env\Server\ServerOverviewReader;
 use Larena\Env\Server\SiteDetailsReader;
 use Larena\Env\Server\SiteExtrasReader;
 use Larena\Env\Server\SiteLogView;
+use Larena\Env\Warnings\PanelWarnings;
 
 /**
  * One site: what it runs on, its certificate, its backups and the last lines of its log, and the actions that belong
@@ -77,6 +78,8 @@ final readonly class SiteAdminController
             'phpExtensions' => $ask('php:extensions', 'php') && $site->php !== 'none' ? $this->extras->phpExtensions($actor, $site->php) : null,
             'databases' => $ask('db:list', 'database') ? $this->extras->databases($actor, $domain) : null,
             'sftpAccounts' => $ask('access:list', 'access') ? $this->extras->sftpAccounts($actor, $domain) : null,
+            // What needs attention on this site (Panel plan 4.4), as the sites' list says it.
+            'warnings' => $overview === null ? null : self::siteWarnings($overview, $domain),
             'tabOperations' => array_values(array_filter($operations, static fn (SiteOperation $operation): bool => $operation->tab() === $tab)),
             'source' => $result->source,
             'site' => $site,
@@ -118,6 +121,35 @@ final readonly class SiteAdminController
             'runUrl' => route('larena.env.admin.site.run', ['domain' => $domain], false),
             'cancelUrl' => route('larena.env.admin.site', ['domain' => $domain], false).'?tab='.$operation->tab(),
             'hidden' => ['operation' => $operation->value] + $input,
+            'replaces' => $this->replaces($actor, $operation, $domain, $input['backup'] ?? null),
+        ]);
+    }
+
+    /**
+     * What a restore replaces, in words, before it is confirmed (Panel plan 4.2): the site's database by the backup's,
+     * after the server saves the current one, or nothing at all for files unpacked for review.
+     */
+    private function replaces(PanelActor $actor, SiteOperation $operation, string $domain, ?string $name): ?string
+    {
+        $key = match ($operation) {
+            SiteOperation::BackupRestoreDatabase => 'replaces_database',
+            SiteOperation::BackupExtractFiles => 'replaces_files',
+            default => null,
+        };
+        if ($key === null) {
+            return null;
+        }
+        $backup = null;
+        foreach ($this->sites->read($actor, $domain)->site->backups ?? [] as $candidate) {
+            if ($candidate->name === $name) {
+                $backup = $candidate;
+            }
+        }
+
+        return (string) $this->translator->get('larena-env::admin.plan.'.$key, [
+            'domain' => $domain,
+            'time' => $backup->createdAt ?? (string) $name,
+            'size' => \Larena\Env\Server\Bytes::human($backup?->sizeBytes),
         ]);
     }
 
@@ -159,6 +191,18 @@ final readonly class SiteAdminController
     private function back(Request $request, string $domain, string $reason, string $tab = 'overview'): RedirectResponse
     {
         return NoticeRedirect::to($request, route('larena.env.admin.site', ['domain' => $domain], false).'?tab='.$tab, $this->reasonText($reason));
+    }
+
+    /** @return list<\Larena\Env\Warnings\PanelWarning> */
+    private static function siteWarnings(\Larena\Env\Server\ServerOverview $overview, string $domain): array
+    {
+        foreach ($overview->sites as $summary) {
+            if (strcasecmp($summary->domain, $domain) === 0) {
+                return PanelWarnings::forSite($summary, PanelWarnings::now());
+            }
+        }
+
+        return [];
     }
 
     /** The action asked for, when it is one this server's gateway has: a form left from an older page is refused in words. */

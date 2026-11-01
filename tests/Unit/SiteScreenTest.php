@@ -109,6 +109,9 @@ env_assert($doctor !== null && $doctor->status === 'WARN' && $doctor->problems !
 $ok = $screen(['site' => $site, 'doctor' => $doctor, 'tabOperations' => $onTab('overview')]);
 env_assert(str_contains($ok, 'data-env-state="ok"') && str_contains($ok, 'data-env-doctor="WARN"') && str_contains($ok, 'data-env-problem="WARN"'), 'The overview shows the check and its problems.');
 env_assert(str_contains($ok, 'data-env-answers="') && str_contains($ok, 'data-env-disk') && !str_contains($ok, 'data-env-no-backup'), 'Whether it answers and its disk; it has a backup.');
+$warned = $screen(['site' => $site, 'warnings' => [new \Larena\Env\Warnings\PanelWarning('backup_stale', 'warning', 'demo-php.test', ['domain' => 'demo-php.test', 'time' => '2026-01-01'])]]);
+env_assert(str_contains($warned, 'data-env-warning="backup_stale"') && str_contains($warned, 'href="?tab=backups"')
+    && strpos($warned, 'data-env-warnings') < strpos($warned, 'data-env-tabs'), 'The card says what needs attention above its tabs, with the tab to deal with it.');
 env_assert(substr_count($ok, 'data-env-tab=') === 8 && preg_match('/data-env-tab="overview"\s+aria-current="page"/', $ok) === 1, 'The eight tabs, the current one marked.');
 
 // Backups have their tab: the list, «Back up now», and restoring and checking only where the server has them.
@@ -195,6 +198,13 @@ env_assert(str_contains($planned, 'data-env-plan="backup:data"') && str_contains
 env_assert(str_contains($planned, 'data-env-confirm="backup:data"') && str_contains($planned, 'name="db" value="no"')
     && str_contains($planned, 'name="operation" value="backup"'), 'The confirmation carries the same values.');
 env_assert(str_contains($planned, 'data-env-source="recorded"'), 'Recorded answers are marked as recorded.');
+env_assert(!str_contains($planned, 'data-env-plan-replaces') && !str_contains($planned, 'data-env-plan-then'), 'A backup replaces nothing and needs nothing after.');
+// A restore says what it replaces, and a new site what follows it (Panel plan 4.1, 4.2).
+$restoring = $factory->make('larena-env::admin.plan', ['heading' => 'Restore', 'eyebrow' => 'demo-php.test', 'target' => 'demo-php.test',
+    'source' => 'sudo', 'plan' => $plan, 'runUrl' => '/run', 'cancelUrl' => '/cancel', 'hidden' => [],
+    'replaces' => 'The database of demo-php.test is replaced.', 'then' => [$text('new_site.daily_backup_after')]])->render();
+env_assert(str_contains($restoring, 'data-env-plan-replaces') && str_contains($restoring, 'The database of demo-php.test is replaced.')
+    && str_contains($restoring, 'data-env-plan-then'), 'What is replaced and what follows, before the confirmation.');
 
 // A new site: the wizard's plan, as the gateway answers it.
 $newSite = (new PanelOperations($gateway))->planCommand(new PanelActor($user), 'site:add', ['domain' => 'new.test', 'profile' => 'static']);
@@ -207,6 +217,11 @@ env_assert(substr_count($wizard, 'data-env-profile=') === 6 && str_contains($wiz
 $ownWizard = $factory->make('larena-env::admin.new-site', ['profiles' => ['static'], 'phpProfiles' => [], 'phpVersions' => [], 'owners' => null,
     'old' => [], 'notice' => null])->render();
 env_assert(!str_contains($ownWizard, 'data-env-new-owner') && str_contains($ownWizard, 'data-env-new-own-space'), 'A person\'s site is in their space.');
+env_assert(!str_contains($ownWizard, 'data-env-new-daily-backup'), 'No daily backup offered where the server cannot set one.');
+$backedUp = $factory->make('larena-env::admin.new-site', ['profiles' => ['static'], 'phpProfiles' => [], 'phpVersions' => [], 'owners' => null,
+    'old' => [], 'notice' => null, 'dailyBackup' => true])->render();
+env_assert(preg_match('/name="daily-backup" value="yes" data-env-new-daily-backup\s+checked/', $backedUp) === 1
+    && str_contains($backedUp, 'name="daily-backup" value="no"'), 'A new site gets its daily backup unless it is turned off.');
 
 // The job: where it stands, what it printed, and a way to stop it while it runs.
 $view = (new PanelOperations($gateway))->view(new PanelActor($user), '000000000000000000000000');
@@ -235,7 +250,7 @@ env_assert(str_contains($blocking, 'data-env-owner="acme" data-env-owner-blocked
     && str_contains($blocking, 'name="action" value="block"'), 'A blocked space offers unblocking, the other blocking.');
 env_assert(!str_contains($spaces(['canBlock' => false]), 'name="action" value="block"'), 'No blocking where the server\'s gateway has none.');
 
-foreach (['site', 'plan', 'job', 'new-site', 'people', 'partials/notes'] as $view) {
+foreach (['site', 'plan', 'job', 'new-site', 'people', 'partials/notes', 'partials/warnings', 'partials/history'] as $view) {
     $source = (string) file_get_contents(dirname(__DIR__, 2).'/resources/views/admin/'.$view.'.blade.php');
     env_assert(!str_contains($source, '{!!') && preg_match('/<style\b|<script\b|@php\b/i', $source) !== 1, "The {$view} view prints nothing raw and holds no script.");
 }

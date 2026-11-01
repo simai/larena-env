@@ -29,6 +29,7 @@
         "larena/dataview": "dev-main#a7bcdb1163d7e3c2876136cbb78a994930a394bb",
         "larena/env": "dev-main",
         "larena/filesystem": "dev-main#0516a162e10a02b35f872574034374e25d1398f7",
+        "larena/notification": "dev-main#5991c903ec083e8ada15463e7da75839b5709d50",
         "larena/property": "dev-main#6a8b5895d03b7c6e0492ebded943fc1410104e23",
         "larena/setting": "dev-main#6a165243fd51d3f958b3dedfe9daf40248ad0e42",
         "larena/ui": "dev-main#9c975c230c278ae26488a3a793152f82915d7047"
@@ -42,6 +43,7 @@
         {"type": "vcs", "url": "https://github.com/simai/larena-core.git"},
         {"type": "vcs", "url": "https://github.com/simai/larena-dataview.git"},
         {"type": "vcs", "url": "https://github.com/simai/larena-filesystem.git"},
+        {"type": "vcs", "url": "https://github.com/simai/larena-notification.git"},
         {"type": "vcs", "url": "https://github.com/simai/larena-property.git"},
         {"type": "vcs", "url": "https://github.com/simai/larena-setting.git"},
         {"type": "vcs", "url": "https://github.com/simai/larena-ui.git"}

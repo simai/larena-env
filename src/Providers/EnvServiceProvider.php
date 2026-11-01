@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Larena\Env\Providers;
 
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Contracts\Config\Repository as Config;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
@@ -11,10 +12,12 @@ use Larena\Access\Runtime\AccessOperationRegistry;
 use Larena\Access\ValueObjects\AccessOperationDescriptor;
 use Larena\Admin\Navigation\AdminNavigationRegistry;
 use Larena\Core\Process\ProcessExecutor;
+use Larena\Env\Console\PanelCheckCommand;
 use Larena\Env\Console\RegisterServerAreaCommand;
 use Larena\Env\Contracts\PanelGateway;
 use Larena\Env\Gateway\PanelActor;
 use Larena\Env\Gateway\PanelGatewayFactory;
+use Larena\Env\History\MetricSamples;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\PanelActorResolver;
 use Larena\Env\Navigation\ServerAdminNavigationContributor;
@@ -23,6 +26,7 @@ use Larena\Env\People\PanelAudit;
 use Larena\Env\People\PersonOwners;
 use Larena\Env\Server\ServerOverviewReader;
 use Larena\Env\Server\SiteDetailsReader;
+use Larena\Env\Warnings\WarningLedger;
 
 final class EnvServiceProvider extends ServiceProvider
 {
@@ -45,6 +49,9 @@ final class EnvServiceProvider extends ServiceProvider
         $this->app->bind(PanelOperations::class, static fn (Application $app): PanelOperations => new PanelOperations($app->make(PanelGateway::class)));
         // Which owner of the server a person at the user level works as (Panel plan 2.4).
         $this->app->bind(PersonOwners::class, static fn (Application $app): PersonOwners => new PersonOwners($app->make('db')->connection()));
+        // The load the panel measured, and the warnings it has already told people about (Panel plan 4.5, 4.6).
+        $this->app->bind(MetricSamples::class, static fn (Application $app): MetricSamples => new MetricSamples($app->make('db')->connection()));
+        $this->app->bind(WarningLedger::class, static fn (Application $app): WarningLedger => new WarningLedger($app->make('db')->connection()));
         $this->app->bind(PanelAudit::class, static fn (Application $app): PanelAudit => new PanelAudit($app));
         $this->app->bind(PanelActorResolver::class, static fn (Application $app): PanelActorResolver => new PanelActorResolver(
             $app->make(\Larena\Access\Runtime\AccessOperationAuthorizer::class),
@@ -92,8 +99,12 @@ final class EnvServiceProvider extends ServiceProvider
             self::registerAccessOperations($this->app->make(AccessOperationRegistry::class));
         }
         if ($this->app->runningInConsole()) {
-            $this->commands([RegisterServerAreaCommand::class]);
+            $this->commands([RegisterServerAreaCommand::class, PanelCheckCommand::class]);
         }
+        // The panel looks at the server every 5 minutes, open or not (the application's scheduler, `schedule:run`).
+        $this->callAfterResolving(Schedule::class, static function (Schedule $schedule): void {
+            $schedule->command('larena:env-check')->everyFiveMinutes()->withoutOverlapping();
+        });
     }
 
     /** The screen and its menu entry are composed only where larena/admin is installed; the rest works without it. */

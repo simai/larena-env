@@ -10,6 +10,9 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\NoticeRedirect;
+use Larena\Env\Gateway\PanelActor;
+use Larena\Env\Operations\JobState;
+use Larena\Env\Operations\PanelJobStatus;
 use Larena\Env\Operations\PanelOperations;
 
 /**
@@ -30,6 +33,10 @@ final readonly class ServerJobController
         $actor = ResolvePanelActor::of($request);
         $after = (int) $request->query('after', '0');
         $result = $this->operations->view($actor, $job, max(0, $after));
+        $followUp = $this->followUp($request, $actor, $job, $result->status);
+        if ($followUp !== null) {
+            return $followUp;
+        }
 
         return $this->views->make('larena-env::admin.job', [
             'jobId' => $job,
@@ -53,6 +60,30 @@ final readonly class ServerJobController
             : NoticeRedirect::to($request, $address, $this->reasonText($result->reason));
     }
 
+    /**
+     * A new site made with its daily backup asked for (Panel plan 4.1): once its job has made it, the backup is turned
+     * on, and the screen follows that job. A site that was not made forgets the request.
+     */
+    private function followUp(Request $request, PanelActor $actor, string $job, ?PanelJobStatus $status): ?RedirectResponse
+    {
+        $key = NewSiteController::AFTER_JOB.'.'.$job;
+        $domain = $request->hasSession() ? $request->session()->get($key) : null;
+        if (!is_string($domain) || $status === null || $status->state === JobState::Running || $status->state === JobState::Busy) {
+            return null;
+        }
+        $request->session()->forget($key);
+        if ($status->state !== JobState::Succeeded) {
+            return null;
+        }
+        $started = $this->operations->startCommand($actor, 'backup:data-schedule', ['domain' => $domain, 'enabled' => 'yes']);
+        if ($started->jobId === null) {
+            return NoticeRedirect::to($request, route('larena.env.admin.site', ['domain' => $domain], false).'?tab=backups',
+                (string) $this->translator->get('larena-env::admin.new_site.daily_backup_failed', ['reason' => $this->reasonText($started->reason ?? 'answer_shape_invalid')]));
+        }
+
+        return NoticeRedirect::to($request, route('larena.env.admin.job', ['job' => $started->jobId], false),
+            (string) $this->translator->get('larena-env::admin.new_site.daily_backup_started'));
+    }
 
     private function reasonText(string $reason): string
     {

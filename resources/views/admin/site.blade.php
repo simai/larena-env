@@ -15,6 +15,7 @@
             <p><a href="{{ route('larena.env.admin.index', [], false) }}">{{ __('larena-env::admin.site.back') }}</a></p>
         </section>
     @else
+        @include('larena-env::admin.partials.warnings', ['linkSites' => false])
         <nav class="larena-panel larena-panel-padded" aria-label="{{ __('larena-env::admin.site.tabs_label') }}" data-env-tabs>
             @foreach ($tabs as $name)
                 <a href="{{ route('larena.env.admin.site', ['domain' => $domain], false) }}?tab={{ $name }}" data-env-tab="{{ $name }}" @if ($name === $tab) aria-current="page" @endif>{{ __('larena-env::admin.site.tabs.'.$name) }}</a>
@@ -48,9 +49,6 @@
                             <li data-env-problem="{{ $problem['status'] }}">{{ __('larena-env::admin.doctor.'.strtolower($problem['status'])) }} · {{ $problem['area'] }} · {{ $problem['title'] }}</li>
                         @endforeach
                     </ul>
-                @endif
-                @if ($site->backups === [])
-                    <p data-env-no-backup role="alert">{{ __('larena-env::admin.backups.none') }} <a href="{{ route('larena.env.admin.site', ['domain' => $domain], false) }}?tab=backups">{{ __('larena-env::admin.backups.go') }}</a></p>
                 @endif
             </section>
         @elseif ($tab === 'domains')

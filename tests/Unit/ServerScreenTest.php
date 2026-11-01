@@ -124,8 +124,22 @@ $metrics = \Larena\Env\Server\ServerMetrics::fromData(['cpu' => ['cores' => 8, '
     'memory' => ['total_bytes' => 12_000_000_000, 'used_bytes' => 4_000_000_000], 'swap' => ['total_bytes' => 0, 'used_bytes' => 0],
     'disk' => [['mount' => '/', 'total_bytes' => 100_000_000_000, 'used_bytes' => 98_000_000_000], ['mount' => 'bad']], 'checked_at' => '2026-11-01T10:00:00Z']);
 env_assert($metrics->cores === 8 && $metrics->load === [0.5, 0.4, 0.3] && count($metrics->disks) === 1, 'The load reads, a malformed disk is left out.');
-$loaded = $state(['section' => 'overview', 'overview' => $overview, 'metrics' => $metrics]);
-env_assert(str_contains($loaded, 'data-env-metrics') && str_contains($loaded, 'data-env-disk-full="/"') && str_contains($loaded, '98%'), 'A disk at 98% is said first.');
+$warnings = \Larena\Env\Warnings\PanelWarnings::of($overview, $metrics, new DateTimeImmutable('2026-11-01T12:00:00Z'));
+$loaded = $state(['section' => 'overview', 'overview' => $overview, 'metrics' => $metrics, 'warnings' => $warnings]);
+env_assert(str_contains($loaded, 'data-env-metrics') && str_contains($loaded, 'data-env-warning="disk_full"') && str_contains($loaded, '98%')
+    && strpos($loaded, 'data-env-warnings') < strpos($loaded, 'data-env-metrics') && str_contains($loaded, 'role="alert"'), 'A disk at 98% is said first, as an error.');
+env_assert(str_contains($loaded, 'data-env-warning-site="demo-owned.test"') && str_contains($loaded, $text('warnings.backup_none', ['domain' => 'demo-owned.test'])), 'A site without backups is said in words.');
+$listed = $state(['overview' => $overview, 'sitesView' => ['stub' => true], 'warnings' => $warnings]);
+env_assert(strpos($listed, 'data-env-warnings') < strpos($listed, 'stub-dataview'), 'The sites screen says what needs attention above the list.');
+env_assert(str_contains($state(['overview' => $overview, 'sitesView' => ['stub' => true], 'warnings' => []]), 'data-env-warnings-none'), 'Nothing to say is said too.');
+env_assert(!str_contains($ok, 'data-env-warnings'), 'Warnings not read, none drawn.');
+
+// The load history (Panel plan 4.6): a line per measure, a legend in words, nothing drawn without measurements.
+$history = ['day' => new \Larena\Env\History\MetricHistory('day', ['load' => [[0.1, 20.0], [0.9, 60.0]], 'disk:/' => [[0.5, 40.0]]], 2, '2026-11-01 01:00:00', '2026-11-01 11:00:00'),
+    'week' => new \Larena\Env\History\MetricHistory('week', [], 0, null, null)];
+$drawn = $state(['section' => 'overview', 'overview' => $overview, 'history' => $history]);
+env_assert(str_contains($drawn, 'data-env-history-chart="day"') && str_contains($drawn, '<polyline') && str_contains($drawn, '<circle')
+    && str_contains($drawn, 'data-env-history-line="disk:/"') && str_contains($drawn, $text('history.disk', ['mount' => '/'])) && str_contains($drawn, 'data-env-history-none="week"'), 'The history is drawn: '.$drawn);
 env_assert(!str_contains($loaded, $text('metrics.swap')), 'No swap, no swap line.');
 env_assert(!str_contains($ok, 'data-env-metrics'), 'Without the server\'s numbers, no load section.');
 env_assert(!str_contains($live, 'data-env-source'), 'A live server has no such notice.');

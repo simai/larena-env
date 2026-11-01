@@ -9,7 +9,9 @@
 #   3. no route of a feature the product left off exists; the panel's screens do;
 #   4. the first administrator is made through ?setup=, signs in, and the menu is the product's: its roots, and every
 #      row's address opens;
-#   5. the two levels (Panel plan, stage 2): the administrator gives a person of the user level a space (an owner of
+#   5. peace of mind (stage 4): a new site gets its daily backup, a restore says what it replaces, the check measures
+#      and tells the administrator, the sites, card and overview say what needs attention and draw the load;
+#   6. the two levels (Panel plan, stage 2): the administrator gives a person of the user level a space (an owner of
 #      the server), looks at the panel as them (marked in the audit log), plans a new site and opens a site's tabs; the
 #      person signs in and sees only their own owner's sites, and none of the system level's screens.
 #
@@ -113,7 +115,7 @@ $id = $app->make('db')->table('larena_admin_identities')->insertGetId(['email' =
 $app->make(Larena\Access\Runtime\RoleAssignmentService::class)->assign('user:admin_identity:'.$id, 'editor', 'user:admin_identity:1');
 PHP
 export PANEL_APP="$APP"
-python3 - "http://127.0.0.1:${PORT}" "$TOKEN" "$WORK" "$STAFF_PASSWORD" <<'PY' >>"$LOG" 2>&1 || failed "sign-in and menu"
+python3 - "http://127.0.0.1:${PORT}" "$TOKEN" "$WORK" "$STAFF_PASSWORD" "$APP" <<'PY' >>"$LOG" 2>&1 || failed "sign-in and menu"
 import http.cookiejar, json, re, secrets, sys, urllib.error, urllib.parse, urllib.request
 base, token = sys.argv[1], sys.argv[2]
 jar = http.cookiejar.CookieJar()
@@ -168,6 +170,34 @@ for path, expected in (("/admin/server/people", ["Users", "Spaces"]), ("/admin/s
     assert labels[1:] == expected, (path, labels)
 print("breadcrumbs:", "ok")
 
+# Peace of mind (Panel plan, stage 4): the check measures and tells the administrator; the sites say what needs
+# attention, the overview draws the load, and the notification centre has them.
+import subprocess
+check = subprocess.run(["php", "artisan", "larena:env-check"], cwd=sys.argv[5], check=True, capture_output=True, text=True).stdout
+print("check:", check.strip())
+assert "measured: yes" in check and "notifications: 0" not in check, check
+_, listed = get("/admin/server")
+assert "data-env-warnings=" in listed and 'data-env-warning="backup_none"' in listed and 'data-env-warning-site="demo-owned.test"' in listed, "the sites say what needs attention"
+_, overview = get("/admin/server/overview")
+assert "data-env-history" in overview and 'data-env-history-chart="day"' in overview and "data-env-warnings=" in overview, "the overview draws the load"
+_, card = get("/admin/server/sites/demo-php.test")
+assert 'data-env-warning="backup_stale"' in card, "the card says its own"
+request = urllib.request.Request(base + "/admin/navigation/menu", method="POST",
+    data=json.dumps({"intent": "navigation.load", "payload": {"reason": "connected", "site": None}, "page": "/admin/server"}).encode(),
+    headers={"Content-Type": "application/json", "Accept": "application/json", "X-CSRF-TOKEN": csrf})
+with web.open(request) as answer:
+    told = json.loads(answer.read().decode())
+unread = (told.get("navigation", told).get("notifications") or told.get("notifications") or {}).get("unread", 0)
+assert unread >= 3, ("the administrator's notifications", unread)
+status, _ = get("/admin/notifications")
+assert status == 200, ("the notification centre opens", status)
+_, backups = get("/admin/server/sites/demo-php.test?tab=backups")
+form = re.search(r'data-env-operation="backup-restore-database".*?</form>', backups, re.S).group(0)
+name = re.search(r'<option value="([^"]+)"', form).group(1)
+_, restore = post("/admin/server/sites/demo-php.test/plan", {"_token": form_token(backups), "operation": "backup-restore-database", "backup": name})
+assert "data-env-plan-replaces" in restore, "a restore says what it replaces"
+print("stage 4:", "ok", unread, "unread")
+
 # The second level: a person at the user level (the editor role), made the way an administrator's tooling would.
 import subprocess
 subprocess.run(["php", sys.argv[3] + "/make-staff.php", sys.argv[4]], check=True)
@@ -187,8 +217,11 @@ _, whole = get("/admin/server")
 assert 'data-env-acting' not in whole and "demo-php.test" in whole, "back to the whole server"
 status, wizard = get("/admin/server/sites/new")
 assert status == 200 and "data-env-new-owner" in wizard, "the wizard, with whose the site is"
-_, planned = post("/admin/server/sites/new/plan", {"_token": form_token(wizard), "domain": "new.test", "profile": "static"})
-assert 'data-env-plan="site:add"' in planned, "a new site is planned"
+assert re.search(r'name="daily-backup" value="yes" data-env-new-daily-backup\s+checked', wizard), "a new site gets its daily backup by default"
+_, planned = post("/admin/server/sites/new/plan", {"_token": form_token(wizard), "domain": "new.test", "profile": "static", "daily-backup": "yes"})
+assert 'data-env-plan="site:add"' in planned and "data-env-plan-then" in planned and 'name="daily-backup" value="yes"' in planned, "a new site is planned, its daily backup after"
+_, made = post("/admin/server/sites/new/run", {"_token": form_token(planned), "domain": "new.test", "profile": "static", "daily-backup": "yes"})
+assert "data-env-notice" in made and "daily backup is being turned on" in made, "once the site is made, its daily backup is turned on"
 for tab in ("overview", "domains", "php", "database", "backups", "releases", "log", "access"):
     status, card = get("/admin/server/sites/demo-php.test?tab=" + tab)
     assert status == 200 and 'data-env-tab="' + tab + '"' in card, ("tab", tab)
@@ -228,6 +261,9 @@ with web.open(request) as answer:
 own_roots = [item["key"] for item in own_menu.get("navigation", own_menu).get("items", [])]
 print("user level menu roots:", own_roots)
 assert "sites" in own_roots and "users" not in own_roots and "server" not in own_roots and "journal" not in own_roots, own_roots
+status, _ = get("/admin/notifications")
+assert status == 200, ("the person's notification centre opens", status)
+assert 'data-env-warning-site="demo-owned.test"' in sites and 'data-env-warning-site="demo-php.test"' not in sites and 'data-env-warning="disk_full"' not in sites, "the person is warned about their own sites only"
 print("both levels checked")
 PY
 python3 - "$APP/database/database.sqlite" <<'PY' >>"$LOG" 2>&1 || failed "audit"

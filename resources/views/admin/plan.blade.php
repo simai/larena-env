@@ -11,6 +11,13 @@
     <section class="larena-panel larena-panel-padded" data-env-plan="{{ $plan->command }}" aria-labelledby="env-plan">
         <h2 id="env-plan">{{ __('larena-env::admin.plan.heading') }}</h2>
         <p>{{ $plan->description }}</p>
+        @if (($replaces ?? null) !== null)
+            <h3>{{ __('larena-env::admin.plan.replaces') }}</h3>
+            <p data-env-plan-replaces role="note">{{ $replaces }}</p>
+        @endif
+        @foreach ($then ?? [] as $after)
+            <p data-env-plan-then>{{ $after }}</p>
+        @endforeach
         <dl class="larena-recipe-facts">
             <div><dt>{{ __('larena-env::admin.plan.command') }}</dt><dd>{{ $plan->command }}</dd></div>
             <div><dt>{{ __('larena-env::admin.plan.target') }}</dt><dd>{{ $plan->target ?? $target }}</dd></div>

@@ -48,10 +48,4 @@ final readonly class ServerMetrics
             checkedAt: is_string($data['checked_at'] ?? null) ? $data['checked_at'] : null,
         );
     }
-
-    /** A disk is nearly full at 90% and over: the overview says so first. */
-    public static function nearlyFull(int $total, int $used): bool
-    {
-        return $total > 0 && $used / $total >= 0.9;
-    }
 }

@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+- Stage 4 of the Panel plan, on what simai-env 1.28.0 gives. A new site gets its daily backup by default: the wizard's
+  «Ежедневная резервная копия» is ticked, its plan says so, and once `site:add` has made the site the panel starts
+  `backup:data-schedule {enabled: yes}` (only where the server lists that command). A restore says before it is
+  confirmed what it replaces: the site's database by the backup of that date and size, after the server saves the
+  current one, or nothing for files unpacked for review.
+- What needs attention, said first on «Сайты», on a site's card and on «Сервер › Обзор» (`PanelWarnings`): a disk at
+  90% and over (system level only), a certificate ending within 14 days, expired or missing where https is expected, a
+  site answering 5xx or nothing, a site without backups and without a daily one, a newest backup older than 48 hours,
+  backups only by hand. The user level is warned about its own sites.
+- `larena:env-check`, every 5 minutes by the application's scheduler: it keeps `self:metrics` in
+  `larena_env_metric_samples` for 30 days and tells people what needs attention through larena/notification: the
+  administrators about everything, a space's people about its sites; once when it appears, again once a day while it
+  lasts, at once when it becomes an error (`larena_env_warnings`). The overview draws the last day and week of load.
+- The assembly takes larena/notification: the notification centre is in the panel.
 - Stage 2 of the Panel plan. The sites list says whose a site is, what it runs, its certificate (ending soon in words)
   and whether it has a daily backup; «Создать сайт» plans `site:add` for static files, PHP, Laravel, WordPress, Node.js
   or a redirect, and a person's own site lands in their space. A site's card has tabs: overview with simai-env's check
