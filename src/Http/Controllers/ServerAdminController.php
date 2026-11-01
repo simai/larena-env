@@ -25,6 +25,7 @@ final readonly class ServerAdminController
         private AdminDataviewPagePresenter $dataviews,
         private \Illuminate\Contracts\Config\Repository $config,
         private ?\Larena\Access\Runtime\AccessOperationAuthorizer $authorizer = null,
+        private ?\Larena\Env\Server\SiteExtrasReader $extras = null,
     ) {
     }
 
@@ -50,6 +51,9 @@ final readonly class ServerAdminController
         return $this->views->make('larena-env::admin.index', [
             'section' => $section,
             'canCreate' => $this->authorizer?->authorize($request, 'env.sites.operate')->isAllowed() ?? false,
+            // The server's load now (Panel plan 3.3), on the overview, when the server's gateway reports it.
+            'metrics' => $section === 'overview' && $overview?->capabilities?->allows('self:metrics') === true
+                ? $this->extras?->metrics(\Larena\Env\Http\Middleware\ResolvePanelActor::of($request)) : null,
             'source' => $result->source,
             'overview' => $overview,
             'refused' => $result->refused,

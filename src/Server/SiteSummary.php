@@ -19,6 +19,12 @@ final readonly class SiteSummary
         public ?string $release,
         public ?int $certificateDaysLeft,
         public bool $backupSchedule = false,
+        // simai-env 1.27.0: the HTTP status the site's health path answered (null: nothing answered, or not checked yet),
+        // the size of its directory and the time of its newest backup.
+        public ?int $answers = null,
+        public bool $answersChecked = false,
+        public ?int $diskBytes = null,
+        public ?string $lastBackup = null,
     ) {
     }
 
@@ -46,6 +52,10 @@ final readonly class SiteSummary
             release: is_array($site['release'] ?? null) && is_string($site['release']['current'] ?? null) ? $site['release']['current'] : null,
             certificateDaysLeft: is_int($days) ? $days : null,
             backupSchedule: ($site['backup_schedule'] ?? false) === true,
+            answers: is_array($site['answers'] ?? null) && is_int($site['answers']['http'] ?? null) ? $site['answers']['http'] : null,
+            answersChecked: is_array($site['answers'] ?? null),
+            diskBytes: is_array($site['disk'] ?? null) && is_int($site['disk']['bytes'] ?? null) ? $site['disk']['bytes'] : null,
+            lastBackup: is_string($site['last_backup'] ?? null) ? $site['last_backup'] : null,
         );
     }
 }

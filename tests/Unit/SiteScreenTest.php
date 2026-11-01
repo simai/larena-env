@@ -67,7 +67,8 @@ $site = $result->site;
 env_assert($site instanceof SiteDetails && $result->reason === null, 'The site reads.');
 env_assert($site->profile === 'generic' && $site->php === '8.3' && $site->ssl === 'none' && $site->databaseEngine === 'mysql', 'What it runs on.');
 env_assert($site->certificate === null && $site->backupSchedule === null && $site->release === null, 'No certificate, no daily backup, no release.');
-env_assert(count($site->backups) === 1 && $site->backups[0]->name === '20261031-092444', 'A backup is named by its own name, not its path.');
+env_assert(count($site->backups) === 1 && $site->backups[0]->name === '20261031-213210' && $site->backups[0]->sizeBytes === 4345, 'A backup is named by its own name, not its path.');
+env_assert($site->answersChecked && $site->diskBytes !== null, 'Whether it answers and its disk (simai-env 1.27.0).');
 env_assert($site->backups[0]->parts === ['config', 'db', 'files'] && $site->backups[0]->encrypted === false, 'What the backup holds.');
 $typed = serialize($site);
 foreach (['/home/simai', '/var/backups', 'demo_php_test', 'localhost'] as $left) {
@@ -79,7 +80,7 @@ env_assert($reader->read(new PanelActor($user), 'nothing.test')->reason === Pane
 
 // The log is read with its own command.
 $log = $reader->log(new PanelActor($user), 'demo-static.test', 'access');
-env_assert($log->log !== null && $log->log->kind === 'access' && count($log->log->lines) === 1, 'The last lines of the log.');
+env_assert($log->log !== null && $log->log->kind === 'access' && count($log->log->lines) === 2, 'The last lines of the log.');
 env_assert($reader->log(new PanelActor($user), 'demo-static.test', 'everything')->reason === PanelReason::INVALID_ARGUMENT, 'Only access or error.');
 
 // The views on stubs.
@@ -94,32 +95,76 @@ $factory->addNamespace('larena-env', dirname(__DIR__, 2).'/resources/views');
 
 $screen = static fn (array $data): string => $factory->make('larena-env::admin.site', $data + [
     'domain' => 'demo-php.test', 'source' => 'sudo', 'site' => null, 'refused' => false, 'reasonText' => null, 'tab' => 'overview',
-    'tabs' => ['overview', 'domains', 'php', 'releases', 'log', 'access'], 'doctor' => null, 'phpVersions' => ['8.3'], 'tabOperations' => [],
-    'logKind' => 'access', 'logKinds' => ['access', 'error'], 'log' => null, 'logReasonText' => null, 'notice' => null,
+    'tabs' => \Larena\Env\Http\Controllers\SiteAdminController::TABS, 'doctor' => null, 'phpVersions' => ['8.3'], 'tabOperations' => [],
+    'phpSettings' => null, 'phpExtensions' => null, 'databases' => null, 'sftpAccounts' => null,
+    'logKind' => 'access', 'logKinds' => ['access', 'error'], 'logLines' => 200, 'logLineChoices' => [200, 500, 1000], 'logSearch' => '',
+    'logGroup' => '', 'logGroups' => \Larena\Env\Server\SiteLogView::STATUS_GROUPS, 'log' => null, 'logReasonText' => null, 'notice' => null,
 ])->render();
-$onTab = static fn (string $tab): array => array_values(array_filter(SiteOperation::offeredFor($site), static fn (SiteOperation $operation): bool => $operation->tab() === $tab));
+$capabilities = (new \Larena\Env\Server\ServerOverviewReader($gateway))->read(new PanelActor($user))->overview->capabilities;
+$onTab = static fn (string $tab, ?\Larena\Env\Gateway\PanelCapabilities $with = null): array => array_values(array_filter(SiteOperation::offeredFor($site, $with ?? $capabilities), static fn (SiteOperation $operation): bool => $operation->tab() === $tab));
 
 // The overview: the site, simai-env's check of it, its backups and «Back up now».
 $doctor = $reader->doctor(new PanelActor($user), 'demo-php.test');
 env_assert($doctor !== null && $doctor->status === 'WARN' && $doctor->problems !== [] && $doctor->passed > 0, 'The check reads: what did not pass is named.');
 $ok = $screen(['site' => $site, 'doctor' => $doctor, 'tabOperations' => $onTab('overview')]);
 env_assert(str_contains($ok, 'data-env-state="ok"') && str_contains($ok, 'data-env-doctor="WARN"') && str_contains($ok, 'data-env-problem="WARN"'), 'The overview shows the check and its problems.');
-env_assert(str_contains($ok, 'data-env-backup="20261031-092444"') && str_contains($ok, 'data-env-operation="backup"'), 'Backups and «Back up now» are on the overview.');
-env_assert(substr_count($ok, 'data-env-tab=') === 6 && preg_match('/data-env-tab="overview"\s+aria-current="page"/', $ok) === 1, 'The six tabs, the current one marked.');
+env_assert(str_contains($ok, 'data-env-answers="') && str_contains($ok, 'data-env-disk') && !str_contains($ok, 'data-env-no-backup'), 'Whether it answers and its disk; it has a backup.');
+env_assert(substr_count($ok, 'data-env-tab=') === 8 && preg_match('/data-env-tab="overview"\s+aria-current="page"/', $ok) === 1, 'The eight tabs, the current one marked.');
+
+// Backups have their tab: the list, «Back up now», and restoring and checking only where the server has them.
+$backups = $screen(['site' => $site, 'tab' => 'backups', 'tabOperations' => $onTab('backups')]);
+env_assert(str_contains($backups, 'data-env-backup="20261031-213210"') && str_contains($backups, '4.2 KB') && str_contains($backups, 'data-env-operation="backup"'), 'The backups and «Back up now».');
+env_assert(!str_contains($backups, 'data-env-operation="backup-restore"'), 'No restore while the server\'s gateway has none.');
+$more = \Larena\Env\Gateway\PanelCapabilities::fromHostDescription(['simai_env' => ['version' => '1.27.0'], 'gate' => ['commands' => ['backup:data', 'backup:data-restore', 'backup:data-schedule', 'site:db-rotate', 'site:db-export', 'site:php-ini-set', 'access:create-project', 'access:disable']]]);
+$restore = $screen(['site' => $site, 'tab' => 'backups', 'tabOperations' => $onTab('backups', $more)]);
+env_assert(str_contains($restore, 'data-env-operation="backup-restore"') && str_contains($restore, '<option value="20261031-213210">') && str_contains($restore, 'data-env-restore-note'), 'Restoring chooses a backup and says a copy is taken first.');
+env_assert(str_contains($restore, 'data-env-operation="backup-schedule"') && str_contains($restore, 'type="time"'), 'The daily backup, at a time of day.');
+
+// The database: its engine, its actions where the server has them, and never a password.
+$database = $screen(['site' => $site, 'tab' => 'database', 'tabOperations' => $onTab('database', $more),
+    'databases' => [\Larena\Env\Server\SiteDatabase::fromData(['name' => 'demo_php', 'engine' => 'mysql', 'site' => 'demo-php.test', 'size_bytes' => 2048, 'users' => ['demo_php']])]]);
+env_assert(str_contains($database, 'data-env-database="mysql"') && str_contains($database, 'data-env-database-item="demo_php"') && str_contains($database, '2.0 KB'), 'The database and its size.');
+env_assert(str_contains($database, 'data-env-operation="database-password"') && str_contains($database, 'data-env-operation="database-export"')
+    && !str_contains($database, 'data-env-operation="database-create"'), 'A site with a database changes its password and exports it, and is not given another.');
+
+// SFTP: the site's accounts, and an account's actions name it.
+$sftp = $screen(['site' => $site, 'tab' => 'access', 'tabOperations' => $onTab('access', $more),
+    'sftpAccounts' => [\Larena\Env\Server\SftpAccount::fromData(['login' => 'dev', 'site' => 'demo-php.test', 'keys' => 1, 'enabled' => true])]]);
+env_assert(str_contains($sftp, 'data-env-sftp="dev"') && str_contains($sftp, 'data-env-operation="sftp-create"') && str_contains($sftp, '<textarea'), 'A new access takes a key, never a password.');
+env_assert(str_contains($sftp, 'data-env-operation="sftp-disable"') && str_contains($sftp, '<option value="dev">'), 'Turning an access off chooses it.');
 env_assert(!str_contains($ok, 'data-env-log=') && !str_contains($ok, 'data-env-operation="certificate-issue"'), 'A tab shows only its own part and actions.');
 
 // The other tabs: the certificate with its actions, PHP with the version the server has, the log.
 $domains = $screen(['site' => $site, 'tab' => 'domains', 'tabOperations' => $onTab('domains')]);
 env_assert(str_contains($domains, 'data-env-certificate="none"') && str_contains($domains, 'data-env-operation="certificate-issue"')
     && !str_contains($domains, 'data-env-operation="certificate-renew"'), 'A site without a certificate says so and offers to get one, not to renew.');
-$php = $screen(['site' => $site, 'tab' => 'php', 'tabOperations' => $onTab('php')]);
+$php = $screen(['site' => $site, 'tab' => 'php', 'tabOperations' => $onTab('php'),
+    'phpSettings' => [\Larena\Env\Server\PhpSetting::fromData(['key' => 'memory_limit', 'value' => '256M', 'source' => 'site'])],
+    'phpExtensions' => [\Larena\Env\Server\PhpExtension::fromData(['name' => 'intl', 'enabled' => true])]]);
+env_assert(str_contains($php, 'data-env-php-setting="memory_limit"') && str_contains($php, 'data-env-php-extension="intl"'), 'PHP settings and extensions, when the server reports them.');
+env_assert(!str_contains($php, 'data-env-operation="php-setting"'), 'Changing a setting only where the server allows it.');
 env_assert(str_contains($php, 'data-env-operation="php-version"') && preg_match('/<option value="8\.3"\s+selected\s*>/', $php) === 1, 'PHP offers the server\'s versions, the current one chosen.');
 env_assert(!str_contains($php, 'data-env-operation="queue-restart"'), 'And nothing the site cannot be asked for.');
-$logged = $screen(['site' => $site, 'tab' => 'log', 'log' => $log->log]);
-env_assert(str_contains($logged, 'data-env-log="access"') && str_contains($logged, 'tab=log&amp;log=error'), 'The log keeps its tab.');
+$logged = $screen(['site' => $site, 'tab' => 'log', 'log' => \Larena\Env\Server\SiteLogView::of($log->log)]);
+env_assert(str_contains($logged, 'data-env-log="access"') && str_contains($logged, 'data-env-log-filter') && str_contains($logged, 'name="tab" value="log"'), 'The log keeps its tab and can be narrowed.');
+env_assert(str_contains($logged, 'data-env-log-row="200"') && str_contains($logged, 'GET /'), 'A request line is read into its parts.');
+
+// The log narrowed: by words, by the answer's group, by an error's level; newest first.
+$tail = new \Larena\Env\Server\NginxLogTail('a.test', 'access', [
+    '1.2.3.4 - - [01/Jan/2026:00:00:01 +0000] "GET /ok HTTP/1.1" 200 21 "-" "curl"',
+    '1.2.3.5 - - [01/Jan/2026:00:00:02 +0000] "POST /form HTTP/1.1" 500 10 "-" "Firefox"',
+    'not a request line',
+]);
+$all = \Larena\Env\Server\SiteLogView::of($tail);
+env_assert($all->total === 3 && count($all->rows) === 3 && $all->rows[0]['text'] === 'not a request line' && $all->rows[1]['status'] === '500', 'Newest first; a line in another form stays text.');
+env_assert(count(\Larena\Env\Server\SiteLogView::of($tail, '', '5xx')->rows) === 1 && \Larena\Env\Server\SiteLogView::of($tail, '', '5xx')->rows[0]['path'] === '/form', 'Only the 5xx answers.');
+env_assert(count(\Larena\Env\Server\SiteLogView::of($tail, 'FIREFOX')->rows) === 1, 'Words in any case.');
+$errors = \Larena\Env\Server\SiteLogView::of(new \Larena\Env\Server\NginxLogTail('a.test', 'error', [
+    '2026/01/01 00:00:00 [error] 12#12: *1 open() failed', '2026/01/01 00:00:01 [warn] 12#12: something']), '', 'error');
+env_assert(count($errors->rows) === 1 && $errors->rows[0]['level'] === 'error' && $errors->rows[0]['time'] === '2026/01/01 00:00:00', 'Errors by level.');
 $access = $screen(['site' => $site, 'tab' => 'access']);
 env_assert(str_contains($access, 'data-env-access') && str_contains($access, 'site-demo-php-test'), 'Access names the account the site runs as.');
-env_assert(str_contains($ok, 'name="_token"') && substr_count($ok, '<form') === 1, 'Each action is a form of its own, with the session\'s token.');
+env_assert(str_contains($backups, 'name="_token"') && substr_count($backups, '<form') === 1, 'Each action is a form of its own, with the session\'s token.');
 
 $refused = $screen(['refused' => true, 'reasonText' => 'Another owner.']);
 env_assert(str_contains($refused, 'data-env-state="refused"') && str_contains($refused, 'Another owner.') && !str_contains($refused, 'data-env-operations')
@@ -169,6 +214,15 @@ env_assert(str_contains($live, 'data-env-job-cancel') && str_contains($live, 'af
 $hostile = new PanelJobStatus('000000000000000000000000', JobState::Failed, '<img src=x onerror=alert(1)>', [], 1, null, null);
 $escaped = $job(['status' => $hostile, 'log' => new PanelJobLog('000000000000000000000000', JobState::Failed, ['<script>alert(1)</script>'], 1)]);
 env_assert(!str_contains($escaped, '<img') && !str_contains($escaped, '<script>alert'), 'What the server says is escaped.');
+
+// The spaces: what each one's sites take, whether it is blocked, and blocking or unblocking where the server has it.
+$spaces = static fn (array $data): string => $factory->make('larena-env::admin.people', $data + ['people' => [], 'owners' => ['demo', 'acme'],
+    'blockedOwners' => ['acme'], 'ownerDisk' => ['demo' => 1048576], 'canBlock' => true, 'source' => 'recorded', 'reasonText' => null, 'notice' => null])->render();
+$blocking = $spaces([]);
+env_assert(str_contains($blocking, 'data-env-owner="demo" data-env-owner-blocked="no"') && str_contains($blocking, '1.0 MB'), 'A space and its disk.');
+env_assert(str_contains($blocking, 'data-env-owner="acme" data-env-owner-blocked="yes"') && str_contains($blocking, 'name="action" value="unblock"')
+    && str_contains($blocking, 'name="action" value="block"'), 'A blocked space offers unblocking, the other blocking.');
+env_assert(!str_contains($spaces(['canBlock' => false]), 'name="action" value="block"'), 'No blocking where the server\'s gateway has none.');
 
 foreach (['site', 'plan', 'job', 'new-site', 'people', 'partials/notes'] as $view) {
     $source = (string) file_get_contents(dirname(__DIR__, 2).'/resources/views/admin/'.$view.'.blade.php');

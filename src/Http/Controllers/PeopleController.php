@@ -56,9 +56,15 @@ final readonly class PeopleController
         }
         $result = $this->overviews->read(new PanelActor($user));
 
+        $capabilities = $result->overview?->capabilities;
+
         return $this->views->make('larena-env::admin.people', [
             'people' => $rows,
             'owners' => $result->overview->owners ?? [],
+            'blockedOwners' => $result->overview->blockedOwners ?? [],
+            'ownerDisk' => $result->overview->ownerDiskBytes ?? [],
+            // Blocking a space is offered where the server's gateway has it (simai-env 1.27.0).
+            'canBlock' => $capabilities?->allows('owner:block') === true,
             'source' => $result->source,
             'reasonText' => $result->reason === null ? null : $this->reasonText($result->reason),
             'notice' => $request->session()->get('larena_env_notice'),
@@ -116,31 +122,37 @@ final readonly class PeopleController
         return new RedirectResponse(route('larena.env.admin.people', [], false));
     }
 
-    /** A new owner of the server, a space for people to work in: planned and created on confirmation. */
+    /** The owner actions of this screen: a new space, blocking one and unblocking it. */
+    private const array OWNER_ACTIONS = ['create' => 'owner:create', 'block' => 'owner:block', 'unblock' => 'owner:unblock'];
+    private const array OWNER_HEADINGS = ['create' => 'new_owner', 'block' => 'block', 'unblock' => 'unblock'];
+
+    /** A new owner of the server, a space for people to work in, or blocking one: planned, and run on confirmation. */
     public function planOwner(Request $request): mixed
     {
         $actor = ResolvePanelActor::of($request);
-        $input = self::ownerInput($request);
-        $result = $this->operations->planCommand($actor, 'owner:create', $input);
+        $action = self::ownerAction($request);
+        $input = self::ownerInput($request, $action);
+        $result = $this->operations->planCommand($actor, self::OWNER_ACTIONS[$action], $input);
         if ($result->plan === null) {
             return $this->back($request, $result->reason ?? 'answer_shape_invalid');
         }
 
         return $this->views->make('larena-env::admin.plan', [
-            'heading' => (string) $this->translator->get('larena-env::admin.people.new_owner'),
+            'heading' => (string) $this->translator->get('larena-env::admin.people.'.self::OWNER_HEADINGS[$action]),
             'eyebrow' => $input['name'] ?? '',
             'target' => $input['name'] ?? '',
             'source' => $result->source,
             'plan' => $result->plan,
             'runUrl' => route('larena.env.admin.people.owners.run', [], false),
             'cancelUrl' => route('larena.env.admin.people', [], false),
-            'hidden' => $input,
+            'hidden' => ['action' => $action] + $input,
         ]);
     }
 
     public function runOwner(Request $request): RedirectResponse
     {
-        $started = $this->operations->startCommand(ResolvePanelActor::of($request), 'owner:create', self::ownerInput($request));
+        $action = self::ownerAction($request);
+        $started = $this->operations->startCommand(ResolvePanelActor::of($request), self::OWNER_ACTIONS[$action], self::ownerInput($request, $action));
         if ($started->jobId === null) {
             return $this->back($request, $started->reason ?? 'answer_shape_invalid');
         }
@@ -148,11 +160,18 @@ final readonly class PeopleController
         return new RedirectResponse(route('larena.env.admin.job', ['job' => $started->jobId], false));
     }
 
+    private static function ownerAction(Request $request): string
+    {
+        $action = (string) $request->input('action', 'create');
+
+        return array_key_exists($action, self::OWNER_ACTIONS) ? $action : 'create';
+    }
+
     /** @return array<string, string> */
-    private static function ownerInput(Request $request): array
+    private static function ownerInput(Request $request, string $action = 'create'): array
     {
         $input = [];
-        foreach (['name', 'pubkey'] as $field) {
+        foreach ($action === 'create' ? ['name', 'pubkey'] : ['name'] as $field) {
             $value = $request->input($field);
             if (is_string($value) && trim($value) !== '') {
                 $input[$field] = trim($value);

@@ -11,9 +11,9 @@ use Larena\Env\Server\SiteSummary;
 /** The sites as the admin's shared data view, with rows in place: the page holds them already. A row opens the site's own screen. */
 final class ServerSitesPage
 {
-    // What a person checks first (Panel plan 2.1): whose the site is, what it runs, its certificate and its backups.
-    // Whether it answers and the disk it takes come when the gateway reports them (asked of simai-env).
-    private const array COLUMNS = ['domain', 'owner', 'profile', 'php', 'certificate', 'backups'];
+    // What a person checks first (Panel plan 2.1): whether it answers, whose the site is, what it runs, its certificate,
+    // its backups and the disk it takes (the last two from simai-env 1.27.0).
+    private const array COLUMNS = ['domain', 'answers', 'owner', 'profile', 'php', 'certificate', 'backups', 'disk'];
 
     private function __construct()
     {
@@ -51,7 +51,12 @@ final class ServerSitesPage
             'certificate' => $site->certificateDaysLeft !== null
                 ? $text($site->certificateDaysLeft <= 14 ? 'sites.certificate_ends' : 'sites.certificate_left', ['days' => (string) $site->certificateDaysLeft])
                 : ($site->ssl === 'none' ? $text('sites.certificate_none') : $site->ssl),
-            'backups' => $text($site->backupSchedule ? 'sites.backups_scheduled' : 'sites.backups_unscheduled'),
+            'backups' => $site->lastBackup !== null
+                ? $text('sites.backups_last', ['time' => $site->lastBackup]).($site->backupSchedule ? ' · '.$text('sites.backups_scheduled') : '')
+                : $text($site->backupSchedule ? 'sites.backups_scheduled' : 'sites.backups_unscheduled'),
+            'answers' => !$site->answersChecked ? '—'
+                : ($site->answers === null ? $text('sites.answers_none') : $text('sites.answers_code', ['code' => (string) $site->answers])),
+            'disk' => \Larena\Env\Server\Bytes::human($site->diskBytes),
         ];
     }
 }

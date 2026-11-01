@@ -29,8 +29,32 @@
                 @endforeach
             </dl>
         </section>
+        @if (($metrics ?? null) !== null)
+            <section class="larena-panel larena-panel-padded" data-env-metrics aria-labelledby="env-server-metrics">
+                <h2 id="env-server-metrics">{{ __('larena-env::admin.metrics.title') }}</h2>
+                @foreach ($metrics->disks as $disk)
+                    @if (\Larena\Env\Server\ServerMetrics::nearlyFull($disk['total'], $disk['used']))
+                        <p data-env-disk-full="{{ $disk['mount'] }}" role="alert">{{ __('larena-env::admin.metrics.nearly_full', ['mount' => $disk['mount'], 'percent' => (string) \Larena\Env\Server\Bytes::percent($disk['used'], $disk['total'])]) }}</p>
+                    @endif
+                @endforeach
+                <dl class="larena-recipe-facts">
+                    <div><dt>{{ __('larena-env::admin.metrics.cores') }}</dt><dd>{{ $metrics->cores ?? '—' }}</dd></div>
+                    <div><dt>{{ __('larena-env::admin.metrics.load') }}</dt><dd>{{ $metrics->load === null ? '—' : implode(' · ', array_map(static fn (float $value): string => number_format($value, 2), $metrics->load)) }}</dd></div>
+                    @if ($metrics->memoryTotal !== null && $metrics->memoryUsed !== null)
+                        <div><dt>{{ __('larena-env::admin.metrics.memory') }}</dt><dd>{{ __('larena-env::admin.metrics.used', ['used' => \Larena\Env\Server\Bytes::human($metrics->memoryUsed), 'total' => \Larena\Env\Server\Bytes::human($metrics->memoryTotal), 'percent' => (string) \Larena\Env\Server\Bytes::percent($metrics->memoryUsed, $metrics->memoryTotal)]) }}</dd></div>
+                    @endif
+                    @if ($metrics->swapTotal !== null && $metrics->swapUsed !== null && $metrics->swapTotal > 0)
+                        <div><dt>{{ __('larena-env::admin.metrics.swap') }}</dt><dd>{{ __('larena-env::admin.metrics.used', ['used' => \Larena\Env\Server\Bytes::human($metrics->swapUsed), 'total' => \Larena\Env\Server\Bytes::human($metrics->swapTotal), 'percent' => (string) \Larena\Env\Server\Bytes::percent($metrics->swapUsed, $metrics->swapTotal)]) }}</dd></div>
+                    @endif
+                    @foreach ($metrics->disks as $disk)
+                        <div data-env-disk-mount="{{ $disk['mount'] }}"><dt>{{ __('larena-env::admin.metrics.disk', ['mount' => $disk['mount']]) }}</dt><dd>{{ __('larena-env::admin.metrics.used', ['used' => \Larena\Env\Server\Bytes::human($disk['used']), 'total' => \Larena\Env\Server\Bytes::human($disk['total']), 'percent' => (string) \Larena\Env\Server\Bytes::percent($disk['used'], $disk['total'])]) }}</dd></div>
+                    @endforeach
+                    <div><dt>{{ __('larena-env::admin.metrics.checked_at') }}</dt><dd>{{ $metrics->checkedAt ?? '—' }}</dd></div>
+                </dl>
+            </section>
+        @endif
     @else
-        @if ($canCreate)
+        @if ($canCreate ?? false)
             <p data-env-create-site><a class="larena-button" href="{{ route('larena.env.admin.sites.new', [], false) }}">{{ __('larena-env::admin.new_site.action') }}</a></p>
         @endif
         @include('larena-admin::dataview.page', ['dataview' => $sitesView, 'sectionId' => 'env-server-sites', 'owner' => 'larena/env',

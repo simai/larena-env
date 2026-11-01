@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Larena\Env\Server;
 
+use Larena\Env\Gateway\PanelCapabilities;
 use UnexpectedValueException;
 
 /** The first screen's data: the server's status and its sites, read from a host description (simai-host/1). */
@@ -16,6 +17,8 @@ final readonly class ServerOverview
      * @param list<string> $phpVersions
      * @param list<SiteSummary> $sites
      * @param list<string> $owners the owners of the server (simai-env's isolation), whose spaces people work in
+     * @param list<string> $blockedOwners the owners whose space is blocked (simai-env 1.27.0)
+     * @param array<string, int> $ownerDiskBytes what each owner's sites take, where all of them are measured (simai-env 1.27.0)
      */
     public function __construct(
         public string $generatedAt,
@@ -26,6 +29,9 @@ final readonly class ServerOverview
         public array $phpVersions,
         public array $sites,
         public array $owners = [],
+        public ?PanelCapabilities $capabilities = null,
+        public array $blockedOwners = [],
+        public array $ownerDiskBytes = [],
     ) {
     }
 
@@ -40,7 +46,7 @@ final readonly class ServerOverview
 
         return new self($this->generatedAt, $this->envVersion, $this->osId, $this->osVersion, $this->services, $this->phpVersions,
             array_values(array_filter($this->sites, static fn (SiteSummary $site): bool => !in_array(strtolower($site->domain), $domains, true))),
-            $this->owners);
+            $this->owners, $this->capabilities, $this->blockedOwners, $this->ownerDiskBytes);
     }
 
     /**
@@ -79,13 +85,22 @@ final readonly class ServerOverview
         }
 
         $owners = [];
+        $blocked = [];
+        $disk = [];
         foreach (is_array($host['isolation']['owners'] ?? null) ? $host['isolation']['owners'] : [] as $owner) {
             if (is_array($owner) && is_string($owner['name'] ?? null) && preg_match('/\A[a-z][a-z0-9_-]{0,31}\z/D', $owner['name']) === 1) {
                 $owners[] = $owner['name'];
+                if (($owner['blocked'] ?? false) === true) {
+                    $blocked[] = $owner['name'];
+                }
+                if (is_int($owner['sites_disk_bytes'] ?? null)) {
+                    $disk[$owner['name']] = $owner['sites_disk_bytes'];
+                }
             }
         }
 
         return new self($generatedAt, $envVersion, $osId, $osVersion, $services,
-            array_values(array_filter(is_array($host['php_versions'] ?? null) ? $host['php_versions'] : [], 'is_string')), $sites, $owners);
+            array_values(array_filter(is_array($host['php_versions'] ?? null) ? $host['php_versions'] : [], 'is_string')), $sites, $owners,
+            PanelCapabilities::fromHostDescription($host), $blocked, $disk);
     }
 }

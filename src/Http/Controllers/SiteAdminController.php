@@ -11,8 +11,13 @@ use Illuminate\Http\Request;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\NoticeRedirect;
 use Larena\Env\Operations\PanelOperations;
+use Larena\Env\Gateway\PanelActor;
+use Larena\Env\Gateway\PanelCapabilities;
 use Larena\Env\Operations\SiteOperation;
+use Larena\Env\Server\ServerOverviewReader;
 use Larena\Env\Server\SiteDetailsReader;
+use Larena\Env\Server\SiteExtrasReader;
+use Larena\Env\Server\SiteLogView;
 
 /**
  * One site: what it runs on, its certificate, its backups and the last lines of its log, and the actions that belong
@@ -21,14 +26,19 @@ use Larena\Env\Server\SiteDetailsReader;
  */
 final readonly class SiteAdminController
 {
-    /** The card's tabs (Panel plan 2.3): its state and problems, domains and certificate, PHP, releases, log, access. */
-    private const array TABS = ['overview', 'domains', 'php', 'releases', 'log', 'access'];
+    /**
+     * The card's tabs (Panel plan 2.3 and 3): its state and problems, domains and certificate, PHP, its database, its
+     * backups, releases, log, access.
+     */
+    public const array TABS = ['overview', 'domains', 'php', 'database', 'backups', 'releases', 'log', 'access'];
     private const array LOG_KINDS = ['access', 'error'];
-    private const int LOG_LINES = 200;
+    /** How many of the last lines the log reads; the gateway gives at most 1000. */
+    public const array LOG_LINES = [200, 500, 1000];
 
     public function __construct(
         private SiteDetailsReader $sites,
-        private \Larena\Env\Server\ServerOverviewReader $overviews,
+        private ServerOverviewReader $overviews,
+        private SiteExtrasReader $extras,
         private PanelOperations $operations,
         private Factory $views,
         private Translator $translator,
@@ -39,27 +49,45 @@ final readonly class SiteAdminController
     {
         $actor = ResolvePanelActor::of($request);
         $result = $this->sites->read($actor, $domain);
+        $site = $result->site;
         $tab = in_array($request->query('tab'), self::TABS, true) ? (string) $request->query('tab') : self::TABS[0];
         $kind = in_array($request->query('log'), self::LOG_KINDS, true) ? (string) $request->query('log') : 'access';
+        $lines = in_array((int) $request->query('lines'), self::LOG_LINES, true) ? (int) $request->query('lines') : self::LOG_LINES[0];
+        $search = mb_substr(trim((string) $request->query('q')), 0, 128);
+        $groups = $kind === 'error' ? SiteLogView::LEVELS : SiteLogView::STATUS_GROUPS;
+        $group = in_array($request->query('group'), $groups, true) ? (string) $request->query('group') : '';
+        // What this server's gateway allows, and its PHP versions: the card offers only what will not be refused.
+        $overview = $site === null ? null : $this->overviews->read($actor)->overview;
+        $capabilities = $overview->capabilities ?? PanelCapabilities::none();
         // Each tab asks the gateway only for what it shows.
-        $log = $result->site === null || $tab !== 'log' ? null : $this->sites->log($actor, $domain, $kind, self::LOG_LINES);
-        $doctor = $result->site === null || $tab !== 'overview' ? null : $this->sites->doctor($actor, $domain);
-        $operations = $result->site === null ? [] : SiteOperation::offeredFor($result->site);
+        $log = $site === null || $tab !== 'log' ? null : $this->sites->log($actor, $domain, $kind, $lines);
+        $doctor = $site === null || $tab !== 'overview' ? null : $this->sites->doctor($actor, $domain);
+        $operations = $site === null ? [] : SiteOperation::offeredFor($site, $capabilities);
+        $ask = static fn (string $command, string $onTab): bool => $site !== null && $tab === $onTab && $capabilities->allows($command);
 
         return $this->views->make('larena-env::admin.site', [
             'domain' => $domain,
             'tab' => $tab,
             'tabs' => self::TABS,
             'doctor' => $doctor,
-            'phpVersions' => $tab === 'php' && $result->site !== null ? $this->phpVersions($actor) : [],
+            'phpVersions' => $tab === 'php' ? ($overview->phpVersions ?? []) : [],
+            'phpSettings' => $ask('site:php-ini-list', 'php') ? $this->extras->phpSettings($actor, $domain) : null,
+            'phpExtensions' => $ask('php:extensions', 'php') && $site->php !== 'none' ? $this->extras->phpExtensions($actor, $site->php) : null,
+            'databases' => $ask('db:list', 'database') ? $this->extras->databases($actor, $domain) : null,
+            'sftpAccounts' => $ask('access:list', 'access') ? $this->extras->sftpAccounts($actor, $domain) : null,
             'tabOperations' => array_values(array_filter($operations, static fn (SiteOperation $operation): bool => $operation->tab() === $tab)),
             'source' => $result->source,
-            'site' => $result->site,
+            'site' => $site,
             'refused' => $result->refused,
             'reasonText' => $result->reason === null ? null : $this->reasonText($result->reason),
             'logKind' => $kind,
             'logKinds' => self::LOG_KINDS,
-            'log' => $log?->log,
+            'logLines' => $lines,
+            'logLineChoices' => self::LOG_LINES,
+            'logSearch' => $search,
+            'logGroup' => $group,
+            'logGroups' => $groups,
+            'log' => $log?->log === null ? null : SiteLogView::of($log->log, $search, $group),
             'logReasonText' => $log === null || $log->reason === null ? null : $this->reasonText($log->reason),
             'notice' => $request->session()->get('larena_env_notice'),
         ]);
@@ -69,7 +97,7 @@ final readonly class SiteAdminController
     public function plan(Request $request, string $domain): mixed
     {
         $actor = ResolvePanelActor::of($request);
-        $operation = SiteOperation::tryFrom((string) $request->input('operation'));
+        $operation = $this->offered($actor, (string) $request->input('operation'));
         if ($operation === null) {
             return $this->back($request, $domain, 'not_allowed');
         }
@@ -95,7 +123,7 @@ final readonly class SiteAdminController
     public function run(Request $request, string $domain): RedirectResponse
     {
         $actor = ResolvePanelActor::of($request);
-        $operation = SiteOperation::tryFrom((string) $request->input('operation'));
+        $operation = $this->offered($actor, (string) $request->input('operation'));
         if ($operation === null) {
             return $this->back($request, $domain, 'not_allowed');
         }
@@ -131,10 +159,13 @@ final readonly class SiteAdminController
         return NoticeRedirect::to($request, route('larena.env.admin.site', ['domain' => $domain], false).'?tab='.$tab, $this->reasonText($reason));
     }
 
-    /** @return list<string> the server's PHP versions, which the PHP tab offers */
-    private function phpVersions(\Larena\Env\Gateway\PanelActor $actor): array
+    /** The action asked for, when it is one this server's gateway has: a form left from an older page is refused in words. */
+    private function offered(PanelActor $actor, string $code): ?SiteOperation
     {
-        return $this->overviews->read($actor)->overview->phpVersions ?? [];
+        $operation = SiteOperation::tryFrom($code);
+        $capabilities = $this->overviews->read($actor)->overview->capabilities ?? PanelCapabilities::none();
+
+        return $operation !== null && $capabilities->allows($operation->command()) ? $operation : null;
     }
 
     private function reasonText(string $reason): string

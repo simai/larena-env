@@ -36,6 +36,10 @@ final readonly class SiteDetails
         public bool $scheduler,
         // The account the site's code runs as: its own, or its owner's (simai-env's isolation).
         public ?string $runsAs = null,
+        // simai-env 1.27.0: what the health path answered (null: nothing, or not checked yet), and the directory's size.
+        public ?int $answers = null,
+        public bool $answersChecked = false,
+        public ?int $diskBytes = null,
     ) {
     }
 
@@ -88,6 +92,9 @@ final readonly class SiteDetails
             workers: $workers,
             scheduler: ($data['scheduler'] ?? false) === true,
             runsAs: is_string($data['runs_as'] ?? null) && $data['runs_as'] !== '' ? $data['runs_as'] : null,
+            answers: is_array($data['answers'] ?? null) && is_int($data['answers']['http'] ?? null) ? $data['answers']['http'] : null,
+            answersChecked: is_array($data['answers'] ?? null),
+            diskBytes: is_array($data['disk'] ?? null) && is_int($data['disk']['bytes'] ?? null) ? $data['disk']['bytes'] : null,
         );
     }
 }

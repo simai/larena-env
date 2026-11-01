@@ -25,12 +25,14 @@
             <section class="larena-panel larena-panel-padded" data-env-state="ok" aria-labelledby="env-site-facts">
                 <h2 id="env-site-facts">{{ __('larena-env::admin.site.facts') }}</h2>
                 <dl class="larena-recipe-facts">
+                    <div data-env-answers="{{ $site->answersChecked ? ($site->answers ?? 'none') : 'unchecked' }}"><dt>{{ __('larena-env::admin.sites.answers') }}</dt><dd>{{ !$site->answersChecked ? '—' : ($site->answers === null ? __('larena-env::admin.sites.answers_none') : __('larena-env::admin.sites.answers_code', ['code' => (string) $site->answers])) }}</dd></div>
                     <div><dt>{{ __('larena-env::admin.sites.owner') }}</dt><dd>{{ $site->owner ?? '—' }}</dd></div>
                     <div><dt>{{ __('larena-env::admin.sites.profile') }}</dt><dd>{{ $site->profile }}</dd></div>
                     <div><dt>{{ __('larena-env::admin.sites.php') }}</dt><dd>{{ $site->php }}</dd></div>
                     <div><dt>{{ __('larena-env::admin.sites.ssl') }}</dt><dd>{{ $site->ssl }}</dd></div>
                     <div><dt>{{ __('larena-env::admin.sites.database') }}</dt><dd>{{ $site->databaseEngine ?? '—' }}</dd></div>
                     <div><dt>{{ __('larena-env::admin.sites.release') }}</dt><dd>{{ $site->release ?? '—' }}</dd></div>
+                    <div data-env-disk><dt>{{ __('larena-env::admin.sites.disk') }}</dt><dd>{{ \Larena\Env\Server\Bytes::human($site->diskBytes) }}</dd></div>
                 </dl>
             </section>
             <section class="larena-panel larena-panel-padded" data-env-doctor="{{ $doctor?->status ?? 'unknown' }}" aria-labelledby="env-site-doctor">
@@ -47,25 +49,8 @@
                         @endforeach
                     </ul>
                 @endif
-            </section>
-            <section class="larena-panel larena-panel-padded" data-env-backups aria-labelledby="env-site-backups">
-                <h2 id="env-site-backups">{{ __('larena-env::admin.backups.title') }}</h2>
-                @if ($site->backupSchedule === null)
-                    <p>{{ __('larena-env::admin.backups.no_schedule') }}</p>
-                @else
-                    <p>{{ __('larena-env::admin.backups.schedule', ['time' => $site->backupSchedule->time ?? '—', 'keep' => $site->backupSchedule->keep ?? '—']) }}</p>
-                @endif
                 @if ($site->backups === [])
-                    <p>{{ __('larena-env::admin.backups.none') }}</p>
-                @else
-                    <ul class="larena-list">
-                        @foreach ($site->backups as $backup)
-                            <li data-env-backup="{{ $backup->name }}">
-                                {{ $backup->createdAt ?? $backup->name }} · {{ implode(', ', $backup->parts) }}
-                                @if ($backup->encrypted) · {{ __('larena-env::admin.backups.encrypted') }} @endif
-                            </li>
-                        @endforeach
-                    </ul>
+                    <p data-env-no-backup role="alert">{{ __('larena-env::admin.backups.none') }} <a href="{{ route('larena.env.admin.site', ['domain' => $domain], false) }}?tab=backups">{{ __('larena-env::admin.backups.go') }}</a></p>
                 @endif
             </section>
         @elseif ($tab === 'domains')
@@ -95,6 +80,70 @@
                     <div><dt>{{ __('larena-env::admin.runtime.workers') }}</dt><dd>{{ $site->workers === [] ? '—' : implode(', ', $site->workers) }}</dd></div>
                 </dl>
             </section>
+            @if ($phpSettings !== null)
+                <section class="larena-panel larena-panel-padded" data-env-php-settings aria-labelledby="env-site-php-settings">
+                    <h2 id="env-site-php-settings">{{ __('larena-env::admin.runtime.settings') }}</h2>
+                    @if ($phpSettings === [])
+                        <p>{{ __('larena-env::admin.runtime.settings_none') }}</p>
+                    @else
+                        <dl class="larena-recipe-facts">
+                            @foreach ($phpSettings as $setting)
+                                <div data-env-php-setting="{{ $setting->key }}"><dt>{{ $setting->key }}</dt><dd>{{ $setting->value }}@if ($setting->source !== null) · {{ $setting->source }}@endif</dd></div>
+                            @endforeach
+                        </dl>
+                    @endif
+                </section>
+            @endif
+            @if ($phpExtensions !== null)
+                <section class="larena-panel larena-panel-padded" data-env-php-extensions aria-labelledby="env-site-php-extensions">
+                    <h2 id="env-site-php-extensions">{{ __('larena-env::admin.runtime.extensions', ['php' => $site->php]) }}</h2>
+                    <ul class="larena-list">
+                        @foreach ($phpExtensions as $extension)
+                            <li data-env-php-extension="{{ $extension->name }}">{{ $extension->name }} · {{ $extension->enabled ? __('larena-env::admin.runtime.on') : __('larena-env::admin.runtime.off') }}</li>
+                        @endforeach
+                    </ul>
+                </section>
+            @endif
+        @elseif ($tab === 'database')
+            <section class="larena-panel larena-panel-padded" data-env-database="{{ $site->databaseEngine ?? 'none' }}" aria-labelledby="env-site-database">
+                <h2 id="env-site-database">{{ __('larena-env::admin.database.title') }}</h2>
+                @if ($site->databaseEngine === null)
+                    <p>{{ __('larena-env::admin.database.none') }}</p>
+                @else
+                    <dl class="larena-recipe-facts">
+                        <div><dt>{{ __('larena-env::admin.database.engine') }}</dt><dd>{{ $site->databaseEngine }}</dd></div>
+                    </dl>
+                    @if ($databases !== null)
+                        <ul class="larena-list">
+                            @foreach ($databases as $database)
+                                <li data-env-database-item="{{ $database->name }}">{{ $database->name }} · {{ \Larena\Env\Server\Bytes::human($database->sizeBytes) }}@if ($database->users !== []) · {{ implode(', ', $database->users) }}@endif</li>
+                            @endforeach
+                        </ul>
+                    @endif
+                    <p>{{ __('larena-env::admin.database.secrets') }}</p>
+                @endif
+            </section>
+        @elseif ($tab === 'backups')
+            <section class="larena-panel larena-panel-padded" data-env-backups aria-labelledby="env-site-backups">
+                <h2 id="env-site-backups">{{ __('larena-env::admin.backups.title') }}</h2>
+                @if ($site->backupSchedule === null)
+                    <p>{{ __('larena-env::admin.backups.no_schedule') }}</p>
+                @else
+                    <p>{{ __('larena-env::admin.backups.schedule', ['time' => $site->backupSchedule->time ?? '—', 'keep' => $site->backupSchedule->keep ?? '—']) }}</p>
+                @endif
+                @if ($site->backups === [])
+                    <p>{{ __('larena-env::admin.backups.none') }}</p>
+                @else
+                    <ul class="larena-list">
+                        @foreach ($site->backups as $backup)
+                            <li data-env-backup="{{ $backup->name }}">
+                                {{ $backup->createdAt ?? $backup->name }} · {{ \Larena\Env\Server\Bytes::human($backup->sizeBytes) }} · {{ implode(', ', $backup->parts) }}
+                                @if ($backup->encrypted) · {{ __('larena-env::admin.backups.encrypted') }} @endif
+                            </li>
+                        @endforeach
+                    </ul>
+                @endif
+            </section>
         @elseif ($tab === 'releases')
             <section class="larena-panel larena-panel-padded" data-env-releases aria-labelledby="env-site-releases">
                 <h2 id="env-site-releases">{{ __('larena-env::admin.releases.title') }}</h2>
@@ -109,17 +158,81 @@
         @elseif ($tab === 'log')
             <section class="larena-panel larena-panel-padded" data-env-log="{{ $logKind }}" aria-labelledby="env-site-log">
                 <h2 id="env-site-log">{{ __('larena-env::admin.log.title') }}</h2>
-                <p>
-                    @foreach ($logKinds as $kind)
-                        <a href="{{ route('larena.env.admin.site', ['domain' => $domain], false) }}?tab=log&amp;log={{ $kind }}" @if ($kind === $logKind) aria-current="page" @endif>{{ __('larena-env::admin.log.'.$kind) }}</a>
-                    @endforeach
-                </p>
+                <form method="get" action="{{ route('larena.env.admin.site', ['domain' => $domain], false) }}" class="larena-form" data-env-log-filter role="search">
+                    <input type="hidden" name="tab" value="log">
+                    <div class="larena-field">
+                        <label for="env-log-kind">{{ __('larena-env::admin.log.kind') }}</label>
+                        <select id="env-log-kind" name="log">
+                            @foreach ($logKinds as $kind)
+                                <option value="{{ $kind }}" @if ($kind === $logKind) selected @endif>{{ __('larena-env::admin.log.'.$kind) }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="larena-field">
+                        <label for="env-log-q">{{ __('larena-env::admin.log.search') }}</label>
+                        <input type="search" id="env-log-q" name="q" value="{{ $logSearch }}" maxlength="128">
+                    </div>
+                    <div class="larena-field">
+                        <label for="env-log-group">{{ __('larena-env::admin.log.'.($logKind === 'error' ? 'level' : 'status')) }}</label>
+                        <select id="env-log-group" name="group">
+                            <option value="">{{ __('larena-env::admin.log.all') }}</option>
+                            @foreach ($logGroups as $group)
+                                <option value="{{ $group }}" @if ($group === $logGroup) selected @endif>{{ $group }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="larena-field">
+                        <label for="env-log-lines">{{ __('larena-env::admin.log.lines') }}</label>
+                        <select id="env-log-lines" name="lines">
+                            @foreach ($logLineChoices as $count)
+                                <option value="{{ $count }}" @if ($count === $logLines) selected @endif>{{ $count }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="larena-form-actions">
+                        <button type="submit" class="larena-button">{{ __('larena-env::admin.log.show') }}</button>
+                    </div>
+                </form>
                 @if ($log === null)
                     <p>{{ $logReasonText ?? __('larena-env::admin.log.none') }}</p>
-                @elseif ($log->lines === [])
+                @elseif ($log->total === 0)
                     <p>{{ __('larena-env::admin.log.empty') }}</p>
                 @else
-                    <pre data-env-log-lines>{{ implode("\n", $log->lines) }}</pre>
+                    <p data-env-log-count>{{ __('larena-env::admin.log.count', ['shown' => (string) count($log->rows), 'total' => (string) $log->total]) }}</p>
+                    @if ($log->rows !== [])
+                        <div class="larena-table-scroll">
+                            <table class="larena-table" data-env-log-rows>
+                                <thead>
+                                    <tr>
+                                        <th scope="col">{{ __('larena-env::admin.log.time') }}</th>
+                                        @if ($logKind === 'error')
+                                            <th scope="col">{{ __('larena-env::admin.log.level') }}</th>
+                                        @else
+                                            <th scope="col">{{ __('larena-env::admin.log.status') }}</th>
+                                            <th scope="col">{{ __('larena-env::admin.log.request') }}</th>
+                                            <th scope="col">{{ __('larena-env::admin.log.address') }}</th>
+                                        @endif
+                                        <th scope="col">{{ __('larena-env::admin.log.line') }}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach ($log->rows as $row)
+                                        <tr data-env-log-row="{{ $row['status'] ?? $row['level'] ?? 'text' }}">
+                                            <td>{{ $row['time'] ?? '—' }}</td>
+                                            @if ($logKind === 'error')
+                                                <td>{{ $row['level'] ?? '—' }}</td>
+                                            @else
+                                                <td>{{ $row['status'] ?? '—' }}</td>
+                                                <td>{{ $row['method'] === null ? '—' : $row['method'].' '.$row['path'] }}</td>
+                                                <td>{{ $row['ip'] ?? '—' }}</td>
+                                            @endif
+                                            <td><code>{{ $row['text'] }}</code></td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @endif
                 @endif
             </section>
         @elseif ($tab === 'access')
@@ -130,6 +243,18 @@
                     <div><dt>{{ __('larena-env::admin.access.runs_as') }}</dt><dd>{{ $site->runsAs ?? '—' }}</dd></div>
                 </dl>
                 <p>{{ __('larena-env::admin.access.explain') }}</p>
+                @if ($sftpAccounts !== null)
+                    <h3>{{ __('larena-env::admin.access.sftp') }}</h3>
+                    @if ($sftpAccounts === [])
+                        <p>{{ __('larena-env::admin.access.sftp_none') }}</p>
+                    @else
+                        <ul class="larena-list">
+                            @foreach ($sftpAccounts as $account)
+                                <li data-env-sftp="{{ $account->login }}">{{ $account->login }} · {{ __('larena-env::admin.access.keys', ['count' => (string) $account->keys]) }} · {{ $account->enabled ? __('larena-env::admin.access.on') : __('larena-env::admin.access.off') }}</li>
+                            @endforeach
+                        </ul>
+                    @endif
+                @endif
             </section>
         @endif
 
@@ -153,15 +278,40 @@
                                             <option value="{{ $version }}" @if ($version === $site->php) selected @endif>{{ $version }}</option>
                                         @endforeach
                                     </select>
+                                @elseif ($field === 'backup')
+                                    <select id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}" required>
+                                        @foreach ($site->backups as $backup)
+                                            <option value="{{ $backup->name }}">{{ $backup->createdAt ?? $backup->name }}</option>
+                                        @endforeach
+                                    </select>
+                                @elseif ($field === 'login' && $operation !== \Larena\Env\Operations\SiteOperation::SftpCreate)
+                                    <select id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}" required>
+                                        @foreach ($sftpAccounts ?? [] as $account)
+                                            <option value="{{ $account->login }}">{{ $account->login }}</option>
+                                        @endforeach
+                                    </select>
+                                @elseif ($field === 'pubkey')
+                                    <textarea id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}" rows="3" required></textarea>
+                                @elseif ($field === 'time')
+                                    <input type="time" id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}" value="{{ $site->backupSchedule?->time ?? '03:00' }}">
+                                @elseif ($field === 'keep')
+                                    <input type="number" id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}" min="1" max="90" value="{{ $site->backupSchedule?->keep ?? '7' }}">
+                                @elseif (in_array($field, ['login', 'key', 'value'], true))
+                                    <input type="text" id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}" @if ($field !== 'value') required @endif maxlength="128">
                                 @else
-                                    <select id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}">
-                                        <option value="">{{ __('larena-env::admin.fields.default') }}</option>
+                                    <select id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}" @if ($field === 'enable') required @endif>
+                                        @if ($field !== 'enable')
+                                            <option value="">{{ __('larena-env::admin.fields.default') }}</option>
+                                        @endif
                                         <option value="yes">{{ __('larena-env::admin.yes') }}</option>
                                         <option value="no">{{ __('larena-env::admin.no') }}</option>
                                     </select>
                                 @endif
                             </div>
                         @endforeach
+                        @if (in_array($operation->value, ['backup-restore'], true))
+                            <p data-env-restore-note>{{ __('larena-env::admin.backups.restore_note') }}</p>
+                        @endif
                         <div class="larena-form-actions">
                             <button type="submit" class="larena-button">{{ __('larena-env::admin.operations.plan') }}</button>
                         </div>

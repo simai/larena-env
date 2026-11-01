@@ -57,6 +57,31 @@
         <p>{{ __('larena-env::admin.people.levels') }} <a href="/admin/users">{{ __('larena-env::admin.people.users_link') }}</a></p>
     </section>
 
+    @if ($owners !== [])
+        <section class="larena-panel larena-panel-padded" aria-labelledby="env-owners" data-env-owners>
+            <h2 id="env-owners">{{ __('larena-env::admin.people.navigation') }}</h2>
+            @if ($canBlock ?? false)
+                <p>{{ __('larena-env::admin.people.block_explain') }}</p>
+            @endif
+            <ul class="larena-list">
+                @foreach ($owners as $owner)
+                    <li data-env-owner="{{ $owner }}" data-env-owner-blocked="{{ in_array($owner, $blockedOwners ?? [], true) ? 'yes' : 'no' }}">
+                        {{ $owner }}@if (isset($ownerDisk[$owner])) · {{ __('larena-env::admin.people.disk', ['size' => \Larena\Env\Server\Bytes::human($ownerDisk[$owner])]) }}@endif
+                        @if (in_array($owner, $blockedOwners ?? [], true)) · <strong>{{ __('larena-env::admin.people.blocked') }}</strong>@endif
+                        @if ($canBlock ?? false)
+                            <form method="post" action="{{ route('larena.env.admin.people.owners.plan', [], false) }}" class="larena-inline-form">
+                                @csrf
+                                <input type="hidden" name="action" value="{{ in_array($owner, $blockedOwners ?? [], true) ? 'unblock' : 'block' }}">
+                                <input type="hidden" name="name" value="{{ $owner }}">
+                                <button type="submit" class="larena-button">{{ __('larena-env::admin.people.'.(in_array($owner, $blockedOwners ?? [], true) ? 'unblock' : 'block')) }}</button>
+                            </form>
+                        @endif
+                    </li>
+                @endforeach
+            </ul>
+        </section>
+    @endif
+
     <section class="larena-panel larena-panel-padded" aria-labelledby="env-new-owner" data-env-new-owner-form>
         <h2 id="env-new-owner">{{ __('larena-env::admin.people.new_owner') }}</h2>
         <p>{{ __('larena-env::admin.people.new_owner_explain') }}</p>

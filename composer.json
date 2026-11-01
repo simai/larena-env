@@ -162,6 +162,7 @@
             "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/EnvBootTest.php",
             "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/ServerScreenTest.php",
             "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/SiteScreenTest.php",
+            "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/SiteExtrasReaderTest.php",
             "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PanelOperationsTest.php",
             "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PanelActorResolverTest.php"
         ],

@@ -175,9 +175,18 @@ status, wizard = get("/admin/server/sites/new")
 assert status == 200 and "data-env-new-owner" in wizard, "the wizard, with whose the site is"
 _, planned = post("/admin/server/sites/new/plan", {"_token": form_token(wizard), "domain": "new.test", "profile": "static"})
 assert 'data-env-plan="site:add"' in planned, "a new site is planned"
-for tab in ("overview", "domains", "php", "releases", "log", "access"):
+for tab in ("overview", "domains", "php", "database", "backups", "releases", "log", "access"):
     status, card = get("/admin/server/sites/demo-php.test?tab=" + tab)
     assert status == 200 and 'data-env-tab="' + tab + '"' in card, ("tab", tab)
+    # The recorded server (simai-env 1.26.1, no list of its own) has no restore, SFTP or php.ini commands: none is offered.
+    for hiddenAction in ("backup-restore", "sftp-create", "php-setting", "database-password"):
+        assert 'data-env-operation="' + hiddenAction + '"' not in card, ("not offered", hiddenAction)
+_, logged = get("/admin/server/sites/demo-static.test?tab=log&q=curl&group=2xx&lines=500")
+assert "data-env-log-rows" in logged and 'data-env-log-row="200"' in logged, "the log narrows"
+_, overview = get("/admin/server")
+assert "HTTP 200" in overview, "a site that answers says so"
+_, spaces = get("/admin/server/people")
+assert 'data-env-owner="demo"' in spaces and 'name="action" value="block"' not in spaces, "no blocking on a server without it" 
 
 # The person signs in: their space only, no system screen.
 jar.clear()

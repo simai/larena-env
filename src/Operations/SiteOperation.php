@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Larena\Env\Operations;
 
+use Larena\Env\Gateway\PanelCapabilities;
 use Larena\Env\Server\SiteDetails;
 
 /**
@@ -15,10 +16,23 @@ enum SiteOperation: string
     case CertificateIssue = 'certificate-issue';
     case CertificateRenew = 'certificate-renew';
     case Backup = 'backup';
+    case BackupRestore = 'backup-restore';
+    case BackupVerify = 'backup-verify';
+    case BackupSchedule = 'backup-schedule';
     case Rollback = 'rollback';
     case ServiceRestart = 'service-restart';
     case QueueRestart = 'queue-restart';
     case PhpVersion = 'php-version';
+    case PhpSetting = 'php-setting';
+    case PhpSettingRemove = 'php-setting-remove';
+    case DatabaseCreate = 'database-create';
+    case DatabasePassword = 'database-password';
+    case DatabaseExport = 'database-export';
+    case SftpCreate = 'sftp-create';
+    case SftpAddKey = 'sftp-add-key';
+    case SftpDisable = 'sftp-disable';
+    case SftpEnable = 'sftp-enable';
+    case SftpRemove = 'sftp-remove';
 
     public function command(): string
     {
@@ -26,10 +40,23 @@ enum SiteOperation: string
             self::CertificateIssue => 'ssl:letsencrypt',
             self::CertificateRenew => 'ssl:renew',
             self::Backup => 'backup:data',
+            self::BackupRestore => 'backup:data-restore',
+            self::BackupVerify => 'backup:data-verify',
+            self::BackupSchedule => 'backup:data-schedule',
             self::Rollback => 'site:deploy-rollback',
             self::ServiceRestart => 'site:service-restart',
             self::QueueRestart => 'queue:restart',
             self::PhpVersion => 'site:set-php',
+            self::PhpSetting => 'site:php-ini-set',
+            self::PhpSettingRemove => 'site:php-ini-unset',
+            self::DatabaseCreate => 'site:db-create',
+            self::DatabasePassword => 'site:db-rotate',
+            self::DatabaseExport => 'site:db-export',
+            self::SftpCreate => 'access:create-project',
+            self::SftpAddKey => 'access:add-key',
+            self::SftpDisable => 'access:disable',
+            self::SftpEnable => 'access:enable',
+            self::SftpRemove => 'access:remove',
         };
     }
 
@@ -38,39 +65,64 @@ enum SiteOperation: string
     {
         return match ($this) {
             self::CertificateIssue, self::CertificateRenew => 'domains',
-            self::PhpVersion, self::ServiceRestart, self::QueueRestart => 'php',
+            self::PhpVersion, self::PhpSetting, self::PhpSettingRemove, self::ServiceRestart, self::QueueRestart => 'php',
+            self::DatabaseCreate, self::DatabasePassword, self::DatabaseExport => 'database',
+            self::Backup, self::BackupRestore, self::BackupVerify, self::BackupSchedule => 'backups',
             self::Rollback => 'releases',
-            self::Backup => 'overview',
+            self::SftpCreate, self::SftpAddKey, self::SftpDisable, self::SftpEnable, self::SftpRemove => 'access',
         };
     }
 
-    /** The form fields this action asks for, by name: `email` is text, `php` a version of the server, `db` and `files` yes or no. */
+    /**
+     * The form fields this action asks for, by name: `email`, `login` and `value` are text, `pubkey` a public key,
+     * `php` a version of the server, `backup` a backup of the site, `key` a `php.ini` setting, `time` a time of day,
+     * `keep` a number of backups, and `db`, `files`, `enable` yes or no.
+     *
+     * @return list<string>
+     */
     public function fields(): array
     {
         return match ($this) {
             self::CertificateIssue => ['email', 'redirect', 'hsts', 'staging'],
             self::Backup => ['db', 'files'],
+            self::BackupRestore => ['backup', 'db', 'files'],
+            self::BackupVerify => ['backup'],
+            self::BackupSchedule => ['enable', 'time', 'keep'],
             self::PhpVersion => ['php'],
+            self::PhpSetting => ['key', 'value'],
+            self::PhpSettingRemove => ['key'],
+            self::SftpCreate => ['login', 'pubkey'],
+            self::SftpAddKey => ['login', 'pubkey'],
+            self::SftpDisable, self::SftpEnable, self::SftpRemove => ['login'],
             default => [],
         };
+    }
+
+    /** An SFTP account's own action names the account, not the site: the gateway checks it belongs to the site's owner. */
+    public function namesSite(): bool
+    {
+        return !in_array($this, [self::SftpAddKey, self::SftpDisable, self::SftpEnable, self::SftpRemove], true);
     }
 
     /**
      * Whether the site can be asked for this at all, so the screen offers nothing that would only be refused.
      * A site without a certificate has nothing to renew; without a previous release nothing to roll back to;
-     * without workers no queue; a site nginx serves without its own service has nothing to restart.
+     * without workers no queue; a site nginx serves without its own service has nothing to restart; a site without
+     * PHP has no version or settings; without a database nothing to export; without backups nothing to restore.
      */
     public function suitsSite(SiteDetails $site): bool
     {
         return match ($this) {
-            self::CertificateIssue => true,
             self::CertificateRenew => $site->certificate !== null,
-            self::Backup => true,
             self::Rollback => $site->previousRelease !== null,
             self::ServiceRestart => $site->service !== null,
             self::QueueRestart => $site->workers !== [],
-            // A site without PHP (static, a redirect) has no version to change.
-            self::PhpVersion => $site->php !== 'none',
+            self::PhpVersion, self::PhpSetting, self::PhpSettingRemove => $site->php !== 'none',
+            // A database is made for a site that runs code and has none yet.
+            self::DatabaseCreate => $site->databaseEngine === null && $site->php !== 'none',
+            self::DatabasePassword, self::DatabaseExport => $site->databaseEngine !== null,
+            self::BackupRestore, self::BackupVerify => $site->backups !== [],
+            default => true,
         };
     }
 
@@ -84,7 +136,7 @@ enum SiteOperation: string
      */
     public function arguments(string $domain, array $input): array
     {
-        $args = ['domain' => $domain];
+        $args = $this->namesSite() ? ['domain' => $domain] : [];
         foreach ($this->fields() as $field) {
             $value = $input[$field] ?? null;
             if (is_string($value) && $value !== '') {
@@ -95,9 +147,16 @@ enum SiteOperation: string
         return $args;
     }
 
-    /** @return list<self> */
-    public static function offeredFor(SiteDetails $site): array
+    /**
+     * What the site can be asked for on this server: the actions that suit the site and whose command its gateway has.
+     *
+     * @return list<self>
+     */
+    public static function offeredFor(SiteDetails $site, ?PanelCapabilities $capabilities = null): array
     {
-        return array_values(array_filter(self::cases(), static fn (self $operation): bool => $operation->suitsSite($site)));
+        $capabilities ??= PanelCapabilities::none();
+
+        return array_values(array_filter(self::cases(),
+            static fn (self $operation): bool => $operation->suitsSite($site) && $capabilities->allows($operation->command())));
     }
 }

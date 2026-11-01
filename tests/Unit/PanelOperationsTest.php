@@ -28,7 +28,7 @@ env_assert(PanelCommands::kind('site:describe') === PanelCommands::READ, 'A read
 env_assert(PanelCommands::kind('backup:data') === PanelCommands::ACTION, 'An action.');
 env_assert(PanelCommands::kind('job:status') === PanelCommands::JOB, 'A job command.');
 env_assert(PanelCommands::kind('site:remove') === null && PanelCommands::kind('self:bootstrap') === null, 'Commands this package may not send.');
-env_assert(count(PanelCommands::actions()) === 9, 'The six actions of the site\'s card, its PHP version, a new site and a new owner.');
+env_assert(count(PanelCommands::actions()) === 24, 'The card\'s actions, a new site, and creating, blocking and unblocking an owner.');
 
 // Only an action is ever confirmed.
 $refusedConfirm = null;
@@ -76,8 +76,27 @@ env_assert($cancelled->status === null && $cancelled->reason === PanelReason::RE
 // The screen offers only what the site can be asked for.
 $site = (new SiteDetailsReader($gateway))->read(new PanelActor($user), 'demo-php.test')->site;
 env_assert($site instanceof SiteDetails, 'The site reads.');
-$offered = array_map(static fn (SiteOperation $operation): string => $operation->value, SiteOperation::offeredFor($site));
+$capabilities = (new \Larena\Env\Server\ServerOverviewReader($gateway))->read(new PanelActor($user))->overview?->capabilities;
+env_assert($capabilities instanceof \Larena\Env\Gateway\PanelCapabilities, 'The server says what its gateway has.');
+$offered = array_map(static fn (SiteOperation $operation): string => $operation->value, SiteOperation::offeredFor($site, $capabilities));
 env_assert($offered === ['certificate-issue', 'backup', 'php-version'], 'Without a certificate, a previous release, workers or a service: '.implode(',', $offered));
+env_assert(SiteOperation::offeredFor($site) === [], 'Without knowing the server, nothing is offered.');
+
+// What no simai-env release has yet is offered only when the server lists it among its gateway's commands.
+$recorded = \Larena\Env\Gateway\PanelCapabilities::fromHostDescription(['simai_env' => ['version' => '1.26.1']]);
+env_assert($recorded->allows('backup:data') && !$recorded->allows('owner:block') && !$recorded->allows('backup:data-restore'), 'By the release: 1.26 has backups, not blocking or restoring.');
+env_assert(\Larena\Env\Gateway\PanelCapabilities::fromHostDescription(['simai_env' => ['version' => '1.27.0']])->allows('owner:block'), 'Blocking came with 1.27.0.');
+$listed = \Larena\Env\Gateway\PanelCapabilities::fromHostDescription(['simai_env' => ['version' => '1.27.0'], 'gate' => ['commands' => ['site:describe', 'backup:data', 'backup:data-restore', 'site:db-rotate']]]);
+env_assert($listed->allows('backup:data-restore') && !$listed->allows('site:set-php') && !$listed->allows('site:remove'), 'The server\'s own list wins, and only for commands this panel knows.');
+$withRestore = array_map(static fn (SiteOperation $operation): string => $operation->value, SiteOperation::offeredFor($site, $listed));
+env_assert($withRestore === ['backup', 'backup-restore', 'database-password'], 'A listed command appears where the site suits it: '.implode(',', $withRestore));
+
+// SFTP access names its account; a site's own new access names the site.
+env_assert(SiteOperation::SftpDisable->arguments('demo-php.test', ['login' => 'dev']) === ['login' => 'dev'], 'An account\'s own action does not send the site.');
+env_assert(SiteOperation::SftpCreate->arguments('demo-php.test', ['login' => 'dev', 'pubkey' => 'ssh-ed25519 AAAA']) === ['domain' => 'demo-php.test', 'login' => 'dev', 'pubkey' => 'ssh-ed25519 AAAA'], 'A new access is the site\'s.');
+foreach (SiteOperation::cases() as $operation) {
+    env_assert(PanelCommands::kind($operation->command()) === PanelCommands::ACTION, "{$operation->value} is an action of the table.");
+}
 env_assert(SiteOperation::Backup->arguments('demo-php.test', ['db' => 'yes', 'files' => ''])  === ['domain' => 'demo-php.test', 'db' => 'yes'], 'An empty field is simply not sent.');
 env_assert(SiteOperation::CertificateIssue->fields() === ['email', 'redirect', 'hsts', 'staging'], 'The fields the certificate asks for.');
 
