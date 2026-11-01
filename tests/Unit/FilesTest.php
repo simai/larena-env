@@ -182,8 +182,11 @@ $overlay = new PanelOperations($gateway);
 file_put_contents($directory.'/overlay.conf', "add_header X-Test 1;\n");
 $set = $overlay->startCommand($admin, 'site:nginx-overlay-set', ['domain' => 'demo-php.test'], PanelAttachment::fromFile($directory.'/overlay.conf'));
 $current = $files->overlay($admin, 'demo-php.test');
-env_assert($set->jobId !== null && is_array($current) && $current['content'] === "add_header X-Test 1;\n" && $current['pending'] !== null, 'Directives applied, waiting to be kept.');
-$overlay->startCommand($admin, 'site:nginx-overlay-confirm', ['domain' => 'demo-php.test', 'change' => (string) $current['pending']]);
-env_assert($files->overlay($admin, 'demo-php.test')['pending'] === null, 'Kept once confirmed.');
+env_assert($set->jobId !== null && is_array($current) && $current['content'] === "add_header X-Test 1;\n" && $current['pending'] !== null
+    && is_string($current['expires']), 'Directives applied, waiting to be kept until a time.');
+// One confirmation for every timed change (simai-env): it names the change only.
+$kept = $overlay->startCommand($admin, 'change:confirm', ['change_id' => (string) $current['pending']]);
+env_assert($kept->jobId !== null && $files->overlay($admin, 'demo-php.test')['pending'] === null, 'Kept once confirmed.');
+env_assert($overlay->startCommand($admin, 'change:confirm', ['change_id' => (string) $current['pending']])->reason === 'unknown_change', 'A change kept already is unknown.');
 
 echo "FilesTest passed.\n";

@@ -11,6 +11,9 @@
         @if ($overlay['pending'] !== null)
             <div role="alert" data-env-nginx-pending="{{ $overlay['pending'] }}">
                 <p>{{ __('larena-env::admin.nginx.pending') }}</p>
+                @if (($overlay['expires'] ?? null) !== null)
+                    <p data-env-nginx-expires>{{ __('larena-env::admin.nginx.pending_until', ['time' => \Larena\Env\Server\Moment::human($overlay['expires'])]) }}</p>
+                @endif
                 @if ($overlayAllows['confirm'])
                     <form method="post" action="{{ route('larena.env.admin.site.nginx.plan', ['domain' => $domain], false) }}" data-env-nginx-op="overlay-confirm">
                         @csrf

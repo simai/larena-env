@@ -12,7 +12,7 @@ final readonly class PanelRequest
     private const string REQUEST_ID_PATTERN = '/\A[A-Za-z0-9._:-]{1,64}\z/D';
 
     /**
-     * @param array<string, string> $args option names without `--` => strings
+     * @param array<string, string|list<string>> $args option names without `--` => strings; a list only where the gateway takes one (fs:archive paths)
      *
      * @throws PanelRefused
      */
@@ -57,7 +57,7 @@ final readonly class PanelRequest
     }
 
     /**
-     * @param array<string, string> $args
+     * @param array<string, string|list<string>> $args
      *
      * @throws PanelRefused
      */
@@ -69,7 +69,7 @@ final readonly class PanelRequest
     /**
      * What an action would do, without doing it: the gateway answers `kind: plan` and nothing runs.
      *
-     * @param array<string, string> $args
+     * @param array<string, string|list<string>> $args
      *
      * @throws PanelRefused
      */
@@ -81,7 +81,7 @@ final readonly class PanelRequest
     /**
      * The same action, confirmed: the gateway starts it as a job and answers `kind: job`.
      *
-     * @param array<string, string> $args
+     * @param array<string, string|list<string>> $args
      *
      * @throws PanelRefused
      */

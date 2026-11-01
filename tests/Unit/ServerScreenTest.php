@@ -54,6 +54,12 @@ function route(string $name, array $parameters = [], bool $absolute = true): str
     return '/admin/server';
 }
 
+// A server's alert is acknowledged by a form, as on the site card.
+function csrf_field(): string
+{
+    return '<input type="hidden" name="_token" value="test">';
+}
+
 // Both languages have the same keys.
 $russian = require dirname(__DIR__, 2).'/resources/lang/ru/admin.php';
 $flatten = static fn (array $tree): array => array_keys(Illuminate\Support\Arr::dot($tree));
@@ -133,6 +139,21 @@ $listed = $state(['overview' => $overview, 'sitesView' => ['stub' => true], 'war
 env_assert(strpos($listed, 'data-env-warnings') < strpos($listed, 'stub-dataview'), 'The sites screen says what needs attention above the list.');
 env_assert(str_contains($state(['overview' => $overview, 'sitesView' => ['stub' => true], 'warnings' => []]), 'data-env-warnings-none'), 'Nothing to say is said too.');
 env_assert(!str_contains($ok, 'data-env-warnings'), 'Warnings not read, none drawn.');
+// The server's own alerts (simai-env 1.31.0): said where they come from; an open one is acknowledged by plan, an
+// acknowledged one says by whom; without the right, no form.
+$alerts = \Larena\Env\Alerts\ServerAlerts::fromData(['alerts' => [
+    ['id' => 'a1', 'kind' => 'backup_failed', 'severity' => 'warning', 'domain' => 'demo-php.test', 'message' => 'failed', 'state' => 'open'],
+    ['id' => 'a2', 'kind' => 'cert_expiring', 'severity' => 'critical', 'domain' => 'demo-php.test', 'message' => '2 days', 'state' => 'acked',
+        'acked_by' => 'admin@stand.test', 'acked_at' => '2026-01-01T00:00:00Z'],
+]]);
+$fromServer = \Larena\Env\Warnings\PanelWarnings::fromAlerts($alerts, ['demo-php.test'], true);
+$alerted = $state(['overview' => $overview, 'sitesView' => ['stub' => true], 'warnings' => $fromServer, 'fromServer' => true, 'canAcknowledge' => true,
+    'warningsBack' => '/admin/server']);
+env_assert(str_contains($alerted, 'data-env-warnings-from-server') && str_contains($alerted, 'data-env-alert-ack="a1"') && !str_contains($alerted, 'data-env-alert-ack="a2"')
+    && str_contains($alerted, 'data-env-alert-acked') && str_contains($alerted, 'admin@stand.test') && str_contains($alerted, 'name="back" value="/admin/server"')
+    && strpos($alerted, 'data-env-alert="a2"') < strpos($alerted, 'data-env-alert="a1"'), 'The server\'s alerts, the critical first: '.$alerted);
+env_assert(!str_contains($state(['overview' => $overview, 'sitesView' => ['stub' => true], 'warnings' => $fromServer, 'fromServer' => true]), 'data-env-alert-ack="'),
+    'Without the right to change sites, nothing to acknowledge.');
 
 // The load history (Panel plan 4.6): a line per measure, a legend in words, nothing drawn without measurements.
 $history = ['day' => new \Larena\Env\History\MetricHistory('day', ['load' => [[0.1, 20.0], [0.9, 60.0]], 'disk:/' => [[0.5, 40.0]]], 2, '2026-11-01 01:00:00', '2026-11-01 11:00:00'),
@@ -140,6 +161,22 @@ $history = ['day' => new \Larena\Env\History\MetricHistory('day', ['load' => [[0
 $drawn = $state(['section' => 'overview', 'overview' => $overview, 'history' => $history]);
 env_assert(str_contains($drawn, 'data-env-history-chart="day"') && str_contains($drawn, '<polyline') && str_contains($drawn, '<circle')
     && str_contains($drawn, 'data-env-history-line="disk:/"') && str_contains($drawn, $text('history.disk', ['mount' => '/'])) && str_contains($drawn, 'data-env-history-none="week"'), 'The history is drawn: '.$drawn);
+env_assert(!str_contains($drawn, 'data-env-history-from-server') && str_contains($state(['section' => 'overview', 'overview' => $overview, 'history' => $history,
+    'historyFromServer' => true]), 'data-env-history-from-server'), 'The server\'s own history says so.');
+
+// Where the server sends its alerts (simai-env 1.31.0): the channel now, its last sending and error, the form with a
+// token field that is never filled, and a test; a server without it says so and offers nothing.
+$channel = static fn (array $data): string => $factory->make('larena-env::admin.alerts', $data + ['supported' => true, 'canTest' => true, 'channel' => null, 'notice' => null])->render();
+$telegram = $channel(['channel' => ['kind' => 'telegram', 'target_hint' => 'chat …4567', 'last_sent_at' => '2026-01-01T00:00:00Z', 'last_error' => 'timeout <b>']]);
+env_assert(str_contains($telegram, 'data-env-alerts-channel="telegram"') && str_contains($telegram, 'chat …4567') && str_contains($telegram, '2026-01-01 00:00 UTC')
+    && str_contains($telegram, 'timeout &lt;b&gt;') && str_contains($telegram, 'type="password" id="env-alerts-token" name="token"')
+    && !preg_match('/name="token"[^>]*value=/', $telegram) && str_contains($telegram, 'data-env-alerts-test'), 'The channel: '.$telegram);
+$off = $channel([]);
+env_assert(str_contains($off, 'data-env-alerts-channel="off"') && str_contains($off, $text('alerts.never')) && str_contains($off, $text('alerts.no_error')), 'Nowhere yet.');
+$older = $channel(['supported' => false, 'canTest' => false]);
+env_assert(str_contains($older, 'data-env-alerts-unsupported') && !str_contains($older, 'data-env-alerts-form'), 'An older server: nothing to change.');
+$alertsSource = (string) file_get_contents(dirname(__DIR__, 2).'/resources/views/admin/alerts.blade.php');
+env_assert(!str_contains($alertsSource, '{!!') && preg_match('/<style\b|<script\b|@php\b/i', $alertsSource) !== 1, 'The alerts view prints nothing raw and holds no script.');
 env_assert(!str_contains($loaded, $text('metrics.swap')), 'No swap, no swap line.');
 env_assert(!str_contains($ok, 'data-env-metrics'), 'Without the server\'s numbers, no load section.');
 env_assert(!str_contains($live, 'data-env-source'), 'A live server has no such notice.');

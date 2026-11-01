@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Larena\Env\Server;
 
+use Larena\Env\Alerts\ServerAlerts;
 use Larena\Env\Contracts\PanelGateway;
+use Larena\Env\History\MetricHistory;
 use Larena\Env\Gateway\PanelActor;
 use Larena\Env\Gateway\PanelRefused;
 use Larena\Env\Gateway\PanelRequest;
@@ -54,6 +56,26 @@ final readonly class SiteExtrasReader
         $data = $this->data($actor, 'self:metrics', []);
 
         return $data === null ? null : ServerMetrics::fromData($data);
+    }
+
+    /** The server's own alerts (simai-env 1.31.0): an owner's are their sites' only. */
+    public function alerts(PanelActor $actor): ?ServerAlerts
+    {
+        $data = $this->data($actor, 'self:alerts', []);
+
+        return $data === null ? null : ServerAlerts::fromData($data);
+    }
+
+    /**
+     * The load the server kept itself (simai-env 1.31.0, administrator only), ready to draw.
+     *
+     * @param 'day'|'week'|'month' $period
+     */
+    public function metricsHistory(PanelActor $actor, string $period): ?MetricHistory
+    {
+        $data = $this->data($actor, 'self:metrics-history', ['period' => $period]);
+
+        return $data === null ? null : MetricHistory::fromServer($period, $data);
     }
 
     /**

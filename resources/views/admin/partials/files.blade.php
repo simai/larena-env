@@ -34,15 +34,19 @@
             @if ($files['text']['binary'])
                 <p data-env-files-binary>{{ __('larena-env::admin.files.binary') }}</p>
             @else
+                {{-- Only the start of a longer file came: it is shown, never saved, or the rest would be lost. --}}
+                @if ($files['text']['truncated'] ?? false)
+                    <p data-env-files-text-truncated role="note">{{ __('larena-env::admin.files.text_truncated') }}</p>
+                @endif
                 <form method="post" action="{{ route('larena.env.admin.site.files.plan', ['domain' => $domain], false) }}" class="larena-form" data-env-files-editor>
                     @csrf
                     <input type="hidden" name="op" value="write">
                     <input type="hidden" name="path" value="{{ $files['view'] }}">
                     <div class="larena-field">
                         <label for="env-files-content">{{ __('larena-env::admin.files.content', ['name' => basename($files['view'])]) }}</label>
-                        <textarea id="env-files-content" name="content" rows="18" spellcheck="false" style="font-family: var(--sf-font-mono, monospace); width: 100%; white-space: pre; overflow-x: auto;" @if (!$files['allows']['write']) readonly @endif>{{ $files['text']['content'] }}</textarea>
+                        <textarea id="env-files-content" name="content" rows="18" spellcheck="false" style="font-family: var(--sf-font-mono, monospace); width: 100%; white-space: pre; overflow-x: auto;" @if (!$files['allows']['write'] || ($files['text']['truncated'] ?? false)) readonly @endif>{{ $files['text']['content'] }}</textarea>
                     </div>
-                    @if ($files['allows']['write'])
+                    @if ($files['allows']['write'] && !($files['text']['truncated'] ?? false))
                         <p>{{ __('larena-env::admin.files.save_note') }}</p>
                         <div class="larena-form-actions"><button type="submit" class="larena-button">{{ __('larena-env::admin.files.save') }}</button></div>
                     @endif

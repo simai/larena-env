@@ -26,10 +26,11 @@ final readonly class WarningLedger
      * Keeps the warnings seen now and answers the ones to tell people about.
      *
      * @param list<PanelWarning> $warnings
+     * @param bool $remind whether one that lasts is told again each day; the server's alerts are told once per state
      *
      * @return list<PanelWarning>
      */
-    public function due(array $warnings, DateTimeImmutable $now): array
+    public function due(array $warnings, DateTimeImmutable $now, bool $remind = true): array
     {
         $at = $now->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s');
         $remindBefore = $now->modify('-'.self::REMIND_HOURS.' hours')->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s');
@@ -44,7 +45,7 @@ final readonly class WarningLedger
             $seen[] = $key;
             $row = $known[$key] ?? null;
             $worse = $row !== null && (string) $row->severity !== PanelWarning::ERROR && $warning->severity === PanelWarning::ERROR;
-            $tell = $row === null || $worse || (string) $row->notified_at < $remindBefore;
+            $tell = $row === null || $worse || ($remind && (string) $row->notified_at < $remindBefore);
             if ($tell) {
                 $due[] = $warning;
             }

@@ -48,6 +48,15 @@ final class PanelCommands
     private const string FS_TRASH_ID = '/\A[A-Za-z0-9][A-Za-z0-9._-]{0,127}\z/D';
     private const string FS_FORMAT = '/\A(?:zip|tar\.gz)\z/D';
     private const string CHANGE_ID = '/\A[A-Za-z0-9][A-Za-z0-9._-]{0,63}\z/D';
+    // The server's alerts and where it sends them (simai-env 1.31.0). A webhook is https only; a Telegram chat is its
+    // id or @name; the bot's token travels as text and reaches the command as a file, shown as (stored) everywhere.
+    private const string ALERT_ID = '/\A[A-Za-z0-9][A-Za-z0-9._-]{0,63}\z/D';
+    private const string ALERT_CHANNEL = '/\A(?:webhook|telegram|off)\z/D';
+    private const string ALERT_TARGET = '/\A(?:https:\/\/[!-~]{1,500}|-?[0-9]{1,20}|@[A-Za-z0-9_]{5,32})\z/D';
+    private const string BOT_TOKEN = '/\A[0-9]{5,12}:[A-Za-z0-9_-]{30,64}\z/D';
+    private const string PERIOD = '/\A(?:day|week|month)\z/D';
+    /** The one argument the gateway takes as a list: fs:archive's paths, up to 100, each checked as a path. */
+    private const array LIST_ARGUMENTS = ['fs:archive' => ['paths' => 100]];
 
     /**
      * `since`: the first simai-env release whose gateway allows the command; null for one no release has yet.
@@ -95,6 +104,13 @@ final class PanelCommands
             'required' => ['domain', 'name', 'value'], 'since' => '1.28.0', 'kind' => self::ACTION],
         'site:php-ini-unset' => ['args' => ['domain' => self::DOMAIN, 'name' => self::INI_KEY], 'required' => ['domain', 'name'], 'since' => '1.28.0', 'kind' => self::ACTION],
         'self:metrics' => ['args' => [], 'required' => [], 'since' => '1.28.0', 'kind' => self::READ],
+        // The server's own watch, also while the panel is closed or down, its channel and its load history (1.31.0).
+        'self:alerts' => ['args' => [], 'required' => [], 'since' => '1.31.0', 'kind' => self::READ],
+        'self:alerts-ack' => ['args' => ['id' => self::ALERT_ID], 'required' => ['id'], 'since' => '1.31.0', 'kind' => self::ACTION],
+        'self:alerts-channel' => ['args' => ['kind' => self::ALERT_CHANNEL, 'target' => self::ALERT_TARGET, 'token' => self::BOT_TOKEN],
+            'required' => ['kind'], 'since' => '1.31.0', 'kind' => self::ACTION],
+        'self:alerts-test' => ['args' => [], 'required' => [], 'since' => '1.31.0', 'kind' => self::ACTION],
+        'self:metrics-history' => ['args' => ['period' => self::PERIOD], 'required' => ['period'], 'since' => '1.31.0', 'kind' => self::READ],
         // SFTP accounts of a site, by key only: there is no password argument (simai-env 1.30.0).
         'access:list' => ['args' => ['domain' => self::DOMAIN], 'required' => [], 'since' => '1.30.0', 'kind' => self::READ],
         'access:create-project' => ['args' => ['domain' => self::DOMAIN, 'login' => self::LOGIN, 'pubkey' => self::PUBKEY],
@@ -124,7 +140,10 @@ final class PanelCommands
         'site:nginx-overlay-get' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => null, 'kind' => self::READ],
         'site:nginx-overlay-set' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => null, 'kind' => self::ACTION],
         'site:nginx-overlay-clear' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => null, 'kind' => self::ACTION],
-        'site:nginx-overlay-confirm' => ['args' => ['domain' => self::DOMAIN, 'change' => self::CHANGE_ID], 'required' => ['domain', 'change'], 'since' => null, 'kind' => self::ACTION],
+        // A timed change kept by the person who made it (the firewall, the panel's access, nginx directives): without the
+        // confirmation in time, the server puts the previous one back by itself.
+        'change:confirm' => ['args' => ['change_id' => self::CHANGE_ID], 'required' => ['change_id'], 'since' => null, 'kind' => self::ACTION],
+        'change:status' => ['args' => ['change_id' => self::CHANGE_ID], 'required' => ['change_id'], 'since' => null, 'kind' => self::READ],
         'job:status' => ['args' => ['job_id' => self::JOB_ID], 'required' => ['job_id'], 'since' => '1.21.0', 'kind' => self::JOB],
         'job:log' => ['args' => ['job_id' => self::JOB_ID, 'after' => self::CURSOR], 'required' => ['job_id'], 'since' => '1.21.0', 'kind' => self::JOB],
         'job:cancel' => ['args' => ['job_id' => self::JOB_ID], 'required' => ['job_id'], 'since' => '1.21.0', 'kind' => self::JOB],
@@ -202,7 +221,7 @@ final class PanelCommands
     }
 
     /**
-     * @param array<array-key, mixed> $args
+     * @param array<array-key, mixed> $args a list only where LIST_ARGUMENTS allows one
      *
      * @throws PanelRefused
      */
@@ -218,8 +237,12 @@ final class PanelCommands
         }
         foreach ($args as $name => $value) {
             $pattern = $rules['args'][$name] ?? null;
-            if ($pattern === null || !is_string($value) || preg_match($pattern, $value) !== 1) {
-                throw new PanelRefused(PanelReason::INVALID_ARGUMENT);
+            $most = self::LIST_ARGUMENTS[$command][$name] ?? null;
+            $values = $most !== null && is_array($value) && array_is_list($value) && $value !== [] && count($value) <= $most ? $value : [$value];
+            foreach ($values as $item) {
+                if ($pattern === null || !is_string($item) || preg_match($pattern, $item) !== 1) {
+                    throw new PanelRefused(PanelReason::INVALID_ARGUMENT);
+                }
             }
         }
         foreach ($rules['required'] as $name) {

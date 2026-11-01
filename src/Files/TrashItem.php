@@ -6,7 +6,7 @@ namespace Larena\Env\Files;
 
 use UnexpectedValueException;
 
-/** Something in a site's trash, as fs:trash-list answers it: where it was and when it went there. */
+/** Something in a site's trash, as fs:trash-list answers it: its name, where it was and when it went there. */
 final readonly class TrashItem
 {
     public function __construct(
@@ -15,6 +15,7 @@ final readonly class TrashItem
         public ?string $deletedAt,
         public ?string $type,
         public ?int $size,
+        public ?string $name = null,
     ) {
     }
 
@@ -32,6 +33,7 @@ final readonly class TrashItem
         }
 
         return new self($id, $path, is_string($data['deleted_at'] ?? null) ? $data['deleted_at'] : null,
-            is_string($data['type'] ?? null) ? $data['type'] : null, is_int($data['size'] ?? null) ? $data['size'] : null);
+            is_string($data['type'] ?? null) ? $data['type'] : null, is_int($data['size'] ?? null) ? $data['size'] : null,
+            is_string($data['name'] ?? null) && $data['name'] !== '' ? $data['name'] : null);
     }
 }

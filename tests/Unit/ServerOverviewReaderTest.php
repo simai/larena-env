@@ -40,7 +40,7 @@ $recorded = new ServerOverviewReader(new RecordedAnswersGateway(env_recorded_pat
 $result = $recorded->read(new PanelActor('admin@example.com'));
 $overview = $result->overview;
 env_assert($overview !== null && $result->reason === null && $result->source === 'recorded', 'The recording reads.');
-env_assert($overview->envVersion === '1.30.0' && $overview->osId === 'ubuntu' && $overview->osVersion === '24.04', 'The server\'s status is typed.');
+env_assert($overview->envVersion === '1.31.0' && $overview->osId === 'ubuntu' && $overview->osVersion === '24.04', 'The server\'s status is typed.');
 env_assert($overview->phpVersions === ['8.3'], 'PHP versions.');
 $states = [];
 foreach ($overview->services as $service) {
@@ -53,13 +53,15 @@ env_assert($domains === ['demo-owned.test', 'demo-php.test', 'demo-redirect.test
 [$owned, $php, $redirect, $static] = $overview->sites;
 env_assert($owned->owner === 'demo' && $php->owner === null, 'Owners.');
 env_assert($php->databaseEngine === 'mysql' && $owned->databaseEngine === null, 'Only the database\'s engine.');
-env_assert($static->release === '20261101151756' && $php->release === null, 'The current release.');
+env_assert($static->release === '20261101180047' && $php->release === null, 'The current release.');
 env_assert($redirect->profile === 'redirect' && $redirect->php === 'none' && $redirect->ssl === 'none', 'A redirect site.');
 // simai-env 1.27.0: whether a site answers, its disk, its last backup, and whether a space is blocked.
 env_assert($owned->answersChecked && $owned->answers === 200 && $owned->diskBytes === 1048576 && $owned->lastBackup === null, 'Answers 200, takes 1 MB, no backup yet.');
 env_assert($overview->owners === ['demo'] && $overview->ownerDiskBytes === ['demo' => 1048576] && $overview->blockedOwners === [], 'The space and that it is not blocked.');
 env_assert($overview->capabilities !== null && $overview->capabilities->allows('site:set-php') && $overview->capabilities->allows('self:metrics')
-    && $overview->capabilities->allows('access:create-project') && !$overview->capabilities->allows('self:alerts'), 'What the gateway allows, by the server\'s own list: the load and SFTP (1.30.0).');
+    && $overview->capabilities->allows('access:create-project') && $overview->capabilities->allows('self:alerts')
+    && $overview->capabilities->allows('self:metrics-history') && !$overview->capabilities->allows('change:confirm'),
+    'What the gateway allows, by the server\'s own list: the load, SFTP (1.30.0), its alerts and load history (1.31.0); no timed changes yet.');
 env_assert($overview->capabilities->takes('site:add', 'backup') && $overview->capabilities->takes('backup:data-schedule', 'verify'), 'A new site\'s backup and the check of each copy (1.30.0).');
 env_assert(!\Larena\Env\Gateway\PanelCapabilities::fromHostDescription(['simai_env' => ['version' => '1.28.0'], 'gate' => ['commands' => ['site:add']]])->takes('site:add', 'backup'), 'An older server is not sent a new site\'s backup.');
 

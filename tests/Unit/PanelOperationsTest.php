@@ -28,8 +28,31 @@ env_assert(PanelCommands::kind('site:describe') === PanelCommands::READ, 'A read
 env_assert(PanelCommands::kind('backup:data') === PanelCommands::ACTION, 'An action.');
 env_assert(PanelCommands::kind('job:status') === PanelCommands::JOB, 'A job command.');
 env_assert(PanelCommands::kind('site:remove') === null && PanelCommands::kind('self:bootstrap') === null, 'Commands this package may not send.');
-// 23 of the card, a new site and the owners; 10 of a site's files and 3 of its nginx directives (stage 6).
-env_assert(count(PanelCommands::actions()) === 36, 'The card\'s actions, a new site, the owners, the files and the nginx directives.');
+// 23 of the card, a new site and the owners; 10 of a site's files, 2 of its nginx directives and the confirmation of a
+// timed change (stage 6); 3 of the server's alerts (simai-env 1.31.0).
+env_assert(count(PanelCommands::actions()) === 39, 'The card\'s actions, a new site, the owners, the files, the nginx directives and the alerts.');
+// fs:archive's paths are the one list an argument may be: up to 100, each a path; nothing else takes a list.
+PanelCommands::check('fs:archive', ['domain' => 'demo-php.test', 'paths' => ['public', 'notes.txt'], 'name' => 'a.zip', 'format' => 'zip']);
+foreach ([['paths' => ['../x']], ['paths' => array_fill(0, 101, 'a')], ['paths' => []]] as $bad) {
+    try {
+        PanelCommands::check('fs:archive', ['domain' => 'demo-php.test', 'name' => 'a.zip', 'format' => 'zip'] + $bad);
+        env_assert(false, 'A wrong list is refused.');
+    } catch (\Larena\Env\Gateway\PanelRefused $refused) {
+        env_assert($refused->reasonCode === 'invalid_argument', 'A wrong list is an invalid argument.');
+    }
+}
+try {
+    PanelCommands::check('fs:delete', ['domain' => 'demo-php.test', 'path' => ['public']]);
+    env_assert(false, 'Only fs:archive\'s paths take a list.');
+} catch (\Larena\Env\Gateway\PanelRefused) {
+}
+// A Telegram bot's token has its shape; a webhook is https only.
+PanelCommands::check('self:alerts-channel', ['kind' => 'telegram', 'target' => '-1001234567', 'token' => '123456789:'.str_repeat('A', 35)]);
+try {
+    PanelCommands::check('self:alerts-channel', ['kind' => 'webhook', 'target' => 'http://hooks.example.com/a']);
+    env_assert(false, 'A plain http webhook is refused.');
+} catch (\Larena\Env\Gateway\PanelRefused) {
+}
 
 // Only an action is ever confirmed.
 $refusedConfirm = null;

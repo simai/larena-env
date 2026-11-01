@@ -10,6 +10,7 @@ use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Translation\Translator;
 use Larena\Access\Persistence\PersistentAccessStore;
 use Larena\Access\Runtime\SystemRolePresetSynchronizer;
+use Larena\Env\Alerts\ServerAlert;
 use Larena\Env\Gateway\PanelActor;
 use Larena\Env\History\MetricSamples;
 use Larena\Env\People\PersonOwners;
@@ -58,14 +59,35 @@ final class PanelCheckCommand extends Command
         }
         $ownHost = parse_url((string) $config->get('app.url'), PHP_URL_HOST);
         $overview = $overview->withoutSites(is_string($ownHost) ? [$ownHost] : []);
-        $metrics = $overview->capabilities?->allows('self:metrics') === true ? $extras->metrics($actor) : null;
+        // A server that keeps its own load history (simai-env 1.31.0) is not sampled again; an older one is.
+        $serverHistory = $overview->capabilities?->allows('self:metrics-history') === true;
+        $metrics = !$serverHistory && $overview->capabilities?->allows('self:metrics') === true ? $extras->metrics($actor) : null;
         if ($metrics !== null) {
             $samples->record($metrics, $now);
         }
         $samples->prune($now);
 
-        $warnings = PanelWarnings::of($overview, $metrics, $now);
-        $due = $ledger->due($warnings, $now);
+        // A server that keeps its own alerts: each is told when it opens and when it is resolved, never reminded (the
+        // server sends them to its own channel too). An older server's warnings are worked out here, reminded daily.
+        $alerts = $overview->capabilities?->allows('self:alerts') === true ? $extras->alerts($actor) : null;
+        if ($alerts !== null) {
+            $sites = array_map(static fn ($site): string => $site->domain, $overview->sites);
+            $warnings = [];
+            foreach ($alerts->alerts as $alert) {
+                $warning = PanelWarnings::fromAlert($alert);
+                if ($warning->domain !== null && !in_array($warning->domain, $sites, true)) {
+                    continue;
+                }
+                // Acknowledged is seen already: nobody is told again, and its open record stays so it is not news.
+                $warnings[] = $alert->state === ServerAlert::RESOLVED
+                    ? new PanelWarning(PanelWarnings::RESOLVED, 'success', $warning->domain, $warning->replace, $warning->subject, $alert->id, ServerAlert::RESOLVED)
+                    : new PanelWarning($warning->kind, $warning->severity, $warning->domain, $warning->replace, $warning->subject, $alert->id, ServerAlert::OPEN);
+            }
+            $due = $ledger->due($warnings, $now, false);
+        } else {
+            $warnings = PanelWarnings::of($overview, $metrics, $now);
+            $due = $ledger->due($warnings, $now);
+        }
         $inbox = class_exists(NotificationInbox::class) && $container->bound(NotificationInbox::class)
             ? $container->make(NotificationInbox::class) : null;
         $told = 0;
@@ -84,6 +106,7 @@ final class PanelCheckCommand extends Command
                     $recipients = array_merge($recipients, array_keys(array_filter($spaces, static fn (string $space): bool => $space === $owner)));
                 }
                 $title = (string) $translator->get('larena-env::admin.warnings.'.$warning->kind, $warning->replace);
+                // The server's alert names its own message; a resolved one says what cleared.
                 foreach (array_unique($recipients) as $recipient) {
                     try {
                         $inbox->record($recipient, $warning->severity, $title, null, 'env:warning:'.$warning->kind,
@@ -95,8 +118,8 @@ final class PanelCheckCommand extends Command
                 }
             }
         }
-        $this->line(sprintf('warnings: %d, new or reminded: %d, notifications: %d, measured: %s',
-            count($warnings), count($due), $told, $metrics === null ? 'no' : 'yes'));
+        $this->line(sprintf('warnings: %d, new or reminded: %d, notifications: %d, measured: %s, from the server: %s',
+            count($warnings), count($due), $told, $metrics === null ? 'no' : 'yes', $alerts === null ? 'no' : 'yes'));
 
         return self::SUCCESS;
     }

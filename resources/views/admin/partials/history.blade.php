@@ -3,6 +3,9 @@
 @if (($history ?? null) !== null)
     <section class="larena-panel larena-panel-padded" data-env-history aria-labelledby="env-history">
         <h2 id="env-history">{{ __('larena-env::admin.history.title') }}</h2>
+        @if ($historyFromServer ?? false)
+            <p data-env-history-from-server>{{ __('larena-env::admin.history.from_server') }}</p>
+        @endif
         @foreach ($history as $period => $line)
             <h3>{{ __('larena-env::admin.history.'.$period) }}</h3>
             @if ($line->count === 0)

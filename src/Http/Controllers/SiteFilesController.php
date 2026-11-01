@@ -39,7 +39,7 @@ final readonly class SiteFilesController
         'copy' => 'fs:copy', 'delete' => 'fs:delete', 'restore' => 'fs:restore', 'chmod' => 'fs:chmod', 'archive' => 'fs:archive', 'extract' => 'fs:extract'];
     /** The nginx directives', the system level's only. */
     public const array OVERLAY_OPERATIONS = ['overlay-set' => 'site:nginx-overlay-set', 'overlay-clear' => 'site:nginx-overlay-clear',
-        'overlay-confirm' => 'site:nginx-overlay-confirm'];
+        'overlay-confirm' => 'change:confirm'];
 
     private const string STAGED = 'larena_env_staged';
     private const int STAGED_SECONDS = 3600;
@@ -85,7 +85,10 @@ final readonly class SiteFilesController
         }
         $hidden = ['op' => $op];
         foreach ($args as $name => $value) {
-            $hidden['args['.$name.']'] = $value;
+            // A list (fs:archive's paths) goes back item by item.
+            foreach (is_array($value) ? $value : [null => $value] as $index => $item) {
+                $hidden['args['.$name.']'.(is_int($index) ? '['.$index.']' : '')] = $item;
+            }
         }
         if ($staged !== null) {
             $hidden['staged'] = $staged['id'];
@@ -111,8 +114,11 @@ final readonly class SiteFilesController
         $op = (string) $request->input('op');
         $command = $this->offered($actor, $op);
         $tab = isset(self::OVERLAY_OPERATIONS[$op]) ? 'nginx' : 'files';
-        $args = array_filter((array) $request->input('args', []), static fn (mixed $value, mixed $name): bool => is_string($name) && is_string($value), ARRAY_FILTER_USE_BOTH);
-        if ($command === null || ($args['domain'] ?? null) !== $domain) {
+        $args = array_filter((array) $request->input('args', []), static fn (mixed $value, mixed $name): bool => is_string($name)
+            && (is_string($value) || ($name === 'paths' && is_array($value) && array_is_list($value) && array_filter($value, 'is_string') === $value)), ARRAY_FILTER_USE_BOTH);
+        // Keeping a timed change names the change only (change:confirm); every other change names its site.
+        $site = $op === 'overlay-confirm' ? $domain : ($args['domain'] ?? null);
+        if ($command === null || $site !== $domain) {
             return $this->back($request, $domain, $tab, PanelReason::NOT_ALLOWED);
         }
         $attachment = null;
@@ -186,7 +192,7 @@ final readonly class SiteFilesController
     /**
      * The gateway arguments of the change, from the form: paths are cleaned, never trusted as typed.
      *
-     * @return array<string, string>|null null when a path or name is not one
+     * @return array<string, string|list<string>>|null null when a path or name is not one
      */
     private function arguments(Request $request, string $op, string $domain): ?array
     {
@@ -241,7 +247,7 @@ final readonly class SiteFilesController
                 }
                 $archive = str_ends_with($name, '.'.$format) ? $name : $name.'.'.$format;
 
-                return $args + ['paths' => $path, 'name' => $archive, 'format' => $format];
+                return $args + ['paths' => [$path], 'name' => $archive, 'format' => $format];
             case 'extract':
                 return $path === null || $path === '.' || $folder === null ? null : $args + ['path' => $path, 'into' => $folder];
             case 'overlay-set':
@@ -250,7 +256,8 @@ final readonly class SiteFilesController
             case 'overlay-confirm':
                 $change = $request->input('change');
 
-                return is_string($change) && preg_match('/\A[A-Za-z0-9][A-Za-z0-9._-]{0,63}\z/D', $change) === 1 ? $args + ['change' => $change] : null;
+                // The shared confirmation of a timed change names the change only; the server knows its site.
+                return is_string($change) && preg_match('/\A[A-Za-z0-9][A-Za-z0-9._-]{0,63}\z/D', $change) === 1 ? ['change_id' => $change] : null;
         }
 
         return null;

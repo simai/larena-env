@@ -22,6 +22,7 @@ use Larena\Env\Server\ServerOverviewReader;
 use Larena\Env\Server\SiteDetailsReader;
 use Larena\Env\Server\SiteExtrasReader;
 use Larena\Env\Server\SiteLogView;
+use Larena\Env\Warnings\PanelWarningSource;
 use Larena\Env\Warnings\PanelWarnings;
 
 /**
@@ -52,7 +53,15 @@ final readonly class SiteAdminController
         private Translator $translator,
         private ?\Larena\Env\Dns\DnsService $dns = null,
         private ?SiteFiles $files = null,
+        private ?PanelWarningSource $warningSource = null,
+        private ?\Larena\Access\Runtime\AccessOperationAuthorizer $authorizer = null,
     ) {
+    }
+
+    /** Whether the person may change the server's sites (env.sites.operate), as the routes that change them require. */
+    private function canOperate(Request $request): bool
+    {
+        return $this->authorizer?->authorize($request, 'env.sites.operate')->isAllowed() ?? false;
     }
 
     public function show(Request $request, string $domain): mixed
@@ -79,6 +88,8 @@ final readonly class SiteAdminController
         $ask = static fn (string $command, string $onTab): bool => $site !== null && $tab === $onTab && $capabilities->allows($command);
         $sftpAccounts = $ask('access:list', 'access') ? $this->extras->sftpAccounts($actor, $domain) : null;
         $overlay = $ask('site:nginx-overlay-get', 'nginx') && $actor->owner === null ? $this->files?->overlay($actor, $domain) : null;
+        // What needs attention on this site (Panel plan 4.4): the server's own alerts where it keeps them, as the sites' list says it.
+        $siteWarnings = $overview === null ? null : ($this->warningSource ?? new PanelWarningSource($this->extras))->ofSite($actor, $overview, $domain, PanelWarnings::now());
 
         return $this->views->make('larena-env::admin.site', [
             'domain' => $domain,
@@ -97,14 +108,17 @@ final readonly class SiteAdminController
             'overlayProblem' => is_string($overlay) ? $this->filesReasonText($overlay) : null,
             'overlaySupported' => $capabilities->allows('site:nginx-overlay-get'),
             'overlayAllows' => ['set' => $capabilities->allows('site:nginx-overlay-set'), 'clear' => $capabilities->allows('site:nginx-overlay-clear'),
-                'confirm' => $capabilities->allows('site:nginx-overlay-confirm')],
+                'confirm' => $capabilities->allows('change:confirm')],
             'siteDns' => $site !== null && $tab === 'dns' ? $this->dns?->forSite($domain) : null,
             'wholeServer' => $actor->owner === null,
             // An account's own action chooses among the accounts it suits; with none, the action is not offered.
             'sftpChoices' => array_combine(array_map(static fn (SiteOperation $operation): string => $operation->value, $operations),
                 array_map(static fn (SiteOperation $operation): array => $operation->accountChoices($sftpAccounts ?? []), $operations)),
             // What needs attention on this site (Panel plan 4.4), as the sites' list says it.
-            'warnings' => $overview === null ? null : self::siteWarnings($overview, $domain),
+            'warnings' => $siteWarnings['warnings'] ?? null,
+            'fromServer' => $siteWarnings['fromServer'] ?? false,
+            'warningsBack' => $request->getRequestUri(),
+            'canAcknowledge' => $capabilities->allows('self:alerts-ack') && $this->canOperate($request),
             'capabilities' => $capabilities,
             'tabOperations' => array_values(array_filter($operations, static fn (SiteOperation $operation): bool => $operation->tab() === $tab)),
             'source' => $result->source,
@@ -271,17 +285,6 @@ final readonly class SiteAdminController
     }
 
     /** @return list<\Larena\Env\Warnings\PanelWarning> */
-    private static function siteWarnings(\Larena\Env\Server\ServerOverview $overview, string $domain): array
-    {
-        foreach ($overview->sites as $summary) {
-            if (strcasecmp($summary->domain, $domain) === 0) {
-                return PanelWarnings::forSite($summary, PanelWarnings::now());
-            }
-        }
-
-        return [];
-    }
-
     /** The action asked for, when it is one this server's gateway has: a form left from an older page is refused in words. */
     private function offered(PanelActor $actor, string $code): ?SiteOperation
     {

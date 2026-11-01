@@ -34,11 +34,14 @@ $with = env_boot('with');
 env_assert($with['admin_loadable'] === true, 'The admin must be installed for development.');
 $navigation = $with['navigation'];
 sort($navigation);
-env_assert($navigation === ['env.dns', 'env.dns.connection', 'env.people', 'env.server', 'env.server.overview'] && $with['navigation_valid'] === [true, true, true, true, true],
-    'With the admin the sites, the overview, the spaces and DNS are valid menu entries.');
+env_assert($navigation === ['env.alerts.channel', 'env.dns', 'env.dns.connection', 'env.people', 'env.server', 'env.server.overview']
+    && $with['navigation_valid'] === [true, true, true, true, true, true],
+    'With the admin the sites, the overview, the spaces, DNS and the alerts\' channel are valid menu entries.');
 $names = array_keys($with['routes']);
 sort($names);
-env_assert($names === ['larena.env.admin.dns', 'larena.env.admin.dns.connection', 'larena.env.admin.dns.connection.addresses',
+env_assert($names === ['larena.env.admin.alerts.ack.plan', 'larena.env.admin.alerts.ack.run', 'larena.env.admin.alerts.channel',
+    'larena.env.admin.alerts.channel.plan', 'larena.env.admin.alerts.channel.run', 'larena.env.admin.alerts.test.plan', 'larena.env.admin.alerts.test.run',
+    'larena.env.admin.dns', 'larena.env.admin.dns.connection', 'larena.env.admin.dns.connection.addresses',
     'larena.env.admin.dns.connection.disconnect', 'larena.env.admin.dns.connection.save', 'larena.env.admin.dns.run', 'larena.env.admin.dns.zone',
     'larena.env.admin.dns.zone.plan', 'larena.env.admin.dns.zone.undo', 'larena.env.admin.index', 'larena.env.admin.job', 'larena.env.admin.job.cancel', 'larena.env.admin.overview',
     'larena.env.admin.people', 'larena.env.admin.people.act', 'larena.env.admin.people.assign', 'larena.env.admin.people.owners.plan',
@@ -63,13 +66,16 @@ foreach ($with['routes'] as $name => $route) {
     env_assert(in_array('access:env.dns.operate', $route['middleware'], true) === ($dns && !$dnsReads), "{$name} must ask for the DNS right.");
     // A site's own nginx directives can break the sites' isolation: the server's right, not a site's (Panel plan 6.3).
     $nginx = str_starts_with($name, 'larena.env.admin.site.nginx');
+    // Where the server sends its alerts, and a test, are the system level's; acknowledging one changes a site's state.
+    $channel = str_starts_with($name, 'larena.env.admin.alerts.channel') || str_starts_with($name, 'larena.env.admin.alerts.test');
+    $channelChanges = $channel && $name !== 'larena.env.admin.alerts.channel';
     // Changing a site is a right of its own: a new site, a site's action and stopping a job ask for it.
-    $changes = !$people && !$dns && !$nginx && (str_ends_with($name, '.plan') || str_ends_with($name, '.run') || str_ends_with($name, '.cancel') || $name === 'larena.env.admin.sites.new');
+    $changes = !$people && !$dns && !$nginx && !$channel && (str_ends_with($name, '.plan') || str_ends_with($name, '.run') || str_ends_with($name, '.cancel') || $name === 'larena.env.admin.sites.new');
     env_assert(in_array('access:env.sites.operate', $route['middleware'], true) === $changes, "{$name} asks for the wrong right.");
     // The server's overview and the people's spaces are the system level's; giving a space or acting for someone changes the server.
-    $reads = in_array($name, ['larena.env.admin.overview', 'larena.env.admin.people', 'larena.env.admin.people.stop'], true);
+    $reads = in_array($name, ['larena.env.admin.overview', 'larena.env.admin.people', 'larena.env.admin.people.stop', 'larena.env.admin.alerts.channel'], true);
     env_assert(in_array('access:env.server.read', $route['middleware'], true) === $reads, "{$name} asks for the wrong level.");
-    env_assert(in_array('access:env.server.operate', $route['middleware'], true) === (($people && !$reads) || $nginx), "{$name} must ask for the server's right.");
+    env_assert(in_array('access:env.server.operate', $route['middleware'], true) === (($people && !$reads) || $nginx || $channelChanges), "{$name} must ask for the server's right.");
 }
 env_assert($with['commands'] === [RegisterServerAreaCommand::class, PanelCheckCommand::class] && $with['sites'] === 4, 'The rest does not change.');
 

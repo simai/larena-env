@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- simai-env 1.31.0 (recorded answers set 7): the server's own alerts and load history, kept every 5 minutes also
+  while the panel is closed or down. Where the server lists `self:alerts`, «Требует внимания» on «Сайты», a site's card
+  and «Сервер › Обзор» shows the server's alerts: open and acknowledged ones, critical as errors, the panel's own being
+  down and a disk as the whole server's; an open one is acknowledged by plan (`self:alerts-ack`, either level, an
+  owner's own sites only), an acknowledged one says by whom and when. Older servers keep the panel's own warnings.
+  `larena:env-check` then copies the server's alerts into people's notifications, once when one opens and once when it
+  is resolved, and samples nothing where the server keeps `self:metrics-history`; «Обзор» draws the server's day, week
+  and month. «Настройки панели › Оповещения» (system level) shows where the server sends alerts, its last sending and
+  error, and changes it by plan: a webhook (https only), a Telegram chat with the bot's token, which waits encrypted in
+  the person's session between plan and confirmation and is never shown, or nowhere; «Отправить проверку». The stage 6
+  shapes simai-env confirmed: `fs:read` answers `mtime` and `truncated` (a cut text is shown read-only), trash items
+  their `name`, the nginx directives' pending change `{change_id, expires_at}`, kept by the shared `change:confirm
+  {change_id}` (with `change:status`) instead of a command of its own, and `fs:archive` takes its paths as a list of
+  up to 100, the one list argument.
+
 - Stage 6 on the panel's side, files and nginx directives, as agreed with simai-env (after 1.35.0: 1.37.0 the files and
   the download, 1.38.0 archives and the directives). No release has the commands yet, so they show only where a server
   lists them in `gate.commands`; elsewhere the new «Файлы» tab says the server cannot yet, with no buttons. A site's

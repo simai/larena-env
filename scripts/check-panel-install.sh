@@ -150,7 +150,7 @@ assert roots == ["sites", "journal", "users", "server", "settings"], roots
 children = {item["key"]: [row["key"] for row in item.get("children", []) if row.get("kind") == "page"] for item in items}
 assert sorted(children["server"]) == ["auth.diagnostics", "env.dns", "env.server.overview"], children
 assert sorted(children["users"]) == ["auth.users", "env.people"], children
-assert sorted(children["settings"]) == ["admin.settings_general", "admin.site_backgrounds", "env.dns.connection"], children
+assert sorted(children["settings"]) == ["admin.settings_general", "admin.site_backgrounds", "env.alerts.channel", "env.dns.connection"], children
 assert "site-switch" not in json.dumps(menu.get("capabilities", [])), "the panel has no site switcher"
 hrefs = [item["href"] for item in items if item.get("href")] + [row["href"] for item in items for row in item.get("children", []) if row.get("href")]
 for href in hrefs:
@@ -172,20 +172,24 @@ for path, expected in (("/admin/server/people", ["Users", "Spaces"]), ("/admin/s
     assert labels[1:] == expected, (path, labels)
 print("breadcrumbs:", "ok")
 
-# Peace of mind (Panel plan, stage 4): the check measures and tells the administrator; the sites say what needs
-# attention, the overview draws the load, and the notification centre has them.
+# Peace of mind (Panel plan, stage 4): the check tells the administrator; the sites say what needs attention, the
+# overview draws the load, and the notification centre has them. simai-env 1.31.0 keeps its own alerts and load
+# history: the check copies the alerts and measures nothing itself. The recording holds one open alert, demo-owned.test's.
 import subprocess
 check = subprocess.run(["php", "artisan", "larena:env-check"], cwd=sys.argv[5], check=True, capture_output=True, text=True).stdout
 print("check:", check.strip())
-assert "measured: yes" in check and "notifications: 0" not in check, check
+assert "from the server: yes" in check and "measured: no" in check and "notifications: 0" not in check, check
 _, listed = get("/admin/server")
-# simai-env 1.30.0: every recorded site has its daily backup; demo-php.test's newest copy is old.
-assert "data-env-warnings=" in listed and 'data-env-warning="backup_stale"' in listed and 'data-env-warning-site="demo-php.test"' in listed, "the sites say what needs attention"
+assert "data-env-warnings-from-server" in listed and 'data-env-warning="backup_failed"' in listed and 'data-env-warning-site="demo-owned.test"' in listed, "the sites say the server's alerts"
+assert 'data-env-alert-ack="9147a2749fff"' in listed and 'data-env-alert-state="open"' in listed, "an open alert can be acknowledged"
+_, acknowledge = post("/admin/server/alerts/ack/plan", {"_token": form_token(listed), "id": "9147a2749fff", "back": "/admin/server"})
+assert 'data-env-plan="self:alerts-ack"' in acknowledge and 'name="id" value="9147a2749fff"' in acknowledge, "acknowledging an alert is planned"
 _, overview = get("/admin/server/overview")
-assert "data-env-history" in overview and 'data-env-history-chart="day"' in overview and "data-env-warnings=" in overview, "the overview draws the load"
+assert "data-env-history-from-server" in overview and 'data-env-history-chart="day"' in overview and "data-env-warnings=" in overview, "the overview draws the server's own history"
+_, card = get("/admin/server/sites/demo-owned.test")
+assert 'data-env-alert="9147a2749fff"' in card, "the card says its own"
 _, card = get("/admin/server/sites/demo-php.test")
-assert 'data-env-warning="backup_stale"' in card, "the card says its own"
-assert "2026-01-01 00:00 UTC" in card and "data-env-tabs" in card, "the card reads its times as a person does"
+assert "data-env-tabs" in card and "data-env-alert=" not in card, "another site's card has no alert of it"
 request = urllib.request.Request(base + "/admin/navigation/menu", method="POST",
     data=json.dumps({"intent": "navigation.load", "payload": {"reason": "connected", "site": None}, "page": "/admin/server"}).encode(),
     headers={"Content-Type": "application/json", "Accept": "application/json", "X-CSRF-TOKEN": csrf})
@@ -202,6 +206,14 @@ _, restore = post("/admin/server/sites/demo-php.test/plan", {"_token": form_toke
 assert "data-env-plan-replaces" in restore, "a restore says what it replaces"
 # simai-env 1.30.0: each scheduled copy is checked, and the server's last check is said.
 assert "data-env-verify-field" in backups and 'data-env-last-verify="ok"' in backups, "the schedule checks each copy, the last check is said"
+assert "2026-01-01 00:00 UTC" in backups, "the card reads its times as a person does"
+# Where the server sends its alerts (simai-env 1.31.0): the channel now, a change by plan, a test.
+status, channel = get("/admin/server/alerts/channel")
+assert status == 200 and 'data-env-alerts-channel="off"' in channel and "data-env-alerts-form" in channel and "data-env-alerts-test" in channel, "the alerts' channel"
+_, hooked = post("/admin/server/alerts/channel/plan", {"_token": form_token(channel), "kind": "webhook", "target": "https://hooks.example.com/simai"})
+assert 'data-env-plan="self:alerts-channel"' in hooked and 'name="target" value="https://hooks.example.com/simai"' in hooked, "a webhook is planned"
+_, tested = post("/admin/server/alerts/test/plan", {"_token": form_token(channel)})
+assert 'data-env-plan="self:alerts-test"' in tested, "a test is planned"
 print("stage 4:", "ok", unread, "unread")
 
 # The second level: a person at the user level (the editor role), made the way an administrator's tooling would.
@@ -343,7 +355,7 @@ status, sites = get("/admin/server")
 assert status == 200 and "demo-owned.test" in sites and "demo-php.test" not in sites, "the person sees their own owner's sites"
 status, other = get("/admin/server/sites/demo-php.test")
 assert "another owner" in other, "another owner's site is refused by the server"
-for path in ("/admin/server/people", "/admin/server/overview", "/admin/server/dns", "/admin/server/dns/connection"):
+for path in ("/admin/server/people", "/admin/server/overview", "/admin/server/dns", "/admin/server/dns/connection", "/admin/server/alerts/channel"):
     try:
         status, _ = get(path)
     except urllib.error.HTTPError as error:
@@ -361,6 +373,14 @@ assert "sites" in own_roots and "users" not in own_roots and "server" not in own
 status, _ = get("/admin/notifications")
 assert status == 200, ("the person's notification centre opens", status)
 assert 'data-env-warning-site="demo-php.test"' not in sites and 'data-env-warning="disk_full"' not in sites, "the person is warned about their own sites only"
+assert 'data-env-alert="9147a2749fff"' in sites and len(re.findall(r'data-env-alert="', sites)) == 1, "the person sees their own site's alert, and only that"
+_, acknowledge = post("/admin/server/alerts/ack/plan", {"_token": form_token(sites), "id": "9147a2749fff", "back": "/admin/server"})
+assert 'data-env-plan="self:alerts-ack"' in acknowledge, "the person acknowledges their own site's alert"
+try:
+    status, _ = post("/admin/server/alerts/channel/plan", {"_token": form_token(sites), "kind": "off"})
+except urllib.error.HTTPError as error:
+    status = error.code
+assert status == 403, ("the channel is the system level's", status)
 status, own_sftp = get("/admin/server/sites/demo-owned.test?tab=access")
 assert status == 200 and 'data-env-sftp="demo-staff"' in own_sftp and 'data-env-operation="sftp-add-key"' in own_sftp, "the person manages their own site's SFTP"
 status, own_files = get("/admin/server/sites/demo-owned.test?tab=files")

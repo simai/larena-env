@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Larena\Env\Http\Controllers\AlertsController;
 use Larena\Env\Http\Controllers\DnsController;
 use Larena\Env\Http\Controllers\NewSiteController;
 use Larena\Env\Http\Controllers\PeopleController;
@@ -40,6 +41,19 @@ $router->middleware(['access:env.dns.operate'])->group(static function ($router)
     $router->post('/dns/zones/{zone}/plan', [DnsController::class, 'plan'])->where('zone', '[a-f0-9]{32}')->name('larena.env.admin.dns.zone.plan');
     $router->post('/dns/zones/{zone}/undo', [DnsController::class, 'undo'])->where('zone', '[a-f0-9]{32}')->name('larena.env.admin.dns.zone.undo');
     $router->post('/dns/run', [DnsController::class, 'run'])->name('larena.env.admin.dns.run');
+});
+// The server's own alerts (simai-env 1.31.0): where it sends them is the system level's; acknowledging one is either
+// level's, an owner's only for their own sites, which the server checks.
+$router->get('/alerts/channel', [AlertsController::class, 'channel'])->middleware('access:env.server.read')->name('larena.env.admin.alerts.channel');
+$router->middleware(['access:env.server.operate'])->group(static function ($router): void {
+    $router->post('/alerts/channel/plan', [AlertsController::class, 'channelPlan'])->name('larena.env.admin.alerts.channel.plan');
+    $router->post('/alerts/channel/run', [AlertsController::class, 'channelRun'])->name('larena.env.admin.alerts.channel.run');
+    $router->post('/alerts/test/plan', [AlertsController::class, 'testPlan'])->name('larena.env.admin.alerts.test.plan');
+    $router->post('/alerts/test/run', [AlertsController::class, 'testRun'])->name('larena.env.admin.alerts.test.run');
+});
+$router->middleware(['access:env.sites.operate'])->group(static function ($router): void {
+    $router->post('/alerts/ack/plan', [AlertsController::class, 'ackPlan'])->name('larena.env.admin.alerts.ack.plan');
+    $router->post('/alerts/ack/run', [AlertsController::class, 'ackRun'])->name('larena.env.admin.alerts.ack.run');
 });
 $router->get('/sites/{domain}', [SiteAdminController::class, 'show'])->where('domain', $domain)->name('larena.env.admin.site');
 // A site's file, handed over once checked (Panel plan 6.2); the server keeps the owner's scope.

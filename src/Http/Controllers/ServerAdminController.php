@@ -12,6 +12,7 @@ use Larena\Admin\Runtime\AdminDataviewPagePresenter;
 use Larena\Env\Admin\ServerSitesPage;
 use Larena\Env\History\MetricSamples;
 use Larena\Env\Server\ServerOverviewReader;
+use Larena\Env\Warnings\PanelWarningSource;
 use Larena\Env\Warnings\PanelWarnings;
 
 /**
@@ -29,6 +30,7 @@ final readonly class ServerAdminController
         private ?\Larena\Access\Runtime\AccessOperationAuthorizer $authorizer = null,
         private ?\Larena\Env\Server\SiteExtrasReader $extras = null,
         private ?MetricSamples $samples = null,
+        private ?PanelWarningSource $warningSource = null,
     ) {
     }
 
@@ -56,16 +58,24 @@ final readonly class ServerAdminController
         // system level reads it, and it also tells whether a disk is running out.
         $metrics = $actor->owner === null && $overview?->capabilities?->allows('self:metrics') === true ? $this->extras?->metrics($actor) : null;
         $now = PanelWarnings::now();
+        $warnings = $overview === null ? null
+            : ($this->warningSource ?? ($this->extras === null ? null : new PanelWarningSource($this->extras)))?->of($actor, $overview, $metrics, $now)
+                ?? ['warnings' => PanelWarnings::of($overview, $metrics, $now), 'fromServer' => false];
 
         return $this->views->make('larena-env::admin.index', [
             'section' => $section,
             'canCreate' => $this->authorizer?->authorize($request, 'env.sites.operate')->isAllowed() ?? false,
             'metrics' => $section === 'overview' ? $metrics : null,
-            // What needs attention (Panel plan 4.4): the person's own sites, and the disks for the whole server.
-            'warnings' => $overview === null ? null : PanelWarnings::of($overview, $metrics, $now),
-            // The load over the last day and week (Panel plan 4.6), as the panel's check measured it.
-            'history' => $section === 'overview' && $actor->owner === null && $this->samples !== null
-                ? ['day' => $this->samples->history('day', $now), 'week' => $this->samples->history('week', $now)] : null,
+            // What needs attention (Panel plan 4.4): the person's own sites, and the disks for the whole server; the
+            // server's own alerts where it keeps them (simai-env 1.31.0), acknowledged by plan and confirmation.
+            'warnings' => $warnings['warnings'] ?? null,
+            'fromServer' => $warnings['fromServer'] ?? false,
+            'warningsBack' => $request->getRequestUri(),
+            'canAcknowledge' => $overview?->capabilities?->allows('self:alerts-ack') === true
+                && ($this->authorizer?->authorize($request, 'env.sites.operate')->isAllowed() ?? false),
+            // The load over time (Panel plan 4.6): the server's own history where it keeps one, else the panel's samples.
+            'history' => $section === 'overview' && $actor->owner === null ? $this->history($actor, $overview, $now) : null,
+            'historyFromServer' => $overview?->capabilities?->allows('self:metrics-history') === true,
             'source' => $result->source,
             'overview' => $overview,
             'refused' => $result->refused,
@@ -76,6 +86,25 @@ final readonly class ServerAdminController
                 AdminProductAssetManifest::dataviewActivation(),
             ),
         ]);
+    }
+
+    /** @return array<string, \Larena\Env\History\MetricHistory>|null */
+    private function history(\Larena\Env\Gateway\PanelActor $actor, ?\Larena\Env\Server\ServerOverview $overview, \DateTimeImmutable $now): ?array
+    {
+        if ($overview?->capabilities?->allows('self:metrics-history') === true && $this->extras !== null) {
+            $periods = [];
+            foreach (['day', 'week', 'month'] as $period) {
+                $history = $this->extras->metricsHistory($actor, $period);
+                if ($history !== null) {
+                    $periods[$period] = $history;
+                }
+            }
+            if ($periods !== []) {
+                return $periods;
+            }
+        }
+
+        return $this->samples === null ? null : ['day' => $this->samples->history('day', $now), 'week' => $this->samples->history('week', $now)];
     }
 
     private function reasonText(string $reason): string

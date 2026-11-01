@@ -7,6 +7,8 @@ namespace Larena\Env\Warnings;
 use DateTimeImmutable;
 use DateTimeZone;
 use Exception;
+use Larena\Env\Alerts\ServerAlert;
+use Larena\Env\Alerts\ServerAlerts;
 use Larena\Env\Server\Bytes;
 use Larena\Env\Server\Moment;
 use Larena\Env\Server\ServerMetrics;
@@ -34,10 +36,34 @@ final class PanelWarnings
     public const string BACKUP_CHECK_FAILED = 'backup_check_failed';
     public const string CERTIFICATE_RENEW_FAILED = 'certificate_renew_failed';
 
+    // The server's own alerts (simai-env 1.31.0) whose words differ from the panel's: the server names no percent or days.
+    public const string DISK_ALERT = 'disk_alert';
+    public const string CERTIFICATE_ALERT = 'certificate_alert';
+    public const string SITE_UNAVAILABLE = 'site_unavailable';
+    public const string PANEL_DOWN = 'panel_down';
+    public const string BACKUP_MISSING = 'backup_missing';
+    public const string BACKUP_FAILED = 'backup_failed';
+    public const string SERVER_ALERT = 'server_alert';
+    // An alert that cleared, told once in people's notifications.
+    public const string RESOLVED = 'resolved';
+
     /** Every kind, each recorded as the notification source "env:warning:<kind>". */
     public const array KINDS = [self::DISK_FULL, self::CERTIFICATE_ENDING, self::CERTIFICATE_EXPIRED, self::CERTIFICATE_MISSING,
         self::SITE_DOWN, self::SITE_ERROR, self::BACKUP_NONE, self::BACKUP_STALE, self::BACKUP_UNSCHEDULED,
-        self::BACKUP_CHECK_FAILED, self::CERTIFICATE_RENEW_FAILED];
+        self::BACKUP_CHECK_FAILED, self::CERTIFICATE_RENEW_FAILED, self::DISK_ALERT, self::CERTIFICATE_ALERT, self::SITE_UNAVAILABLE,
+        self::PANEL_DOWN, self::BACKUP_MISSING, self::BACKUP_FAILED, self::SERVER_ALERT, self::RESOLVED];
+
+    /** The server's alert kinds (simai-alerts/1) and the panel's words for each; an unknown kind keeps the server's message. */
+    private const array ALERT_KINDS = [
+        'disk_full' => self::DISK_ALERT,
+        'cert_expiring' => self::CERTIFICATE_ALERT,
+        'cert_renew_failed' => self::CERTIFICATE_RENEW_FAILED,
+        'site_down' => self::SITE_UNAVAILABLE,
+        'panel_down' => self::PANEL_DOWN,
+        'backup_missing' => self::BACKUP_MISSING,
+        'backup_failed' => self::BACKUP_FAILED,
+        'backup_check_failed' => self::BACKUP_CHECK_FAILED,
+    ];
 
     public const int DISK_PERCENT = 90;
     public const int DISK_ERROR_PERCENT = 95;
@@ -73,6 +99,45 @@ final class PanelWarnings
         usort($warnings, static fn (PanelWarning $a, PanelWarning $b): int => ($a->severity === PanelWarning::ERROR ? 0 : 1) <=> ($b->severity === PanelWarning::ERROR ? 0 : 1));
 
         return $warnings;
+    }
+
+    /**
+     * The server's own alerts as the person sees them (simai-env 1.31.0), the errors first: open and acknowledged ones,
+     * not resolved. An alert of a site the person's list does not show (the panel's own) is left out, except the
+     * panel's own being down, which is the whole server's.
+     *
+     * @param list<string>|null $sites the sites the person sees; null for no such limit
+     *
+     * @return list<PanelWarning>
+     */
+    public static function fromAlerts(ServerAlerts $alerts, ?array $sites, bool $wholeServer): array
+    {
+        $warnings = [];
+        foreach ($alerts->current() as $alert) {
+            $warning = self::fromAlert($alert);
+            if ($warning->domain !== null && $sites !== null && !in_array($warning->domain, $sites, true)) {
+                continue;
+            }
+            if ($warning->domain === null && !$wholeServer) {
+                continue;
+            }
+            $warnings[] = $warning;
+        }
+        usort($warnings, static fn (PanelWarning $a, PanelWarning $b): int => ($a->severity === PanelWarning::ERROR ? 0 : 1) <=> ($b->severity === PanelWarning::ERROR ? 0 : 1));
+
+        return $warnings;
+    }
+
+    /** One alert in the panel's words; critical is an error. The panel's own being down is the server's, not a site's. */
+    public static function fromAlert(ServerAlert $alert): PanelWarning
+    {
+        $kind = self::ALERT_KINDS[$alert->kind] ?? self::SERVER_ALERT;
+        $domain = $kind === self::PANEL_DOWN || $kind === self::DISK_ALERT ? null : $alert->domain;
+        $replace = ['domain' => $alert->domain ?? '', 'target' => $alert->target ?? $alert->domain ?? '', 'message' => $alert->message,
+            'time' => Moment::human($alert->lastSeen ?? $alert->firstSeen), 'since' => Moment::human($alert->firstSeen)];
+
+        return new PanelWarning($kind, $alert->severity === 'critical' || $alert->severity === 'error' ? PanelWarning::ERROR : PanelWarning::WARNING,
+            $domain, $replace, $alert->target, $alert->id, $alert->state, $alert->ackedBy, $alert->ackedAt);
     }
 
     /**

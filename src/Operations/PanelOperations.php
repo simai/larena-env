@@ -49,7 +49,7 @@ final readonly class PanelOperations
     /**
      * What any action of the command table would do (a new site, a new owner), with its gateway arguments. Nothing runs.
      *
-     * @param array<string, string> $args
+     * @param array<string, string|list<string>> $args
      * @param ?PanelAttachment $attachment a file the action carries: the plan names it, nothing is sent yet
      */
     public function planCommand(PanelActor $actor, string $command, array $args, ?PanelAttachment $attachment = null): PlanResult
@@ -76,7 +76,7 @@ final readonly class PanelOperations
     /**
      * That action confirmed: the gateway starts it and answers a job.
      *
-     * @param array<string, string> $args
+     * @param array<string, string|list<string>> $args
      * @param ?PanelAttachment $attachment the file the confirmed action sends after its request
      */
     public function startCommand(PanelActor $actor, string $command, array $args, ?PanelAttachment $attachment = null): JobStartResult

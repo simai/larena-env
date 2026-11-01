@@ -46,7 +46,7 @@ final readonly class SiteFiles
         return ['entries' => $entries, 'truncated' => ($data['truncated'] ?? false) === true];
     }
 
-    /** @return array{content: ?string, binary: bool, size: ?int}|string the file's text, or why it cannot be shown */
+    /** @return array{content: ?string, binary: bool, size: ?int, mtime: ?string, truncated: bool}|string the file's text, or why it cannot be shown */
     public function text(PanelActor $actor, string $domain, string $path): array|string
     {
         $data = $this->data($actor, 'fs:read', ['domain' => $domain, 'path' => $path, 'max_bytes' => (string) self::READ_MAX_BYTES]);
@@ -55,7 +55,8 @@ final readonly class SiteFiles
         }
         $binary = ($data['binary'] ?? false) === true || !is_string($data['content'] ?? null);
 
-        return ['content' => $binary ? null : (string) $data['content'], 'binary' => $binary, 'size' => is_int($data['size'] ?? null) ? $data['size'] : null];
+        return ['content' => $binary ? null : (string) $data['content'], 'binary' => $binary, 'size' => is_int($data['size'] ?? null) ? $data['size'] : null,
+            'mtime' => is_string($data['mtime'] ?? null) ? $data['mtime'] : null, 'truncated' => ($data['truncated'] ?? false) === true];
     }
 
     /** @return list<TrashItem>|string */
@@ -72,7 +73,12 @@ final readonly class SiteFiles
         }
     }
 
-    /** @return array{content: string, pending: ?string}|string the site's own nginx directives and an unconfirmed change */
+    /**
+     * The site's own nginx directives and a change applied but not kept yet: its id and when the server puts the previous
+     * directives back by itself.
+     *
+     * @return array{content: string, pending: ?string, expires: ?string}|string
+     */
     public function overlay(PanelActor $actor, string $domain): array|string
     {
         $data = $this->data($actor, 'site:nginx-overlay-get', ['domain' => $domain]);
@@ -80,7 +86,11 @@ final readonly class SiteFiles
             return $data;
         }
 
-        return ['content' => is_string($data['content'] ?? null) ? $data['content'] : '', 'pending' => is_string($data['pending'] ?? null) && $data['pending'] !== '' ? $data['pending'] : null];
+        $pending = is_array($data['pending'] ?? null) ? $data['pending'] : [];
+        $change = is_string($pending['change_id'] ?? null) && $pending['change_id'] !== '' ? $pending['change_id'] : null;
+
+        return ['content' => is_string($data['content'] ?? null) ? $data['content'] : '', 'pending' => $change,
+            'expires' => $change !== null && is_string($pending['expires_at'] ?? null) ? $pending['expires_at'] : null];
     }
 
     /** The file written to $into and checked, or its reason in the answer. */

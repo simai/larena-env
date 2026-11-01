@@ -39,6 +39,10 @@ final readonly class PanelPlan
         }
         $args = [];
         foreach (is_array($data['args'] ?? null) ? $data['args'] : [] as $name => $value) {
+            // fs:archive's paths are the one list an argument may be; the plan shows them one after another.
+            if (is_array($value) && array_is_list($value) && array_filter($value, 'is_string') === $value) {
+                $value = implode(', ', $value);
+            }
             if (!is_string($value)) {
                 throw new UnexpectedValueException('plan_field_invalid');
             }

@@ -21,13 +21,16 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
     /** The commands this stand-in answers, added to the host description's own list. */
     public const array COMMANDS = ['fs:list', 'fs:read', 'fs:trash-list', 'fs:download', 'fs:write', 'fs:upload', 'fs:mkdir', 'fs:rename',
         'fs:copy', 'fs:delete', 'fs:restore', 'fs:chmod', 'fs:archive', 'fs:extract',
-        'site:nginx-overlay-get', 'site:nginx-overlay-set', 'site:nginx-overlay-clear', 'site:nginx-overlay-confirm'];
+        'site:nginx-overlay-get', 'site:nginx-overlay-set', 'site:nginx-overlay-clear', 'change:confirm', 'change:status'];
+
+    /** How long an applied change waits for its confirmation before the server would put the previous one back. */
+    private const int CHANGE_SECONDS = 120;
 
     private const array DESCRIPTIONS = [
         'fs:write' => 'Save a file', 'fs:upload' => 'Upload a file', 'fs:mkdir' => 'Make a folder', 'fs:rename' => 'Rename',
         'fs:copy' => 'Copy', 'fs:delete' => 'Move to the trash', 'fs:restore' => 'Restore from the trash', 'fs:chmod' => 'Change permissions',
         'fs:archive' => 'Pack into an archive', 'fs:extract' => 'Unpack an archive', 'site:nginx-overlay-set' => 'Apply nginx directives',
-        'site:nginx-overlay-clear' => 'Remove nginx directives', 'site:nginx-overlay-confirm' => 'Keep the nginx directives',
+        'site:nginx-overlay-clear' => 'Remove nginx directives', 'change:confirm' => 'Keep the change',
     ];
 
     public function __construct(private PanelGateway $inner, private string $root)
@@ -53,7 +56,8 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
         if ($command === 'fs:download') {
             return PanelAnswer::refused($request->requestId, PanelReason::NOT_ALLOWED);
         }
-        $domain = $request->args['domain'];
+        // A timed change is named by its id alone; the stand-in knows only the nginx directives' changes.
+        $domain = str_starts_with($command, 'change:') ? $this->changeDomain($request->args['change_id'] ?? '') : $request->args['domain'];
         $scope = $this->scope($request, $domain);
         if ($scope !== null) {
             return $scope;
@@ -123,7 +127,7 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
     private function scope(PanelRequest $request, string $domain): ?PanelAnswer
     {
         if ($request->actor->owner === null) {
-            return null;
+            return $domain === '' ? PanelAnswer::refused($request->requestId, 'unknown_change') : null;
         }
         if (!str_starts_with($request->command, 'fs:')) {
             return PanelAnswer::refused($request->requestId, 'owner_admin_only');
@@ -147,9 +151,15 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
         }
         if ($command === 'site:nginx-overlay-get') {
             $file = $this->root.'/overlay/'.$domain.'.conf';
-            $pending = $this->root.'/overlay/'.$domain.'.pending';
 
-            return ['content' => is_file($file) ? (string) file_get_contents($file) : '', 'pending' => is_file($pending) ? trim((string) file_get_contents($pending)) : null];
+            return ['content' => is_file($file) ? (string) file_get_contents($file) : '', 'applied_at' => is_file($file) ? gmdate('Y-m-d\TH:i:s\Z', (int) filemtime($file)) : null,
+                'pending' => $this->pending($domain)];
+        }
+        if ($command === 'change:status') {
+            $pending = $this->pending($domain);
+
+            return ['change_id' => $args['change_id'], 'kind' => 'nginx_overlay', 'domain' => $domain,
+                'state' => ($pending['change_id'] ?? null) === $args['change_id'] ? 'pending' : 'confirmed', 'expires_at' => $pending['expires_at'] ?? null];
         }
         $path = $this->path($domain, $args['path']);
         if ($command === 'fs:list') {
@@ -171,11 +181,14 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
         }
         $limit = min(1_048_576, (int) ($args['max_bytes'] ?? 1_048_576));
         $bytes = (string) file_get_contents($path, false, null, 0, $limit + 1);
-        if (strlen($bytes) > $limit || !mb_check_encoding($bytes, 'UTF-8') || str_contains($bytes, "\0")) {
-            return ['path' => $args['path'], 'size' => (int) filesize($path), 'binary' => true];
+        $mtime = gmdate('Y-m-d\TH:i:s\Z', (int) filemtime($path));
+        $text = mb_strcut($bytes, 0, $limit, 'UTF-8');
+        if (!mb_check_encoding($text, 'UTF-8') || str_contains($bytes, "\0") || filesize($path) > 1_048_576) {
+            return ['path' => $args['path'], 'size' => (int) filesize($path), 'mtime' => $mtime, 'binary' => true];
         }
 
-        return ['path' => $args['path'], 'size' => (int) filesize($path), 'binary' => false, 'content' => $bytes];
+        return ['path' => $args['path'], 'size' => (int) filesize($path), 'mtime' => $mtime, 'binary' => false,
+            'content' => $text, 'truncated' => strlen($bytes) > $limit];
     }
 
     /** @throws FakeRefusal what the gateway refuses before it plans */
@@ -186,7 +199,8 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
             'fs:rename', 'fs:copy' => $this->free($this->path($domain, $args['to'])) && $this->existing($this->path($domain, $args['from'])),
             'fs:mkdir' => $this->free($this->path($domain, $args['path'])),
             'fs:upload' => ($args['overwrite'] ?? 'no') === 'yes' || $this->free($this->path($domain, $args['path'])),
-            'fs:delete', 'fs:chmod', 'fs:archive' => $this->existing($this->path($domain, $args['path'] ?? $args['paths'])),
+            'fs:delete', 'fs:chmod' => $this->existing($this->path($domain, $args['path'])),
+            'fs:archive' => array_map(fn (string $path): bool => $this->existing($this->path($domain, $path)), $args['paths']) !== [],
             'fs:extract' => $this->existing($this->path($domain, $args['path'])) && $this->path($domain, $args['into']) !== '',
             'fs:restore' => $this->restorable($domain, $args['id']),
             'fs:write' => $this->path($domain, $args['path']) !== '',
@@ -254,7 +268,7 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
 
                 return ["Set {$args['mode']} on {$args['path']}"];
             case 'fs:archive':
-                return ["Packed {$args['paths']} into {$args['name']}"];
+                return ['Packed '.implode(', ', $args['paths'])." into {$args['name']}"];
             case 'fs:extract':
                 return ["Unpacked {$args['path']} into {$args['into']}"];
             case 'site:nginx-overlay-set':
@@ -263,17 +277,20 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
                 $content = $command === 'site:nginx-overlay-clear' ? '' : (string) file_get_contents(($request->attachment ?? throw new FakeRefusal('bad_request'))->path);
                 file_put_contents($this->root.'/overlay/'.$domain.'.conf', $content);
                 $change = bin2hex(random_bytes(8));
-                file_put_contents($this->root.'/overlay/'.$domain.'.pending', $change);
+                @mkdir($this->root.'/overlay/changes', 0o775, true);
+                file_put_contents($this->root.'/overlay/'.$domain.'.pending', json_encode(['change_id' => $change,
+                    'expires_at' => gmdate('Y-m-d\TH:i:s\Z', time() + self::CHANGE_SECONDS)], JSON_THROW_ON_ERROR));
+                file_put_contents($this->root.'/overlay/changes/'.$change, $domain);
 
-                return ['nginx -t: ok', 'Reloaded nginx', "Change {$change}: confirm within 120 seconds or it is undone"];
-            case 'site:nginx-overlay-confirm':
-                $pending = $this->root.'/overlay/'.$domain.'.pending';
-                if (!is_file($pending) || trim((string) file_get_contents($pending)) !== $args['change']) {
+                return ['nginx -t: ok', 'Reloaded nginx', 'Change '.$change.': confirm within '.self::CHANGE_SECONDS.' seconds or it is undone'];
+            case 'change:confirm':
+                if (($this->pending($domain)['change_id'] ?? null) !== $args['change_id']) {
                     throw new FakeRefusal('unknown_change');
                 }
-                unlink($pending);
+                unlink($this->root.'/overlay/'.$domain.'.pending');
+                unlink($this->root.'/overlay/changes/'.$args['change_id']);
 
-                return ["Change {$args['change']} kept"];
+                return ["Change {$args['change_id']} kept"];
         }
 
         throw new FakeRefusal('not_allowed');
@@ -358,11 +375,28 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
         foreach (is_dir($this->trashDir($domain)) ? array_diff((array) scandir($this->trashDir($domain)), ['.', '..']) : [] as $id) {
             $meta = json_decode((string) @file_get_contents($this->trashDir($domain).'/'.$id.'/meta.json'), true);
             if (is_array($meta)) {
-                $items[] = ['id' => (string) $id] + $meta + ['expires_at' => null];
+                $items[] = ['id' => (string) $id, 'name' => basename((string) ($meta['path'] ?? $id))] + $meta + ['expires_at' => null];
             }
         }
 
         return $items;
+    }
+
+    /** @return array{change_id: string, expires_at: string}|null the nginx directives' change applied and not kept yet */
+    private function pending(string $domain): ?array
+    {
+        $pending = json_decode((string) @file_get_contents($this->root.'/overlay/'.$domain.'.pending'), true);
+
+        return is_array($pending) && is_string($pending['change_id'] ?? null) && is_string($pending['expires_at'] ?? null)
+            ? ['change_id' => $pending['change_id'], 'expires_at' => $pending['expires_at']] : null;
+    }
+
+    /** The site a pending change belongs to; '' for a change the stand-in does not know. */
+    private function changeDomain(string $change): string
+    {
+        $file = $this->root.'/overlay/changes/'.$change;
+
+        return preg_match('/\A[a-f0-9]{16}\z/D', $change) === 1 && is_file($file) ? trim((string) file_get_contents($file)) : '';
     }
 
     private function trashDir(string $domain): string

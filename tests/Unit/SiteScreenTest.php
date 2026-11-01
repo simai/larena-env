@@ -69,7 +69,7 @@ env_assert($site->profile === 'generic' && $site->php === '8.3' && $site->ssl ==
 env_assert($site->certificate === null && $site->backupSchedule?->time === '03:30' && $site->backupSchedule->keep === 7 && $site->backupSchedule->verify === false
     && $site->release === null, 'No certificate, a daily backup at 03:30 kept 7, not checked, no release.');
 env_assert($site->lastVerify?->ok === true && $site->lastVerify->restoreTest && $site->lastVerify->backup === '20260101-000000', 'The server\'s last check of a copy (simai-env 1.30.0).');
-env_assert(count($site->backups) === 1 && $site->backups[0]->name === '20261101-151759' && $site->backups[0]->sizeBytes === 4345, 'A backup is named by its own name, not its path.');
+env_assert(count($site->backups) === 1 && $site->backups[0]->name === '20261101-180050' && $site->backups[0]->sizeBytes === 4346, 'A backup is named by its own name, not its path.');
 env_assert($site->answersChecked && $site->diskBytes !== null, 'Whether it answers and its disk (simai-env 1.27.0).');
 env_assert($site->backups[0]->parts === ['config', 'db', 'files'] && $site->backups[0]->encrypted === false, 'What the backup holds.');
 $typed = serialize($site);
@@ -82,7 +82,7 @@ env_assert($reader->read(new PanelActor($user), 'nothing.test')->reason === Pane
 
 // The log is read with its own command.
 $log = $reader->log(new PanelActor($user), 'demo-static.test', 'access');
-env_assert($log->log !== null && $log->log->kind === 'access' && count($log->log->lines) === 2, 'The last lines of the log.');
+env_assert($log->log !== null && $log->log->kind === 'access' && count($log->log->lines) === 3, 'The last lines of the log.');
 env_assert($reader->log(new PanelActor($user), 'demo-static.test', 'everything')->reason === PanelReason::INVALID_ARGUMENT, 'Only access or error.');
 
 // The views on stubs.
@@ -122,12 +122,12 @@ env_assert(substr_count($ok, 'data-env-tab=') === count(\Larena\Env\Http\Control
 // Backups have their tab: the list, «Back up now», and restoring and checking only where the server has them.
 $older = \Larena\Env\Gateway\PanelCapabilities::fromHostDescription(['simai_env' => ['version' => '1.27.0']]);
 $backups = $screen(['site' => $site, 'tab' => 'backups', 'tabOperations' => $onTab('backups', $older)]);
-env_assert(str_contains($backups, 'data-env-backup="20261101-151759"') && str_contains($backups, '4.2 KB') && str_contains($backups, 'data-env-operation="backup"'), 'The backups and «Back up now».');
+env_assert(str_contains($backups, 'data-env-backup="20261101-180050"') && str_contains($backups, '4.2 KB') && str_contains($backups, 'data-env-operation="backup"'), 'The backups and «Back up now».');
 env_assert(!str_contains($backups, 'data-env-operation="backup-restore-database"'), 'No restore while the server\'s gateway has none.');
 $more = \Larena\Env\Gateway\PanelCapabilities::fromHostDescription(['simai_env' => ['version' => '1.27.0'], 'gate' => ['commands' => ['backup:data', 'backup:data-restore', 'backup:data-schedule', 'site:db-rotate', 'site:php-ini-set', 'access:create-project', 'access:disable']]]);
 $restore = $screen(['site' => $site, 'tab' => 'backups', 'tabOperations' => $onTab('backups', $more)]);
 env_assert(str_contains($restore, 'data-env-operation="backup-restore-database"') && str_contains($restore, 'data-env-operation="backup-extract-files"')
-    && str_contains($restore, '<option value="20261101-151759">') && str_contains($restore, 'data-env-restore-note'), 'Restoring chooses a backup and says a copy is taken first.');
+    && str_contains($restore, '<option value="20261101-180050">') && str_contains($restore, 'data-env-restore-note'), 'Restoring chooses a backup and says a copy is taken first.');
 env_assert(str_contains($restore, 'data-env-operation="backup-schedule"') && str_contains($restore, 'type="time"'), 'The daily backup, at a time of day.');
 // simai-env 1.30.0: each new copy is checked, asked where the server takes it, on by default; the last check is said.
 $checked = \Larena\Env\Server\SiteDetails::fromDescription(['schema' => 'simai-site/1', 'domain' => 'demo-php.test', 'profile' => 'generic', 'php' => '8.3', 'ssl' => 'none',
@@ -306,14 +306,18 @@ $editor = $screen(['site' => $site, 'tab' => 'files', 'files' => ['view' => 'pub
 env_assert(str_contains($editor, 'data-env-files-editor') && str_contains($editor, '&lt;h1&gt;hi&lt;/h1&gt;') && str_contains($editor, 'name="op" value="write"') && str_contains($editor, 'data-env-files-download'), 'A text file in the editor, saved by a plan.');
 $binary = $screen(['site' => $site, 'tab' => 'files', 'files' => ['view' => 'public/logo.png', 'text' => ['content' => null, 'binary' => true, 'size' => 5]] + $filesBase]);
 env_assert(str_contains($binary, 'data-env-files-binary') && !str_contains($binary, 'data-env-files-editor'), 'Not text: downloaded, not edited.');
+// Only the start of a longer text came (simai-env: truncated): shown, never saved.
+$cut = $screen(['site' => $site, 'tab' => 'files', 'files' => ['view' => 'big.log', 'text' => ['content' => "start\n", 'binary' => false, 'size' => 2_000_000, 'truncated' => true]] + $filesBase]);
+env_assert(str_contains($cut, 'data-env-files-text-truncated') && str_contains($cut, ' readonly') && !str_contains($cut, $text('files.save_note')), 'A cut text is read-only.');
 $trashed = $screen(['site' => $site, 'tab' => 'files', 'files' => ['trashOpen' => true, 'trash' => [\Larena\Env\Files\TrashItem::fromData(['id' => '20260101-a1', 'path' => 'notes.txt', 'deleted_at' => '2026-01-01T00:00:00Z'])]] + $filesBase]);
 env_assert(str_contains($trashed, 'data-env-trash-item="20260101-a1"') && str_contains($trashed, 'name="op" value="restore"'), 'The trash, each item restored by a plan.');
 $outside = $screen(['site' => $site, 'tab' => 'files', 'files' => ['problem' => 'That path leads outside the site\'s folder: the server refuses it.'] + $filesBase]);
 env_assert(str_contains($outside, 'data-env-files-problem') && str_contains($outside, 'outside the site'), 'A refusal is said in words.');
-$nginx = $screen(['site' => $site, 'tab' => 'nginx', 'overlaySupported' => true, 'overlay' => ['content' => "add_header X-Test 1;\n", 'pending' => 'c1'],
+$nginx = $screen(['site' => $site, 'tab' => 'nginx', 'overlaySupported' => true, 'overlay' => ['content' => "add_header X-Test 1;\n", 'pending' => 'c1', 'expires' => '2026-01-01T00:02:00Z'],
     'overlayProblem' => null, 'overlayAllows' => ['set' => true, 'clear' => true, 'confirm' => true]]);
 env_assert(str_contains($nginx, 'data-env-nginx-allowlist') && str_contains($nginx, 'data-env-nginx-pending="c1"') && str_contains($nginx, 'name="op" value="overlay-confirm"')
-    && str_contains($nginx, 'data-env-nginx-op="overlay-clear"'), 'The nginx directives: what is allowed, a change to keep in time.');
+    && str_contains($nginx, 'data-env-nginx-op="overlay-clear"') && str_contains($nginx, 'data-env-nginx-expires') && str_contains($nginx, '2026-01-01 00:02 UTC'),
+    'The nginx directives: what is allowed, a change to keep in time, and until when.');
 $noNginx = $screen(['site' => $site, 'tab' => 'nginx', 'overlaySupported' => false, 'overlay' => null, 'overlayProblem' => null, 'overlayAllows' => ['set' => false, 'clear' => false, 'confirm' => false]]);
 env_assert(str_contains($noNginx, 'data-env-nginx-unsupported') && !str_contains($noNginx, 'data-env-nginx-op'), 'No directives command: said, nothing offered.');
 

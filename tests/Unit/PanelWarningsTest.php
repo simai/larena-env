@@ -62,7 +62,7 @@ env_assert(count(PanelWarnings::ofSite($all, 'slow.test')) === 1 && $all[1]->tab
 env_assert(PanelCheckCommand::href($all[3], 'admin/server') === '/admin/server/sites/slow.test?tab=backups'
     && PanelCheckCommand::href($all[0], '/admin/server/') === '/admin/server/overview', 'A notification opens where the warning is dealt with.');
 
-// The recorded server (simai-env 1.30.0): every site has its daily backup, and only demo-php.test has a backup, from long ago.
+// The recorded server (simai-env 1.31.0): every site has its daily backup, and only demo-php.test has a backup, from long ago.
 $recorded = (new ServerOverviewReader(new RecordedAnswersGateway(env_recorded_path())))->read(new PanelActor('admin@example.com'))->overview;
 $seen = [];
 foreach (PanelWarnings::of($recorded, null, $now) as $warning) {
@@ -148,7 +148,8 @@ $translator = new class($english) implements \Illuminate\Contracts\Translation\T
     public function getLocale(): string { return 'en'; }
     public function setLocale($locale): void {}
 };
-// The recorded server, with demo's own site's daily backup turned off, so the space has something to hear about.
+// The recorded server as an older one (before simai-env 1.31.0: no alerts of its own, no load history), with demo's own
+// site's daily backup turned off, so the space has something to hear about.
 $gateway = new class(new RecordedAnswersGateway(env_recorded_path())) implements \Larena\Env\Contracts\PanelGateway {
     public function __construct(private RecordedAnswersGateway $inner) {}
     public function ask(\Larena\Env\Gateway\PanelRequest $request): \Larena\Env\Gateway\PanelAnswer
@@ -158,6 +159,8 @@ $gateway = new class(new RecordedAnswersGateway(env_recorded_path())) implements
             return $answer;
         }
         $data = $answer->data;
+        $data['gate']['commands'] = array_values(array_diff($data['gate']['commands'], ['self:alerts', 'self:alerts-ack', 'self:alerts-channel',
+            'self:alerts-test', 'self:metrics-history']));
         foreach ($data['sites'] as $index => $site) {
             if ($site['domain'] === 'demo-owned.test') {
                 $data['sites'][$index]['backup_schedule'] = false;
@@ -169,7 +172,8 @@ $gateway = new class(new RecordedAnswersGateway(env_recorded_path())) implements
     }
     public function source(): string { return 'recorded'; }
 };
-$run = static function () use ($gateway, $connection, $owners, $config, $translator, $container): string {
+$run = static function (?\Larena\Env\Contracts\PanelGateway $server = null) use ($gateway, $connection, $owners, $config, $translator, $container): string {
+    $gateway = $server ?? $gateway;
     $command = new PanelCheckCommand();
     $output = new \Symfony\Component\Console\Output\BufferedOutput();
     $command->setOutput(new \Illuminate\Console\OutputStyle(new \Symfony\Component\Console\Input\ArrayInput([]), $output));
@@ -182,13 +186,78 @@ $run = static function () use ($gateway, $connection, $owners, $config, $transla
 $connection->table(WarningLedger::TABLE)->delete();
 $connection->table(MetricSamples::TABLE)->delete();
 $first = $run();
-env_assert(str_contains($first, 'warnings: 2, new or reminded: 2, notifications: 1, measured: yes'), 'The first check: '.$first);
+env_assert(str_contains($first, 'warnings: 2, new or reminded: 2, notifications: 1, measured: yes, from the server: no'), 'The first check: '.$first);
 $annas = $inbox->list('test:anna');
 env_assert($annas->total === 1 && $annas->items[0]->source === 'env:warning:backup_none' && $annas->items[0]->href === '/admin/server/sites/demo-owned.test?tab=backups'
     && str_contains($annas->items[0]->title, 'demo-owned.test') && $annas->items[0]->status === 'warning', 'The space\'s person hears about their own site.');
 env_assert($inbox->list('test:boris')->total === 0, 'Another space hears nothing of it.');
 env_assert(str_contains($run(), 'new or reminded: 0, notifications: 0'), 'Five minutes on, nothing is told again.');
 env_assert($connection->table(MetricSamples::TABLE)->count() === 2, 'Each check measures the server.');
+
+// A server with its own alerts and load history (simai-env 1.31.0): the check copies its alerts, told once when they open
+// and once when resolved, and measures nothing itself. The recording holds one open alert of demo-owned.test.
+$connection->table(WarningLedger::TABLE)->delete();
+$connection->table(MetricSamples::TABLE)->delete();
+$connection->table(\Larena\Notification\Runtime\NotificationInbox::TABLE)->delete();
+$alerting = new RecordedAnswersGateway(env_recorded_path());
+$fromServer = $run($alerting);
+env_assert(str_contains($fromServer, 'warnings: 1, new or reminded: 1, notifications: 1, measured: no, from the server: yes'), 'The server\'s alerts: '.$fromServer);
+$annas = $inbox->list('test:anna');
+env_assert($annas->total === 1 && $annas->items[0]->source === 'env:warning:backup_failed' && $annas->items[0]->href === '/admin/server/sites/demo-owned.test?tab=backups'
+    && $annas->items[0]->title === 'The last backup of demo-owned.test failed.', 'The space\'s person hears of the server\'s alert.');
+env_assert($connection->table(MetricSamples::TABLE)->count() === 0, 'The server keeps the load; the panel does not.');
+env_assert(str_contains($run($alerting), 'new or reminded: 0, notifications: 0'), 'An open alert is not told again, even a day on.');
+$stated = static fn (string $state): \Larena\Env\Contracts\PanelGateway => new class($alerting, $state) implements \Larena\Env\Contracts\PanelGateway {
+    public function __construct(private RecordedAnswersGateway $inner, private string $state) {}
+    public function ask(\Larena\Env\Gateway\PanelRequest $request): \Larena\Env\Gateway\PanelAnswer
+    {
+        $answer = $this->inner->ask($request);
+        if ($request->command !== 'self:alerts') {
+            return $answer;
+        }
+        $data = $answer->data;
+        $data['alerts'][0]['state'] = $this->state;
+
+        return \Larena\Env\Gateway\PanelAnswer::fromDocument($request->requestId, ['schema' => 'simai-panel-answer/1', 'request_id' => $request->requestId,
+            'status' => 'ok', 'kind' => 'result', 'data' => $data]);
+    }
+    public function source(): string { return 'recorded'; }
+};
+env_assert(str_contains($run($stated('acked')), 'notifications: 0'), 'Acknowledged is not news.');
+env_assert(str_contains($run($stated('resolved')), 'notifications: 1'), 'Resolved is told once.');
+// The inbox's clock stands still here, so the two notifications share a time: the resolved one is found by its source.
+$resolved = array_values(array_filter($inbox->list('test:anna')->items, static fn ($item): bool => $item->source === 'env:warning:resolved'))[0] ?? null;
+env_assert($resolved !== null && $inbox->list('test:anna')->total === 2 && $resolved->status === 'success' && str_contains($resolved->title, 'demo-owned.test'), 'Resolved, in words.');
+env_assert(str_contains($run($stated('resolved')), 'notifications: 0'), 'And not again.');
+
+// The server's alerts in the panel's words: critical is an error, the panel's own being down and a disk are the server's,
+// an owner sees no server-wide one, a site the person does not see is left out, a resolved one is not shown.
+$alerts = \Larena\Env\Alerts\ServerAlerts::fromData(['alerts' => [
+    ['id' => 'a1', 'kind' => 'disk_full', 'severity' => 'critical', 'domain' => null, 'target' => '/', 'message' => 'disk / is 96% full', 'state' => 'open'],
+    ['id' => 'a2', 'kind' => 'panel_down', 'severity' => 'critical', 'domain' => 'panel.example.test', 'message' => 'panel down', 'state' => 'open'],
+    ['id' => 'a3', 'kind' => 'cert_expiring', 'severity' => 'warning', 'domain' => 'a.test', 'message' => '9 days', 'state' => 'acked',
+        'acked_by' => 'admin@stand.test', 'acked_at' => '2026-01-01T00:00:00Z'],
+    ['id' => 'a4', 'kind' => 'site_down', 'severity' => 'warning', 'domain' => 'hidden.test', 'message' => 'no answer', 'state' => 'open'],
+    ['id' => 'a5', 'kind' => 'something_new', 'severity' => 'warning', 'domain' => 'a.test', 'message' => 'a new kind', 'state' => 'open'],
+    ['id' => 'a6', 'kind' => 'backup_failed', 'severity' => 'warning', 'domain' => 'a.test', 'message' => 'failed', 'state' => 'resolved'],
+    ['id' => '../bad', 'kind' => 'disk_full', 'state' => 'open'],
+], 'channel' => ['kind' => 'telegram', 'target_hint' => 'chat …4567', 'last_sent_at' => null, 'last_error' => 'timeout']]);
+$whole = PanelWarnings::fromAlerts($alerts, ['a.test'], true);
+env_assert($kinds($whole) === ['disk_alert:error', 'panel_down:error', 'certificate_alert:warning', 'server_alert:warning'], 'The system level: '.json_encode($kinds($whole)));
+env_assert($whole[1]->domain === null && $whole[2]->tab() === 'domains' && $whole[2]->state === 'acked' && !$whole[2]->acknowledgeable()
+    && $whole[0]->acknowledgeable() && $whole[2]->ackedBy === 'admin@stand.test', 'Acknowledged ones say by whom; open ones can be acknowledged.');
+env_assert($kinds(PanelWarnings::fromAlerts($alerts, ['a.test'], false)) === ['certificate_alert:warning', 'server_alert:warning'], 'An owner: their sites only.');
+env_assert($alerts->channel === ['kind' => 'telegram', 'target_hint' => 'chat …4567', 'last_sent_at' => null, 'last_error' => 'timeout'], 'The channel, without its token.');
+
+// The load the server kept itself: ends at its last point, in percent of the whole.
+$history = MetricHistory::fromServer('day', ['points' => [
+    ['at' => '2026-01-01T00:00:00Z', 'load1' => 1.0, 'cpu_cores' => 2, 'memory_used_bytes' => 1, 'memory_total_bytes' => 4, 'disk' => [['mount' => '/', 'used_bytes' => 1, 'total_bytes' => 2]]],
+    ['at' => '2025-12-31T12:00:00Z', 'load1' => 4.0, 'cpu_cores' => 2, 'memory_used_bytes' => 2, 'memory_total_bytes' => 4, 'disk' => []],
+    ['at' => 'not a time'],
+]]);
+env_assert($history->count === 2 && $history->lines['load'] === [[0.5, 100.0], [1.0, 50.0]] && $history->lines['memory'][1] === [1.0, 25.0]
+    && $history->lines['disk:/'] === [[1.0, 50.0]], 'The server\'s history: '.json_encode($history->lines));
+env_assert(MetricHistory::fromServer('week', [])->count === 0, 'No points, nothing drawn.');
 
 // Each kind is a notification source the panel names in both languages, and KINDS lists every kind.
 $constants = array_filter((new ReflectionClass(PanelWarnings::class))->getConstants(), 'is_string');

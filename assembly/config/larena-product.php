@@ -32,6 +32,8 @@ return [
             // DNS through the provider's API (Panel plan, stage 7): the zones beside the server, the connection among the settings.
             'env.dns' => 'server',
             'env.dns.connection' => 'settings',
+            // Where the server sends its own alerts (simai-env 1.31.0).
+            'env.alerts.channel' => 'settings',
             // Sign-in diagnostics under its own name, beside the server's overview.
             'auth.diagnostics' => 'server',
             'admin.settings_general' => 'settings',
