@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- The Larena Panel 0.3.0 assembly: build.json takes Root 28b4be24 for the Framework assets, and the lock takes access
+  050716f, admin d6c66967, audit b7041203 and notification 70e9ac62, the revisions Root pins.
+
 - simai-env 1.32.0 (recorded answers set 8): a safe update of simai-env and of the panel from the panel (Panel plan
   4.7). «Сервер › Обновление» (system level, `env.server.read`) shows, for «Окружение» and «Панель» each, the version
   now and the one available, the release notes between them with a link to all changes, the copy taken first, what

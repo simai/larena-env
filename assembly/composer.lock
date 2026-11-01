@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "77bd9f06f48b29eb079159a7572a4801",
+    "content-hash": "e38fa62db052aa446e05d87f5145d69b",
     "packages": [
         {
             "name": "brick/math",
@@ -1415,12 +1415,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:simai/larena-access.git",
-                "reference": "17f2163c91dc32c7b17c5e3fcccb568f9609223d"
+                "reference": "050716f79bd0aa87426962fbe150a440260d64fa"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-access/zipball/17f2163c91dc32c7b17c5e3fcccb568f9609223d",
-                "reference": "17f2163c91dc32c7b17c5e3fcccb568f9609223d",
+                "url": "https://api.github.com/repos/simai/larena-access/zipball/050716f79bd0aa87426962fbe150a440260d64fa",
+                "reference": "050716f79bd0aa87426962fbe150a440260d64fa",
                 "shasum": ""
             },
             "require": {
@@ -1468,6 +1468,7 @@
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/AdminUserManagementAccessIntegrationTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/AdministratorGovernanceServiceTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/FirstAdministratorSetupServiceTest.php",
+                    "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/AdministratorAuditNamesTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/AdministratorApiOperationHandlerTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/AccessRolePolicyApiOperationHandlerTest.php",
                     "@php tests/Unit/AccessDecisionContractTest.php",
@@ -1564,7 +1565,7 @@
                 }
             ],
             "description": "Larena Access: Operation permissions, target providers, query scopes and explainable access decisions.",
-            "time": "2026-10-31T21:23:42+00:00"
+            "time": "2026-11-01T15:39:17+00:00"
         },
         {
             "name": "larena/admin",
@@ -1572,12 +1573,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:simai/larena-admin.git",
-                "reference": "2ec6a166de738879ea76295ef166ae1516c3fdb4"
+                "reference": "d6c6696724e85945d65ad8efa14018a038f914f1"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-admin/zipball/2ec6a166de738879ea76295ef166ae1516c3fdb4",
-                "reference": "2ec6a166de738879ea76295ef166ae1516c3fdb4",
+                "url": "https://api.github.com/repos/simai/larena-admin/zipball/d6c6696724e85945d65ad8efa14018a038f914f1",
+                "reference": "d6c6696724e85945d65ad8efa14018a038f914f1",
                 "shasum": ""
             },
             "require": {
@@ -1795,7 +1796,7 @@
                 }
             ],
             "description": "Larena Admin: Object-based, permission-aware administration platform for package contributions, screens, actions and diagnostics.",
-            "time": "2026-11-01T00:41:19+00:00"
+            "time": "2026-11-01T15:39:45+00:00"
         },
         {
             "name": "larena/audit",
@@ -1803,12 +1804,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/simai/larena-audit.git",
-                "reference": "b862b325e0cfca098010d5b428dadc900266e17a"
+                "reference": "b704120342456f1b4d1c073dc868f7b7a4ebafb6"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-audit/zipball/b862b325e0cfca098010d5b428dadc900266e17a",
-                "reference": "b862b325e0cfca098010d5b428dadc900266e17a",
+                "url": "https://api.github.com/repos/simai/larena-audit/zipball/b704120342456f1b4d1c073dc868f7b7a4ebafb6",
+                "reference": "b704120342456f1b4d1c073dc868f7b7a4ebafb6",
                 "shasum": ""
             },
             "require": {
@@ -1905,7 +1906,7 @@
                 "source": "https://github.com/simai/larena-audit/tree/main",
                 "issues": "https://github.com/simai/larena-audit/issues"
             },
-            "time": "2026-10-31T22:16:30+00:00"
+            "time": "2026-11-01T15:39:02+00:00"
         },
         {
             "name": "larena/auth",
@@ -2555,12 +2556,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/simai/larena-notification.git",
-                "reference": "5991c903ec083e8ada15463e7da75839b5709d50"
+                "reference": "70e9ac626686ab9028de85b3bc3fd8a788872d28"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-notification/zipball/5991c903ec083e8ada15463e7da75839b5709d50",
-                "reference": "5991c903ec083e8ada15463e7da75839b5709d50",
+                "url": "https://api.github.com/repos/simai/larena-notification/zipball/70e9ac626686ab9028de85b3bc3fd8a788872d28",
+                "reference": "70e9ac626686ab9028de85b3bc3fd8a788872d28",
                 "shasum": ""
             },
             "require": {
@@ -2639,7 +2640,7 @@
                 "source": "https://github.com/simai/larena-notification/tree/main",
                 "issues": "https://github.com/simai/larena-notification/issues"
             },
-            "time": "2026-10-23T12:40:51+00:00"
+            "time": "2026-11-01T15:38:52+00:00"
         },
         {
             "name": "larena/property",
