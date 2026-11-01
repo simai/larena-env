@@ -59,7 +59,8 @@ final readonly class NewSiteController
     public function plan(Request $request): mixed
     {
         $actor = ResolvePanelActor::of($request);
-        $input = self::input($request, $actor);
+        $overview = $this->overviews->read($actor)->overview;
+        $input = self::withBackup(self::input($request, $actor), $request, $overview);
         $result = $this->operations->planCommand($actor, 'site:add', $input);
         if ($result->plan === null) {
             return $this->back($request, $result->reason ?? 'answer_shape_invalid', $input);
@@ -74,7 +75,7 @@ final readonly class NewSiteController
             'runUrl' => route('larena.env.admin.sites.run', [], false),
             'cancelUrl' => route('larena.env.admin.sites.new', [], false),
             'hidden' => $input + ['daily-backup' => self::dailyBackup($request) ? 'yes' : 'no'],
-            'then' => self::dailyBackup($request) && $this->schedules($this->overviews->read($actor)->overview)
+            'then' => $this->followsWithSchedule($request, $overview, $input)
                 ? [(string) $this->translator->get('larena-env::admin.new_site.daily_backup_after')] : [],
         ]);
     }
@@ -82,14 +83,15 @@ final readonly class NewSiteController
     public function run(Request $request): RedirectResponse
     {
         $actor = ResolvePanelActor::of($request);
-        $input = self::input($request, $actor);
+        $overview = $this->overviews->read($actor)->overview;
+        $input = self::withBackup(self::input($request, $actor), $request, $overview);
         $started = $this->operations->startCommand($actor, 'site:add', $input);
         if ($started->jobId === null) {
             return $this->back($request, $started->reason ?? 'answer_shape_invalid', $input);
         }
 
         // The site's daily backup is turned on when its job has made it (ServerJobController), as the plan said.
-        if (self::dailyBackup($request) && $this->schedules($this->overviews->read($actor)->overview) && isset($input['domain'])) {
+        if ($this->followsWithSchedule($request, $overview, $input) && isset($input['domain'])) {
             $request->session()->put(self::AFTER_JOB.'.'.$started->jobId, $input['domain']);
         }
 
@@ -104,7 +106,32 @@ final readonly class NewSiteController
 
     private function schedules(?\Larena\Env\Server\ServerOverview $overview): bool
     {
-        return $overview?->capabilities?->allows('backup:data-schedule') === true;
+        return $overview?->capabilities?->allows('backup:data-schedule') === true
+            || $overview?->capabilities?->takes('site:add', 'backup') === true;
+    }
+
+    /**
+     * A server whose site:add takes `backup` (simai-env 1.30.0) makes the daily backup with the site, every kind but a
+     * redirect; an older one gets backup:data-schedule once the site is made.
+     *
+     * @param array<string, string> $input
+     *
+     * @return array<string, string>
+     */
+    private static function withBackup(array $input, Request $request, ?\Larena\Env\Server\ServerOverview $overview): array
+    {
+        if ($overview?->capabilities?->takes('site:add', 'backup') === true && ($input['profile'] ?? null) !== 'redirect') {
+            $input['backup'] = self::dailyBackup($request) ? 'yes' : 'no';
+        }
+
+        return $input;
+    }
+
+    /** @param array<string, string> $input */
+    private function followsWithSchedule(Request $request, ?\Larena\Env\Server\ServerOverview $overview, array $input): bool
+    {
+        return self::dailyBackup($request) && !isset($input['backup']) && ($input['profile'] ?? null) !== 'redirect'
+            && $overview?->capabilities?->allows('backup:data-schedule') === true;
     }
 
     /**

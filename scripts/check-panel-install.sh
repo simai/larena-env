@@ -9,7 +9,7 @@
 #   3. no route of a feature the product left off exists; the panel's screens do;
 #   4. the first administrator is made through ?setup=, signs in, and the menu is the product's: its roots, and every
 #      row's address opens;
-#   5. peace of mind (stage 4): a new site gets its daily backup, a restore says what it replaces, the check measures
+#   5. peace of mind (stage 4): a new site gets its daily backup, each copy is checked, a restore says what it replaces, the check measures
 #      and tells the administrator, the sites, card and overview say what needs attention and draw the load;
 #   6. the two levels (Panel plan, stage 2): the administrator gives a person of the user level a space (an owner of
 #      the server), looks at the panel as them (marked in the audit log), plans a new site and opens a site's tabs; the
@@ -177,7 +177,8 @@ check = subprocess.run(["php", "artisan", "larena:env-check"], cwd=sys.argv[5], 
 print("check:", check.strip())
 assert "measured: yes" in check and "notifications: 0" not in check, check
 _, listed = get("/admin/server")
-assert "data-env-warnings=" in listed and 'data-env-warning="backup_none"' in listed and 'data-env-warning-site="demo-owned.test"' in listed, "the sites say what needs attention"
+# simai-env 1.30.0: every recorded site has its daily backup; demo-php.test's newest copy is old.
+assert "data-env-warnings=" in listed and 'data-env-warning="backup_stale"' in listed and 'data-env-warning-site="demo-php.test"' in listed, "the sites say what needs attention"
 _, overview = get("/admin/server/overview")
 assert "data-env-history" in overview and 'data-env-history-chart="day"' in overview and "data-env-warnings=" in overview, "the overview draws the load"
 _, card = get("/admin/server/sites/demo-php.test")
@@ -189,7 +190,7 @@ request = urllib.request.Request(base + "/admin/navigation/menu", method="POST",
 with web.open(request) as answer:
     told = json.loads(answer.read().decode())
 unread = (told.get("navigation", told).get("notifications") or told.get("notifications") or {}).get("unread", 0)
-assert unread >= 3, ("the administrator's notifications", unread)
+assert unread >= 1, ("the administrator's notifications", unread)
 status, _ = get("/admin/notifications")
 assert status == 200, ("the notification centre opens", status)
 _, backups = get("/admin/server/sites/demo-php.test?tab=backups")
@@ -197,6 +198,8 @@ form = re.search(r'data-env-operation="backup-restore-database".*?</form>', back
 name = re.search(r'<option value="([^"]+)"', form).group(1)
 _, restore = post("/admin/server/sites/demo-php.test/plan", {"_token": form_token(backups), "operation": "backup-restore-database", "backup": name})
 assert "data-env-plan-replaces" in restore, "a restore says what it replaces"
+# simai-env 1.30.0: each scheduled copy is checked, and the server's last check is said.
+assert "data-env-verify-field" in backups and 'data-env-last-verify="ok"' in backups, "the schedule checks each copy, the last check is said"
 print("stage 4:", "ok", unread, "unread")
 
 # The second level: a person at the user level (the editor role), made the way an administrator's tooling would.
@@ -227,18 +230,32 @@ assert 'data-env-new-profile="laravel"' in laravel and all('data-env-field="' + 
 _, redirect = get("/admin/server/sites/new?profile=redirect")
 assert 'data-env-field="redirect"' in redirect and 'data-env-field="php"' not in redirect, "a redirect asks only where to"
 _, planned = post("/admin/server/sites/new/plan", {"_token": form_token(wizard), "domain": "new.test", "profile": "static", "daily-backup": "yes"})
-assert 'data-env-plan="site:add"' in planned and "data-env-plan-then" in planned and 'name="daily-backup" value="yes"' in planned, "a new site is planned, its daily backup after"
-_, made = post("/admin/server/sites/new/run", {"_token": form_token(planned), "domain": "new.test", "profile": "static", "daily-backup": "yes"})
-assert "data-env-notice" in made and "daily backup is being turned on" in made, "once the site is made, its daily backup is turned on"
+# simai-env 1.30.0 makes the daily backup with the site: no backup:data-schedule after it.
+assert 'data-env-plan="site:add"' in planned and 'name="backup" value="yes"' in planned and "data-env-plan-then" not in planned, "a new site is planned with its daily backup"
+_, made = post("/admin/server/sites/new/run", {"_token": form_token(planned), "domain": "new.test", "profile": "static", "daily-backup": "yes", "backup": "yes"})
+assert "daily backup is being turned on" not in made, "the daily backup came with the site, nothing is turned on after"
 for tab in ("overview", "domains", "php", "database", "backups", "releases", "log", "access"):
     status, card = get("/admin/server/sites/demo-php.test?tab=" + tab)
     assert status == 200 and 'data-env-tab="' + tab + '"' in card, ("tab", tab)
-    # The recorded server (simai-env 1.28.0) lists its commands: SFTP is not among them, so it is never offered.
-    assert 'data-env-operation="sftp-create"' not in card, ("not offered", "sftp-create")
+    # SFTP is by key only (simai-env 1.30.0): no password field on any tab.
+    assert 'type="password"' not in card and 'name="password"' not in card, ("no password", tab)
+    if tab == "access":
+        assert 'data-env-operation="sftp-create"' in card and "data-env-sftp-uploads" in card, "a new SFTP access by key, and the note on uploads"
+        assert 'data-env-operation="sftp-disable"' not in card, "a site without accounts has none to turn off"
+    else:
+        assert 'data-env-operation="sftp-create"' not in card, ("SFTP on its own tab", tab)
     # Its own tab offers what 1.28.0 does: restoring the database, unpacking files, php.ini, a new database password.
     for shownAction, onTab in (("backup-restore-database", "backups"), ("backup-extract-files", "backups"), ("php-setting", "php"), ("database-password", "database")):
         if tab == onTab:
             assert 'data-env-operation="' + shownAction + '"' in card, ("offered", shownAction)
+_, sftp = get("/admin/server/sites/demo-owned.test?tab=access")
+assert 'data-env-sftp="demo-staff"' in sftp and 'data-env-sftp-path="/site"' in sftp, "the site's own SFTP access, where it lands"
+for shownAction in ("sftp-add-key", "sftp-disable", "sftp-remove"):
+    assert 'data-env-operation="' + shownAction + '"' in sftp, ("offered", shownAction)
+assert 'data-env-operation="sftp-enable"' not in sftp, "an access that is on is not turned on"
+_, off = post("/admin/server/sites/demo-owned.test/plan", {"_token": form_token(sftp), "operation": "sftp-disable", "login": "demo-staff"})
+assert 'data-env-plan="access:disable"' in off, "turning an access off is planned"
+print("sftp:", "ok")
 _, logged = get("/admin/server/sites/demo-static.test?tab=log&q=curl&group=2xx&lines=500")
 assert "data-env-log-rows" in logged and 'data-env-log-row="200"' in logged, "the log narrows"
 assert "larena-table-stack" in logged and 'data-label="' in logged, "the log reads as cards on a phone"
@@ -272,7 +289,9 @@ print("user level menu roots:", own_roots)
 assert "sites" in own_roots and "users" not in own_roots and "server" not in own_roots and "journal" not in own_roots, own_roots
 status, _ = get("/admin/notifications")
 assert status == 200, ("the person's notification centre opens", status)
-assert 'data-env-warning-site="demo-owned.test"' in sites and 'data-env-warning-site="demo-php.test"' not in sites and 'data-env-warning="disk_full"' not in sites, "the person is warned about their own sites only"
+assert 'data-env-warning-site="demo-php.test"' not in sites and 'data-env-warning="disk_full"' not in sites, "the person is warned about their own sites only"
+status, own_sftp = get("/admin/server/sites/demo-owned.test?tab=access")
+assert status == 200 and 'data-env-sftp="demo-staff"' in own_sftp and 'data-env-operation="sftp-add-key"' in own_sftp, "the person manages their own site's SFTP"
 print("both levels checked")
 PY
 python3 - "$APP/database/database.sqlite" <<'PY' >>"$LOG" 2>&1 || failed "audit"

@@ -68,6 +68,7 @@ final readonly class SiteAdminController
         $doctor = $site === null || $tab !== 'overview' ? null : $this->sites->doctor($actor, $domain);
         $operations = $site === null ? [] : SiteOperation::offeredFor($site, $capabilities);
         $ask = static fn (string $command, string $onTab): bool => $site !== null && $tab === $onTab && $capabilities->allows($command);
+        $sftpAccounts = $ask('access:list', 'access') ? $this->extras->sftpAccounts($actor, $domain) : null;
 
         return $this->views->make('larena-env::admin.site', [
             'domain' => $domain,
@@ -78,9 +79,13 @@ final readonly class SiteAdminController
             'phpSettings' => $ask('site:php-ini-list', 'php') ? $this->extras->phpSettings($actor, $domain) : null,
             'phpExtensions' => $ask('php:extensions', 'php') && $site->php !== 'none' ? $this->extras->phpExtensions($actor, $site->php) : null,
             'databases' => $ask('db:list', 'database') ? $this->extras->databases($actor, $domain) : null,
-            'sftpAccounts' => $ask('access:list', 'access') ? $this->extras->sftpAccounts($actor, $domain) : null,
+            'sftpAccounts' => $sftpAccounts,
+            // An account's own action chooses among the accounts it suits; with none, the action is not offered.
+            'sftpChoices' => array_combine(array_map(static fn (SiteOperation $operation): string => $operation->value, $operations),
+                array_map(static fn (SiteOperation $operation): array => $operation->accountChoices($sftpAccounts ?? []), $operations)),
             // What needs attention on this site (Panel plan 4.4), as the sites' list says it.
             'warnings' => $overview === null ? null : self::siteWarnings($overview, $domain),
+            'capabilities' => $capabilities,
             'tabOperations' => array_values(array_filter($operations, static fn (SiteOperation $operation): bool => $operation->tab() === $tab)),
             'source' => $result->source,
             'site' => $site,
@@ -107,7 +112,7 @@ final readonly class SiteAdminController
         if ($operation === null) {
             return $this->back($request, $domain, 'not_allowed');
         }
-        $input = self::input($request, $operation);
+        $input = $this->input($request, $actor, $operation);
         $result = $this->operations->plan($actor, $operation, $domain, $input);
         if ($result->plan === null) {
             return $this->back($request, $domain, $result->reason ?? 'answer_shape_invalid', $operation->tab());
@@ -162,7 +167,7 @@ final readonly class SiteAdminController
         if ($operation === null) {
             return $this->back($request, $domain, 'not_allowed');
         }
-        $started = $this->operations->start($actor, $operation, $domain, self::input($request, $operation));
+        $started = $this->operations->start($actor, $operation, $domain, $this->input($request, $actor, $operation));
         if ($started->jobId === null) {
             return $this->back($request, $domain, $started->reason ?? 'answer_shape_invalid', $operation->tab());
         }
@@ -175,10 +180,10 @@ final readonly class SiteAdminController
      *
      * @return array<string, string>
      */
-    private static function input(Request $request, SiteOperation $operation): array
+    private function input(Request $request, PanelActor $actor, SiteOperation $operation): array
     {
         $input = [];
-        foreach ($operation->fields() as $field) {
+        foreach ($operation->fieldsOn($this->overviews->read($actor)->overview->capabilities ?? PanelCapabilities::none()) as $field) {
             $value = $request->input($field);
             if (is_string($value) && $value !== '') {
                 $input[$field] = $value;

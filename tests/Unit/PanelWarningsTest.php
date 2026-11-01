@@ -62,13 +62,13 @@ env_assert(count(PanelWarnings::ofSite($all, 'slow.test')) === 1 && $all[1]->tab
 env_assert(PanelCheckCommand::href($all[3], 'admin/server') === '/admin/server/sites/slow.test?tab=backups'
     && PanelCheckCommand::href($all[0], '/admin/server/') === '/admin/server/overview', 'A notification opens where the warning is dealt with.');
 
-// The recorded server: its sites have no daily backup, and only demo-php.test has a backup, from long ago.
+// The recorded server (simai-env 1.30.0): every site has its daily backup, and only demo-php.test has a backup, from long ago.
 $recorded = (new ServerOverviewReader(new RecordedAnswersGateway(env_recorded_path())))->read(new PanelActor('admin@example.com'))->overview;
 $seen = [];
 foreach (PanelWarnings::of($recorded, null, $now) as $warning) {
     $seen[$warning->domain] = $warning->kind;
 }
-env_assert($seen === ['demo-owned.test' => 'backup_none', 'demo-php.test' => 'backup_stale', 'demo-static.test' => 'backup_none'], 'The recording: '.json_encode($seen));
+env_assert($seen === ['demo-php.test' => 'backup_stale'], 'The recording: '.json_encode($seen));
 
 // The database the check keeps its ledger and the load in, made by the package's own migrations.
 $capsule = new Capsule();
@@ -148,7 +148,27 @@ $translator = new class($english) implements \Illuminate\Contracts\Translation\T
     public function getLocale(): string { return 'en'; }
     public function setLocale($locale): void {}
 };
-$gateway = new RecordedAnswersGateway(env_recorded_path());
+// The recorded server, with demo's own site's daily backup turned off, so the space has something to hear about.
+$gateway = new class(new RecordedAnswersGateway(env_recorded_path())) implements \Larena\Env\Contracts\PanelGateway {
+    public function __construct(private RecordedAnswersGateway $inner) {}
+    public function ask(\Larena\Env\Gateway\PanelRequest $request): \Larena\Env\Gateway\PanelAnswer
+    {
+        $answer = $this->inner->ask($request);
+        if ($request->command !== 'self:describe') {
+            return $answer;
+        }
+        $data = $answer->data;
+        foreach ($data['sites'] as $index => $site) {
+            if ($site['domain'] === 'demo-owned.test') {
+                $data['sites'][$index]['backup_schedule'] = false;
+            }
+        }
+
+        return \Larena\Env\Gateway\PanelAnswer::fromDocument($request->requestId, ['schema' => 'simai-panel-answer/1', 'request_id' => $request->requestId,
+            'status' => 'ok', 'kind' => 'result', 'data' => $data]);
+    }
+    public function source(): string { return 'recorded'; }
+};
 $run = static function () use ($gateway, $connection, $owners, $config, $translator, $container): string {
     $command = new PanelCheckCommand();
     $output = new \Symfony\Component\Console\Output\BufferedOutput();
@@ -162,7 +182,7 @@ $run = static function () use ($gateway, $connection, $owners, $config, $transla
 $connection->table(WarningLedger::TABLE)->delete();
 $connection->table(MetricSamples::TABLE)->delete();
 $first = $run();
-env_assert(str_contains($first, 'warnings: 3, new or reminded: 3, notifications: 1, measured: yes'), 'The first check: '.$first);
+env_assert(str_contains($first, 'warnings: 2, new or reminded: 2, notifications: 1, measured: yes'), 'The first check: '.$first);
 $annas = $inbox->list('test:anna');
 env_assert($annas->total === 1 && $annas->items[0]->source === 'env:warning:backup_none' && $annas->items[0]->href === '/admin/server/sites/demo-owned.test?tab=backups'
     && str_contains($annas->items[0]->title, 'demo-owned.test') && $annas->items[0]->status === 'warning', 'The space\'s person hears about their own site.');

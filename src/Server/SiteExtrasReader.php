@@ -41,10 +41,12 @@ final readonly class SiteExtrasReader
         return $all === null ? null : array_values(array_filter($all, static fn (SiteDatabase $db): bool => $db->site === $domain));
     }
 
-    /** @return list<SftpAccount>|null */
+    /** @return list<SftpAccount>|null the site's own SFTP accounts, from the server's list (whose own owner scope applies) */
     public function sftpAccounts(PanelActor $actor, string $domain): ?array
     {
-        return $this->list($actor, 'access:list', ['domain' => $domain], 'accounts', SftpAccount::fromData(...));
+        $all = $this->list($actor, 'access:list', [], 'accesses', SftpAccount::fromData(...));
+
+        return $all === null ? null : array_values(array_filter($all, static fn (SftpAccount $account): bool => $account->site === $domain));
     }
 
     public function metrics(PanelActor $actor): ?ServerMetrics

@@ -80,7 +80,8 @@ $capabilities = (new \Larena\Env\Server\ServerOverviewReader($gateway))->read(ne
 env_assert($capabilities instanceof \Larena\Env\Gateway\PanelCapabilities, 'The server says what its gateway has.');
 $offered = array_map(static fn (SiteOperation $operation): string => $operation->value, SiteOperation::offeredFor($site, $capabilities));
 env_assert($offered === ['certificate-issue', 'backup', 'backup-restore-database', 'backup-extract-files', 'backup-verify', 'backup-schedule', 'php-version',
-    'php-setting', 'php-setting-remove', 'database-password', 'database-export'], 'Without a certificate, a previous release, workers or a service; with 1.28.0\'s backups, php.ini and database: '.implode(',', $offered));
+    'php-setting', 'php-setting-remove', 'database-password', 'database-export', 'sftp-create', 'sftp-add-key', 'sftp-disable', 'sftp-enable', 'sftp-remove'],
+    'Without a certificate, a previous release, workers or a service; with 1.28.0\'s backups, php.ini and database, and 1.30.0\'s SFTP: '.implode(',', $offered));
 env_assert(SiteOperation::offeredFor($site) === [], 'Without knowing the server, nothing is offered.');
 
 // What no simai-env release has yet is offered only when the server lists it among its gateway's commands.

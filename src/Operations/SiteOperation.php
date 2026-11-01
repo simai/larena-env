@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Larena\Env\Operations;
 
 use Larena\Env\Gateway\PanelCapabilities;
+use Larena\Env\Server\SftpAccount;
 use Larena\Env\Server\SiteDetails;
 
 /**
@@ -91,7 +92,7 @@ enum SiteOperation: string
             self::Backup => ['db', 'files'],
             self::BackupRestoreDatabase, self::BackupExtractFiles => ['backup'],
             self::BackupVerify => ['backup'],
-            self::BackupSchedule => ['enabled', 'time', 'keep'],
+            self::BackupSchedule => ['enabled', 'time', 'keep', 'verify'],
             self::PhpVersion => ['php'],
             self::PhpSetting => ['name', 'value'],
             self::PhpSettingRemove => ['name'],
@@ -102,10 +103,41 @@ enum SiteOperation: string
         };
     }
 
+    /**
+     * The fields this server's gateway takes: an argument a later release added is asked only where the server has it.
+     *
+     * @return list<string>
+     */
+    public function fieldsOn(PanelCapabilities $capabilities): array
+    {
+        return array_values(array_filter($this->fields(), fn (string $field): bool => $capabilities->takes($this->command(), $field)));
+    }
+
     /** An SFTP account's own action names the account, not the site: the gateway checks it belongs to the site's owner. */
     public function namesSite(): bool
     {
         return !in_array($this, [self::SftpAddKey, self::SftpDisable, self::SftpEnable, self::SftpRemove], true);
+    }
+
+    /**
+     * The site's SFTP accounts this action can be asked for: an account that is on can be turned off, one that is off
+     * turned on; a key is added to, or an account removed from, any of them. None for an action that names the site.
+     *
+     * @param list<SftpAccount> $accounts
+     *
+     * @return list<SftpAccount>
+     */
+    public function accountChoices(array $accounts): array
+    {
+        if ($this->namesSite()) {
+            return [];
+        }
+
+        return array_values(array_filter($accounts, fn (SftpAccount $account): bool => match ($this) {
+            self::SftpDisable => $account->enabled,
+            self::SftpEnable => !$account->enabled,
+            default => true,
+        }));
     }
 
     /**

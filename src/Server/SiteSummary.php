@@ -25,6 +25,9 @@ final readonly class SiteSummary
         public bool $answersChecked = false,
         public ?int $diskBytes = null,
         public ?string $lastBackup = null,
+        // simai-env 1.30.0: the server's last check of a copy, and whether the certificate's last renewal failed.
+        public ?BackupCheck $lastVerify = null,
+        public bool $certificateRenewFailed = false,
     ) {
     }
 
@@ -56,6 +59,9 @@ final readonly class SiteSummary
             answersChecked: is_array($site['answers'] ?? null),
             diskBytes: is_array($site['disk'] ?? null) && is_int($site['disk']['bytes'] ?? null) ? $site['disk']['bytes'] : null,
             lastBackup: is_string($site['last_backup'] ?? null) ? $site['last_backup'] : null,
+            lastVerify: is_array($site['last_verify'] ?? null) ? BackupCheck::fromData($site['last_verify']) : null,
+            certificateRenewFailed: is_array($site['certificate'] ?? null) && is_array($site['certificate']['last_renew'] ?? null)
+                && ($site['certificate']['last_renew']['ok'] ?? null) === false,
         );
     }
 }

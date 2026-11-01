@@ -59,6 +59,9 @@ return [
         'tabs' => ['overview' => 'Overview', 'domains' => 'Domains and certificate', 'php' => 'PHP and services', 'database' => 'Database', 'backups' => 'Backups', 'releases' => 'Releases', 'log' => 'Log', 'access' => 'Access'],
     ],
     'certificate' => [
+        'last_renew' => 'Last renewal',
+        'renew_ok' => 'succeeded',
+        'renew_failed' => 'failed',
         'title' => 'Certificate',
         'none' => 'nginx serves this site without a certificate.',
         'names' => 'Names',
@@ -69,6 +72,12 @@ return [
         'ends_soon' => 'This certificate ends soon. Renew it, or let the server renew it.',
     ],
     'backups' => [
+        'verify_on' => 'The server checks each new backup.',
+        'verify_off' => 'The server does not check new backups.',
+        'last_verify_ok' => 'The last check of a backup at :time passed.',
+        'last_verify_failed' => 'The last check of a backup at :time failed: that backup cannot be relied on.',
+        'restore_tested' => 'Restoring its database was tried on a scratch copy.',
+        'restore_not_tested' => 'Restoring a database was not tried: the backup has none.',
         'title' => 'Backups',
         'no_schedule' => 'There is no daily backup of this site.',
         'schedule' => 'A daily backup runs at :time and the last :keep are kept.',
@@ -98,6 +107,7 @@ return [
         'message' => 'Message',
     ],
     'fields' => [
+        'verify' => 'Check each backup after it is made',
         'email' => 'Email for the certificate authority',
         'redirect' => 'Send http to https',
         'hsts' => 'Ask browsers to use https only',
@@ -186,6 +196,7 @@ return [
         'bad_request' => 'The server could not read the request.',
         'too_large' => 'The request is too large.',
         'not_allowed' => 'This command is not allowed for the panel.',
+        'unknown_access' => 'The server has no such SFTP access: it may have been removed already.',
         'invalid_argument' => 'An argument of the request is not valid.',
         'owner_scope' => 'This site belongs to another owner.',
         'gateway_not_configured' => 'No connection to the server is configured. Set LARENA_ENV_GATEWAY and the SSH target.',
@@ -227,6 +238,8 @@ return [
         'backup_none' => 'The site :domain has no backup and no daily one.',
         'backup_stale' => 'The newest backup of :domain is from :time, more than two days ago.',
         'backup_unscheduled' => 'The site :domain has no daily backup: copies are made only by hand.',
+        'backup_check_failed' => 'The check of a backup of :domain at :time failed: that backup cannot be relied on. Make a new one and check it.',
+        'certificate_renew_failed' => 'The certificate of :domain could not be renewed. It is still valid, but will run out soon.',
     ],
     // What a person's notifications call the panel's warnings (the source env:warning:<kind>).
     'notification_sources' => [
@@ -239,6 +252,8 @@ return [
         'backup_none' => 'No backup',
         'backup_stale' => 'Old backup',
         'backup_unscheduled' => 'No daily backup',
+        'backup_check_failed' => 'Backup failed its check',
+        'certificate_renew_failed' => 'Certificate not renewed',
     ],
     'history' => [
         'title' => 'Load history',
@@ -270,7 +285,10 @@ return [
         'explain' => 'Developers reach a site over SSH as its owner. The owner\'s keys are kept by the server; the panel never shows them.',
         'sftp' => 'SFTP access',
         'sftp_none' => 'This site has no SFTP access of its own.',
-        'keys' => 'keys: :count',
+        'by_key' => 'signs in by key',
+        'lands' => 'sees the site as :path',
+        'created' => 'created :when',
+        'uploads' => 'The site can read a file uploaded over SFTP but cannot change it when the client uploads it as 0644, as most do. Upload files the site must rewrite as group-writable (0664). An access has no password: keys only.',
         'on' => 'on',
         'off' => 'off',
     ],

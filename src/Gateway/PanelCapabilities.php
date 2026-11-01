@@ -40,6 +40,17 @@ final readonly class PanelCapabilities
         return $this->listed !== null || version_compare($this->envVersion, '1.28.0', '>=');
     }
 
+    /** Whether the server takes an argument a later release added to a command it allows (by its release). */
+    public function takes(string $command, string $argument): bool
+    {
+        if (!$this->allows($command)) {
+            return false;
+        }
+        $since = PanelCommands::argumentSince($command, $argument);
+
+        return $since !== null && version_compare($this->envVersion, $since, '>=');
+    }
+
     public function allows(string $command): bool
     {
         if (PanelCommands::kind($command) === null) {

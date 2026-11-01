@@ -33,8 +33,9 @@ final readonly class PanelWarning
     public function tab(): string
     {
         return match ($this->kind) {
-            PanelWarnings::CERTIFICATE_ENDING, PanelWarnings::CERTIFICATE_EXPIRED, PanelWarnings::CERTIFICATE_MISSING => 'domains',
-            PanelWarnings::BACKUP_NONE, PanelWarnings::BACKUP_STALE, PanelWarnings::BACKUP_UNSCHEDULED => 'backups',
+            PanelWarnings::CERTIFICATE_ENDING, PanelWarnings::CERTIFICATE_EXPIRED, PanelWarnings::CERTIFICATE_MISSING,
+            PanelWarnings::CERTIFICATE_RENEW_FAILED => 'domains',
+            PanelWarnings::BACKUP_NONE, PanelWarnings::BACKUP_STALE, PanelWarnings::BACKUP_UNSCHEDULED, PanelWarnings::BACKUP_CHECK_FAILED => 'backups',
             default => 'overview',
         };
     }

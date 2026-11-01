@@ -42,7 +42,11 @@ $reader = env_extras_answering([
         ['name' => 'shop', 'engine' => 'mysql', 'site' => 'shop.test', 'size_bytes' => 1024, 'users' => ['shop'], 'password' => 'never'],
         ['name' => 'blog', 'engine' => 'mysql', 'site' => 'blog.test', 'size_bytes' => 2048, 'users' => []],
     ]]),
-    'access:list' => $ok(['accounts' => [['login' => 'dev', 'kind' => 'project', 'site' => 'shop.test', 'keys' => 2, 'enabled' => false], ['login' => 'Bad Login']]]),
+    'access:list' => $ok(['schema' => 'simai-access/1', 'accesses' => [
+        ['login' => 'dev', 'type' => 'project', 'domain' => 'shop.test', 'enabled' => false, 'auth' => 'key', 'sftp_path' => '/site', 'created_at' => '2026-01-01T00:00:00'],
+        ['login' => 'blogger', 'type' => 'project', 'domain' => 'blog.test', 'enabled' => true, 'auth' => 'key'],
+        ['login' => 'Bad Login', 'domain' => 'shop.test'],
+    ]]),
     'self:metrics' => $ok(['cpu' => ['cores' => 4, 'load1' => 1, 'load5' => 0.5, 'load15' => 0.25], 'memory' => ['total_bytes' => 100, 'used_bytes' => 50], 'disk' => []]),
 ]);
 $actor = new PanelActor('admin@example.com');
@@ -55,7 +59,8 @@ $databases = $reader->databases($actor, 'shop.test');
 env_assert(is_array($databases) && count($databases) === 1 && $databases[0]->name === 'shop' && $databases[0]->sizeBytes === 1024, 'Only this site\'s databases.');
 env_assert(!str_contains(serialize($databases), 'never'), 'A password the server sent anyway is not kept.');
 $accounts = $reader->sftpAccounts($actor, 'shop.test');
-env_assert(is_array($accounts) && count($accounts) === 1 && $accounts[0]->keys === 2 && $accounts[0]->enabled === false, 'An account; one with an impossible login is left out.');
+env_assert(is_array($accounts) && count($accounts) === 1 && $accounts[0]->login === 'dev' && $accounts[0]->enabled === false
+    && $accounts[0]->auth === 'key' && $accounts[0]->path === '/site', 'Only this site\'s accounts; one with an impossible login is left out.');
 $metrics = $reader->metrics($actor);
 env_assert($metrics !== null && $metrics->cores === 4 && $metrics->load === [1.0, 0.5, 0.25] && $metrics->memoryUsed === 50 && $metrics->swapTotal === null, 'The load now.');
 

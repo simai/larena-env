@@ -72,8 +72,8 @@ env_assert(array_column($page->columns, 'key') === ['domain', 'answers', 'owner'
 env_assert($byDomain['demo-owned.test']['answers'] === $text('sites.answers_code', ['code' => '200']) && $byDomain['demo-owned.test']['disk'] === '1.0 MB', 'It answers 200 and takes 1 MB.');
 env_assert($byDomain['demo-owned.test']['owner'] === 'demo' && $byDomain['demo-php.test']['owner'] === '—', 'The owner, or none.');
 env_assert($byDomain['demo-redirect.test']['php'] === '—' && $byDomain['demo-php.test']['certificate'] === $text('sites.certificate_none'), 'Empty values in words.');
-env_assert($byDomain['demo-owned.test']['backups'] === $text('sites.backups_unscheduled'), 'A site without a schedule or a backup says so.');
-env_assert($byDomain['demo-php.test']['backups'] === $text('sites.backups_last', ['time' => '2026-01-01T00:00:00']), 'Its newest backup is named.');
+env_assert($byDomain['demo-owned.test']['backups'] !== $text('sites.backups_unscheduled'), 'A site with its daily backup and none yet does not say it has none scheduled.');
+env_assert($byDomain['demo-php.test']['backups'] === $text('sites.backups_last', ['time' => '2026-01-01T00:00:00']).' · '.$text('sites.backups_scheduled'), 'Its newest backup is named, and its daily one.');
 $soon = new ServerOverview('now', '1', 'ubuntu', '24.04', [], [], [new \Larena\Env\Server\SiteSummary('a.test', 'static', 'none', 'letsencrypt', null, null, null, 9, true)]);
 $soonRow = ServerSitesPage::of($soon, $text)->rows[0];
 env_assert($soonRow['certificate'] === $text('sites.certificate_ends', ['days' => '9']) && $soonRow['backups'] === $text('sites.backups_scheduled'), 'A certificate that ends soon is said so.');
@@ -128,7 +128,7 @@ $warnings = \Larena\Env\Warnings\PanelWarnings::of($overview, $metrics, new Date
 $loaded = $state(['section' => 'overview', 'overview' => $overview, 'metrics' => $metrics, 'warnings' => $warnings]);
 env_assert(str_contains($loaded, 'data-env-metrics') && str_contains($loaded, 'data-env-warning="disk_full"') && str_contains($loaded, '98%')
     && strpos($loaded, 'data-env-warnings') < strpos($loaded, 'data-env-metrics') && str_contains($loaded, 'role="alert"'), 'A disk at 98% is said first, as an error.');
-env_assert(str_contains($loaded, 'data-env-warning-site="demo-owned.test"') && str_contains($loaded, $text('warnings.backup_none', ['domain' => 'demo-owned.test'])), 'A site without backups is said in words.');
+env_assert(str_contains($loaded, 'data-env-warning-site="demo-php.test"') && str_contains($loaded, $text('warnings.backup_stale', ['domain' => 'demo-php.test', 'time' => '2026-01-01 00:00 UTC'])), 'An old backup is said in words.');
 $listed = $state(['overview' => $overview, 'sitesView' => ['stub' => true], 'warnings' => $warnings]);
 env_assert(strpos($listed, 'data-env-warnings') < strpos($listed, 'stub-dataview'), 'The sites screen says what needs attention above the list.');
 env_assert(str_contains($state(['overview' => $overview, 'sitesView' => ['stub' => true], 'warnings' => []]), 'data-env-warnings-none'), 'Nothing to say is said too.');

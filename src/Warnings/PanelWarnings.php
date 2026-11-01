@@ -30,10 +30,14 @@ final class PanelWarnings
     public const string BACKUP_NONE = 'backup_none';
     public const string BACKUP_STALE = 'backup_stale';
     public const string BACKUP_UNSCHEDULED = 'backup_unscheduled';
+    // simai-env 1.30.0: the server's check of a copy failed; the certificate's last renewal failed.
+    public const string BACKUP_CHECK_FAILED = 'backup_check_failed';
+    public const string CERTIFICATE_RENEW_FAILED = 'certificate_renew_failed';
 
     /** Every kind, each recorded as the notification source "env:warning:<kind>". */
     public const array KINDS = [self::DISK_FULL, self::CERTIFICATE_ENDING, self::CERTIFICATE_EXPIRED, self::CERTIFICATE_MISSING,
-        self::SITE_DOWN, self::SITE_ERROR, self::BACKUP_NONE, self::BACKUP_STALE, self::BACKUP_UNSCHEDULED];
+        self::SITE_DOWN, self::SITE_ERROR, self::BACKUP_NONE, self::BACKUP_STALE, self::BACKUP_UNSCHEDULED,
+        self::BACKUP_CHECK_FAILED, self::CERTIFICATE_RENEW_FAILED];
 
     public const int DISK_PERCENT = 90;
     public const int DISK_ERROR_PERCENT = 95;
@@ -95,6 +99,15 @@ final class PanelWarnings
         } elseif ($site->ssl !== 'none' && $site->certificateDaysLeft === null) {
             // The site is meant to be served over https, and nginx serves no certificate the server could read.
             $warnings[] = new PanelWarning(self::CERTIFICATE_MISSING, PanelWarning::WARNING, $domain, ['domain' => $domain]);
+        }
+        // The certificate is still valid, but the server could not renew it: it will run out unless someone looks.
+        if ($site->certificateRenewFailed) {
+            $warnings[] = new PanelWarning(self::CERTIFICATE_RENEW_FAILED, PanelWarning::ERROR, $domain, ['domain' => $domain]);
+        }
+        // A copy the server checked and could not restore is not a copy to rely on.
+        if ($site->lastVerify !== null && !$site->lastVerify->ok) {
+            $warnings[] = new PanelWarning(self::BACKUP_CHECK_FAILED, PanelWarning::ERROR, $domain,
+                ['domain' => $domain, 'time' => $site->lastVerify->at === null ? '—' : Moment::human($site->lastVerify->at)]);
         }
         // A redirect keeps nothing worth a backup.
         if ($site->profile !== 'redirect') {

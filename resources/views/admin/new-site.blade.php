@@ -65,7 +65,7 @@
                     <input type="url" id="env-new-redirect" name="redirect-to" value="{{ $old['redirect-to'] ?? '' }}" placeholder="https://example.org">
                 </div>
             @endif
-            @if (($dailyBackup ?? null) !== null)
+            @if (($dailyBackup ?? null) !== null && ($kind ?? '') !== 'redirect')
                 <div class="larena-field">
                     <input type="hidden" name="daily-backup" value="no">
                     <label for="env-new-daily-backup">

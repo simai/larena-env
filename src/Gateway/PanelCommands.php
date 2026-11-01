@@ -65,7 +65,7 @@ final class PanelCommands
         // A new site and its PHP; a new owner, the space of a person at the panel's user level (simai-env 1.22.0).
         'site:add' => ['args' => ['domain' => self::DOMAIN, 'profile' => self::PROFILE, 'php' => self::PHP, 'owner' => self::OWNER,
             'create-db' => self::YES_NO, 'db-engine' => self::ENGINE, 'redirect-to' => self::ORIGIN, 'redirect-code' => self::CODE,
-            'redirect-path' => self::KEEP_DROP], 'required' => ['domain'], 'since' => '1.22.0', 'kind' => self::ACTION],
+            'redirect-path' => self::KEEP_DROP, 'backup' => self::YES_NO], 'required' => ['domain'], 'since' => '1.22.0', 'kind' => self::ACTION],
         'site:set-php' => ['args' => ['domain' => self::DOMAIN, 'php' => self::PHP], 'required' => ['domain', 'php'], 'since' => '1.22.0', 'kind' => self::ACTION],
         'owner:create' => ['args' => ['name' => self::OWNER, 'pubkey' => self::PUBKEY], 'required' => ['name'], 'since' => '1.22.0', 'kind' => self::ACTION],
         // Blocking a space: SSH, SFTP and requests as that owner stop, its sites keep serving (simai-env 1.27.0).
@@ -76,7 +76,8 @@ final class PanelCommands
         // server's load (administrator only), the databases and a new database password.
         'backup:data-restore' => ['args' => ['domain' => self::DOMAIN, 'backup' => self::BACKUP, 'db' => self::YES_NO, 'files' => self::YES_NO],
             'required' => ['domain', 'backup'], 'since' => '1.28.0', 'kind' => self::ACTION],
-        'backup:data-schedule' => ['args' => ['domain' => self::DOMAIN, 'enabled' => self::YES_NO, 'time' => self::TIME, 'keep' => self::KEEP],
+        'backup:data-schedule' => ['args' => ['domain' => self::DOMAIN, 'enabled' => self::YES_NO, 'time' => self::TIME, 'keep' => self::KEEP,
+            'verify' => self::YES_NO],
             'required' => ['domain', 'enabled'], 'since' => '1.28.0', 'kind' => self::ACTION],
         'backup:data-verify' => ['args' => ['domain' => self::DOMAIN, 'backup' => self::BACKUP], 'required' => ['domain', 'backup'], 'since' => '1.28.0', 'kind' => self::ACTION],
         'php:extensions' => ['args' => ['php' => self::PHP], 'required' => ['php'], 'since' => '1.28.0', 'kind' => self::READ],
@@ -85,14 +86,14 @@ final class PanelCommands
             'required' => ['domain', 'name', 'value'], 'since' => '1.28.0', 'kind' => self::ACTION],
         'site:php-ini-unset' => ['args' => ['domain' => self::DOMAIN, 'name' => self::INI_KEY], 'required' => ['domain', 'name'], 'since' => '1.28.0', 'kind' => self::ACTION],
         'self:metrics' => ['args' => [], 'required' => [], 'since' => '1.28.0', 'kind' => self::READ],
-        // SFTP is not in a release yet: offered only when the server lists it.
-        'access:list' => ['args' => ['domain' => self::DOMAIN], 'required' => [], 'since' => null, 'kind' => self::READ],
+        // SFTP accounts of a site, by key only: there is no password argument (simai-env 1.30.0).
+        'access:list' => ['args' => ['domain' => self::DOMAIN], 'required' => [], 'since' => '1.30.0', 'kind' => self::READ],
         'access:create-project' => ['args' => ['domain' => self::DOMAIN, 'login' => self::LOGIN, 'pubkey' => self::PUBKEY],
-            'required' => ['domain', 'login', 'pubkey'], 'since' => null, 'kind' => self::ACTION],
-        'access:add-key' => ['args' => ['login' => self::LOGIN, 'pubkey' => self::PUBKEY], 'required' => ['login', 'pubkey'], 'since' => null, 'kind' => self::ACTION],
-        'access:disable' => ['args' => ['login' => self::LOGIN], 'required' => ['login'], 'since' => null, 'kind' => self::ACTION],
-        'access:enable' => ['args' => ['login' => self::LOGIN], 'required' => ['login'], 'since' => null, 'kind' => self::ACTION],
-        'access:remove' => ['args' => ['login' => self::LOGIN], 'required' => ['login'], 'since' => null, 'kind' => self::ACTION],
+            'required' => ['domain', 'login', 'pubkey'], 'since' => '1.30.0', 'kind' => self::ACTION],
+        'access:add-key' => ['args' => ['login' => self::LOGIN, 'pubkey' => self::PUBKEY], 'required' => ['login', 'pubkey'], 'since' => '1.30.0', 'kind' => self::ACTION],
+        'access:disable' => ['args' => ['login' => self::LOGIN], 'required' => ['login'], 'since' => '1.30.0', 'kind' => self::ACTION],
+        'access:enable' => ['args' => ['login' => self::LOGIN], 'required' => ['login'], 'since' => '1.30.0', 'kind' => self::ACTION],
+        'access:remove' => ['args' => ['login' => self::LOGIN], 'required' => ['login'], 'since' => '1.30.0', 'kind' => self::ACTION],
         'db:list' => ['args' => [], 'required' => [], 'since' => '1.28.0', 'kind' => self::READ],
         'site:db-rotate' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => '1.28.0', 'kind' => self::ACTION],
         'job:status' => ['args' => ['job_id' => self::JOB_ID], 'required' => ['job_id'], 'since' => '1.21.0', 'kind' => self::JOB],
@@ -101,8 +102,25 @@ final class PanelCommands
         'job:list' => ['args' => [], 'required' => [], 'since' => '1.21.0', 'kind' => self::JOB],
     ];
 
+    /**
+     * Arguments a later simai-env release added to a command the panel already sends; an older gateway refuses them.
+     *
+     * @var array<string, array<string, string>>
+     */
+    private const array ARGUMENTS_SINCE = [
+        // A new site's daily backup and the check of each scheduled copy (simai-env 1.30.0).
+        'site:add' => ['backup' => '1.30.0'],
+        'backup:data-schedule' => ['verify' => '1.30.0'],
+    ];
+
     private function __construct()
     {
+    }
+
+    /** The first simai-env release that takes the argument; that of the command for one it always took. */
+    public static function argumentSince(string $command, string $argument): ?string
+    {
+        return self::ARGUMENTS_SINCE[$command][$argument] ?? self::since($command);
     }
 
     /** @return list<string> */

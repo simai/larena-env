@@ -14,6 +14,9 @@ final readonly class SiteCertificate
         public ?string $notAfter,
         public ?int $daysLeft,
         public bool $autoRenew,
+        // The last renewal (simai-env 1.30.0): when, and whether it worked; null before the first.
+        public ?string $lastRenewAt = null,
+        public ?bool $lastRenewOk = null,
     ) {
     }
 
@@ -33,6 +36,8 @@ final readonly class SiteCertificate
             notAfter: is_string($data['not_after'] ?? null) ? $data['not_after'] : null,
             daysLeft: is_int($data['days_left'] ?? null) ? $data['days_left'] : null,
             autoRenew: ($data['auto_renew'] ?? false) === true,
+            lastRenewAt: is_array($data['last_renew'] ?? null) && is_string($data['last_renew']['at'] ?? null) ? $data['last_renew']['at'] : null,
+            lastRenewOk: is_array($data['last_renew'] ?? null) && is_bool($data['last_renew']['ok'] ?? null) ? $data['last_renew']['ok'] : null,
         );
     }
 

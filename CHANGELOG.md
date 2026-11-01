@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- simai-env 1.30.0, recorded answers set 6. SFTP on a site's «Доступ» tab, by key only: a new access, a key, turn off,
+  turn on, remove, each planned and confirmed; there is no password field anywhere. The list says where an access
+  lands and when it was made, and a note says that files the site must rewrite need group-writable uploads (0664).
+  `unknown_access` is said in words. A daily backup checks each new copy (`verify`, on by default, asked only of a
+  server that takes it); the backups tab says the server's last check and whether a restore test ran; a failed check
+  and a failed certificate renewal are errors among the warnings. A new site's daily backup goes with `site:add
+  {backup}` where the server takes it, so nothing follows the site; an older server still gets `backup:data-schedule`
+  after it. A redirect gets no daily backup. The host's backup directory is no longer kept from the answer.
 - The panel from a phone (Panel plan, promise 6), checked at 375 px on both levels. A site's tabs are a row of chips
   that wraps, the open one marked; its facts keep their grid inside a panel; the log and the spaces read as cards; a
   person's space is a full-size choice; a checkbox sits beside its words; a job's output scrolls sideways instead of

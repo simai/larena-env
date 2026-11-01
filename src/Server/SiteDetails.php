@@ -40,6 +40,8 @@ final readonly class SiteDetails
         public ?int $answers = null,
         public bool $answersChecked = false,
         public ?int $diskBytes = null,
+        // simai-env 1.30.0: the server's last check of a copy.
+        public ?BackupCheck $lastVerify = null,
     ) {
     }
 
@@ -95,6 +97,8 @@ final readonly class SiteDetails
             answers: is_array($data['answers'] ?? null) && is_int($data['answers']['http'] ?? null) ? $data['answers']['http'] : null,
             answersChecked: is_array($data['answers'] ?? null),
             diskBytes: is_array($data['disk'] ?? null) && is_int($data['disk']['bytes'] ?? null) ? $data['disk']['bytes'] : null,
+            lastVerify: is_array($data['last_verify'] ?? null) ? BackupCheck::fromData($data['last_verify'])
+                : (is_array($backups['last_verify'] ?? null) ? BackupCheck::fromData($backups['last_verify']) : null),
         );
     }
 }

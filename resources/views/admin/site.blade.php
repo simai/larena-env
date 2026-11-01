@@ -64,6 +64,9 @@
                         <div><dt>{{ __('larena-env::admin.certificate.not_after') }}</dt><dd>{{ $site->certificate->notAfter ?? '—' }}</dd></div>
                         <div><dt>{{ __('larena-env::admin.certificate.days_left') }}</dt><dd>{{ $site->certificate->daysLeft ?? '—' }}</dd></div>
                         <div><dt>{{ __('larena-env::admin.certificate.auto_renew') }}</dt><dd>{{ $site->certificate->autoRenew ? __('larena-env::admin.yes') : __('larena-env::admin.no') }}</dd></div>
+                        @if ($site->certificate->lastRenewOk !== null)
+                            <div data-env-certificate-renew="{{ $site->certificate->lastRenewOk ? 'ok' : 'failed' }}"><dt>{{ __('larena-env::admin.certificate.last_renew') }}</dt><dd>{{ $site->certificate->lastRenewAt === null ? '—' : \Larena\Env\Server\Moment::human($site->certificate->lastRenewAt) }} · {{ $site->certificate->lastRenewOk ? __('larena-env::admin.certificate.renew_ok') : __('larena-env::admin.certificate.renew_failed') }}</dd></div>
+                        @endif
                     </dl>
                     @if ($site->certificate->endsSoon())
                         <p data-env-certificate-warning role="alert">{{ __('larena-env::admin.certificate.ends_soon') }}</p>
@@ -128,7 +131,17 @@
                 @if ($site->backupSchedule === null)
                     <p>{{ __('larena-env::admin.backups.no_schedule') }}</p>
                 @else
-                    <p>{{ __('larena-env::admin.backups.schedule', ['time' => $site->backupSchedule->time ?? '—', 'keep' => $site->backupSchedule->keep ?? '—']) }}</p>
+                    <p>{{ __('larena-env::admin.backups.schedule', ['time' => $site->backupSchedule->time ?? '—', 'keep' => (string) ($site->backupSchedule->keep ?? '—')]) }}
+                        @if ($site->backupSchedule->verify !== null)
+                            <span data-env-backup-verify="{{ $site->backupSchedule->verify ? 'yes' : 'no' }}">{{ __('larena-env::admin.backups.'.($site->backupSchedule->verify ? 'verify_on' : 'verify_off')) }}</span>
+                        @endif
+                    </p>
+                @endif
+                @if ($site->lastVerify !== null)
+                    <p data-env-last-verify="{{ $site->lastVerify->ok ? 'ok' : 'failed' }}">
+                        {{ __('larena-env::admin.backups.'.($site->lastVerify->ok ? 'last_verify_ok' : 'last_verify_failed'), ['time' => $site->lastVerify->at === null ? '—' : \Larena\Env\Server\Moment::human($site->lastVerify->at)]) }}
+                        {{ __('larena-env::admin.backups.'.($site->lastVerify->restoreTest ? 'restore_tested' : 'restore_not_tested')) }}
+                    </p>
                 @endif
                 @if ($site->backups === [])
                     <p>{{ __('larena-env::admin.backups.none') }}</p>
@@ -250,10 +263,11 @@
                     @else
                         <ul class="larena-list">
                             @foreach ($sftpAccounts as $account)
-                                <li data-env-sftp="{{ $account->login }}">{{ $account->login }} · {{ __('larena-env::admin.access.keys', ['count' => (string) $account->keys]) }} · {{ $account->enabled ? __('larena-env::admin.access.on') : __('larena-env::admin.access.off') }}</li>
+                                <li data-env-sftp="{{ $account->login }}" data-env-sftp-path="{{ $account->path ?? '' }}">{{ $account->login }} · {{ __('larena-env::admin.access.by_key') }} · {{ $account->enabled ? __('larena-env::admin.access.on') : __('larena-env::admin.access.off') }}@if ($account->path !== null) · {{ __('larena-env::admin.access.lands', ['path' => $account->path]) }}@endif @if ($account->createdAt !== null) · {{ __('larena-env::admin.access.created', ['when' => \Larena\Env\Server\Moment::human($account->createdAt)]) }}@endif</li>
                             @endforeach
                         </ul>
                     @endif
+                    <p data-env-sftp-uploads>{{ __('larena-env::admin.access.uploads') }}</p>
                 @endif
             </section>
         @endif
@@ -263,11 +277,12 @@
                 <h2 id="env-site-operations">{{ __('larena-env::admin.operations.title') }}</h2>
                 <p>{{ __('larena-env::admin.operations.explain') }}</p>
                 @foreach ($tabOperations as $operation)
+                    @continue(!$operation->namesSite() && ($sftpChoices[$operation->value] ?? []) === [])
                     <form method="post" action="{{ route('larena.env.admin.site.plan', ['domain' => $domain], false) }}" class="larena-form" data-env-operation="{{ $operation->value }}">
                         @csrf
                         <input type="hidden" name="operation" value="{{ $operation->value }}">
                         <h3>{{ __('larena-env::admin.operations.'.$operation->value) }}</h3>
-                        @foreach ($operation->fields() as $field)
+                        @foreach (($capabilities ?? null) === null ? $operation->fields() : $operation->fieldsOn($capabilities) as $field)
                             <div class="larena-field">
                                 <label for="env-{{ $operation->value }}-{{ $field }}">{{ __('larena-env::admin.fields.'.$field) }}</label>
                                 @if ($field === 'email')
@@ -286,7 +301,7 @@
                                     </select>
                                 @elseif ($field === 'login' && $operation !== \Larena\Env\Operations\SiteOperation::SftpCreate)
                                     <select id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}" required>
-                                        @foreach ($sftpAccounts ?? [] as $account)
+                                        @foreach ($sftpChoices[$operation->value] ?? [] as $account)
                                             <option value="{{ $account->login }}">{{ $account->login }}</option>
                                         @endforeach
                                     </select>
@@ -294,6 +309,11 @@
                                     <textarea id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}" rows="3" required></textarea>
                                 @elseif ($field === 'time')
                                     <input type="time" id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}" value="{{ $site->backupSchedule?->time ?? '03:00' }}">
+                                @elseif ($field === 'verify')
+                                    <select id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}" data-env-verify-field>
+                                        <option value="yes" @if ($site->backupSchedule?->verify !== false) selected @endif>{{ __('larena-env::admin.yes') }}</option>
+                                        <option value="no" @if ($site->backupSchedule?->verify === false) selected @endif>{{ __('larena-env::admin.no') }}</option>
+                                    </select>
                                 @elseif ($field === 'keep')
                                     <input type="number" id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}" min="1" max="90" value="{{ $site->backupSchedule?->keep ?? '7' }}">
                                 @elseif (in_array($field, ['login', 'name', 'value'], true))

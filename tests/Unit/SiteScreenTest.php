@@ -66,8 +66,10 @@ $result = $reader->read(new PanelActor($user), 'demo-php.test');
 $site = $result->site;
 env_assert($site instanceof SiteDetails && $result->reason === null, 'The site reads.');
 env_assert($site->profile === 'generic' && $site->php === '8.3' && $site->ssl === 'none' && $site->databaseEngine === 'mysql', 'What it runs on.');
-env_assert($site->certificate === null && $site->backupSchedule === null && $site->release === null, 'No certificate, no daily backup, no release.');
-env_assert(count($site->backups) === 1 && $site->backups[0]->name === '20261101-001500' && $site->backups[0]->sizeBytes === 4346, 'A backup is named by its own name, not its path.');
+env_assert($site->certificate === null && $site->backupSchedule?->time === '03:30' && $site->backupSchedule->keep === 7 && $site->backupSchedule->verify === false
+    && $site->release === null, 'No certificate, a daily backup at 03:30 kept 7, not checked, no release.');
+env_assert($site->lastVerify?->ok === true && $site->lastVerify->restoreTest && $site->lastVerify->backup === '20260101-000000', 'The server\'s last check of a copy (simai-env 1.30.0).');
+env_assert(count($site->backups) === 1 && $site->backups[0]->name === '20261101-151759' && $site->backups[0]->sizeBytes === 4345, 'A backup is named by its own name, not its path.');
 env_assert($site->answersChecked && $site->diskBytes !== null, 'Whether it answers and its disk (simai-env 1.27.0).');
 env_assert($site->backups[0]->parts === ['config', 'db', 'files'] && $site->backups[0]->encrypted === false, 'What the backup holds.');
 $typed = serialize($site);
@@ -94,9 +96,12 @@ $factory->addNamespace('larena-admin', dirname(__DIR__).'/Support/admin-views');
 $factory->addNamespace('larena-env', dirname(__DIR__, 2).'/resources/views');
 
 $screen = static fn (array $data): string => $factory->make('larena-env::admin.site', $data + [
+    // As the controller: each account action chooses among the accounts it suits.
+    'sftpChoices' => array_combine(array_map(static fn (SiteOperation $operation): string => $operation->value, $data['tabOperations'] ?? []),
+        array_map(static fn (SiteOperation $operation): array => $operation->accountChoices($data['sftpAccounts'] ?? []), $data['tabOperations'] ?? [])),
     'domain' => 'demo-php.test', 'source' => 'sudo', 'site' => null, 'refused' => false, 'reasonText' => null, 'tab' => 'overview',
     'tabs' => \Larena\Env\Http\Controllers\SiteAdminController::TABS, 'doctor' => null, 'phpVersions' => ['8.3'], 'tabOperations' => [],
-    'phpSettings' => null, 'phpExtensions' => null, 'databases' => null, 'sftpAccounts' => null,
+    'phpSettings' => null, 'phpExtensions' => null, 'databases' => null, 'sftpAccounts' => null, 'capabilities' => null,
     'logKind' => 'access', 'logKinds' => ['access', 'error'], 'logLines' => 200, 'logLineChoices' => [200, 500, 1000], 'logSearch' => '',
     'logGroup' => '', 'logGroups' => \Larena\Env\Server\SiteLogView::STATUS_GROUPS, 'log' => null, 'logReasonText' => null, 'notice' => null,
 ])->render();
@@ -117,13 +122,23 @@ env_assert(substr_count($ok, 'data-env-tab=') === 8 && preg_match('/data-env-tab
 // Backups have their tab: the list, «Back up now», and restoring and checking only where the server has them.
 $older = \Larena\Env\Gateway\PanelCapabilities::fromHostDescription(['simai_env' => ['version' => '1.27.0']]);
 $backups = $screen(['site' => $site, 'tab' => 'backups', 'tabOperations' => $onTab('backups', $older)]);
-env_assert(str_contains($backups, 'data-env-backup="20261101-001500"') && str_contains($backups, '4.2 KB') && str_contains($backups, 'data-env-operation="backup"'), 'The backups and «Back up now».');
+env_assert(str_contains($backups, 'data-env-backup="20261101-151759"') && str_contains($backups, '4.2 KB') && str_contains($backups, 'data-env-operation="backup"'), 'The backups and «Back up now».');
 env_assert(!str_contains($backups, 'data-env-operation="backup-restore-database"'), 'No restore while the server\'s gateway has none.');
 $more = \Larena\Env\Gateway\PanelCapabilities::fromHostDescription(['simai_env' => ['version' => '1.27.0'], 'gate' => ['commands' => ['backup:data', 'backup:data-restore', 'backup:data-schedule', 'site:db-rotate', 'site:php-ini-set', 'access:create-project', 'access:disable']]]);
 $restore = $screen(['site' => $site, 'tab' => 'backups', 'tabOperations' => $onTab('backups', $more)]);
 env_assert(str_contains($restore, 'data-env-operation="backup-restore-database"') && str_contains($restore, 'data-env-operation="backup-extract-files"')
-    && str_contains($restore, '<option value="20261101-001500">') && str_contains($restore, 'data-env-restore-note'), 'Restoring chooses a backup and says a copy is taken first.');
+    && str_contains($restore, '<option value="20261101-151759">') && str_contains($restore, 'data-env-restore-note'), 'Restoring chooses a backup and says a copy is taken first.');
 env_assert(str_contains($restore, 'data-env-operation="backup-schedule"') && str_contains($restore, 'type="time"'), 'The daily backup, at a time of day.');
+// simai-env 1.30.0: each new copy is checked, asked where the server takes it, on by default; the last check is said.
+$checked = \Larena\Env\Server\SiteDetails::fromDescription(['schema' => 'simai-site/1', 'domain' => 'demo-php.test', 'profile' => 'generic', 'php' => '8.3', 'ssl' => 'none',
+    'backups' => ['schedule' => ['time' => '03:30', 'keep' => '7', 'verify' => true], 'items' => [], 'last_verify' => ['at' => '2026-01-01T00:00:00Z', 'ok' => false, 'backup' => '20260101-000000', 'restore_test' => true]]]);
+env_assert($checked->backupSchedule?->keep === 7 && $checked->backupSchedule->verify === true && $checked->lastVerify?->ok === false, 'The schedule reads its number as digits, and the last check.');
+$newer = \Larena\Env\Gateway\PanelCapabilities::fromHostDescription(['simai_env' => ['version' => '1.30.0'], 'gate' => ['commands' => ['backup:data-schedule']]]);
+$verifying = $screen(['site' => $checked, 'tab' => 'backups', 'tabOperations' => $onTab('backups', $newer), 'capabilities' => $newer]);
+env_assert(str_contains($verifying, 'data-env-verify-field') && preg_match('/<option value="yes"\s+selected/', $verifying) === 1
+    && str_contains($verifying, 'data-env-backup-verify="yes"') && str_contains($verifying, 'data-env-last-verify="failed"'), 'A checked schedule, its last failed check, and the check asked for.');
+$beforeCheck = $screen(['site' => $site, 'tab' => 'backups', 'tabOperations' => $onTab('backups', $more), 'capabilities' => $more]);
+env_assert(str_contains($beforeCheck, 'data-env-operation="backup-schedule"') && !str_contains($beforeCheck, 'data-env-verify-field'), 'A server before 1.30.0 is not asked to check copies.');
 
 // The database: its engine, its actions where the server has them, and never a password.
 $database = $screen(['site' => $site, 'tab' => 'database', 'tabOperations' => $onTab('database', $more),
@@ -134,9 +149,11 @@ env_assert(str_contains($database, 'data-env-operation="database-password"') && 
 
 // SFTP: the site's accounts, and an account's actions name it.
 $sftp = $screen(['site' => $site, 'tab' => 'access', 'tabOperations' => $onTab('access', $more),
-    'sftpAccounts' => [\Larena\Env\Server\SftpAccount::fromData(['login' => 'dev', 'site' => 'demo-php.test', 'keys' => 1, 'enabled' => true])]]);
+    'sftpAccounts' => [\Larena\Env\Server\SftpAccount::fromData(['login' => 'dev', 'type' => 'project', 'domain' => 'demo-php.test', 'enabled' => true, 'auth' => 'key', 'sftp_path' => '/site'])]]);
 env_assert(str_contains($sftp, 'data-env-sftp="dev"') && str_contains($sftp, 'data-env-operation="sftp-create"') && str_contains($sftp, '<textarea'), 'A new access takes a key, never a password.');
 env_assert(str_contains($sftp, 'data-env-operation="sftp-disable"') && str_contains($sftp, '<option value="dev">'), 'Turning an access off chooses it.');
+env_assert(!str_contains($sftp, 'type="password"') && !str_contains($sftp, 'name="password"'), 'No password field anywhere: SFTP is by key only.');
+env_assert(str_contains($sftp, 'data-env-sftp-path="/site"') && str_contains($sftp, 'data-env-sftp-uploads'), 'An access says where it lands, and how uploads the site must rewrite need their mode.');
 env_assert(!str_contains($ok, 'data-env-log=') && !str_contains($ok, 'data-env-operation="certificate-issue"'), 'A tab shows only its own part and actions.');
 
 // The other tabs: the certificate with its actions, PHP with the version the server has, the log.
