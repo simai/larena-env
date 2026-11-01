@@ -69,7 +69,7 @@ env_assert($site->profile === 'generic' && $site->php === '8.3' && $site->ssl ==
 env_assert($site->certificate === null && $site->backupSchedule?->time === '03:30' && $site->backupSchedule->keep === 7 && $site->backupSchedule->verify === false
     && $site->release === null, 'No certificate, a daily backup at 03:30 kept 7, not checked, no release.');
 env_assert($site->lastVerify?->ok === true && $site->lastVerify->restoreTest && $site->lastVerify->backup === '20260101-000000', 'The server\'s last check of a copy (simai-env 1.30.0).');
-env_assert(count($site->backups) === 1 && $site->backups[0]->name === '20261101-180050' && $site->backups[0]->sizeBytes === 4346, 'A backup is named by its own name, not its path.');
+env_assert(count($site->backups) === 1 && $site->backups[0]->name === '20261101-220016' && $site->backups[0]->sizeBytes === 4343, 'A backup is named by its own name, not its path.');
 env_assert($site->answersChecked && $site->diskBytes !== null, 'Whether it answers and its disk (simai-env 1.27.0).');
 env_assert($site->backups[0]->parts === ['config', 'db', 'files'] && $site->backups[0]->encrypted === false, 'What the backup holds.');
 $typed = serialize($site);
@@ -122,12 +122,12 @@ env_assert(substr_count($ok, 'data-env-tab=') === count(\Larena\Env\Http\Control
 // Backups have their tab: the list, «Back up now», and restoring and checking only where the server has them.
 $older = \Larena\Env\Gateway\PanelCapabilities::fromHostDescription(['simai_env' => ['version' => '1.27.0']]);
 $backups = $screen(['site' => $site, 'tab' => 'backups', 'tabOperations' => $onTab('backups', $older)]);
-env_assert(str_contains($backups, 'data-env-backup="20261101-180050"') && str_contains($backups, '4.2 KB') && str_contains($backups, 'data-env-operation="backup"'), 'The backups and «Back up now».');
+env_assert(str_contains($backups, 'data-env-backup="20261101-220016"') && str_contains($backups, '4.2 KB') && str_contains($backups, 'data-env-operation="backup"'), 'The backups and «Back up now».');
 env_assert(!str_contains($backups, 'data-env-operation="backup-restore-database"'), 'No restore while the server\'s gateway has none.');
 $more = \Larena\Env\Gateway\PanelCapabilities::fromHostDescription(['simai_env' => ['version' => '1.27.0'], 'gate' => ['commands' => ['backup:data', 'backup:data-restore', 'backup:data-schedule', 'site:db-rotate', 'site:php-ini-set', 'access:create-project', 'access:disable']]]);
 $restore = $screen(['site' => $site, 'tab' => 'backups', 'tabOperations' => $onTab('backups', $more)]);
 env_assert(str_contains($restore, 'data-env-operation="backup-restore-database"') && str_contains($restore, 'data-env-operation="backup-extract-files"')
-    && str_contains($restore, '<option value="20261101-180050">') && str_contains($restore, 'data-env-restore-note'), 'Restoring chooses a backup and says a copy is taken first.');
+    && str_contains($restore, '<option value="20261101-220016">') && str_contains($restore, 'data-env-restore-note'), 'Restoring chooses a backup and says a copy is taken first.');
 env_assert(str_contains($restore, 'data-env-operation="backup-schedule"') && str_contains($restore, 'type="time"'), 'The daily backup, at a time of day.');
 // simai-env 1.30.0: each new copy is checked, asked where the server takes it, on by default; the last check is said.
 $checked = \Larena\Env\Server\SiteDetails::fromDescription(['schema' => 'simai-site/1', 'domain' => 'demo-php.test', 'profile' => 'generic', 'php' => '8.3', 'ssl' => 'none',
@@ -321,9 +321,57 @@ env_assert(str_contains($nginx, 'data-env-nginx-allowlist') && str_contains($ngi
 $noNginx = $screen(['site' => $site, 'tab' => 'nginx', 'overlaySupported' => false, 'overlay' => null, 'overlayProblem' => null, 'overlayAllows' => ['set' => false, 'clear' => false, 'confirm' => false]]);
 env_assert(str_contains($noNginx, 'data-env-nginx-unsupported') && !str_contains($noNginx, 'data-env-nginx-op'), 'No directives command: said, nothing offered.');
 
-foreach (['site', 'plan', 'job', 'new-site', 'people', 'partials/notes', 'partials/warnings', 'partials/history', 'partials/files', 'partials/nginx', 'dns/connection', 'dns/index', 'dns/zone', 'dns/record-form', 'dns/plan'] as $view) {
+foreach (['site', 'plan', 'job', 'new-site', 'people', 'partials/notes', 'partials/warnings', 'partials/history', 'partials/files', 'partials/nginx', 'dns/connection', 'dns/index', 'dns/zone', 'dns/record-form', 'dns/plan', 'update', 'partials/update-plan'] as $view) {
     $source = (string) file_get_contents(dirname(__DIR__, 2).'/resources/views/admin/'.$view.'.blade.php');
     env_assert(!str_contains($source, '{!!') && preg_match('/<style\b|<script\b|@php\b/i', $source) !== 1, "The {$view} view prints nothing raw and holds no script.");
 }
+
+// A safe update (simai-env 1.32.0, Panel plan 4.7): what it changes, for simai-env and for the panel, the administrator's
+// alone; the plan carries the same, and the job's screen waits through the restart instead of failing.
+$extras = new \Larena\Env\Server\SiteExtrasReader($gateway);
+$envUpdate = $extras->updatePlan(new PanelActor($user), 'env');
+$panelUpdate = $extras->updatePlan(new PanelActor($user), 'panel');
+env_assert($envUpdate instanceof \Larena\Env\Update\UpdatePlan && $envUpdate->current === '1.32.0' && $envUpdate->available === '9.9.0'
+    && $envUpdate->updateAvailable && $envUpdate->blocked === null && $envUpdate->notes === [['version' => '9.9.0', 'text' => '- An example release note.']]
+    && count($envUpdate->checks) === 4 && $envUpdate->notesUrl !== null, 'simai-env\'s update reads: the versions, the notes and the sites it checks.');
+env_assert($panelUpdate instanceof \Larena\Env\Update\UpdatePlan && $panelUpdate->current === null && $panelUpdate->blocked === 'not_installed'
+    && !$panelUpdate->updateAvailable, 'The panel on the stand was not installed by simai-env: no update offered.');
+env_assert($extras->updatePlan(new PanelActor($user, 'demo'), 'env') === null, 'At the user level the server refuses: an update is the administrator\'s.');
+env_assert(\Larena\Env\Update\UpdatePlan::fromData(['schema' => 'simai-update-plan/1', 'target' => 'env', 'update_available' => true, 'blocked' => 'later',
+    'notes_url' => 'http://example.com/notes'])?->blocked === 'unknown', 'A reason the panel does not know still blocks.');
+$odd = \Larena\Env\Update\UpdatePlan::fromData(['schema' => 'simai-update-plan/1', 'target' => 'env', 'update_available' => true, 'notes_url' => 'http://example.com/notes']);
+env_assert($odd?->notesUrl === null && $odd->updateAvailable, 'The notes\' address is a link only over https.');
+env_assert(\Larena\Env\Update\UpdatePlan::fromData(['schema' => 'other', 'target' => 'env']) === null
+    && \Larena\Env\Update\UpdatePlan::fromData(['schema' => 'simai-update-plan/1', 'target' => 'host']) === null, 'Only an update plan the panel knows.');
+$updating = (new PanelOperations($gateway))->planCommand(new PanelActor($user), 'self:update', ['target' => 'env']);
+env_assert($updating->plan?->update?->available === '9.9.0', 'The update\'s plan carries what it changes.');
+env_assert((new PanelOperations($gateway))->planCommand(new PanelActor($user), 'self:update', ['target' => 'host'])->reason === PanelReason::INVALID_ARGUMENT,
+    'Only simai-env or the panel is updated.');
+env_assert((new PanelOperations($gateway))->planCommand(new PanelActor($user, 'demo'), 'self:update', ['target' => 'env'])->refused, 'An owner is refused.');
+
+$updateScreen = static fn (array $data): string => $factory->make('larena-env::admin.update', $data + ['supported' => true,
+    'plans' => ['env' => $envUpdate, 'panel' => $panelUpdate], 'canUpdate' => true, 'notice' => null])->render();
+$screen = $updateScreen([]);
+env_assert(str_contains($screen, 'data-env-update="env" data-env-update-state="available"') || preg_match('/data-env-update="env"\s+data-env-update-state="available"/', $screen) === 1,
+    'simai-env has an update: '.$screen);
+env_assert(str_contains($screen, '9.9.0') && str_contains($screen, 'data-env-update-note="9.9.0"') && str_contains($screen, 'demo-php.test')
+    && str_contains($screen, $text('update.rollback.env')) && str_contains($screen, 'data-env-update-plan="env"'), 'What it changes, what is checked, what comes back.');
+env_assert(preg_match('/data-env-update="panel"\s+data-env-update-state="not_installed"/', $screen) === 1 && str_contains($screen, $text('update.blocked.not_installed'))
+    && !str_contains($screen, 'data-env-update-plan="panel"') && str_contains($screen, htmlspecialchars($text('update.rollback.panel'), ENT_QUOTES)), 'The panel says why it cannot be updated here.');
+env_assert(!str_contains($updateScreen(['canUpdate' => false]), 'data-env-update-plan='), 'Without the right, nothing to start.');
+env_assert(str_contains($updateScreen(['supported' => false, 'plans' => ['env' => null, 'panel' => null]]), 'data-env-update="unsupported"'), 'An older server says so.');
+env_assert(preg_match('/data-env-update="env"\s+data-env-update-state="unknown"/', $updateScreen(['plans' => ['env' => null, 'panel' => $panelUpdate]])) === 1,
+    'An unread plan is said, not guessed.');
+$updatePlanned = $factory->make('larena-env::admin.plan', ['heading' => $text('update.plan_heading.env'), 'eyebrow' => 'Update', 'target' => 'env',
+    'source' => 'recorded', 'plan' => $updating->plan, 'update' => $updating->plan->update, 'runUrl' => '/run', 'cancelUrl' => '/cancel', 'hidden' => ['target' => 'env']])->render();
+env_assert(str_contains($updatePlanned, 'data-env-confirm="self:update"') && str_contains($updatePlanned, 'data-env-update-facts="env"')
+    && str_contains($updatePlanned, 'name="target" value="env"'), 'The update\'s plan says what it changes before the confirmation.');
+$restarting = $job(['updating' => 'panel', 'reasonText' => 'The server did not answer.']);
+env_assert(str_contains($restarting, 'data-env-job-restarting="panel"') && str_contains($restarting, $text('update.restarting')) && !str_contains($restarting, 'role="alert"'),
+    'While the panel is replaced, its job\'s screen waits: '.$restarting);
+env_assert(str_contains($job(['refused' => true, 'reasonText' => 'no', 'updating' => 'env']), 'data-env-state="refused"'), 'A refusal is still a refusal.');
+$updateRunning = new PanelJobStatus('000000000000000000000000', JobState::Running, 'self:update', ['target' => 'env'], null, '2026-01-01T00:00:00Z', $user);
+$runningUpdate = $job(['status' => $updateRunning, 'log' => null, 'updating' => 'env']);
+env_assert(!str_contains($runningUpdate, 'data-env-job-cancel') && str_contains($runningUpdate, 'data-env-job-not-cancellable'), 'An update cannot be stopped.');
 
 echo "SiteScreenTest passed.\n";

@@ -10,6 +10,7 @@ use Larena\Env\Http\Controllers\ServerAdminController;
 use Larena\Env\Http\Controllers\ServerJobController;
 use Larena\Env\Http\Controllers\SiteAdminController;
 use Larena\Env\Http\Controllers\SiteFilesController;
+use Larena\Env\Http\Controllers\UpdateController;
 
 /** @var Illuminate\Routing\Router $router */
 $domain = '[A-Za-z0-9]([A-Za-z0-9-]{0,62}[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+';
@@ -50,6 +51,12 @@ $router->middleware(['access:env.server.operate'])->group(static function ($rout
     $router->post('/alerts/channel/run', [AlertsController::class, 'channelRun'])->name('larena.env.admin.alerts.channel.run');
     $router->post('/alerts/test/plan', [AlertsController::class, 'testPlan'])->name('larena.env.admin.alerts.test.plan');
     $router->post('/alerts/test/run', [AlertsController::class, 'testRun'])->name('larena.env.admin.alerts.test.run');
+});
+// A safe update of simai-env or of the panel (simai-env 1.32.0, Panel plan 4.7): the administrator's alone.
+$router->get('/update', [UpdateController::class, 'index'])->middleware('access:env.server.read')->name('larena.env.admin.update');
+$router->middleware(['access:env.server.operate'])->group(static function ($router): void {
+    $router->post('/update/plan', [UpdateController::class, 'plan'])->name('larena.env.admin.update.plan');
+    $router->post('/update/run', [UpdateController::class, 'run'])->name('larena.env.admin.update.run');
 });
 $router->middleware(['access:env.sites.operate'])->group(static function ($router): void {
     $router->post('/alerts/ack/plan', [AlertsController::class, 'ackPlan'])->name('larena.env.admin.alerts.ack.plan');

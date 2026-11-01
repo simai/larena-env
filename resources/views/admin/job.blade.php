@@ -8,7 +8,14 @@
 @section('content')
     @include('larena-env::admin.partials.notes')
 
-    @if ($status === null)
+    @if ($status === null && ($updating ?? null) !== null && ! $refused)
+        {{-- An update replaces the gate and the panel while its job runs: the server may not answer for a moment. --}}
+        <section class="larena-panel larena-panel-padded" data-env-job-restarting="{{ $updating }}" role="status">
+            <h2>{{ __('larena-env::admin.update.restarting_title') }}</h2>
+            <p>{{ __('larena-env::admin.update.restarting') }}</p>
+            <p><a href="{{ route('larena.env.admin.job', ['job' => $jobId], false) }}" class="larena-button">{{ __('larena-env::admin.update.reload') }}</a></p>
+        </section>
+    @elseif ($status === null)
         <section class="larena-panel larena-empty" data-env-state="{{ $refused ? 'refused' : 'failed' }}" role="alert">
             <h2>{{ $refused ? __('larena-env::admin.refused_title') : __('larena-env::admin.failed_title') }}</h2>
             <p>{{ $reasonText }}</p>
@@ -22,7 +29,9 @@
                 <div><dt>{{ __('larena-env::admin.job.started_by') }}</dt><dd>{{ $status->actor ?? '—' }}</dd></div>
                 <div><dt>{{ __('larena-env::admin.job.exit_code') }}</dt><dd>{{ $status->exitCode ?? '—' }}</dd></div>
             </dl>
-            @if (! $status->state->isOver())
+            @if (! $status->state->isOver() && ($updating ?? null) !== null)
+                <p data-env-job-not-cancellable>{{ __('larena-env::admin.update.not_cancellable') }}</p>
+            @elseif (! $status->state->isOver())
                 <form method="post" action="{{ route('larena.env.admin.job.cancel', ['job' => $status->jobId], false) }}" data-env-job-cancel>
                     @csrf
                     <button type="submit">{{ __('larena-env::admin.job.cancel') }}</button>

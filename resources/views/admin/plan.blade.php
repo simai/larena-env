@@ -15,6 +15,9 @@
             <h3>{{ __('larena-env::admin.plan.replaces') }}</h3>
             <p data-env-plan-replaces role="note">{{ $replaces }}</p>
         @endif
+        @if (($update ?? null) !== null)
+            @include('larena-env::admin.partials.update-plan', ['update' => $update])
+        @endif
         @foreach ($then ?? [] as $after)
             <p data-env-plan-then>{{ $after }}</p>
         @endforeach

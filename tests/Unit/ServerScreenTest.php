@@ -164,6 +164,12 @@ env_assert(str_contains($drawn, 'data-env-history-chart="day"') && str_contains(
 env_assert(!str_contains($drawn, 'data-env-history-from-server') && str_contains($state(['section' => 'overview', 'overview' => $overview, 'history' => $history,
     'historyFromServer' => true]), 'data-env-history-from-server'), 'The server\'s own history says so.');
 
+// A safe update waiting (simai-env 1.32.0): the overview says so in a line and links to the update screen.
+$hinted = $state(['section' => 'overview', 'overview' => $overview, 'updates' => [['target' => 'env', 'available' => '9.9.0']]]);
+env_assert(str_contains($hinted, 'data-env-update-hint') && str_contains($hinted, 'data-env-update-hint-target="env"') && str_contains($hinted, '9.9.0')
+    && !str_contains($hinted, 'data-env-update-hint-target="panel"'), 'An update is hinted on the overview: '.$hinted);
+env_assert(!str_contains($ok, 'data-env-update-hint'), 'No update, no hint.');
+
 // Where the server sends its alerts (simai-env 1.31.0): the channel now, its last sending and error, the form with a
 // token field that is never filled, and a test; a server without it says so and offers nothing.
 $channel = static fn (array $data): string => $factory->make('larena-env::admin.alerts', $data + ['supported' => true, 'canTest' => true, 'channel' => null, 'notice' => null])->render();

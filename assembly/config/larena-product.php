@@ -34,6 +34,8 @@ return [
             'env.dns.connection' => 'settings',
             // Where the server sends its own alerts (simai-env 1.31.0).
             'env.alerts.channel' => 'settings',
+            // A safe update of simai-env and of the panel (simai-env 1.32.0).
+            'env.update' => 'server',
             // Sign-in diagnostics under its own name, beside the server's overview.
             'auth.diagnostics' => 'server',
             'admin.settings_general' => 'settings',

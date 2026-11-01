@@ -75,6 +75,8 @@ final readonly class ServerAdminController
                 && ($this->authorizer?->authorize($request, 'env.sites.operate')->isAllowed() ?? false),
             // The load over time (Panel plan 4.6): the server's own history where it keeps one, else the panel's samples.
             'history' => $section === 'overview' && $actor->owner === null ? $this->history($actor, $overview, $now) : null,
+            // A safe update waiting (simai-env 1.32.0): only a hint here, the update screen says what it changes.
+            'updates' => $section === 'overview' && $actor->owner === null ? $this->updates($actor, $overview) : [],
             'historyFromServer' => $overview?->capabilities?->allows('self:metrics-history') === true,
             'source' => $result->source,
             'overview' => $overview,
@@ -86,6 +88,23 @@ final readonly class ServerAdminController
                 AdminProductAssetManifest::dataviewActivation(),
             ),
         ]);
+    }
+
+    /** @return list<array{target: string, available: ?string}> the targets the server has an update for */
+    private function updates(\Larena\Env\Gateway\PanelActor $actor, ?\Larena\Env\Server\ServerOverview $overview): array
+    {
+        if ($overview?->capabilities?->allows('self:update-plan') !== true || $this->extras === null) {
+            return [];
+        }
+        $updates = [];
+        foreach (\Larena\Env\Update\UpdatePlan::TARGETS as $target) {
+            $plan = $this->extras->updatePlan($actor, $target);
+            if ($plan?->updateAvailable === true) {
+                $updates[] = ['target' => $target, 'available' => $plan->available];
+            }
+        }
+
+        return $updates;
     }
 
     /** @return array<string, \Larena\Env\History\MetricHistory>|null */

@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- simai-env 1.32.0 (recorded answers set 8): a safe update of simai-env and of the panel from the panel (Panel plan
+  4.7). «Сервер › Обновление» (system level, `env.server.read`) shows, for «Окружение» and «Панель» each, the version
+  now and the one available, the release notes between them with a link to all changes, the copy taken first, what
+  restarts, which sites are asked before and after, and what comes back if they fail: for simai-env the previous
+  release, with host migrations not undone; for the panel the previous build, with its database not rolled back. A
+  reason the server cannot update now is said in words (the panel not installed by simai-env, no panel build for this
+  release yet, the remote release not readable) and offers nothing. «Обновить…» plans `self:update {target}` with the
+  same facts (`env.server.operate`) and follows its job; the job cannot be stopped, and while the gate and the panel
+  are replaced its screen says the panel is restarting and to reload it, instead of failing. «Обзор» says in a line
+  when an update is available. The user level is refused by its routes and by the server.
+
 - simai-env 1.31.0 (recorded answers set 7): the server's own alerts and load history, kept every 5 minutes also
   while the panel is closed or down. Where the server lists `self:alerts`, «Требует внимания» on «Сайты», a site's card
   and «Сервер › Обзор» shows the server's alerts: open and acknowledged ones, critical as errors, the panel's own being

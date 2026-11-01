@@ -10,6 +10,7 @@ use Larena\Env\History\MetricHistory;
 use Larena\Env\Gateway\PanelActor;
 use Larena\Env\Gateway\PanelRefused;
 use Larena\Env\Gateway\PanelRequest;
+use Larena\Env\Update\UpdatePlan;
 use UnexpectedValueException;
 
 /**
@@ -76,6 +77,18 @@ final readonly class SiteExtrasReader
         $data = $this->data($actor, 'self:metrics-history', ['period' => $period]);
 
         return $data === null ? null : MetricHistory::fromServer($period, $data);
+    }
+
+    /**
+     * What a safe update of simai-env or of the panel would change (simai-env 1.32.0, administrator only).
+     *
+     * @param 'env'|'panel' $target
+     */
+    public function updatePlan(PanelActor $actor, string $target): ?UpdatePlan
+    {
+        $data = $this->data($actor, 'self:update-plan', ['target' => $target]);
+
+        return $data === null ? null : UpdatePlan::fromData($data);
     }
 
     /**

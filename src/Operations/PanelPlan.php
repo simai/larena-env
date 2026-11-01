@@ -4,12 +4,16 @@ declare(strict_types=1);
 
 namespace Larena\Env\Operations;
 
+use Larena\Env\Update\UpdatePlan;
 use UnexpectedValueException;
 
 /** What an action would do, as the gateway answers it before anything runs (`kind: plan`). */
 final readonly class PanelPlan
 {
-    /** @param array<string, string> $args */
+    /**
+     * @param array<string, string> $args
+     * @param ?UpdatePlan $update what a safe update would change (self:update's plan carries it, simai-env 1.32.0)
+     */
     public function __construct(
         public string $command,
         public array $args,
@@ -17,6 +21,7 @@ final readonly class PanelPlan
         public string $description,
         public string $effects,
         public ?string $lock,
+        public ?UpdatePlan $update = null,
     ) {
     }
 
@@ -56,6 +61,7 @@ final readonly class PanelPlan
             description: $description,
             effects: $effects,
             lock: is_string($data['lock'] ?? null) ? $data['lock'] : null,
+            update: is_array($data['update'] ?? null) ? UpdatePlan::fromData($data['update']) : null,
         );
     }
 }

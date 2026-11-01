@@ -34,9 +34,9 @@ $with = env_boot('with');
 env_assert($with['admin_loadable'] === true, 'The admin must be installed for development.');
 $navigation = $with['navigation'];
 sort($navigation);
-env_assert($navigation === ['env.alerts.channel', 'env.dns', 'env.dns.connection', 'env.people', 'env.server', 'env.server.overview']
-    && $with['navigation_valid'] === [true, true, true, true, true, true],
-    'With the admin the sites, the overview, the spaces, DNS and the alerts\' channel are valid menu entries.');
+env_assert($navigation === ['env.alerts.channel', 'env.dns', 'env.dns.connection', 'env.people', 'env.server', 'env.server.overview', 'env.update']
+    && $with['navigation_valid'] === [true, true, true, true, true, true, true],
+    'With the admin the sites, the overview, the spaces, DNS, the alerts\' channel and the update are valid menu entries.');
 $names = array_keys($with['routes']);
 sort($names);
 env_assert($names === ['larena.env.admin.alerts.ack.plan', 'larena.env.admin.alerts.ack.run', 'larena.env.admin.alerts.channel',
@@ -48,7 +48,8 @@ env_assert($names === ['larena.env.admin.alerts.ack.plan', 'larena.env.admin.ale
     'larena.env.admin.people.owners.run', 'larena.env.admin.people.stop', 'larena.env.admin.site', 'larena.env.admin.site.dns.plan', 'larena.env.admin.site.dns.run',
     'larena.env.admin.site.files.download', 'larena.env.admin.site.files.plan', 'larena.env.admin.site.files.run', 'larena.env.admin.site.nginx.plan',
     'larena.env.admin.site.nginx.run', 'larena.env.admin.site.plan',
-    'larena.env.admin.site.run', 'larena.env.admin.sites.new', 'larena.env.admin.sites.plan', 'larena.env.admin.sites.run'],
+    'larena.env.admin.site.run', 'larena.env.admin.sites.new', 'larena.env.admin.sites.plan', 'larena.env.admin.sites.run',
+    'larena.env.admin.update', 'larena.env.admin.update.plan', 'larena.env.admin.update.run'],
     'The screens of the panel: '.implode(', ', $names));
 env_assert($with['routes']['larena.env.admin.index']['uri'] === 'admin/server', 'The sites keep their address.');
 env_assert($with['routes']['larena.env.admin.overview']['uri'] === 'admin/server/overview', 'The server\'s overview has its own address.');
@@ -69,13 +70,17 @@ foreach ($with['routes'] as $name => $route) {
     // Where the server sends its alerts, and a test, are the system level's; acknowledging one changes a site's state.
     $channel = str_starts_with($name, 'larena.env.admin.alerts.channel') || str_starts_with($name, 'larena.env.admin.alerts.test');
     $channelChanges = $channel && $name !== 'larena.env.admin.alerts.channel';
+    // A safe update is the administrator's alone: the screen reads the server, the update changes it (simai-env 1.32.0).
+    $update = str_starts_with($name, 'larena.env.admin.update');
+    $updateChanges = $update && $name !== 'larena.env.admin.update';
     // Changing a site is a right of its own: a new site, a site's action and stopping a job ask for it.
-    $changes = !$people && !$dns && !$nginx && !$channel && (str_ends_with($name, '.plan') || str_ends_with($name, '.run') || str_ends_with($name, '.cancel') || $name === 'larena.env.admin.sites.new');
+    $changes = !$people && !$dns && !$nginx && !$channel && !$update && (str_ends_with($name, '.plan') || str_ends_with($name, '.run') || str_ends_with($name, '.cancel') || $name === 'larena.env.admin.sites.new');
     env_assert(in_array('access:env.sites.operate', $route['middleware'], true) === $changes, "{$name} asks for the wrong right.");
     // The server's overview and the people's spaces are the system level's; giving a space or acting for someone changes the server.
-    $reads = in_array($name, ['larena.env.admin.overview', 'larena.env.admin.people', 'larena.env.admin.people.stop', 'larena.env.admin.alerts.channel'], true);
+    $reads = in_array($name, ['larena.env.admin.overview', 'larena.env.admin.people', 'larena.env.admin.people.stop', 'larena.env.admin.alerts.channel',
+        'larena.env.admin.update'], true);
     env_assert(in_array('access:env.server.read', $route['middleware'], true) === $reads, "{$name} asks for the wrong level.");
-    env_assert(in_array('access:env.server.operate', $route['middleware'], true) === (($people && !$reads) || $nginx || $channelChanges), "{$name} must ask for the server's right.");
+    env_assert(in_array('access:env.server.operate', $route['middleware'], true) === (($people && !$reads) || $nginx || $channelChanges || $updateChanges), "{$name} must ask for the server's right.");
 }
 env_assert($with['commands'] === [RegisterServerAreaCommand::class, PanelCheckCommand::class] && $with['sites'] === 4, 'The rest does not change.');
 

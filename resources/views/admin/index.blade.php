@@ -15,6 +15,17 @@
         </section>
     @elseif ($section === 'overview')
         @include('larena-env::admin.partials.warnings')
+        @if (($updates ?? []) !== [])
+            <section class="larena-panel larena-panel-padded" data-env-update-hint role="note" aria-labelledby="env-update-hint">
+                <h2 id="env-update-hint">{{ __('larena-env::admin.update.hint_title') }}</h2>
+                <ul>
+                    @foreach ($updates as $update)
+                        <li data-env-update-hint-target="{{ $update['target'] }}">{{ __('larena-env::admin.update.hint.'.$update['target'], ['available' => $update['available'] ?? '—']) }}</li>
+                    @endforeach
+                </ul>
+                <p><a href="{{ route('larena.env.admin.update', [], false) }}">{{ __('larena-env::admin.update.hint_open') }}</a></p>
+            </section>
+        @endif
         <section class="larena-panel larena-panel-padded" data-env-state="ok" aria-labelledby="env-server-status">
             <h2 id="env-server-status">{{ __('larena-env::admin.status.title') }}</h2>
             <dl class="larena-recipe-facts">

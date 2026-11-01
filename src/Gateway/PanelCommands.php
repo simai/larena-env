@@ -55,6 +55,8 @@ final class PanelCommands
     private const string ALERT_TARGET = '/\A(?:https:\/\/[!-~]{1,500}|-?[0-9]{1,20}|@[A-Za-z0-9_]{5,32})\z/D';
     private const string BOT_TOKEN = '/\A[0-9]{5,12}:[A-Za-z0-9_-]{30,64}\z/D';
     private const string PERIOD = '/\A(?:day|week|month)\z/D';
+    // What a safe update replaces: simai-env itself, or the panel's build (simai-env 1.32.0).
+    private const string UPDATE_TARGET = '/\A(?:env|panel)\z/D';
     /** The one argument the gateway takes as a list: fs:archive's paths, up to 100, each checked as a path. */
     private const array LIST_ARGUMENTS = ['fs:archive' => ['paths' => 100]];
 
@@ -111,6 +113,10 @@ final class PanelCommands
             'required' => ['kind'], 'since' => '1.31.0', 'kind' => self::ACTION],
         'self:alerts-test' => ['args' => [], 'required' => [], 'since' => '1.31.0', 'kind' => self::ACTION],
         'self:metrics-history' => ['args' => ['period' => self::PERIOD], 'required' => ['period'], 'since' => '1.31.0', 'kind' => self::READ],
+        // A safe update of simai-env or of the panel, administrator only (simai-env 1.32.0): what it changes, then the job
+        // that takes a copy, replaces, checks the sites or the panel's health, and puts the previous one back if they fail.
+        'self:update-plan' => ['args' => ['target' => self::UPDATE_TARGET], 'required' => ['target'], 'since' => '1.32.0', 'kind' => self::READ],
+        'self:update' => ['args' => ['target' => self::UPDATE_TARGET], 'required' => ['target'], 'since' => '1.32.0', 'kind' => self::ACTION],
         // SFTP accounts of a site, by key only: there is no password argument (simai-env 1.30.0).
         'access:list' => ['args' => ['domain' => self::DOMAIN], 'required' => [], 'since' => '1.30.0', 'kind' => self::READ],
         'access:create-project' => ['args' => ['domain' => self::DOMAIN, 'login' => self::LOGIN, 'pubkey' => self::PUBKEY],

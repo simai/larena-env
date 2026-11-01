@@ -34,6 +34,10 @@ final readonly class RecordedAnswersGateway implements PanelGateway
         if ($owner !== null && str_starts_with($request->command, 'owner:')) {
             return $this->replay($request, 'refused.not-allowed.json');
         }
+        // A safe update is the administrator's alone.
+        if ($owner !== null && str_starts_with($request->command, 'self:update')) {
+            return $this->replay($request, 'refused.owner-admin-only.update.json');
+        }
         if ($owner !== null && $domain !== null && $request->command !== 'site:add') {
             $own = $this->document("self-describe.owner-{$owner}.json");
             if (is_string($own)) {
@@ -66,6 +70,10 @@ final readonly class RecordedAnswersGateway implements PanelGateway
         // An action is recorded twice: what it would do, and the start of the one job the recording holds.
         if (PanelCommands::kind($request->command) === PanelCommands::ACTION) {
             return $request->confirm ? 'job-start.json' : "plan.{$name}.json";
+        }
+        // What an update changes is recorded for each of its targets.
+        if ($request->command === 'self:update-plan' && is_string($request->args['target'] ?? null)) {
+            return "{$name}.{$request->args['target']}.json";
         }
         if ($domain !== null) {
             return "{$name}.{$domain}.json";

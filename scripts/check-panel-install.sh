@@ -148,7 +148,7 @@ roots = [item["key"] for item in items]
 print("menu roots:", roots)
 assert roots == ["sites", "journal", "users", "server", "settings"], roots
 children = {item["key"]: [row["key"] for row in item.get("children", []) if row.get("kind") == "page"] for item in items}
-assert sorted(children["server"]) == ["auth.diagnostics", "env.dns", "env.server.overview"], children
+assert sorted(children["server"]) == ["auth.diagnostics", "env.dns", "env.server.overview", "env.update"], children
 assert sorted(children["users"]) == ["auth.users", "env.people"], children
 assert sorted(children["settings"]) == ["admin.settings_general", "admin.site_backgrounds", "env.alerts.channel", "env.dns.connection"], children
 assert "site-switch" not in json.dumps(menu.get("capabilities", [])), "the panel has no site switcher"
@@ -214,6 +214,16 @@ _, hooked = post("/admin/server/alerts/channel/plan", {"_token": form_token(chan
 assert 'data-env-plan="self:alerts-channel"' in hooked and 'name="target" value="https://hooks.example.com/simai"' in hooked, "a webhook is planned"
 _, tested = post("/admin/server/alerts/test/plan", {"_token": form_token(channel)})
 assert 'data-env-plan="self:alerts-test"' in tested, "a test is planned"
+# A safe update (simai-env 1.32.0): simai-env has one (pinned to 9.9.0 in the set), the panel on the stand was not
+# installed by simai-env; the overview hints at it; the update is planned with what it changes.
+status, update = get("/admin/server/update")
+assert status == 200 and re.search(r'data-env-update="env"\s+data-env-update-state="available"', update) and "9.9.0" in update, "simai-env's update"
+assert re.search(r'data-env-update="panel"\s+data-env-update-state="not_installed"', update) and "was not installed through simai-env" in update, "the panel says why not"
+assert 'data-env-update-plan="env"' in update and 'data-env-update-plan="panel"' not in update, "only simai-env is offered"
+_, overview = get("/admin/server/overview")
+assert 'data-env-update-hint-target="env"' in overview, "the overview hints at the update"
+_, updating = post("/admin/server/update/plan", {"_token": form_token(update), "target": "env"})
+assert 'data-env-plan="self:update"' in updating and 'data-env-update-facts="env"' in updating and 'name="target" value="env"' in updating, "the update is planned"
 print("stage 4:", "ok", unread, "unread")
 
 # The second level: a person at the user level (the editor role), made the way an administrator's tooling would.
@@ -355,7 +365,8 @@ status, sites = get("/admin/server")
 assert status == 200 and "demo-owned.test" in sites and "demo-php.test" not in sites, "the person sees their own owner's sites"
 status, other = get("/admin/server/sites/demo-php.test")
 assert "another owner" in other, "another owner's site is refused by the server"
-for path in ("/admin/server/people", "/admin/server/overview", "/admin/server/dns", "/admin/server/dns/connection", "/admin/server/alerts/channel"):
+for path in ("/admin/server/people", "/admin/server/overview", "/admin/server/dns", "/admin/server/dns/connection", "/admin/server/alerts/channel",
+        "/admin/server/update"):
     try:
         status, _ = get(path)
     except urllib.error.HTTPError as error:
@@ -381,6 +392,11 @@ try:
 except urllib.error.HTTPError as error:
     status = error.code
 assert status == 403, ("the channel is the system level's", status)
+try:
+    status, _ = post("/admin/server/update/plan", {"_token": form_token(sites), "target": "env"})
+except urllib.error.HTTPError as error:
+    status = error.code
+assert status == 403, ("an update is the system level's", status)
 status, own_sftp = get("/admin/server/sites/demo-owned.test?tab=access")
 assert status == 200 and 'data-env-sftp="demo-staff"' in own_sftp and 'data-env-operation="sftp-add-key"' in own_sftp, "the person manages their own site's SFTP"
 status, own_files = get("/admin/server/sites/demo-owned.test?tab=files")

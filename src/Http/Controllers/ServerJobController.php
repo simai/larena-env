@@ -38,8 +38,15 @@ final readonly class ServerJobController
             return $followUp;
         }
 
+        // An update's job (simai-env 1.32.0) cannot be stopped, and runs on while the gate and the panel are replaced.
+        $updating = $request->hasSession() ? $request->session()->get(UpdateController::JOB.'.'.$job) : null;
+        if (!is_string($updating) && $result->status?->command === 'self:update') {
+            $updating = $result->status->args['target'] ?? 'env';
+        }
+
         return $this->views->make('larena-env::admin.job', [
             'jobId' => $job,
+            'updating' => is_string($updating) ? $updating : null,
             'source' => $result->source,
             'status' => $result->status,
             'log' => $result->log,
