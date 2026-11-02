@@ -33,7 +33,15 @@ final readonly class PanelWarningSource
             if ($alerts !== null) {
                 $sites = array_map(static fn ($site): string => $site->domain, $overview->sites);
 
-                return ['warnings' => PanelWarnings::fromAlerts($alerts, $sites, $actor->owner === null), 'fromServer' => true];
+                $warnings = PanelWarnings::fromAlerts($alerts, $sites, $actor->owner === null);
+                // The server does not watch swap; the panel's own reading joins its list, for the whole server's level.
+                $swap = $actor->owner === null ? PanelWarnings::swap($metrics) : null;
+                if ($swap !== null && array_filter($warnings, static fn (PanelWarning $warning): bool => $warning->kind === PanelWarnings::SWAP_FULL) === []) {
+                    $warnings[] = $swap;
+                    usort($warnings, static fn (PanelWarning $a, PanelWarning $b): int => ($a->severity === PanelWarning::ERROR ? 0 : 1) <=> ($b->severity === PanelWarning::ERROR ? 0 : 1));
+                }
+
+                return ['warnings' => $warnings, 'fromServer' => true];
             }
         }
 

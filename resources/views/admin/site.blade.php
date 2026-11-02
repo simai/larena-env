@@ -58,7 +58,8 @@
                     @endforeach
                 </div>
             </nav>
-            <div class="lg:col-span-3 min-w-0 flex flex-col g-2">
+            {{-- The admin spaces panels that follow each other; a gap here would add to it. --}}
+            <div class="lg:col-span-3 min-w-0">
         @if ($tab === 'overview')
             <section class="larena-panel larena-panel-padded" data-env-state="ok" aria-labelledby="env-site-facts">
                 <h2 id="env-site-facts">{{ __('larena-env::admin.site.facts') }}</h2>

@@ -198,6 +198,11 @@ $swapped = \Larena\Env\Server\ServerMetrics::fromData(['cpu' => ['cores' => 2, '
 env_assert(array_column($swapped->disks, 'mount') === ['/'] && $swapped->loadPercent() === 50, 'A mounted file is not a disk; the load is in percent of the cores.');
 $swapWarnings = \Larena\Env\Warnings\PanelWarnings::of($overview, $swapped, new DateTimeImmutable('2026-11-01T12:00:00Z'));
 env_assert(($swapWarnings[array_search('swap_full', array_map(static fn ($warning): string => $warning->kind, $swapWarnings), true)] ?? null)?->severity === 'warning', 'Swap at 83% is a warning.');
+// The server's own alerts do not watch swap: the panel's reading is one warning of its own, also next to them.
+env_assert(\Larena\Env\Warnings\PanelWarnings::swap($swapped)?->kind === 'swap_full'
+    && \Larena\Env\Warnings\PanelWarnings::swap(\Larena\Env\Server\ServerMetrics::fromData(['swap' => ['total_bytes' => 1_000, 'used_bytes' => 960]]))?->severity === 'error'
+    && \Larena\Env\Warnings\PanelWarnings::swap(\Larena\Env\Server\ServerMetrics::fromData(['swap' => ['total_bytes' => 1_000, 'used_bytes' => 790]])) === null
+    && \Larena\Env\Warnings\PanelWarnings::swap(null) === null, 'Swap: a warning from 80%, an error from 95%, nothing below or unknown.');
 $swapDrawn = $state(['section' => 'overview', 'overview' => $overview, 'metrics' => $swapped, 'warnings' => $swapWarnings]);
 env_assert(str_contains($swapDrawn, 'data-env-metric="swap" data-env-metric-tone="warning"') && str_contains($swapDrawn, 'data-env-warning="swap_full"'), 'Swap is a tile and a warning.');
 env_assert(!str_contains($state(['section' => 'overview', 'overview' => $overview, 'warnings' => []]), 'larena-panel m-bottom-2" data-env-warnings'), 'Nothing to say is one line, not a card.');

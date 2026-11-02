@@ -97,11 +97,9 @@ final class PanelWarnings
                     null, ['mount' => $disk['mount'], 'percent' => (string) $percent, 'free' => Bytes::human($disk['total'] - $disk['used'])], $disk['mount']);
             }
         }
-        if ($metrics !== null && $metrics->swapTotal !== null && $metrics->swapUsed !== null && $metrics->swapTotal > 0
-            && $metrics->swapUsed / $metrics->swapTotal * 100 >= self::SWAP_PERCENT) {
-            $percent = Bytes::percent($metrics->swapUsed, $metrics->swapTotal);
-            $warnings[] = new PanelWarning(self::SWAP_FULL, $percent >= self::SWAP_ERROR_PERCENT ? PanelWarning::ERROR : PanelWarning::WARNING,
-                null, ['percent' => (string) $percent]);
+        $swap = self::swap($metrics);
+        if ($swap !== null) {
+            $warnings[] = $swap;
         }
         foreach ($overview->sites as $site) {
             array_push($warnings, ...self::forSite($site, $now));
@@ -109,6 +107,22 @@ final class PanelWarnings
         usort($warnings, static fn (PanelWarning $a, PanelWarning $b): int => ($a->severity === PanelWarning::ERROR ? 0 : 1) <=> ($b->severity === PanelWarning::ERROR ? 0 : 1));
 
         return $warnings;
+    }
+
+    /**
+     * The swap nearly used up, worked out by the panel from the load it reads; null below the threshold or unknown.
+     * The server's own alerts do not watch swap, so the panel adds this one to them too.
+     */
+    public static function swap(?ServerMetrics $metrics): ?PanelWarning
+    {
+        if ($metrics === null || $metrics->swapTotal === null || $metrics->swapUsed === null || $metrics->swapTotal <= 0
+            || $metrics->swapUsed / $metrics->swapTotal * 100 < self::SWAP_PERCENT) {
+            return null;
+        }
+        $percent = Bytes::percent($metrics->swapUsed, $metrics->swapTotal);
+
+        return new PanelWarning(self::SWAP_FULL, $percent >= self::SWAP_ERROR_PERCENT ? PanelWarning::ERROR : PanelWarning::WARNING,
+            null, ['percent' => (string) $percent]);
     }
 
     /**

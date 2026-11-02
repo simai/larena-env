@@ -23,6 +23,15 @@ final readonly class ServerMetrics
     ) {
     }
 
+    /**
+     * Whether a mount is one of the server's own disks. A container mounts single files over /etc (hostname, hosts,
+     * resolv.conf): they report the host's disk, not one of the server's own.
+     */
+    public static function ownMount(string $mount): bool
+    {
+        return !str_starts_with($mount, '/etc/');
+    }
+
     /** @param array<array-key, mixed> $data */
     public static function fromData(array $data): self
     {
@@ -32,8 +41,7 @@ final readonly class ServerMetrics
         $bytes = static fn (mixed $block, string $key): ?int => is_array($block) && is_int($block[$key] ?? null) ? $block[$key] : null;
         $disks = [];
         foreach (is_array($data['disk'] ?? null) ? $data['disk'] : [] as $disk) {
-            // A container mounts single files over /etc (hostname, hosts, resolv.conf): they report the host's disk, not one of the server's own.
-            if (is_array($disk) && is_string($disk['mount'] ?? null) && !str_starts_with($disk['mount'], '/etc/')
+            if (is_array($disk) && is_string($disk['mount'] ?? null) && self::ownMount($disk['mount'])
                 && is_int($disk['total_bytes'] ?? null) && is_int($disk['used_bytes'] ?? null)) {
                 $disks[] = ['mount' => $disk['mount'], 'total' => $disk['total_bytes'], 'used' => $disk['used_bytes']];
             }

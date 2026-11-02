@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Larena\Env\History;
 
+use Larena\Env\Server\ServerMetrics;
+
 /** One period of the load history, ready to draw: each line's points as (share of the period, percent). */
 final readonly class MetricHistory
 {
@@ -65,7 +67,7 @@ final readonly class MetricHistory
             foreach (is_array($point['disk'] ?? null) ? $point['disk'] : [] as $disk) {
                 $diskUsed = is_array($disk) ? $number($disk['used_bytes'] ?? null) : null;
                 $diskTotal = is_array($disk) ? $number($disk['total_bytes'] ?? null) : null;
-                if (is_string($disk['mount'] ?? null) && $diskUsed !== null && $diskTotal !== null && $diskTotal > 0) {
+                if (is_string($disk['mount'] ?? null) && ServerMetrics::ownMount($disk['mount']) && $diskUsed !== null && $diskTotal !== null && $diskTotal > 0) {
                     $lines['disk:'.$disk['mount']][] = [$x, $diskUsed / $diskTotal * 100];
                 }
             }
