@@ -62,6 +62,8 @@ final readonly class ServerAdminController
             : ($this->warningSource ?? ($this->extras === null ? null : new PanelWarningSource($this->extras)))?->of($actor, $overview, $metrics, $now)
                 ?? ['warnings' => PanelWarnings::of($overview, $metrics, $now), 'fromServer' => false];
 
+        $history = $section === 'overview' && $actor->owner === null ? $this->history($actor, $overview, $now) : null;
+
         return $this->views->make('larena-env::admin.index', [
             'section' => $section,
             'canCreate' => $this->authorizer?->authorize($request, 'env.sites.operate')->isAllowed() ?? false,
@@ -74,7 +76,7 @@ final readonly class ServerAdminController
             'canAcknowledge' => $overview?->capabilities?->allows('self:alerts-ack') === true
                 && ($this->authorizer?->authorize($request, 'env.sites.operate')->isAllowed() ?? false),
             // The load over time (Panel plan 4.6): the server's own history where it keeps one, else the panel's samples.
-            'history' => $section === 'overview' && $actor->owner === null ? $this->history($actor, $overview, $now) : null,
+            'history' => $history,
             // A safe update waiting (simai-env 1.32.0): only a hint here, the update screen says what it changes.
             'updates' => $section === 'overview' && $actor->owner === null ? $this->updates($actor, $overview) : [],
             'historyFromServer' => $overview?->capabilities?->allows('self:metrics-history') === true,

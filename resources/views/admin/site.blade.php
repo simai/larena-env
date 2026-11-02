@@ -5,6 +5,25 @@
 @section('eyebrow', __('larena-env::admin.eyebrow'))
 @section('description', __('larena-env::admin.site.description'))
 
+@if ($site !== null)
+    {{-- The site's state at a glance in the page's head: whether it works, what it runs, its certificate. --}}
+    @section('heading-meta')
+        <span class="flex flex-wrap items-cross-center g-1" data-env-site-state="{{ \Larena\Env\Admin\SiteState::of($site->answersChecked, $site->answers) }}">
+            <sf-badge status="{{ \Larena\Env\Admin\SiteState::status(\Larena\Env\Admin\SiteState::of($site->answersChecked, $site->answers)) }}" appearance="tonal" text="{{ __('larena-env::admin.sites.state.'.\Larena\Env\Admin\SiteState::of($site->answersChecked, $site->answers)) }}"></sf-badge>
+            <sf-badge appearance="outline" text="{{ __('larena-env::admin.new_site.profiles.'.$site->profile) }}{{ $site->php !== 'none' ? ' · PHP '.$site->php : '' }}"></sf-badge>
+            @if ($site->certificate !== null)
+                <sf-badge status="{{ $site->certificate->daysLeft !== null && $site->certificate->daysLeft < \Larena\Env\Warnings\PanelWarnings::CERTIFICATE_DAYS ? 'warning' : 'success' }}" appearance="tonal"
+                    text="{{ $site->certificate->daysLeft === null ? 'HTTPS' : __('larena-env::admin.sites.certificate_left', ['days' => (string) $site->certificate->daysLeft]) }}"></sf-badge>
+            @else
+                <sf-badge appearance="outline" text="{{ __('larena-env::admin.site.no_https') }}"></sf-badge>
+            @endif
+        </span>
+    @endsection
+    @section('actions')
+        <a class="larena-button" href="{{ $site->certificate !== null ? 'https' : 'http' }}://{{ $domain }}/" target="_blank" rel="noopener noreferrer" data-env-site-open>{{ __('larena-env::admin.site.open') }}</a>
+    @endsection
+@endif
+
 @section('content')
     @include('larena-env::admin.partials.notes')
 
@@ -16,20 +35,37 @@
         </section>
     @else
         @include('larena-env::admin.partials.warnings', ['linkSites' => false])
-        <nav class="larena-panel larena-panel-padded" aria-label="{{ __('larena-env::admin.site.tabs_label') }}" data-env-tabs style="display: flex; flex-wrap: wrap; gap: .5rem;">
-            @foreach ($tabs as $name)
-                <a href="{{ route('larena.env.admin.site', ['domain' => $domain], false) }}?tab={{ $name }}" data-env-tab="{{ $name }}" @if ($name === $tab) aria-current="page" @endif
-                    style="display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0 .875rem; border: 1px solid {{ $name === $tab ? 'var(--sf-primary)' : 'var(--larena-line)' }}; border-radius: 999px; text-decoration: none;{{ $name === $tab ? ' background: var(--sf-primary-container); color: var(--sf-on-primary-container);' : '' }}">{{ __('larena-env::admin.site.tabs.'.$name) }}</a>
-            @endforeach
-        </nav>
-
+        {{-- The card as an entity page: its sections in groups on the side, a strip above the content on a phone. A section
+             with something to attend to carries a mark. Utilities until the Framework's section navigation ships. --}}
+        <div class="grid g-2 grid-col-1 lg:grid-col-4" style="align-items: start;">
+            <nav class="larena-panel p-1 min-w-0 lg:sticky" style="top: 1rem;" aria-label="{{ __('larena-env::admin.site.tabs_label') }}" data-env-tabs>
+                <div class="flex flex-row lg:flex-col g-1 overflow-x-auto lg:overflow-visible">
+                    @foreach (\Larena\Env\Admin\SiteCardSections::of($tabs, $warnings ?? null) as $navGroup)
+                        @if ($navGroup['group'] !== 'site')
+                            <span class="hidden lg:block p-x-1 p-top-1 text-1/2 color-on-surface-variant" data-env-tab-group="{{ $navGroup['group'] }}">{{ __('larena-env::admin.site.groups.'.$navGroup['group']) }}</span>
+                        @endif
+                        @foreach ($navGroup['items'] as $item)
+                            <a href="{{ route('larena.env.admin.site', ['domain' => $domain], false) }}?tab={{ $item['name'] }}" data-env-tab="{{ $item['name'] }}" @if ($item['name'] === $tab) aria-current="page" @endif
+                                class="flex items-cross-center content-main-between g-1 p-x-1 radius-1 wrap-none {{ $item['name'] === $tab ? 'bg-primary-container color-on-primary-container' : 'color-on-surface' }}"
+                                style="min-height: 2.5rem; text-decoration: none; flex: 0 0 auto;">
+                                <span>{{ __('larena-env::admin.site.tabs.'.$item['name']) }}</span>
+                                @if ($item['attention'] !== null)
+                                    <span class="{{ $item['attention'] === 'error' ? 'bg-error' : 'bg-warning' }}" style="width: .5rem; height: .5rem; border-radius: 50%; flex: none;" data-env-tab-attention="{{ $item['attention'] }}"
+                                        role="img" aria-label="{{ __('larena-env::admin.warnings.severity.'.$item['attention']) }}"></span>
+                                @endif
+                            </a>
+                        @endforeach
+                    @endforeach
+                </div>
+            </nav>
+            <div class="lg:col-span-3 min-w-0 flex flex-col g-2">
         @if ($tab === 'overview')
             <section class="larena-panel larena-panel-padded" data-env-state="ok" aria-labelledby="env-site-facts">
                 <h2 id="env-site-facts">{{ __('larena-env::admin.site.facts') }}</h2>
                 <dl class="larena-recipe-facts">
-                    <div data-env-answers="{{ $site->answersChecked ? ($site->answers ?? 'none') : 'unchecked' }}"><dt>{{ __('larena-env::admin.sites.answers') }}</dt><dd>{{ !$site->answersChecked ? '—' : ($site->answers === null ? __('larena-env::admin.sites.answers_none') : __('larena-env::admin.sites.answers_code', ['code' => (string) $site->answers])) }}</dd></div>
+                    <div data-env-answers="{{ $site->answersChecked ? ($site->answers ?? 'none') : 'unchecked' }}"><dt>{{ __('larena-env::admin.sites.answers') }}</dt><dd>{{ __('larena-env::admin.sites.state.'.\Larena\Env\Admin\SiteState::of($site->answersChecked, $site->answers)) }}{{ $site->answers !== null ? ' · '.__('larena-env::admin.sites.answers_code', ['code' => (string) $site->answers]) : '' }}</dd></div>
                     <div><dt>{{ __('larena-env::admin.sites.owner') }}</dt><dd>{{ $site->owner ?? '—' }}</dd></div>
-                    <div><dt>{{ __('larena-env::admin.sites.profile') }}</dt><dd>{{ $site->profile }}</dd></div>
+                    <div><dt>{{ __('larena-env::admin.sites.profile') }}</dt><dd>{{ __('larena-env::admin.new_site.profiles.'.$site->profile) }}</dd></div>
                     <div><dt>{{ __('larena-env::admin.sites.php') }}</dt><dd>{{ $site->php }}</dd></div>
                     <div><dt>{{ __('larena-env::admin.sites.ssl') }}</dt><dd>{{ $site->ssl }}</dd></div>
                     <div><dt>{{ __('larena-env::admin.sites.database') }}</dt><dd>{{ $site->databaseEngine ?? '—' }}</dd></div>
@@ -388,6 +424,7 @@
                 @endforeach
             </section>
         @endif
-        <p><a href="{{ route('larena.env.admin.index', [], false) }}">{{ __('larena-env::admin.site.back') }}</a></p>
+            </div>
+        </div>
     @endif
 @endsection

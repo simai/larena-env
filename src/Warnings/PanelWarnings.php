@@ -24,6 +24,8 @@ use Larena\Env\Server\SiteSummary;
 final class PanelWarnings
 {
     public const string DISK_FULL = 'disk_full';
+    // Swap mostly taken: the server is short of memory and its sites slow down long before anything stops.
+    public const string SWAP_FULL = 'swap_full';
     public const string CERTIFICATE_ENDING = 'certificate_ending';
     public const string CERTIFICATE_EXPIRED = 'certificate_expired';
     public const string CERTIFICATE_MISSING = 'certificate_missing';
@@ -48,7 +50,7 @@ final class PanelWarnings
     public const string RESOLVED = 'resolved';
 
     /** Every kind, each recorded as the notification source "env:warning:<kind>". */
-    public const array KINDS = [self::DISK_FULL, self::CERTIFICATE_ENDING, self::CERTIFICATE_EXPIRED, self::CERTIFICATE_MISSING,
+    public const array KINDS = [self::DISK_FULL, self::SWAP_FULL, self::CERTIFICATE_ENDING, self::CERTIFICATE_EXPIRED, self::CERTIFICATE_MISSING,
         self::SITE_DOWN, self::SITE_ERROR, self::BACKUP_NONE, self::BACKUP_STALE, self::BACKUP_UNSCHEDULED,
         self::BACKUP_CHECK_FAILED, self::CERTIFICATE_RENEW_FAILED, self::DISK_ALERT, self::CERTIFICATE_ALERT, self::SITE_UNAVAILABLE,
         self::PANEL_DOWN, self::BACKUP_MISSING, self::BACKUP_FAILED, self::SERVER_ALERT, self::RESOLVED];
@@ -67,6 +69,8 @@ final class PanelWarnings
 
     public const int DISK_PERCENT = 90;
     public const int DISK_ERROR_PERCENT = 95;
+    public const int SWAP_PERCENT = 80;
+    public const int SWAP_ERROR_PERCENT = 95;
     public const int CERTIFICATE_DAYS = 14;
     public const int CERTIFICATE_ERROR_DAYS = 3;
     public const int BACKUP_HOURS = 48;
@@ -92,6 +96,12 @@ final class PanelWarnings
                 $warnings[] = new PanelWarning(self::DISK_FULL, $percent >= self::DISK_ERROR_PERCENT ? PanelWarning::ERROR : PanelWarning::WARNING,
                     null, ['mount' => $disk['mount'], 'percent' => (string) $percent, 'free' => Bytes::human($disk['total'] - $disk['used'])], $disk['mount']);
             }
+        }
+        if ($metrics !== null && $metrics->swapTotal !== null && $metrics->swapUsed !== null && $metrics->swapTotal > 0
+            && $metrics->swapUsed / $metrics->swapTotal * 100 >= self::SWAP_PERCENT) {
+            $percent = Bytes::percent($metrics->swapUsed, $metrics->swapTotal);
+            $warnings[] = new PanelWarning(self::SWAP_FULL, $percent >= self::SWAP_ERROR_PERCENT ? PanelWarning::ERROR : PanelWarning::WARNING,
+                null, ['percent' => (string) $percent]);
         }
         foreach ($overview->sites as $site) {
             array_push($warnings, ...self::forSite($site, $now));

@@ -38,6 +38,14 @@ final readonly class SiteAdminController
      * for the system level only, its own nginx directives (stage 6).
      */
     public const array TABS = ['overview', 'domains', 'dns', 'php', 'database', 'backups', 'cron', 'files', 'releases', 'log', 'access', 'nginx'];
+    /** The card's sections in groups, as the side navigation shows them (owner-approved prototype, 2026-11-02). */
+    public const array GROUPS = [
+        'site' => ['overview'],
+        'address' => ['domains', 'dns'],
+        'code' => ['php', 'releases', 'files', 'cron', 'nginx', 'access'],
+        'data' => ['database', 'backups'],
+        'observe' => ['log'],
+    ];
     /** The tabs only the system level has. */
     private const array SYSTEM_TABS = ['nginx'];
     /** The tabs shown only where the server lists the command they read. */

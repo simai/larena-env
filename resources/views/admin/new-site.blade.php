@@ -8,28 +8,32 @@
 @section('content')
     @include('larena-env::admin.partials.notes')
 
+    {{-- The way through: the kind and its fields here, then the plan in words, then the server makes the site. --}}
+    <sf-steps class="m-bottom-2" size="1/2" current="0" aria-label="{{ __('larena-env::admin.new_site.steps_label') }}" data-env-new-steps
+        items="{{ json_encode([['label' => __('larena-env::admin.new_site.steps.fill')], ['label' => __('larena-env::admin.new_site.steps.plan'), 'disabled' => true],
+            ['label' => __('larena-env::admin.new_site.steps.make'), 'disabled' => true]], JSON_UNESCAPED_UNICODE) }}"></sf-steps>
     <section class="larena-panel larena-panel-padded" aria-labelledby="env-new-site">
-        <h2 id="env-new-site">{{ __('larena-env::admin.new_site.heading') }}</h2>
-        {{-- First what it runs, each kind with what the server sets up; the form below asks only what that kind takes. --}}
-        <nav aria-labelledby="env-new-kind" data-env-new-kinds>
-            <h3 id="env-new-kind">{{ __('larena-env::admin.new_site.profile') }}</h3>
-            <ul class="larena-list" style="list-style: none; padding-inline-start: 0; display: grid; gap: .5rem;">
+        <h2 id="env-new-site" class="m-top-0">{{ __('larena-env::admin.new_site.profile') }}</h2>
+        {{-- First what it runs, as tiles: each kind with what the server sets up; the fields below ask only what that kind
+             takes. Utilities until the Framework's choice cards ship (msg-993e1e39151942c19b23). --}}
+        <nav aria-labelledby="env-new-site" data-env-new-kinds>
+            <ul class="grid g-1 grid-col-1 md:grid-col-2 xl:grid-col-4 m-0 p-0" style="list-style: none;">
                 @foreach ($profiles as $profile)
-                    <li>
+                    <li class="flex">
                         <a href="{{ route('larena.env.admin.sites.new', [], false) }}?profile={{ $profile }}" data-env-profile="{{ $profile }}" @if ($profile === ($kind ?? 'static')) aria-current="true" @endif
-                            style="display: block; min-height: 2.75rem; padding: .625rem .875rem; border: 1px solid {{ $profile === ($kind ?? 'static') ? 'var(--sf-primary)' : 'var(--larena-line)' }}; border-radius: .625rem; text-decoration: none; color: inherit;{{ $profile === ($kind ?? 'static') ? ' background: var(--sf-primary-container); color: var(--sf-on-primary-container);' : '' }}">
-                            @if (($serverProfiles ?? null) !== null)
-                                <strong>{{ $serverProfiles[$profile]['label'] }}</strong><br>
-                                <span data-env-profile-hint="{{ $profile }}">{{ $serverProfiles[$profile]['hint'] }}</span>
-                            @else
-                                <strong>{{ __('larena-env::admin.new_site.profiles.'.$profile) }}</strong><br>
-                                <span data-env-profile-hint="{{ $profile }}">{{ __('larena-env::admin.new_site.profile_hints.'.$profile) }}</span>
-                            @endif
+                            class="grow flex flex-col g-1/2 p-2 radius-2 border-1 border-solid {{ $profile === ($kind ?? 'static') ? 'border-primary bg-primary-container color-on-primary-container' : 'border-outline-variant color-on-surface' }}"
+                            style="text-decoration: none; min-height: 2.75rem;">
+                            <strong>{{ ($serverProfiles ?? null) !== null ? $serverProfiles[$profile]['label'] : __('larena-env::admin.new_site.profiles.'.$profile) }}</strong>
+                            <span class="{{ $profile === ($kind ?? 'static') ? '' : 'color-on-surface-variant' }}" data-env-profile-hint="{{ $profile }}"
+                                style="display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">{{ ($serverProfiles ?? null) !== null ? $serverProfiles[$profile]['hint'] : __('larena-env::admin.new_site.profile_hints.'.$profile) }}</span>
                         </a>
                     </li>
                 @endforeach
             </ul>
         </nav>
+    </section>
+    <section class="larena-panel larena-panel-padded m-top-2" aria-labelledby="env-new-site-fields">
+        <h2 id="env-new-site-fields" class="m-top-0">{{ __('larena-env::admin.new_site.fields_title', ['kind' => ($serverProfiles ?? null) !== null ? $serverProfiles[$kind ?? 'static']['label'] : __('larena-env::admin.new_site.profiles.'.($kind ?? 'static'))]) }}</h2>
         {{-- The fields the chosen kind asks, in the Framework property view over the new site's port: record.create plans
              the site and leads to that plan. The plain form is the view's fallback, hidden once the view has read its fields. --}}
         <div id="admin-record-view" data-larena-close-url="{{ route('larena.env.admin.index', [], false) }}">
@@ -139,6 +143,5 @@
             </div>
         </form>
         </div>
-        <p><a href="{{ route('larena.env.admin.index', [], false) }}">{{ __('larena-env::admin.site.back') }}</a></p>
     </section>
 @endsection

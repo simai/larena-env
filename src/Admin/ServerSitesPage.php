@@ -11,9 +11,13 @@ use Larena\Env\Server\SiteSummary;
 /** The sites as the admin's shared data view, with rows in place: the page holds them already. A row opens the site's own screen. */
 final class ServerSitesPage
 {
-    // What a person checks first (Panel plan 2.1): whether it answers, whose the site is, what it runs, its certificate,
-    // its backups and the disk it takes (the last two from simai-env 1.27.0).
-    private const array COLUMNS = ['domain', 'answers', 'owner', 'profile', 'php', 'certificate', 'backups', 'disk'];
+    // What a person checks first (Panel plan 2.1): whether it works, what it runs, its certificate, its backups, whose the
+    // site is and the disk it takes (the last two from simai-env 1.27.0). The state and the kind are choices: a coloured
+    // mark in the cell and a filter of the list (owner-approved prototype, 2026-11-02).
+    private const array COLUMNS = ['domain', 'answers', 'profile', 'certificate', 'backups', 'owner', 'disk'];
+
+    /** The kinds a site can be, as the new-site screen names them. */
+    private const array PROFILES = ['generic', 'laravel', 'wordpress', 'bitrix', 'static', 'proxy', 'node', 'redirect'];
 
     private function __construct()
     {
@@ -25,7 +29,13 @@ final class ServerSitesPage
         return new AdminDataviewPage(
             instanceId: 'env-server-sites',
             title: $text('sites.title'),
-            columns: array_map(static fn (string $key): array => ['key' => $key, 'label' => $text('sites.'.$key)] + ($key === 'domain' ? ['role' => 'title'] : []), self::COLUMNS),
+            columns: array_map(static fn (string $key): array => ['key' => $key, 'label' => $text('sites.'.$key)] + match ($key) {
+                'domain' => ['role' => 'title'],
+                'answers' => ['type' => 'choice', 'options' => array_map(static fn (string $state, string $color): array => ['value' => $state, 'label' => $text('sites.state.'.$state), 'color' => $color],
+                    array_keys(SiteState::COLORS), SiteState::COLORS)],
+                'profile' => ['type' => 'choice', 'options' => array_map(static fn (string $profile): array => ['value' => $profile, 'label' => $text('new_site.profiles.'.$profile)], self::PROFILES)],
+                default => [],
+            }, self::COLUMNS),
             total: count($overview->sites),
             pageId: 'page.admin.env-server',
             rows: array_map(static fn (SiteSummary $site): array => self::row($site, $text), $overview->sites),
@@ -47,15 +57,13 @@ final class ServerSitesPage
             'domain' => $site->domain,
             'owner' => $site->owner ?? '—',
             'profile' => $site->profile,
-            'php' => $site->php === 'none' ? '—' : $site->php,
             'certificate' => $site->certificateDaysLeft !== null
                 ? $text($site->certificateDaysLeft <= 14 ? 'sites.certificate_ends' : 'sites.certificate_left', ['days' => (string) $site->certificateDaysLeft])
                 : ($site->ssl === 'none' ? $text('sites.certificate_none') : $site->ssl),
             'backups' => $site->lastBackup !== null
-                ? $text('sites.backups_last', ['time' => $site->lastBackup]).($site->backupSchedule ? ' · '.$text('sites.backups_scheduled') : '')
+                ? $text('sites.backups_last', ['time' => \Larena\Env\Server\Moment::human($site->lastBackup)]).($site->backupSchedule ? ' · '.$text('sites.backups_scheduled') : '')
                 : $text($site->backupSchedule ? 'sites.backups_scheduled' : 'sites.backups_unscheduled'),
-            'answers' => !$site->answersChecked ? '—'
-                : ($site->answers === null ? $text('sites.answers_none') : $text('sites.answers_code', ['code' => (string) $site->answers])),
+            'answers' => SiteState::of($site->answersChecked, $site->answers),
             'disk' => \Larena\Env\Server\Bytes::human($site->diskBytes),
         ];
     }

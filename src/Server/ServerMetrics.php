@@ -32,7 +32,9 @@ final readonly class ServerMetrics
         $bytes = static fn (mixed $block, string $key): ?int => is_array($block) && is_int($block[$key] ?? null) ? $block[$key] : null;
         $disks = [];
         foreach (is_array($data['disk'] ?? null) ? $data['disk'] : [] as $disk) {
-            if (is_array($disk) && is_string($disk['mount'] ?? null) && is_int($disk['total_bytes'] ?? null) && is_int($disk['used_bytes'] ?? null)) {
+            // A container mounts single files over /etc (hostname, hosts, resolv.conf): they report the host's disk, not one of the server's own.
+            if (is_array($disk) && is_string($disk['mount'] ?? null) && !str_starts_with($disk['mount'], '/etc/')
+                && is_int($disk['total_bytes'] ?? null) && is_int($disk['used_bytes'] ?? null)) {
                 $disks[] = ['mount' => $disk['mount'], 'total' => $disk['total_bytes'], 'used' => $disk['used_bytes']];
             }
         }
@@ -47,5 +49,21 @@ final readonly class ServerMetrics
             disks: $disks,
             checkedAt: is_string($data['checked_at'] ?? null) ? $data['checked_at'] : null,
         );
+    }
+
+    /** The processor's load in percent of its cores, over the last minute; null when either is unknown. */
+    public function loadPercent(): ?int
+    {
+        return $this->load === null || $this->cores === null || $this->cores <= 0 ? null : (int) round($this->load[0] / $this->cores * 100);
+    }
+
+    /** The colour a measure takes at a threshold: success below the warning, error from the error one. */
+    public static function tone(?float $percent, int $warning, int $error): string
+    {
+        return match (true) {
+            $percent === null || $percent < $warning => 'success',
+            $percent < $error => 'warning',
+            default => 'error',
+        };
     }
 }

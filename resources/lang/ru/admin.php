@@ -15,6 +15,8 @@ return [
     'failed_title' => 'Данные сервера недоступны',
     'status' => [
         'title' => 'Состояние',
+        'server' => 'Сервер',
+        'all_services' => 'Все службы',
         'os' => 'Операционная система',
         'env' => 'SIMAI ENV',
         'php' => 'Версии PHP',
@@ -23,10 +25,11 @@ return [
     ],
     'sites' => [
         'title' => 'Сайты',
+        'state' => ['works' => 'Работает', 'error' => 'Ошибка сервера', 'down' => 'Не отвечает', 'unchecked' => 'Не проверен'],
         'count' => 'Сайтов',
         'table_view' => 'Вид таблицы',
         'domain' => 'Домен',
-        'profile' => 'Профиль',
+        'profile' => 'Вид сайта',
         'php' => 'PHP',
         'ssl' => 'SSL',
         'owner' => 'Владелец',
@@ -40,7 +43,7 @@ return [
         'backups' => 'Копии',
         'backups_scheduled' => 'каждый день',
         'backups_unscheduled' => 'нет расписания',
-        'answers' => 'Отвечает',
+        'answers' => 'Состояние',
         'answers_none' => 'Не отвечает',
         'answers_code' => 'HTTP :code',
         'disk' => 'Диск',
@@ -56,6 +59,9 @@ return [
         'previous_release' => 'Предыдущий выпуск',
         'back' => 'К серверу',
         'tabs_label' => 'Разделы сайта',
+        'open' => 'Открыть сайт',
+        'no_https' => 'Без HTTPS',
+        'groups' => ['address' => 'Адрес', 'code' => 'Код', 'data' => 'Данные', 'observe' => 'Наблюдение'],
         'tabs' => ['overview' => 'Обзор', 'domains' => 'Домены и сертификат', 'dns' => 'DNS', 'php' => 'PHP и службы', 'database' => 'База данных', 'backups' => 'Резервные копии', 'files' => 'Файлы', 'releases' => 'Выпуски', 'log' => 'Журнал', 'access' => 'Доступ', 'nginx' => 'nginx', 'cron' => 'Планировщик'],
     ],
     'certificate' => [
@@ -245,9 +251,11 @@ return [
     ],
     'warnings' => [
         'title' => 'Требует внимания',
+        'severity' => ['error' => 'Срочно', 'warning' => 'Внимание'],
         'none' => 'Всё в порядке.',
         'go' => 'Открыть',
         'disk_full' => 'Диск :mount заполнен на :percent%, свободно :free. Освободите место, пока сайты не остановились.',
+        'swap_full' => 'Подкачка занята на :percent%: серверу не хватает памяти, и сайты замедляются. Посмотрите, что её занимает, или добавьте серверу память.',
         'certificate_ending' => 'Сертификат :domain закончится через :days дн.',
         'certificate_expired' => 'Сертификат :domain истёк: браузеры предупреждают посетителей.',
         'certificate_missing' => 'Сайт :domain должен работать по https, но сертификата у него нет.',
@@ -274,6 +282,7 @@ return [
     // What a person's notifications call the panel's warnings (the source env:warning:<kind>).
     'notification_sources' => [
         'disk_full' => 'Диск сервера',
+        'swap_full' => 'Подкачка',
         'certificate_ending' => 'Сертификат скоро закончится',
         'certificate_expired' => 'Сертификат истёк',
         'certificate_missing' => 'Нет сертификата',
@@ -308,6 +317,11 @@ return [
     ],
     'metrics' => [
         'title' => 'Нагрузка сейчас',
+        'processor' => 'Процессор',
+        'load_of' => 'нагрузка :load на :cores ядер',
+        'of' => ':used из :total',
+        'free' => 'свободно :free',
+        'trend' => 'за сутки',
         'cores' => 'Ядер процессора',
         'load' => 'Нагрузка (1, 5, 15 мин)',
         'memory' => 'Память',
@@ -333,6 +347,9 @@ return [
         'off' => 'выключен',
     ],
     'new_site' => [
+        'steps_label' => 'Шаги создания сайта',
+        'steps' => ['fill' => 'Вид и настройки', 'plan' => 'Проверка плана', 'make' => 'Создание'],
+        'fields_title' => 'Настройки: :kind',
         'action' => 'Создать сайт',
         'title' => 'Новый сайт — Larena Panel',
         'heading' => 'Новый сайт',

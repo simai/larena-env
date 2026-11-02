@@ -15,6 +15,8 @@ return [
     'failed_title' => 'The server\'s data is unavailable',
     'status' => [
         'title' => 'Status',
+        'server' => 'Server',
+        'all_services' => 'All services',
         'os' => 'Operating system',
         'env' => 'SIMAI ENV',
         'php' => 'PHP versions',
@@ -23,10 +25,11 @@ return [
     ],
     'sites' => [
         'title' => 'Sites',
+        'state' => ['works' => 'Works', 'error' => 'Server error', 'down' => 'Not answering', 'unchecked' => 'Not checked'],
         'count' => 'Sites',
         'table_view' => 'Table view',
         'domain' => 'Domain',
-        'profile' => 'Profile',
+        'profile' => 'Kind',
         'php' => 'PHP',
         'ssl' => 'SSL',
         'owner' => 'Owner',
@@ -40,7 +43,7 @@ return [
         'backups' => 'Backups',
         'backups_scheduled' => 'Daily',
         'backups_unscheduled' => 'No schedule',
-        'answers' => 'Answers',
+        'answers' => 'State',
         'answers_none' => 'Does not answer',
         'answers_code' => 'HTTP :code',
         'disk' => 'Disk',
@@ -56,6 +59,9 @@ return [
         'previous_release' => 'Previous release',
         'back' => 'Back to the server',
         'tabs_label' => 'The site\'s sections',
+        'open' => 'Open the site',
+        'no_https' => 'No HTTPS',
+        'groups' => ['address' => 'Address', 'code' => 'Code', 'data' => 'Data', 'observe' => 'Observation'],
         'tabs' => ['overview' => 'Overview', 'domains' => 'Domains and certificate', 'dns' => 'DNS', 'php' => 'PHP and services', 'database' => 'Database', 'backups' => 'Backups', 'files' => 'Files', 'releases' => 'Releases', 'log' => 'Log', 'access' => 'Access', 'nginx' => 'nginx', 'cron' => 'Scheduler'],
     ],
     'certificate' => [
@@ -245,9 +251,11 @@ return [
     ],
     'warnings' => [
         'title' => 'Needs attention',
+        'severity' => ['error' => 'Urgent', 'warning' => 'Attention'],
         'none' => 'Nothing needs attention.',
         'go' => 'Open',
         'disk_full' => 'The disk :mount is :percent% full, :free left. Free space before the sites stop.',
+        'swap_full' => 'Swap is :percent% used: the server is short of memory and its sites slow down. See what takes it, or give the server more memory.',
         'certificate_ending' => 'The certificate of :domain ends in :days days.',
         'certificate_expired' => 'The certificate of :domain has expired: browsers warn visitors.',
         'certificate_missing' => 'The site :domain is meant to work over https, but it serves no certificate.',
@@ -274,6 +282,7 @@ return [
     // What a person's notifications call the panel's warnings (the source env:warning:<kind>).
     'notification_sources' => [
         'disk_full' => 'Server disk',
+        'swap_full' => 'Swap',
         'certificate_ending' => 'Certificate ends soon',
         'certificate_expired' => 'Certificate expired',
         'certificate_missing' => 'No certificate',
@@ -308,6 +317,11 @@ return [
     ],
     'metrics' => [
         'title' => 'Load now',
+        'processor' => 'Processor',
+        'load_of' => 'load :load on :cores cores',
+        'of' => ':used of :total',
+        'free' => ':free free',
+        'trend' => 'over a day',
         'cores' => 'Processor cores',
         'load' => 'Load (1, 5, 15 min)',
         'memory' => 'Memory',
@@ -333,6 +347,9 @@ return [
         'off' => 'off',
     ],
     'new_site' => [
+        'steps_label' => 'Steps to make a site',
+        'steps' => ['fill' => 'Kind and settings', 'plan' => 'Check the plan', 'make' => 'Making it'],
+        'fields_title' => 'Settings: :kind',
         'action' => 'Create a site',
         'title' => 'New site — Larena Panel',
         'heading' => 'New site',

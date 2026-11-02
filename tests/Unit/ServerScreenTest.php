@@ -74,12 +74,16 @@ env_assert(count($overview->withoutSites(['DEMO-php.test'])->sites) === 3 && cou
 env_assert($page->instanceId === 'env-server-sites' && $page->selectable === false && $page->rowWrites === [], 'The list writes nothing.');
 env_assert($page->rowLinks === ['view' => '/admin/server/sites/__ID__'], 'A row opens the site\'s own screen.');
 $byDomain = array_column($page->rows, null, 'id');
-env_assert(array_column($page->columns, 'key') === ['domain', 'answers', 'owner', 'profile', 'php', 'certificate', 'backups', 'disk'], 'Whether it answers, whose, what it runs, its certificate, its backups and its disk.');
-env_assert($byDomain['demo-owned.test']['answers'] === $text('sites.answers_code', ['code' => '200']) && $byDomain['demo-owned.test']['disk'] === '1.0 MB', 'It answers 200 and takes 1 MB.');
+env_assert(array_column($page->columns, 'key') === ['domain', 'answers', 'profile', 'certificate', 'backups', 'owner', 'disk'], 'Whether it works, what it runs, its certificate, its backups, whose and its disk.');
+env_assert($byDomain['demo-owned.test']['answers'] === 'works' && $byDomain['demo-owned.test']['disk'] === '1.0 MB', 'It works and takes 1 MB.');
+$columns = (string) json_encode(array_column($page->columns, null, 'key'), JSON_UNESCAPED_UNICODE);
+env_assert(str_contains($columns, '"answers":{"key":"answers","label":"'.$text('sites.answers').'","type":"choice","options":[{"value":"works"')
+    && str_contains($columns, '{"value":"down","label":"'.$text('sites.state.down').'","color":"danger"}')
+    && str_contains($columns, '"type":"choice","options":[{"value":"generic"') && str_contains($columns, '{"value":"laravel","label":"Laravel"}'), 'The state and the kind are coloured choices the list filters by: '.$columns);
 env_assert($byDomain['demo-owned.test']['owner'] === 'demo' && $byDomain['demo-php.test']['owner'] === '—', 'The owner, or none.');
-env_assert($byDomain['demo-redirect.test']['php'] === '—' && $byDomain['demo-php.test']['certificate'] === $text('sites.certificate_none'), 'Empty values in words.');
+env_assert($byDomain['demo-php.test']['certificate'] === $text('sites.certificate_none'), 'Empty values in words.');
 env_assert($byDomain['demo-owned.test']['backups'] !== $text('sites.backups_unscheduled'), 'A site with its daily backup and none yet does not say it has none scheduled.');
-env_assert($byDomain['demo-php.test']['backups'] === $text('sites.backups_last', ['time' => '2026-01-01T00:00:00']).' · '.$text('sites.backups_scheduled'), 'Its newest backup is named, and its daily one.');
+env_assert($byDomain['demo-php.test']['backups'] === $text('sites.backups_last', ['time' => '2026-01-01 00:00 UTC']).' · '.$text('sites.backups_scheduled'), 'Its newest backup is named, and its daily one.');
 $soon = new ServerOverview('now', '1', 'ubuntu', '24.04', [], [], [new \Larena\Env\Server\SiteSummary('a.test', 'static', 'none', 'letsencrypt', null, null, null, 9, true)]);
 $soonRow = ServerSitesPage::of($soon, $text)->rows[0];
 env_assert($soonRow['certificate'] === $text('sites.certificate_ends', ['days' => '9']) && $soonRow['backups'] === $text('sites.backups_scheduled'), 'A certificate that ends soon is said so.');
@@ -185,6 +189,18 @@ $alertsSource = (string) file_get_contents(dirname(__DIR__, 2).'/resources/views
 env_assert(!str_contains($alertsSource, '{!!') && preg_match('/<style\b|<script\b|@php\b/i', $alertsSource) !== 1, 'The alerts view prints nothing raw and holds no script.');
 env_assert(!str_contains($loaded, $text('metrics.swap')), 'No swap, no swap line.');
 env_assert(!str_contains($ok, 'data-env-metrics'), 'Without the server\'s numbers, no load section.');
+// The measures as tiles that take their threshold's colour; swap mostly taken is said, a container's file mounts are not disks.
+env_assert(str_contains($loaded, 'data-env-metric="disk:/" data-env-metric-tone="error"') && str_contains($loaded, 'data-env-metric="memory" data-env-metric-tone="success"')
+    && str_contains($loaded, 'data-env-metric="load" data-env-metric-tone="success"'), 'The tiles take their colour: '.$loaded);
+$swapped = \Larena\Env\Server\ServerMetrics::fromData(['cpu' => ['cores' => 2, 'load1' => 1.0, 'load5' => 1.0, 'load15' => 1.0],
+    'swap' => ['total_bytes' => 1_000, 'used_bytes' => 830], 'disk' => [['mount' => '/etc/hostname', 'total_bytes' => 100, 'used_bytes' => 1],
+    ['mount' => '/', 'total_bytes' => 100, 'used_bytes' => 10]], 'checked_at' => '2026-11-01T10:00:00Z']);
+env_assert(array_column($swapped->disks, 'mount') === ['/'] && $swapped->loadPercent() === 50, 'A mounted file is not a disk; the load is in percent of the cores.');
+$swapWarnings = \Larena\Env\Warnings\PanelWarnings::of($overview, $swapped, new DateTimeImmutable('2026-11-01T12:00:00Z'));
+env_assert(($swapWarnings[array_search('swap_full', array_map(static fn ($warning): string => $warning->kind, $swapWarnings), true)] ?? null)?->severity === 'warning', 'Swap at 83% is a warning.');
+$swapDrawn = $state(['section' => 'overview', 'overview' => $overview, 'metrics' => $swapped, 'warnings' => $swapWarnings]);
+env_assert(str_contains($swapDrawn, 'data-env-metric="swap" data-env-metric-tone="warning"') && str_contains($swapDrawn, 'data-env-warning="swap_full"'), 'Swap is a tile and a warning.');
+env_assert(!str_contains($state(['section' => 'overview', 'overview' => $overview, 'warnings' => []]), 'larena-panel m-bottom-2" data-env-warnings'), 'Nothing to say is one line, not a card.');
 env_assert(!str_contains($live, 'data-env-source'), 'A live server has no such notice.');
 
 $refused = $state(['refused' => true, 'reason' => 'owner_scope', 'reasonText' => 'Another owner.']);

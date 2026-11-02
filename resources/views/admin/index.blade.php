@@ -5,6 +5,13 @@
 @section('eyebrow', __('larena-env::admin.eyebrow'))
 @section('description', __('larena-env::admin.description'))
 
+@if ($section !== 'overview' && ($canCreate ?? false) && $overview !== null)
+    {{-- The main action sits in the page's head, where every admin page keeps it. --}}
+    @section('actions')
+        <a class="larena-button larena-button-primary" data-env-create-site href="{{ route('larena.env.admin.sites.new', [], false) }}">{{ __('larena-env::admin.new_site.action') }}</a>
+    @endsection
+@endif
+
 @section('content')
     @include('larena-env::admin.partials.notes')
 
@@ -14,58 +21,65 @@
             <p>{{ $reasonText }}</p>
         </section>
     @elseif ($section === 'overview')
+        {{-- State first, details after (owner-approved prototype, 2026-11-02): what needs a person, a waiting update, the
+             measures as tiles, then the server and its services, then the load over time. --}}
         @include('larena-env::admin.partials.warnings')
         @if (($updates ?? []) !== [])
-            <section class="larena-panel larena-panel-padded" data-env-update-hint role="note" aria-labelledby="env-update-hint">
-                <h2 id="env-update-hint">{{ __('larena-env::admin.update.hint_title') }}</h2>
-                <ul>
+            <section class="larena-panel flex flex-wrap items-cross-center g-2 p-2 m-bottom-2" data-env-update-hint role="note" aria-labelledby="env-update-hint">
+                <sf-badge status="info" appearance="tonal" text="{{ __('larena-env::admin.update.hint_title') }}" id="env-update-hint"></sf-badge>
+                <ul class="grow min-w-0 m-0 p-0 flex flex-wrap g-2" style="list-style: none; flex-basis: 16rem;">
                     @foreach ($updates as $update)
                         <li data-env-update-hint-target="{{ $update['target'] }}">{{ __('larena-env::admin.update.hint.'.$update['target'], ['available' => $update['available'] ?? '—']) }}</li>
                     @endforeach
                 </ul>
-                <p><a href="{{ route('larena.env.admin.update', [], false) }}">{{ __('larena-env::admin.update.hint_open') }}</a></p>
+                <a class="larena-button" href="{{ route('larena.env.admin.update', [], false) }}">{{ __('larena-env::admin.update.hint_open') }}</a>
             </section>
         @endif
-        <section class="larena-panel larena-panel-padded" data-env-state="ok" aria-labelledby="env-server-status">
-            <h2 id="env-server-status">{{ __('larena-env::admin.status.title') }}</h2>
-            <dl class="larena-recipe-facts">
-                <div><dt>{{ __('larena-env::admin.status.os') }}</dt><dd>{{ $overview->osId }} {{ $overview->osVersion }}</dd></div>
-                <div><dt>{{ __('larena-env::admin.status.env') }}</dt><dd>{{ $overview->envVersion }}</dd></div>
-                <div><dt>{{ __('larena-env::admin.status.php') }}</dt><dd>{{ implode(', ', $overview->phpVersions) }}</dd></div>
-                <div><dt>{{ __('larena-env::admin.status.generated_at') }}</dt><dd>{{ \Larena\Env\Server\Moment::human($overview->generatedAt) }}</dd></div>
-            </dl>
-            <h3>{{ __('larena-env::admin.status.services') }}</h3>
-            <dl class="larena-recipe-facts">
-                @foreach ($overview->services as $service)
-                    <div data-env-service="{{ $service->name }}"><dt>{{ $service->name }}</dt><dd>{{ $service->state }}</dd></div>
-                @endforeach
-            </dl>
-        </section>
         @if (($metrics ?? null) !== null)
-            <section class="larena-panel larena-panel-padded" data-env-metrics aria-labelledby="env-server-metrics">
-                <h2 id="env-server-metrics">{{ __('larena-env::admin.metrics.title') }}</h2>
-                <dl class="larena-recipe-facts">
-                    <div><dt>{{ __('larena-env::admin.metrics.cores') }}</dt><dd>{{ $metrics->cores ?? '—' }}</dd></div>
-                    <div><dt>{{ __('larena-env::admin.metrics.load') }}</dt><dd>{{ $metrics->load === null ? '—' : implode(' · ', array_map(static fn (float $value): string => number_format($value, 2), $metrics->load)) }}</dd></div>
-                    @if ($metrics->memoryTotal !== null && $metrics->memoryUsed !== null)
-                        <div><dt>{{ __('larena-env::admin.metrics.memory') }}</dt><dd>{{ __('larena-env::admin.metrics.used', ['used' => \Larena\Env\Server\Bytes::human($metrics->memoryUsed), 'total' => \Larena\Env\Server\Bytes::human($metrics->memoryTotal), 'percent' => (string) \Larena\Env\Server\Bytes::percent($metrics->memoryUsed, $metrics->memoryTotal)]) }}</dd></div>
-                    @endif
-                    @if ($metrics->swapTotal !== null && $metrics->swapUsed !== null && $metrics->swapTotal > 0)
-                        <div><dt>{{ __('larena-env::admin.metrics.swap') }}</dt><dd>{{ __('larena-env::admin.metrics.used', ['used' => \Larena\Env\Server\Bytes::human($metrics->swapUsed), 'total' => \Larena\Env\Server\Bytes::human($metrics->swapTotal), 'percent' => (string) \Larena\Env\Server\Bytes::percent($metrics->swapUsed, $metrics->swapTotal)]) }}</dd></div>
-                    @endif
-                    @foreach ($metrics->disks as $disk)
-                        <div data-env-disk-mount="{{ $disk['mount'] }}"><dt>{{ __('larena-env::admin.metrics.disk', ['mount' => $disk['mount']]) }}</dt><dd>{{ __('larena-env::admin.metrics.used', ['used' => \Larena\Env\Server\Bytes::human($disk['used']), 'total' => \Larena\Env\Server\Bytes::human($disk['total']), 'percent' => (string) \Larena\Env\Server\Bytes::percent($disk['used'], $disk['total'])]) }}</dd></div>
+            <section class="m-bottom-2" data-env-metrics aria-labelledby="env-server-metrics">
+                <div class="flex flex-wrap items-cross-center g-1 m-bottom-1">
+                    <h2 id="env-server-metrics" class="m-0">{{ __('larena-env::admin.metrics.title') }}</h2>
+                    <span class="color-on-surface-variant">{{ __('larena-env::admin.metrics.checked_at') }} {{ \Larena\Env\Server\Moment::human($metrics->checkedAt) }}</span>
+                </div>
+                <div class="grid g-2 grid-col-1 md:grid-col-2 xl:grid-col-4">
+                    @foreach (\Larena\Env\Admin\ServerMetricTiles::of($metrics, ($history ?? null)['day'] ?? null, static fn (string $key, array $replace = []): string => __('larena-env::admin.'.$key, $replace)) as $tile)
+                        @include('larena-env::admin.partials.metric', $tile)
                     @endforeach
-                    <div><dt>{{ __('larena-env::admin.metrics.checked_at') }}</dt><dd>{{ \Larena\Env\Server\Moment::human($metrics->checkedAt) }}</dd></div>
+                </div>
+            </section>
+        @endif
+        <div class="grid g-2 grid-col-1 lg:grid-col-2 m-bottom-2" style="align-items: start;">
+            <section class="larena-panel p-2" data-env-state="ok" aria-labelledby="env-server-status">
+                <h2 id="env-server-status" class="m-top-0">{{ __('larena-env::admin.status.server') }}</h2>
+                <dl class="larena-recipe-facts">
+                    <div><dt>{{ __('larena-env::admin.status.os') }}</dt><dd>{{ $overview->osId }} {{ $overview->osVersion }}</dd></div>
+                    <div><dt>{{ __('larena-env::admin.status.env') }}</dt><dd>{{ $overview->envVersion }}</dd></div>
+                    <div><dt>{{ __('larena-env::admin.status.php') }}</dt><dd>{{ implode(', ', $overview->phpVersions) }}</dd></div>
+                    @if (($metrics ?? null) !== null && $metrics->cores !== null)
+                        <div><dt>{{ __('larena-env::admin.metrics.cores') }}</dt><dd>{{ $metrics->cores }}</dd></div>
+                    @endif
+                    <div><dt>{{ __('larena-env::admin.status.generated_at') }}</dt><dd>{{ \Larena\Env\Server\Moment::human($overview->generatedAt) }}</dd></div>
                 </dl>
             </section>
-        @endif
+            <section class="larena-panel" aria-labelledby="env-server-services">
+                <div class="flex items-cross-center content-main-between g-1 p-2 p-bottom-1">
+                    <h2 id="env-server-services" class="m-0">{{ __('larena-env::admin.status.services') }}</h2>
+                    <a href="{{ route('larena.env.admin.services', [], false) }}">{{ __('larena-env::admin.status.all_services') }}</a>
+                </div>
+                <ul class="m-0 p-0" style="list-style: none;">
+                    @foreach ($overview->services as $service)
+                        <li class="flex items-cross-center content-main-between g-2 p-x-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-service="{{ $service->name }}">
+                            <span class="mono truncate">{{ $service->name }}</span>
+                            <sf-badge status="{{ $service->isActive() ? 'success' : 'error' }}" appearance="tonal"
+                                text="{{ $service->isActive() ? __('larena-env::admin.services.running') : __('larena-env::admin.services.stopped', ['state' => $service->state]) }}"></sf-badge>
+                        </li>
+                    @endforeach
+                </ul>
+            </section>
+        </div>
         @include('larena-env::admin.partials.history')
     @else
         @include('larena-env::admin.partials.warnings')
-        @if ($canCreate ?? false)
-            <p data-env-create-site><a class="larena-button" href="{{ route('larena.env.admin.sites.new', [], false) }}">{{ __('larena-env::admin.new_site.action') }}</a></p>
-        @endif
         @include('larena-admin::dataview.page', ['dataview' => $sitesView, 'sectionId' => 'env-server-sites', 'owner' => 'larena/env',
             'ariaLabel' => __('larena-env::admin.sites.title'), 'queryUrl' => route('larena.env.admin.index', [], false),
             'matchedCount' => count($overview->sites), 'source' => 'env_server_overview'])
