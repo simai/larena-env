@@ -401,7 +401,7 @@ _, logged = get("/admin/server/sites/demo-static.test?tab=log&q=curl&group=2xx&l
 assert "data-env-log-rows" in logged and 'data-env-log-row="200"' in logged, "the log narrows"
 assert "larena-table-stack" in logged and 'data-label="' in logged, "the log reads as cards on a phone"
 _, overview = get("/admin/server")
-assert "HTTP 200" in overview, "a site that answers says so"
+assert any(mark in overview for mark in ('"works"', '&quot;works&quot;', '\\u0022works\\u0022')), "a site that answers says so"
 _, spaces = get("/admin/server/people")
 assert 'data-env-owner="demo"' in spaces and 'name="action" value="block"' in spaces, "a space can be blocked on a server that has it (1.27.0)"
 
