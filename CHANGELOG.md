@@ -31,6 +31,17 @@
   {change_id}` (with `change:status`) instead of a command of its own, and `fs:archive` takes its paths as a list of
   up to 100, the one list argument.
 
+- simai-env 1.34.0 (recorded answers set 10): a site's own scheduled jobs. A site's «Планировщик» tab shows where the
+  server lists `cron:list`, at either level for the person's own sites: each job with its schedule in words, on or off,
+  when it was added and its last run (`simai-cron-jobs/1`), its last runs with their output (`cron:job-runs`, 20 of the
+  50 the server keeps), and a hint that jobs run as the site's user in the site's folder (current/ for a site with
+  releases) and that a run still going makes the next one skip. A job is added from a preset or five cron fields,
+  checked in the panel as the server checks them (numbers, ranges and steps within each field's range: "61 * * * *",
+  `@daily` or names are refused before any plan), with one printable line of up to 1000 characters not starting with
+  «-»; a site with 50 jobs says so instead of offering one more. Turning a job off and on and removing it go by plan.
+  A job the server does not have (`unknown_cron_job`) and another owner's site (`owner_scope`) are said in words. The
+  tests' stand-in now answers only the firewall and who reaches the panel (1.35.0).
+
 - simai-env 1.33.0 (recorded answers set 9): the server's services and the kinds of site it makes. «Сервер › Службы»
   lists only the services the server has (`service:list`: running or not, since when, whether it starts with the
   server), restarts each by plan, rereads the settings only where the server says it can (nginx and PHP-FPM), and

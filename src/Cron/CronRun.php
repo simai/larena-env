@@ -27,7 +27,7 @@ final readonly class CronRun
     /** @param array<array-key, mixed> $data */
     public static function fromData(array $data): ?self
     {
-        $started = $data['started_at'] ?? $data['at'] ?? null;
+        $started = $data['started_at'] ?? $data['started'] ?? null;
         if (!is_string($started)) {
             return null;
         }
@@ -40,7 +40,7 @@ final readonly class CronRun
 
         return new self(
             $started,
-            is_string($data['finished_at'] ?? null) ? $data['finished_at'] : null,
+            is_string($data['finished_at'] ?? $data['finished'] ?? null) ? ($data['finished_at'] ?? $data['finished']) : null,
             is_int($data['exit_code'] ?? null) ? $data['exit_code'] : null,
             array_slice($output, -50),
         );

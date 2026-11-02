@@ -223,7 +223,8 @@ return [
         'not_found' => 'The server no longer has it: it may have changed already.',
         'cron_schedule_invalid' => 'The schedule needs five fields, for example 30 2 * * *, and not more often than every minute.',
         'cron_command_invalid' => 'The command must be one line of text.',
-        'cron_unknown_job' => 'This site has no such job: it may have been removed already.',
+        'unknown_cron_job' => 'This site has no such job: it may have been removed already.',
+        'cron_jobs_full' => 'This site already has 50 scheduled jobs, the most the server keeps. Remove one you no longer need first.',
         'unknown_change' => 'The server no longer waits for this change: it was kept or undone already.',
     ],
     'doctor' => [
@@ -747,6 +748,7 @@ return [
     'cron' => [
         'title' => 'Scheduler',
         'explain' => 'Commands the server runs on a schedule, as the site\'s user in its folder, not more often than every minute.',
+        'where_and_overlap' => 'Jobs run as the site\'s user in the site\'s folder (current/ for a site with releases). If a run is still going when the next one is due, the next one is skipped.',
         'unreadable' => 'The site\'s jobs could not be read.',
         'none' => 'This site has no jobs of its own yet.',
         'as_written' => 'On the schedule :schedule',
@@ -760,9 +762,9 @@ return [
         'when' => 'When',
         'custom' => 'Other schedule…',
         'custom_label' => 'Other schedule (five fields)',
-        'custom_hint' => 'Only for «Other schedule»: minute, hour, day, month, day of the week, for example 30 2 * * *.',
+        'custom_hint' => 'Only for «Other schedule»: minute (0–59), hour (0–23), day (1–31), month (1–12), day of the week (0–7), numbers only, for example 30 2 * * *.',
         'command' => 'Command',
-        'command_hint' => 'One line, run in the site\'s folder.',
+        'command_hint' => 'One line, up to 1000 characters, not starting with «-».',
         'runs_as_site' => 'The job runs as the site\'s user in its folder, never as the server\'s administrator.',
         'presets' => [
             'minute' => 'Every minute', 'five_minutes' => 'Every 5 minutes', 'fifteen_minutes' => 'Every 15 minutes', 'hourly' => 'Every hour',

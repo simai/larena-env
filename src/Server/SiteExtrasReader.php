@@ -20,6 +20,9 @@ use UnexpectedValueException;
  */
 final readonly class SiteExtrasReader
 {
+    /** How many of a scheduled job's last runs are read (the server keeps 50). */
+    private const int CRON_RUNS = 20;
+
     public function __construct(private PanelGateway $gateway)
     {
     }
@@ -124,7 +127,7 @@ final readonly class SiteExtrasReader
     /** @return list<\Larena\Env\Cron\CronRun>|null a job's last runs, the newest first */
     public function cronRuns(PanelActor $actor, string $id): ?array
     {
-        $runs = $this->list($actor, 'cron:job-runs', ['id' => $id], 'runs', \Larena\Env\Cron\CronRun::fromData(...));
+        $runs = $this->list($actor, 'cron:job-runs', ['id' => $id, 'limit' => (string) self::CRON_RUNS], 'runs', \Larena\Env\Cron\CronRun::fromData(...));
 
         if ($runs !== null) {
             usort($runs, static fn (\Larena\Env\Cron\CronRun $a, \Larena\Env\Cron\CronRun $b): int => strcmp((string) $b->startedAt, (string) $a->startedAt));

@@ -2,6 +2,7 @@
 <section class="larena-panel larena-panel-padded" data-env-cron="{{ $cron['jobs'] === null ? 'unreadable' : 'on' }}" aria-labelledby="env-site-cron">
     <h2 id="env-site-cron">{{ __('larena-env::admin.cron.title') }}</h2>
     <p>{{ __('larena-env::admin.cron.explain') }}</p>
+    <p data-env-cron-hint>{{ __('larena-env::admin.cron.where_and_overlap') }}</p>
     @if ($cron['jobs'] === null)
         <p role="alert">{{ __('larena-env::admin.cron.unreadable') }}</p>
     @elseif ($cron['jobs'] === [])
@@ -69,7 +70,11 @@
     </section>
 @endif
 
-@if ($cron['allows']['add'])
+@if ($cron['allows']['add'] && count($cron['jobs'] ?? []) >= \Larena\Env\Cron\CronSchedule::MAX_JOBS)
+    <section class="larena-panel larena-panel-padded" data-env-cron-full>
+        <p role="status">{{ __('larena-env::admin.reasons.cron_jobs_full') }}</p>
+    </section>
+@elseif ($cron['allows']['add'])
     <section class="larena-panel larena-panel-padded" aria-labelledby="env-cron-add">
         <h2 id="env-cron-add">{{ __('larena-env::admin.cron.operations.add') }}</h2>
         <form method="post" action="{{ route('larena.env.admin.site.cron.plan', ['domain' => $domain], false) }}" class="larena-form" data-env-cron-op="add">
@@ -91,7 +96,7 @@
             </div>
             <div class="larena-field">
                 <label for="env-cron-command">{{ __('larena-env::admin.cron.command') }}</label>
-                <input type="text" id="env-cron-command" name="command" required maxlength="1000" autocomplete="off" spellcheck="false" placeholder="php artisan schedule:run">
+                <input type="text" id="env-cron-command" name="command" required maxlength="1000" pattern="[^\-\s].*" autocomplete="off" spellcheck="false" placeholder="php artisan schedule:run">
                 <p>{{ __('larena-env::admin.cron.command_hint') }}</p>
             </div>
             <div class="larena-form-actions"><button type="submit" class="larena-button">{{ __('larena-env::admin.operations.plan') }}</button></div>

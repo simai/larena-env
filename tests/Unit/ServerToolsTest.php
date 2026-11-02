@@ -80,7 +80,11 @@ foreach (['service:list', 'service:restart', 'service:reload', 'service:log', 's
 }
 env_assert((new PanelCapabilities('1.33.0'))->takes('site:add', 'upstream-port') && (new PanelCapabilities('1.33.0'))->takes('site:add', 'bitrix-files')
     && !(new PanelCapabilities('1.32.0'))->takes('site:add', 'upstream-port'), 'An app on a port and a Bitrix installer from 1.33.0.');
-foreach (['cron:list', 'cron:job-add', 'firewall:status', 'firewall:rule-add', 'panel:access'] as $command) {
+foreach (['cron:list', 'cron:job-add', 'cron:job-remove', 'cron:job-enable', 'cron:job-disable', 'cron:job-runs'] as $command) {
+    env_assert(PanelCommands::since($command) === '1.34.0' && (new PanelCapabilities('1.34.0'))->allows($command) && !(new PanelCapabilities('1.33.0'))->allows($command),
+        "{$command} from simai-env 1.34.0.");
+}
+foreach (['firewall:status', 'firewall:rule-add', 'panel:access'] as $command) {
     env_assert(PanelCommands::since($command) === null && !(new PanelCapabilities('9.9.9'))->allows($command)
         && (new PanelCapabilities('1.32.0', [$command]))->allows($command), "{$command} only where the server lists it.");
 }
@@ -89,7 +93,8 @@ foreach (['cron:list', 'cron:job-add', 'firewall:status', 'firewall:rule-add', '
 // two lines, a port of a proxy that is none, and an address that is none; the panel's allow list is the one list.
 foreach ([['service:restart', ['name' => 'nginx']], ['service:reload', ['name' => 'php8.3-fpm']], ['service:log', ['name' => 'mysql', 'lines' => '100']],
     ['cron:job-add', ['domain' => 'demo-php.test', 'schedule' => '*/5 * * * *', 'command' => 'php artisan schedule:run']],
-    ['cron:job-add', ['domain' => 'demo-php.test', 'schedule' => '0 3 * * mon', 'command' => 'echo «привет»']],
+    ['cron:job-add', ['domain' => 'demo-php.test', 'schedule' => '0,30 8-18/2 1-15 * 1-5', 'command' => 'echo «привет»']],
+    ['cron:job-runs', ['id' => 'a1b2c3d4', 'limit' => '50']],
     ['site:add', ['domain' => 'app.test', 'profile' => 'proxy', 'upstream-port' => '3000', 'upstream-path' => '/', 'websockets' => 'yes']],
     ['site:add', ['domain' => 'shop.test', 'profile' => 'bitrix', 'bitrix-files' => 'restore']],
     ['firewall:rule-add', ['port' => '8000:8100', 'proto' => 'tcp', 'from' => '203.0.113.0/24', 'action' => 'allow']],
@@ -100,6 +105,10 @@ foreach ([['service:restart', ['name' => 'nginx']], ['service:reload', ['name' =
 foreach ([['service:restart', ['name' => 'sshd']], ['service:restart', ['name' => 'nginx; reboot']],
     ['cron:job-add', ['domain' => 'demo-php.test', 'schedule' => '* * * *', 'command' => 'x']],
     ['cron:job-add', ['domain' => 'demo-php.test', 'schedule' => '* * * * *', 'command' => "a\nrm -rf /"]],
+    ['cron:job-add', ['domain' => 'demo-php.test', 'schedule' => '@daily * * * *', 'command' => 'x']], ['cron:job-add', ['domain' => 'demo-php.test', 'schedule' => '0 3 * * mon', 'command' => 'x']],
+    ['cron:job-add', ['domain' => 'demo-php.test', 'schedule' => '* * * * *', 'command' => '-rf']], ['cron:job-add', ['domain' => 'demo-php.test', 'schedule' => '* * * * *', 'command' => ' x']],
+    ['cron:job-add', ['domain' => 'demo-php.test', 'schedule' => '* * * * *', 'command' => str_repeat('a', 1001)]],
+    ['cron:job-remove', ['id' => 'job-backup']], ['cron:job-runs', ['id' => 'a1b2c3d4', 'limit' => '51']],
     ['site:add', ['domain' => 'app.test', 'profile' => 'proxy', 'upstream-port' => '70000']],
     ['site:add', ['domain' => 'app.test', 'profile' => 'proxy', 'upstream-port' => '80']], ['site:add', ['domain' => 'app.test', 'profile' => 'proxy', 'upstream-port' => '443']],
     ['site:add', ['domain' => 'shop.test', 'profile' => 'bitrix', 'bitrix-files' => 'download']], ['service:restart', ['name' => 'redis']],
@@ -114,6 +123,18 @@ env_assert(CronSchedule::words('*/5 * * * *') === ['five_minutes', []] && CronSc
     && CronSchedule::words('7 * * * *') === ['hourly_at', ['minute' => '07']] && CronSchedule::words('0 4 * * 7') === ['weekly_at', ['time' => '04:00', 'weekday' => '0']]
     && CronSchedule::words('0 4 1-5 * *') === null, 'A schedule in words, or as written.');
 env_assert(CronSchedule::valid('*/5 * * * *') && !CronSchedule::valid('* * * *') && !CronSchedule::valid('* * * * * *'), 'Five fields.');
+foreach (CronSchedule::PRESETS as $preset) {
+    env_assert(CronSchedule::valid($preset), "Each preset is five fields the server takes: {$preset}.");
+}
+foreach (['59 23 31 12 7', '0,15,30,45 * * * *', '*/10 2-4 * * 0', '0 8-18/2 * * 1-5'] as $schedule) {
+    env_assert(CronSchedule::valid($schedule), "Taken: {$schedule}.");
+}
+foreach (['61 * * * *', '* 24 * * *', '* * 0 * *', '* * * 13 *', '* * * * 8', '*/0 * * * *', '5-2 * * * *', '@daily', '@reboot', '0 3 * * mon', '0  3 * * *', '1,,2 * * * *'] as $schedule) {
+    env_assert(!CronSchedule::valid($schedule), "Refused before any job: {$schedule}.");
+}
+env_assert(CronSchedule::commandValid('php artisan schedule:run') && !CronSchedule::commandValid('-x') && !CronSchedule::commandValid('x ')
+    && !CronSchedule::commandValid("a\tb") && !CronSchedule::commandValid('') && CronSchedule::commandValid(str_repeat('я', 1000)) && !CronSchedule::commandValid(str_repeat('я', 1001)),
+    'One printable line up to 1000 characters, not starting with "-".');
 env_assert(AddressList::parse("203.0.113.7\n198.51.100.0/24, 2001:db8::/32") === ['203.0.113.7', '198.51.100.0/24', '2001:db8::/32']
     && AddressList::parse('203.0.113.7 bad') === null && AddressList::parse('10.0.0.0/33') === null, 'Addresses and networks are read; anything else is refused.');
 env_assert(AddressList::contains(['198.51.100.0/24'], '198.51.100.42') && !AddressList::contains(['198.51.100.0/24'], '198.51.101.1')
@@ -178,20 +199,21 @@ env_assert($operations->planCommand($admin, 'site:add', ['domain' => 'demo-proxy
     'An app on a port and a 1C-Bitrix site are planned.');
 
 // A site's scheduled jobs (5.4): its own, added, turned off and on, removed; its runs, the newest first; an owner's own sites only.
-$jobs = $extras->cronJobs($admin, 'demo-php.test');
-env_assert(is_array($jobs) && count($jobs) === 1 && $jobs[0]->id === 'job-backup' && $jobs[0]->lastRun?->exitCode === 1, 'A site\'s jobs and the last run.');
-$runs = $extras->cronRuns($admin, 'job-backup');
-env_assert(count($runs ?? []) === 2 && $runs[0]->startedAt === '2026-01-02T02:30:00Z' && !$runs[0]->succeeded() && $runs[0]->output === ['Disk is full'], 'The runs, the newest first, with their output.');
-$added = $operations->startCommand($admin, 'cron:job-add', ['domain' => 'demo-php.test', 'schedule' => '*/5 * * * *', 'command' => 'php artisan queue:work --stop-when-empty']);
-$jobs = $extras->cronJobs($admin, 'demo-php.test');
-env_assert($added->jobId !== null && count($jobs) === 2 && $jobs[1]->schedule === '*/5 * * * *' && $jobs[1]->lastRun === null, 'A job is added.');
-$operations->startCommand($admin, 'cron:job-disable', ['id' => $jobs[1]->id]);
-env_assert($extras->cronJobs($admin, 'demo-php.test')[1]->enabled === false, 'Turned off.');
-$operations->startCommand($admin, 'cron:job-remove', ['id' => $jobs[1]->id]);
-env_assert(count($extras->cronJobs($admin, 'demo-php.test')) === 1, 'Removed.');
-env_assert($extras->cronJobs($owner, 'demo-php.test') === null && is_array($extras->cronJobs($owner, 'demo-owned.test')), 'An owner reads their own site\'s jobs only.');
-env_assert($operations->planCommand($owner, 'cron:job-enable', ['id' => 'job-backup'])->reason === 'owner_scope'
-    && $operations->planCommand($owner, 'cron:job-enable', ['id' => 'job-owned'])->plan !== null, 'And changes their own site\'s jobs only.');
+$jobs = $extras->cronJobs($admin, 'demo-owned.test');
+env_assert(is_array($jobs) && count($jobs) === 1 && $jobs[0]->id === 'a1b2c3d4' && $jobs[0]->schedule === '*/10 * * * *' && $jobs[0]->enabled
+    && $jobs[0]->createdAt === '2026-01-01T00:00:00Z' && $jobs[0]->lastRun?->exitCode === 0 && $jobs[0]->lastRun->finishedAt === '2026-01-01T00:00:02Z',
+    'A site\'s jobs and the last run (simai-cron-jobs/1).');
+$runs = $extras->cronRuns($admin, 'a1b2c3d4');
+env_assert(count($runs ?? []) === 1 && $runs[0]->startedAt === '2026-01-01T00:00:00Z' && $runs[0]->succeeded() && $runs[0]->output === ['Synced 12 records.'],
+    'The runs, the newest first, with their output (simai-cron-runs/1).');
+env_assert(\Larena\Env\Cron\CronRun::fromData(['started' => '2026-01-01T00:00:00Z', 'finished' => '2026-01-01T00:00:01Z', 'exit_code' => 0])?->finishedAt === '2026-01-01T00:00:01Z',
+    'The runs\' names the contract\'s text gives are read too.');
+env_assert($operations->planCommand($owner, 'cron:job-add', ['domain' => 'demo-owned.test', 'schedule' => '0 3 * * *', 'command' => 'php artisan backup:clean'])->plan?->command === 'cron:job-add'
+    && $operations->planCommand($admin, 'cron:job-disable', ['id' => 'a1b2c3d4'])->plan?->command === 'cron:job-disable'
+    && $operations->planCommand($admin, 'cron:job-remove', ['id' => 'a1b2c3d4'])->plan?->command === 'cron:job-remove', 'Add, turn off, remove: each planned.');
+env_assert($operations->planCommand($owner, 'cron:job-add', ['domain' => 'demo-php.test', 'schedule' => '0 3 * * *', 'command' => 'x'])->reason === 'owner_scope'
+    && $extras->cronJobs($owner, 'demo-php.test') === null && count($extras->cronJobs($owner, 'demo-owned.test') ?? []) === 1, 'An owner\'s own sites only.');
+env_assert($operations->planCommand($admin, 'cron:job-disable', ['id' => 'ffffffff'])->reason === 'unknown_cron_job', 'A job the server does not have.');
 
 // The firewall (5.2): a change is applied, waits to be kept, and comes back by itself; SSH and the panel's port stay open.
 $status = $extras->firewall($admin);
@@ -260,11 +282,17 @@ env_assert(str_contains($outside, 'data-env-panel-access="list"') && str_contain
 $cronTab = static fn (array $cron): string => $factory->make('larena-env::admin.partials.cron', ['domain' => 'demo-php.test', 'cron' => $cron + ['jobs' => null,
     'opened' => null, 'runs' => null, 'allows' => ['add' => true, 'remove' => true, 'enable' => true, 'disable' => true, 'runs' => true],
     'presets' => CronSchedule::PRESETS, 'when' => []]])->render();
-$jobsNow = $extras->cronJobs($admin, 'demo-php.test');
-$tab = $cronTab(['jobs' => $jobsNow, 'when' => ['job-backup' => 'Every day at 02:30'], 'opened' => $jobsNow[0], 'runs' => $extras->cronRuns($admin, 'job-backup')]);
-env_assert(str_contains($tab, 'data-env-cron-job="job-backup"') && str_contains($tab, 'Every day at 02:30') && str_contains($tab, 'data-env-cron-last="failed"')
-    && str_contains($tab, 'data-env-cron-op="disable"') && !str_contains($tab, 'data-env-cron-op="enable"') && str_contains($tab, 'data-env-cron-runs="job-backup"')
-    && str_contains($tab, 'Disk is full') && str_contains($tab, 'data-env-cron-op="add"') && str_contains($tab, 'value="custom"'), 'The scheduler tab: '.$tab);
+$jobsNow = $extras->cronJobs($admin, 'demo-owned.test');
+$tab = $cronTab(['jobs' => $jobsNow, 'when' => ['a1b2c3d4' => 'Every 10 minutes'], 'opened' => $jobsNow[0], 'runs' => $extras->cronRuns($admin, 'a1b2c3d4')]);
+env_assert(str_contains($tab, 'data-env-cron-job="a1b2c3d4"') && str_contains($tab, 'Every 10 minutes') && str_contains($tab, 'data-env-cron-last="ok"')
+    && str_contains($tab, 'data-env-cron-op="disable"') && !str_contains($tab, 'data-env-cron-op="enable"') && str_contains($tab, 'data-env-cron-runs="a1b2c3d4"')
+    && str_contains($tab, 'Synced 12 records.') && str_contains($tab, 'data-env-cron-op="add"') && str_contains($tab, 'value="custom"')
+    && str_contains($tab, 'data-env-cron-hint') && str_contains($tab, 'the next one is skipped'), 'The scheduler tab: '.$tab);
+$full = $cronTab(['jobs' => array_fill(0, CronSchedule::MAX_JOBS, $jobsNow[0])]);
+env_assert(str_contains($full, 'data-env-cron-full') && !str_contains($full, 'data-env-cron-op="add"'), 'A site with 50 jobs says so instead of offering one more.');
+$failedRun = $cronTab(['jobs' => [\Larena\Env\Cron\CronJob::fromData(['id' => 'b2c3d4e5', 'schedule' => '0 3 * * *', 'command' => 'x', 'enabled' => false,
+    'last_run' => ['started_at' => '2026-01-01T03:00:00Z', 'finished_at' => '2026-01-01T03:00:01Z', 'exit_code' => 1]])]]);
+env_assert(str_contains($failedRun, 'data-env-cron-last="failed"') && str_contains($failedRun, 'data-env-cron-op="enable"'), 'A failed run, and a job turned off.');
 env_assert(str_contains($cronTab(['jobs' => []]), 'data-env-cron-none') && str_contains($cronTab([]), 'data-env-cron="unreadable"'), 'No jobs, or none readable, said so.');
 
 $job = $factory->make('larena-env::admin.job', ['jobId' => (string) $applied->jobId, 'source' => 'recorded', 'status' => $appliedView->status, 'log' => $appliedView->log,

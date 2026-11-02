@@ -9,29 +9,26 @@ use Larena\Env\Contracts\PanelGateway;
 use Throwable;
 
 /**
- * A stand-in for the server's stage 5 commands still to be released (Panel plan 5.2–5.4: simai-env 1.34.0 and 1.35.0) on
- * recorded answers, for tests and the install check only: no recording of them exists yet. The services and the kinds
- * of site came with 1.33.0 and are recorded (set 9). It answers a site's scheduled jobs, the firewall and who reaches
- * the panel the way the agreed protocol does, keeps its state in a local
- * folder, and lists the commands in the host description; everything else goes to the gateway it wraps. A firewall or
+ * A stand-in for the server's stage 5 commands still to be released (Panel plan 5.2, 5.3: simai-env 1.35.0) on recorded
+ * answers, for tests and the install check only: no recording of them exists yet. The services and the kinds of site
+ * came with 1.33.0 (set 9), a site's scheduled jobs with 1.34.0 (set 10). It answers the firewall and who reaches the
+ * panel the way the agreed protocol does, keeps its state in a local folder, and lists the commands in the
+ * administrator's host description; everything else goes to the gateway it wraps. A firewall or
  * panel change is applied and undone by itself unless change:confirm keeps it in time, as the server does; SSH and the
  * panel's own port can never be closed.
  */
 final readonly class FakeServerToolsGateway implements PanelGateway, PanelFileGateway
 {
-    /** The commands this stand-in answers; an owner is offered their own sites' jobs only. */
-    public const array COMMANDS = ['cron:list', 'cron:job-add', 'cron:job-remove',
-        'cron:job-enable', 'cron:job-disable', 'cron:job-runs', 'firewall:status', 'firewall:rule-add', 'firewall:rule-remove', 'firewall:block',
+    /** The commands this stand-in answers, the administrator's alone. */
+    public const array COMMANDS = ['firewall:status', 'firewall:rule-add', 'firewall:rule-remove', 'firewall:block',
         'firewall:unblock', 'panel:access', 'change:confirm', 'change:status'];
-    private const array OWNER_COMMANDS = ['cron:list', 'cron:job-add', 'cron:job-remove', 'cron:job-enable', 'cron:job-disable', 'cron:job-runs'];
     /** The ports no change may close: SSH and the panel's own. */
     private const array PROTECTED_PORTS = ['22', '443'];
     /** How long an applied change waits to be kept before the stand-in puts the previous one back. */
     private const int CHANGE_SECONDS = 120;
 
     private const array DESCRIPTIONS = [
-        'cron:job-add' => 'Add a scheduled job', 'cron:job-remove' => 'Remove a scheduled job', 'cron:job-enable' => 'Turn a scheduled job on',
-        'cron:job-disable' => 'Turn a scheduled job off', 'firewall:rule-add' => 'Add a firewall rule, undone unless kept in time',
+        'firewall:rule-add' => 'Add a firewall rule, undone unless kept in time',
         'firewall:rule-remove' => 'Remove a firewall rule, undone unless kept in time', 'firewall:block' => 'Block an address, undone unless kept in time',
         'firewall:unblock' => 'Unblock an address, undone unless kept in time', 'panel:access' => 'Change who reaches the panel, undone unless kept in time',
         'change:confirm' => 'Keep the change',
@@ -73,7 +70,7 @@ final readonly class FakeServerToolsGateway implements PanelGateway, PanelFileGa
 
             return $command === 'self:describe' ? $this->listed($request, $answer) : $answer;
         }
-        $refused = $this->scope($request, $state);
+        $refused = $this->scope($request);
         if ($refused !== null) {
             return PanelAnswer::refused($request->requestId, $refused);
         }
@@ -101,34 +98,18 @@ final readonly class FakeServerToolsGateway implements PanelGateway, PanelFileGa
             return $answer;
         }
         $data = $answer->data;
-        $offered = $request->actor->owner === null ? self::COMMANDS : self::OWNER_COMMANDS;
-        $data['gate']['commands'] = array_values(array_unique([...$data['gate']['commands'], ...$offered]));
+        if ($request->actor->owner === null) {
+            $data['gate']['commands'] = array_values(array_unique([...$data['gate']['commands'], ...self::COMMANDS]));
+        }
 
         return PanelAnswer::fromDocument($request->requestId, ['status' => 'ok', 'kind' => 'result', 'data' => $data,
             'command_status' => $answer->commandStatus, 'operation_id' => $answer->operationId]);
     }
 
-    /**
-     * Services, the firewall and the panel's access are the administrator's; an owner's jobs are their own sites'
-     * only, found through the recorded description as the gateway would.
-     *
-     * @param array<string, mixed> $state
-     */
-    private function scope(PanelRequest $request, array $state): ?string
+    /** The firewall and the panel's access are the administrator's alone. */
+    private function scope(PanelRequest $request): ?string
     {
-        if ($request->actor->owner === null) {
-            return null;
-        }
-        if (!in_array($request->command, self::OWNER_COMMANDS, true)) {
-            return 'owner_admin_only';
-        }
-        $domain = $request->args['domain'] ?? $this->jobDomain($state, $request->args['id'] ?? '');
-        if ($domain === null) {
-            return 'unknown_job';
-        }
-        $own = $this->inner->ask(PanelRequest::read($request->actor, 'site:describe', ['domain' => $domain]));
-
-        return $own->status === PanelAnswerStatus::Ok ? null : ($own->reason ?? 'owner_scope');
+        return $request->actor->owner === null ? null : 'owner_admin_only';
     }
 
     /**
@@ -140,16 +121,6 @@ final readonly class FakeServerToolsGateway implements PanelGateway, PanelFileGa
     private function read(string $command, array $args, array $state): array
     {
         switch ($command) {
-            case 'cron:list':
-                $jobs = [];
-                foreach ($state['cron'][(string) $args['domain']] ?? [] as $job) {
-                    $runs = $state['runs'][$job['id']] ?? [];
-                    $jobs[] = $job + ['last_run' => $runs === [] ? null : $runs[array_key_last($runs)]];
-                }
-
-                return ['domain' => $args['domain'], 'jobs' => $jobs];
-            case 'cron:job-runs':
-                return ['id' => $args['id'], 'runs' => $state['runs'][(string) $args['id']] ?? []];
             case 'firewall:status':
                 $pending = [];
                 foreach ($state['changes'] as $id => $change) {
@@ -178,19 +149,6 @@ final readonly class FakeServerToolsGateway implements PanelGateway, PanelFileGa
     private function check(string $command, array $args, array $state): void
     {
         switch ($command) {
-            case 'cron:job-add':
-                // No more often than every minute: five fields, the server's own check.
-                if (count(explode(' ', (string) $args['schedule'])) !== 5) {
-                    throw new FakeRefusal('invalid_argument');
-                }
-                break;
-            case 'cron:job-remove':
-            case 'cron:job-enable':
-            case 'cron:job-disable':
-                if ($this->jobDomain($state, (string) $args['id']) === null) {
-                    throw new FakeRefusal('unknown_job');
-                }
-                break;
             case 'firewall:rule-add':
                 if (($args['action'] ?? 'allow') === 'deny' && in_array((string) $args['port'], self::PROTECTED_PORTS, true)) {
                     throw new FakeRefusal('firewall_protected');
@@ -225,27 +183,6 @@ final readonly class FakeServerToolsGateway implements PanelGateway, PanelFileGa
         $args = $request->args;
         $timed = null;
         switch ($command) {
-            case 'cron:job-add':
-                $id = substr(hash('sha256', $args['domain'].$args['schedule'].$args['command'].microtime()), 0, 12);
-                $state['cron'][$args['domain']][] = ['id' => $id, 'schedule' => $args['schedule'], 'command' => $args['command'], 'enabled' => true];
-                $lines = ["Added job {$id} for {$args['domain']}"];
-                break;
-            case 'cron:job-remove':
-            case 'cron:job-enable':
-            case 'cron:job-disable':
-                $domain = (string) $this->jobDomain($state, (string) $args['id']);
-                foreach ($state['cron'][$domain] as $index => $job) {
-                    if ($job['id'] === $args['id']) {
-                        if ($command === 'cron:job-remove') {
-                            unset($state['cron'][$domain][$index]);
-                        } else {
-                            $state['cron'][$domain][$index]['enabled'] = $command === 'cron:job-enable';
-                        }
-                    }
-                }
-                $state['cron'][$domain] = array_values($state['cron'][$domain]);
-                $lines = ["Done: {$command} {$args['id']}"];
-                break;
             case 'change:confirm':
                 $state['changes'][$args['change_id']]['state'] = 'confirmed';
                 $lines = ["Kept change {$args['change_id']}"];
@@ -308,12 +245,6 @@ final readonly class FakeServerToolsGateway implements PanelGateway, PanelFileGa
         }
         if (!is_array($state)) {
             $state = [
-                'cron' => ['demo-php.test' => [['id' => 'job-backup', 'schedule' => '30 2 * * *', 'command' => 'php artisan app:clean', 'enabled' => true]],
-                    'demo-owned.test' => [['id' => 'job-owned', 'schedule' => '*/15 * * * *', 'command' => 'php worker.php', 'enabled' => false]]],
-                'runs' => ['job-backup' => [
-                    ['started_at' => '2026-01-01T02:30:00Z', 'finished_at' => '2026-01-01T02:30:04Z', 'exit_code' => 0, 'output' => ['Cleaned 3 files']],
-                    ['started_at' => '2026-01-02T02:30:00Z', 'finished_at' => '2026-01-02T02:30:01Z', 'exit_code' => 1, 'output' => ['Disk is full']],
-                ]],
                 'firewall' => ['rules' => [
                     ['id' => '1', 'port' => '22', 'proto' => 'tcp', 'from' => 'any', 'action' => 'allow', 'protected' => true],
                     ['id' => '2', 'port' => '80', 'proto' => 'tcp', 'from' => 'any', 'action' => 'allow', 'protected' => false],
@@ -344,20 +275,6 @@ final readonly class FakeServerToolsGateway implements PanelGateway, PanelFileGa
     {
         @mkdir($this->root, 0o775, true);
         file_put_contents($this->root.'/state.json', json_encode($state, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES));
-    }
-
-    /** @param array<string, mixed> $state */
-    private function jobDomain(array $state, string $id): ?string
-    {
-        foreach ($state['cron'] as $domain => $jobs) {
-            foreach ($jobs as $job) {
-                if ($job['id'] === $id) {
-                    return (string) $domain;
-                }
-            }
-        }
-
-        return null;
     }
 
     /**

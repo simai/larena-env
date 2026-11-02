@@ -110,11 +110,15 @@ final readonly class SiteCronController
                 return 'cron_schedule_invalid';
             }
             $line = $field('command');
-            if ($line === '' || preg_match('/[\x00-\x1f\x7f]/', $line) === 1 || mb_strlen($line) > 1000) {
+            if (!CronSchedule::commandValid($line)) {
                 return 'cron_command_invalid';
             }
             if ($planned && $field('domain') !== $domain) {
                 return 'not_allowed';
+            }
+            // The server keeps at most 50 jobs a site (simai-env 1.34.0): said before a plan that would be refused.
+            if (count($this->extras->cronJobs($actor, $domain) ?? []) >= CronSchedule::MAX_JOBS) {
+                return 'cron_jobs_full';
             }
 
             return ['domain' => $domain, 'schedule' => $schedule, 'command' => $line];
@@ -126,7 +130,7 @@ final readonly class SiteCronController
             }
         }
 
-        return 'cron_unknown_job';
+        return 'unknown_cron_job';
     }
 
     private function back(Request $request, string $domain, string $reason): RedirectResponse

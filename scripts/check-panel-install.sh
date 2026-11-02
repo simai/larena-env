@@ -437,6 +437,19 @@ except urllib.error.HTTPError as error:
 assert status == 403, ("the person cannot plan nginx directives", status)
 status, own_dns = get("/admin/server/sites/demo-owned.test?tab=dns")
 assert status == 200 and 'data-env-dns="not_connected"' in own_dns and "/admin/server/dns/connection" not in own_dns, "the person sees their site's DNS tab, not the connection"
+# A site's own scheduled jobs (simai-env 1.34.0, set 10): the person's own site's job, its runs, a new one by plan; not
+# another owner's site.
+status, own_cron = get("/admin/server/sites/demo-owned.test?tab=cron")
+assert status == 200 and 'data-env-tab="cron"' in own_cron and 'data-env-cron-job="a1b2c3d4"' in own_cron and "php artisan app:sync --quiet" in own_cron, "the person's own site's job"
+assert 'data-env-cron-last="ok"' in own_cron and "data-env-cron-hint" in own_cron and 'data-env-cron-op="disable"' in own_cron, "its last run, where it runs, turning it off"
+_, own_runs = get("/admin/server/sites/demo-owned.test?tab=cron&runs=a1b2c3d4")
+assert 'data-env-cron-runs="a1b2c3d4"' in own_runs and "Synced 12 records." in own_runs, "its run's output"
+_, adding = post("/admin/server/sites/demo-owned.test/cron/plan", {"_token": form_token(own_cron), "op": "add", "preset": "daily", "custom": "", "command": "php artisan backup:clean"})
+assert 'data-env-plan="cron:job-add"' in adding and 'name="args[schedule]" value="0 3 * * *"' in adding, "a new job is planned on five fields"
+_, wrong = post("/admin/server/sites/demo-owned.test/cron/plan", {"_token": form_token(own_cron), "op": "add", "preset": "custom", "custom": "61 * * * *", "command": "x"})
+assert 'data-env-plan=' not in wrong and "data-env-cron" in wrong, "a minute past 59 is refused before any plan"
+_, other = post("/admin/server/sites/demo-php.test/cron/plan", {"_token": form_token(own_cron), "op": "add", "preset": "daily", "custom": "", "command": "x"})
+assert 'data-env-plan=' not in other and "This site belongs to another owner." in other, "not another owner's site"
 print("both levels checked")
 PY
 python3 - "$APP/database/database.sqlite" <<'PY' >>"$LOG" 2>&1 || failed "audit"

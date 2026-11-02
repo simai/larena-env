@@ -11,6 +11,8 @@ namespace Larena\Env\Cron;
 final class CronSchedule
 {
     /** The schedules offered in the form, each with its words (`larena-env::admin.cron.presets.<key>`). */
+    /** The most jobs the server keeps for a site (simai-env 1.34.0). */
+    public const int MAX_JOBS = 50;
     public const array PRESETS = [
         'minute' => '* * * * *',
         'five_minutes' => '*/5 * * * *',
@@ -25,18 +27,45 @@ final class CronSchedule
     {
     }
 
-    /** Five fields of a cron schedule: numbers, `*`, steps, ranges, lists, or names of months and days. */
-    public static function valid(string $schedule): bool
-    {
-        return preg_match('/\A[0-9A-Za-z*\/,-]{1,40}(?: [0-9A-Za-z*\/,-]{1,40}){4}\z/D', $schedule) === 1;
-    }
+    /** The ranges of the five fields, as the server checks them (simai-env 1.34.0): minute, hour, day, month, weekday. */
+    private const array RANGES = [[0, 59], [0, 23], [1, 31], [1, 12], [0, 7]];
 
     /**
-     * The words for the schedule: a preset's key with no replacements, or `daily_at`/`hourly_at`/`weekly_at` with the
-     * time, or null when there are none and the schedule is shown as written.
-     *
-     * @return array{0: string, 1: array<string, string>}|null
+     * Five cron fields of numbers only, as the server takes them: `*`, a number, a range and a step, lists of them,
+     * each within its field's range; no names, no `@daily` or `@reboot`. "61 * * * *" is refused before any job.
      */
+    public static function valid(string $schedule): bool
+    {
+        $fields = explode(' ', $schedule);
+        if (count($fields) !== 5 || in_array('', $fields, true)) {
+            return false;
+        }
+        foreach ($fields as $index => $field) {
+            [$low, $high] = self::RANGES[$index];
+            foreach (explode(',', $field) as $part) {
+                if (preg_match('/\A(?:\*|([0-9]{1,2})(?:-([0-9]{1,2}))?)(?:\/([0-9]{1,2}))?\z/D', $part, $m) !== 1) {
+                    return false;
+                }
+                $start = ($m[1] ?? '') === '' ? null : (int) $m[1];
+                $end = ($m[2] ?? '') === '' ? null : (int) $m[2];
+                $step = ($m[3] ?? '') === '' ? null : (int) $m[3];
+                if (($start !== null && ($start < $low || $start > $high)) || ($end !== null && ($end < (int) $start || $end > $high))
+                    || ($step !== null && ($step < 1 || $step > $high))) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    /** One printable line of up to 1000 characters, not starting with "-" nor padded with spaces, as the server takes it. */
+    public static function commandValid(string $command): bool
+    {
+        return $command !== '' && mb_strlen($command) <= 1000 && preg_match('/\A[^\p{C}]+\z/uD', $command) === 1
+            && !str_starts_with($command, '-') && trim($command) === $command;
+    }
+
     public static function words(string $schedule): ?array
     {
         $preset = array_search($schedule, self::PRESETS, true);

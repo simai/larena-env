@@ -65,11 +65,13 @@ final class PanelCommands
     // A 1C-Bitrix site's installer in its root: none yet, bitrixsetup.php, or restore.php.
     private const string BITRIX_FILES = '/\A(?:none|setup|restore)\z/D';
     private const string UPSTREAM_PATH = '/\A\/[A-Za-z0-9._~\/-]{0,200}\z/D';
-    // A site's own scheduled job: five fields, no more often than every minute (the server checks it again), and one
-    // line of printable text run by the site's user.
-    private const string CRON_SCHEDULE = '/\A[0-9A-Za-z*\/,-]{1,40}(?: [0-9A-Za-z*\/,-]{1,40}){4}\z/D';
-    private const string CRON_COMMAND = '/\A[^\x00-\x1f\x7f]{1,1000}\z/Du';
-    private const string CRON_ID = '/\A[A-Za-z0-9][A-Za-z0-9._-]{0,63}\z/D';
+    // A site's own scheduled job (simai-env 1.34.0): five fields of numbers, `*`, ranges and steps (their ranges checked
+    // by CronSchedule::valid, as the server does), and one line of printable text run by the site's user, not starting
+    // with "-"; a job's id is the server's eight hex digits; up to 50 runs are read.
+    private const string CRON_SCHEDULE = '/\A[0-9*\/,-]{1,40}(?: [0-9*\/,-]{1,40}){4}\z/D';
+    private const string CRON_COMMAND = '/\A(?![-\s])[^\x00-\x1f\x7f]{1,1000}(?<!\s)\z/Du';
+    private const string CRON_ID = '/\A[a-f0-9]{8}\z/D';
+    private const string CRON_LIMIT = '/\A(?:[1-9]|[1-4][0-9]|50)\z/D';
     // The firewall (ufw): a port or a range, a protocol, where from, and what to do; an address or a network to block.
     private const string FW_PORT = '/\A[1-9][0-9]{0,4}(?::[1-9][0-9]{0,4})?\z/D';
     private const string FW_PROTO = '/\A(?:tcp|udp|any)\z/D';
@@ -157,19 +159,19 @@ final class PanelCommands
         // Panel plan stage 5. The server's services, the administrator's, each checked before a restart or a reload (nginx
         // -t, php-fpm -t), and the kinds of site the server makes, with their arguments (simai-env 1.33.0); a site's own
         // scheduled jobs, as its user (1.34.0); the firewall and who reaches the panel, each change undone by the server
-        // itself unless it is kept in time with change:confirm (1.35.0): those wait for their release, unlisted.
+        // itself unless it is kept in time with change:confirm (1.35.0): that waits for its release, unlisted.
         'service:list' => ['args' => [], 'required' => [], 'since' => '1.33.0', 'kind' => self::READ],
         'service:restart' => ['args' => ['name' => self::SERVICE], 'required' => ['name'], 'since' => '1.33.0', 'kind' => self::ACTION],
         'service:reload' => ['args' => ['name' => self::SERVICE], 'required' => ['name'], 'since' => '1.33.0', 'kind' => self::ACTION],
         'service:log' => ['args' => ['name' => self::SERVICE, 'lines' => self::LINES], 'required' => ['name'], 'since' => '1.33.0', 'kind' => self::READ],
         'self:profiles' => ['args' => [], 'required' => [], 'since' => '1.33.0', 'kind' => self::READ],
-        'cron:list' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => null, 'kind' => self::READ],
+        'cron:list' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => '1.34.0', 'kind' => self::READ],
         'cron:job-add' => ['args' => ['domain' => self::DOMAIN, 'schedule' => self::CRON_SCHEDULE, 'command' => self::CRON_COMMAND],
-            'required' => ['domain', 'schedule', 'command'], 'since' => null, 'kind' => self::ACTION],
-        'cron:job-remove' => ['args' => ['id' => self::CRON_ID], 'required' => ['id'], 'since' => null, 'kind' => self::ACTION],
-        'cron:job-enable' => ['args' => ['id' => self::CRON_ID], 'required' => ['id'], 'since' => null, 'kind' => self::ACTION],
-        'cron:job-disable' => ['args' => ['id' => self::CRON_ID], 'required' => ['id'], 'since' => null, 'kind' => self::ACTION],
-        'cron:job-runs' => ['args' => ['id' => self::CRON_ID], 'required' => ['id'], 'since' => null, 'kind' => self::READ],
+            'required' => ['domain', 'schedule', 'command'], 'since' => '1.34.0', 'kind' => self::ACTION],
+        'cron:job-remove' => ['args' => ['id' => self::CRON_ID], 'required' => ['id'], 'since' => '1.34.0', 'kind' => self::ACTION],
+        'cron:job-enable' => ['args' => ['id' => self::CRON_ID], 'required' => ['id'], 'since' => '1.34.0', 'kind' => self::ACTION],
+        'cron:job-disable' => ['args' => ['id' => self::CRON_ID], 'required' => ['id'], 'since' => '1.34.0', 'kind' => self::ACTION],
+        'cron:job-runs' => ['args' => ['id' => self::CRON_ID, 'limit' => self::CRON_LIMIT], 'required' => ['id'], 'since' => '1.34.0', 'kind' => self::READ],
         'firewall:status' => ['args' => [], 'required' => [], 'since' => null, 'kind' => self::READ],
         'firewall:rule-add' => ['args' => ['port' => self::FW_PORT, 'proto' => self::FW_PROTO, 'from' => self::FW_FROM, 'action' => self::FW_ACTION],
             'required' => ['port', 'action'], 'since' => null, 'kind' => self::ACTION],

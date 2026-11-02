@@ -49,7 +49,18 @@ final readonly class RecordedAnswersGateway implements PanelGateway
             }
             $sites = is_array($own['data']['sites'] ?? null) ? $own['data']['sites'] : [];
             if (!in_array($domain, array_column($sites, 'domain'), true)) {
-                return $this->replay($request, 'refused.owner-scope.json');
+                // Recorded again for a command whose refusal the recording holds itself (cron:job-add, simai-env 1.34.0).
+                $own = 'refused.owner-scope.'.str_replace(':', '-', $request->command).'.json';
+
+                return $this->replay($request, is_file($this->directory.'/'.$own) ? $own : 'refused.owner-scope.json');
+            }
+        }
+
+        // The set holds one scheduled job; another id is a job the server does not have.
+        if (str_starts_with($request->command, 'cron:job-') && $request->command !== 'cron:job-add' && is_string($request->args['id'] ?? null)) {
+            $runs = $this->document('cron-job-runs.json');
+            if (!is_string($runs) && ($runs['data']['id'] ?? null) !== $request->args['id']) {
+                return $this->replay($request, 'refused.unknown-cron-job.json');
             }
         }
 
@@ -80,6 +91,10 @@ final readonly class RecordedAnswersGateway implements PanelGateway
             }
 
             return $request->confirm ? 'job-start.json' : "plan.{$name}.json";
+        }
+        // A job's runs are recorded once, whoever asks (simai-env 1.34.0).
+        if ($request->command === 'cron:job-runs') {
+            return "{$name}.json";
         }
         // A service's journal is recorded for nginx.
         if ($request->command === 'service:log' && is_string($request->args['name'] ?? null)) {
