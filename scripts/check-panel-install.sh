@@ -274,6 +274,29 @@ _, proxy = get("/admin/server/sites/new?profile=proxy")
 assert 'data-env-field="proxy"' in proxy and 'name="upstream-port"' in proxy and 'data-env-field="php"' not in proxy and "data-env-new-daily-backup" not in proxy, "an app on a port asks for the port only"
 _, proxied = post("/admin/server/sites/new/plan", {"_token": form_token(proxy), "domain": "demo-proxy.test", "profile": "proxy", "upstream-port": "3000", "websockets": "yes"})
 assert 'data-env-plan="site:add"' in proxied and 'name="upstream-port" value="3000"' in proxied, "an app on a port is planned"
+# The same fields in the Framework property view, over the new site's port: record.create plans site:add and leads to
+# the plan screen, which is the one the form shows.
+assert '<sf-property-view collection="env.new_site.laravel" mode="create"' in laravel and "data-larena-record-fallback" in laravel, "the property view, the form its fallback"
+def port(payload):
+    request = urllib.request.Request(base + "/admin/server/sites/new/port", data=json.dumps(payload).encode(),
+        headers={"Content-Type": "application/json", "Accept": "application/json", "X-CSRF-TOKEN": csrf})
+    try:
+        with web.open(request) as answer:
+            return json.loads(answer.read().decode())
+    except urllib.error.HTTPError as error:
+        return json.loads(error.read().decode())
+def fields_of(answer):
+    return [field["key"] for section in answer["record"]["sections"] for group in section["groups"] for field in group["fields"]]
+empty = port({"scope_ref": "scope:server", "intent": "record.load", "payload": {"mode": "create", "collection": "env.new_site.laravel"}})
+assert empty.get("answer") == "applied" and fields_of(empty)[:1] == ["domain"] and "php" in fields_of(empty) and "create_db" in fields_of(empty), ("Laravel's fields from the port", empty)
+proxy_empty = port({"scope_ref": "scope:server", "intent": "record.load", "payload": {"mode": "create", "collection": "env.new_site.proxy"}})
+assert proxy_empty.get("answer") == "applied" and "upstream_port" in fields_of(proxy_empty) and "php" not in fields_of(proxy_empty), ("an app on a port from the port", proxy_empty)
+created = port({"scope_ref": "scope:server", "intent": "record.create", "payload": {"collection": "env.new_site.laravel", "values": {"domain": "app.test", "create_db": True}}})
+assert created.get("answer") == "applied" and created["record"]["address"].startswith("/admin/server/sites/new/plan/draft-"), ("Laravel planned through the port", created)
+_, drafted = get(created["record"]["address"])
+assert 'data-env-plan="site:add"' in drafted and 'name="profile" value="laravel"' in drafted and 'name="create-db" value="yes"' in drafted, "the draft's plan screen"
+wrong = port({"scope_ref": "scope:server", "intent": "record.create", "payload": {"collection": "env.new_site.proxy", "values": {"domain": "a.test", "upstream_port": 443}}})
+assert wrong.get("answer") == "refused" and "upstream_port" in wrong.get("errors", {}), ("port 443 said under the port", wrong)
 _, bitrix = get("/admin/server/sites/new?profile=bitrix")
 assert 'data-env-field="bitrix-files"' in bitrix and 'data-env-field="php"' in bitrix and 'data-env-field="database"' in bitrix, "1C-Bitrix asks PHP, a database and its installer"
 _, bitrixed = post("/admin/server/sites/new/plan", {"_token": form_token(bitrix), "domain": "demo-bitrix.test", "profile": "bitrix", "php": "8.3", "create-db": "yes", "bitrix-files": "setup"})

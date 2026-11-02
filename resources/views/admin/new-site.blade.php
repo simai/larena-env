@@ -30,8 +30,16 @@
                 @endforeach
             </ul>
         </nav>
+        {{-- The fields the chosen kind asks, in the Framework property view over the new site's port: record.create plans
+             the site and leads to that plan. The plain form is the view's fallback, hidden once the view has read its fields. --}}
+        <div id="admin-record-view" data-larena-close-url="{{ route('larena.env.admin.index', [], false) }}">
+        @if (($propertyView ?? null) !== null)
+            <sf-property-view collection="env.new_site.{{ $kind ?? 'static' }}" mode="create" size="1/2" data-env-new-site-view
+                aria-label="{{ __('larena-env::admin.new_site.heading') }}" empty-text="—"
+                data-larena-property-port="{{ $propertyView['port'] }}" data-larena-property-scope="{{ $propertyView['scope'] }}"></sf-property-view>
+        @endif
         {{-- The fields the chosen kind asks: the server's own description of it where it lists its kinds (Panel plan 5.5). --}}
-        <form method="post" action="{{ route('larena.env.admin.sites.plan', [], false) }}" class="larena-form" data-env-new-site>
+        <form @if (($propertyView ?? null) !== null) data-larena-record-fallback @endif method="post" action="{{ route('larena.env.admin.sites.plan', [], false) }}" class="larena-form" data-env-new-site>
             @csrf
             <div class="larena-field">
                 <label for="env-new-domain">{{ __('larena-env::admin.new_site.domain') }}</label>
@@ -130,6 +138,7 @@
                 <button type="submit" class="larena-button">{{ __('larena-env::admin.operations.plan') }}</button>
             </div>
         </form>
+        </div>
         <p><a href="{{ route('larena.env.admin.index', [], false) }}">{{ __('larena-env::admin.site.back') }}</a></p>
     </section>
 @endsection

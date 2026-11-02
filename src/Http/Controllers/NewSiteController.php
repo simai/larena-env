@@ -36,6 +36,8 @@ final readonly class NewSiteController
         'proxy' => ['upstream-port', 'upstream-path', 'websockets'], 'bitrix' => ['bitrix-files']];
     /** The installer a 1C-Bitrix site may get in its root (simai-env 1.33.0): none yet, a new install, or a restore. */
     public const array BITRIX_FILES = ['none', 'setup', 'restore'];
+    /** The session key that holds, by id, the values a property view was filled for until its plan is shown. */
+    public const string DRAFTS = 'larena_env.new_site_drafts';
     /** The session key that holds, by job, the new site whose daily backup is turned on once the site is made. */
     public const string AFTER_JOB = 'larena_env.after_job';
 
@@ -63,21 +65,99 @@ final readonly class NewSiteController
             'phpVersions' => $overview->phpVersions ?? [],
             // Only the whole server chooses whose the site is; a person's own site is theirs.
             'owners' => $actor->owner === null ? ($overview->owners ?? []) : null,
-            'old' => self::input($request, $actor, $server),
+            'old' => self::input($request->all(), $actor, $server),
             // What it runs is chosen first; the form then asks only what that kind takes.
             'kind' => in_array($request->query('profile'), $profiles, true) ? (string) $request->query('profile') : ($profiles[0] ?? 'static'),
             // A new site gets its daily backup by default (Panel plan 4.1), where the server's gateway can set one.
-            'dailyBackup' => $this->schedules($overview) ? self::dailyBackup($request) : null,
+            'dailyBackup' => $this->schedules($overview) ? self::dailyBackup(self::strings($request->all())) : null,
             'notice' => $request->session()->get('larena_env_notice'),
+            // The chosen kind's fields in the Framework property view, over its port (NewSitePropertyViewPort); the
+            // plain form below stays for a page without it.
+            'propertyView' => ['port' => route('larena.env.admin.sites.port', [], false), 'scope' => \Larena\Env\Admin\NewSitePropertyViewPort::SCOPE],
         ]);
     }
 
     public function plan(Request $request): mixed
     {
+        return $this->showPlan($request, self::strings($request->all()));
+    }
+
+    /**
+     * The plan of a site the property view was filled for (NewSitePropertyViewPort): the same plan the form makes, from
+     * what the port kept in this person's session under the draft's id.
+     */
+    public function planDraft(Request $request, string $draft): mixed
+    {
+        $raw = $request->session()->get(self::DRAFTS.'.'.$draft);
+        if (!is_array($raw)) {
+            return NoticeRedirect::to($request, route('larena.env.admin.sites.new', [], false), $this->reasonText('new_site_draft_gone'));
+        }
+
+        return $this->showPlan($request, self::strings($raw));
+    }
+
+    /**
+     * The property view's port of a new site (simai.property-view-port): its fields for the chosen kind, and
+     * record.create, which plans site:add as the form does and leads to that plan.
+     */
+    public function port(Request $request, \Larena\Env\Admin\NewSitePropertyViewPort $port): \Illuminate\Http\JsonResponse
+    {
+        $intent = $request->input('intent');
+        $payload = $request->input('payload');
+        if (!$request->isJson() || strlen($request->getContent()) > 65_536
+            || !is_string($intent) || !in_array($intent, \Larena\Env\Admin\NewSitePropertyViewPort::INTENTS, true)
+            || !is_array($payload) || ($payload !== [] && array_is_list($payload))) {
+            return new \Illuminate\Http\JsonResponse(['answer' => 'refused', 'reason' => 'port_request_invalid'], 422);
+        }
+        $access = $request->attributes->get('larena_access_actor');
+        try {
+            $answer = $port->for(ResolvePanelActor::of($request), $request->session())
+                ->raise(is_string($access) && $access !== '' ? $access : 'panel', \Larena\Env\Admin\NewSitePropertyViewPort::SCOPE, $intent, $payload);
+        } catch (\Throwable) {
+            $answer = ['answer' => 'unavailable', 'reason' => 'port_failed'];
+        }
+        $status = match ($answer['answer'] ?? null) {'applied' => 200, 'conflict' => 409, 'refused' => 422, default => 503};
+
+        return new \Illuminate\Http\JsonResponse($answer, $status, ['Cache-Control' => 'private, no-store']);
+    }
+
+    /**
+     * What a new site's form offers this person: the kinds (the server's own where it lists them), the server's
+     * overview and whether a daily backup can be set.
+     *
+     * @return array{profiles: list<string>, server: array<string, \Larena\Env\Server\SiteProfile>|null, overview: ?\Larena\Env\Server\ServerOverview, schedules: bool}
+     */
+    public function offer(PanelActor $actor): array
+    {
+        $overview = $this->overviews->read($actor)->overview;
+        $server = $this->serverProfiles($actor, $overview);
+
+        return ['profiles' => $server === null ? self::PROFILES : array_keys($server), 'server' => $server, 'overview' => $overview,
+            'schedules' => $this->schedules($overview)];
+    }
+
+    /**
+     * The plan of site:add for a form's values, as the plan screen asks it: the arguments the kind takes, with the
+     * daily backup where the server makes it with the site.
+     *
+     * @param array<string, string> $raw
+     * @return array{0: \Larena\Env\Operations\PlanResult, 1: array<string, string>}
+     */
+    public function planFor(PanelActor $actor, array $raw): array
+    {
+        $offer = $this->offer($actor);
+        $input = self::withBackup(self::input($raw, $actor, $offer['server']), $raw, $offer['overview'], $offer['server']);
+
+        return [$this->operations->planCommand($actor, 'site:add', $input), $input];
+    }
+
+    /** @param array<string, string> $raw */
+    private function showPlan(Request $request, array $raw): mixed
+    {
         $actor = ResolvePanelActor::of($request);
         $overview = $this->overviews->read($actor)->overview;
         $server = $this->serverProfiles($actor, $overview);
-        $input = self::withBackup(self::input($request, $actor, $server), $request, $overview, $server);
+        $input = self::withBackup(self::input($raw, $actor, $server), $raw, $overview, $server);
         $result = $this->operations->planCommand($actor, 'site:add', $input);
         if ($result->plan === null) {
             return $this->back($request, $result->reason ?? 'answer_shape_invalid', $input);
@@ -90,9 +170,9 @@ final readonly class NewSiteController
             'source' => $result->source,
             'plan' => $result->plan,
             'runUrl' => route('larena.env.admin.sites.run', [], false),
-            'cancelUrl' => route('larena.env.admin.sites.new', [], false),
-            'hidden' => $input + ['daily-backup' => self::dailyBackup($request) ? 'yes' : 'no'],
-            'then' => $this->followsWithSchedule($request, $overview, $input)
+            'cancelUrl' => route('larena.env.admin.sites.new', [], false).(isset($input['profile']) ? '?profile='.$input['profile'] : ''),
+            'hidden' => $input + ['daily-backup' => self::dailyBackup($raw) ? 'yes' : 'no'],
+            'then' => $this->followsWithSchedule($raw, $overview, $input)
                 ? [(string) $this->translator->get('larena-env::admin.new_site.daily_backup_after')] : [],
         ]);
     }
@@ -102,14 +182,15 @@ final readonly class NewSiteController
         $actor = ResolvePanelActor::of($request);
         $overview = $this->overviews->read($actor)->overview;
         $server = $this->serverProfiles($actor, $overview);
-        $input = self::withBackup(self::input($request, $actor, $server), $request, $overview, $server);
+        $raw = self::strings($request->all());
+        $input = self::withBackup(self::input($raw, $actor, $server), $raw, $overview, $server);
         $started = $this->operations->startCommand($actor, 'site:add', $input);
         if ($started->jobId === null) {
             return $this->back($request, $started->reason ?? 'answer_shape_invalid', $input);
         }
 
         // The site's daily backup is turned on when its job has made it (ServerJobController), as the plan said.
-        if ($this->followsWithSchedule($request, $overview, $input, $server) && isset($input['domain'])) {
+        if ($this->followsWithSchedule($raw, $overview, $input, $server) && isset($input['domain'])) {
             $request->session()->put(self::AFTER_JOB.'.'.$started->jobId, $input['domain']);
         }
 
@@ -117,9 +198,21 @@ final readonly class NewSiteController
     }
 
     /** On unless the form turned it off: the form sends `no` before the box, which sends `yes` when it is ticked. */
-    private static function dailyBackup(Request $request): bool
+    /** @param array<string, string> $raw */
+    private static function dailyBackup(array $raw): bool
     {
-        return $request->input('daily-backup') !== 'no';
+        return ($raw['daily-backup'] ?? null) !== 'no';
+    }
+
+    /**
+     * The text values of a request or a kept draft; anything else is not a form value.
+     *
+     * @param array<array-key, mixed> $values
+     * @return array<string, string>
+     */
+    private static function strings(array $values): array
+    {
+        return array_filter($values, static fn (mixed $value, int|string $key): bool => is_string($key) && is_string($value), ARRAY_FILTER_USE_BOTH);
     }
 
     private function schedules(?\Larena\Env\Server\ServerOverview $overview): bool
@@ -133,22 +226,26 @@ final readonly class NewSiteController
      * redirect; an older one gets backup:data-schedule once the site is made.
      *
      * @param array<string, string> $input
+     * @param array<string, string> $raw
      *
      * @return array<string, string>
      */
-    private static function withBackup(array $input, Request $request, ?\Larena\Env\Server\ServerOverview $overview, ?array $server = null): array
+    private static function withBackup(array $input, array $raw, ?\Larena\Env\Server\ServerOverview $overview, ?array $server = null): array
     {
         if ($overview?->capabilities?->takes('site:add', 'backup') === true && self::backsUp($input['profile'] ?? 'static', $server)) {
-            $input['backup'] = self::dailyBackup($request) ? 'yes' : 'no';
+            $input['backup'] = self::dailyBackup($raw) ? 'yes' : 'no';
         }
 
         return $input;
     }
 
-    /** @param array<string, string> $input */
-    private function followsWithSchedule(Request $request, ?\Larena\Env\Server\ServerOverview $overview, array $input, ?array $server = null): bool
+    /**
+     * @param array<string, string> $raw
+     * @param array<string, string> $input
+     */
+    private function followsWithSchedule(array $raw, ?\Larena\Env\Server\ServerOverview $overview, array $input, ?array $server = null): bool
     {
-        return self::dailyBackup($request) && !isset($input['backup']) && self::backsUp($input['profile'] ?? 'static', $server)
+        return self::dailyBackup($raw) && !isset($input['backup']) && self::backsUp($input['profile'] ?? 'static', $server)
             && $overview?->capabilities?->allows('backup:data-schedule') === true;
     }
 
@@ -157,15 +254,16 @@ final readonly class NewSiteController
      * sends only the fields it takes (PHP and a database for a PHP profile, the target for a redirect, the local port
      * for a proxy), the database engine only when one is asked for, and the owner only from the whole server.
      *
+     * @param array<string, string> $raw the form's values
      * @param array<string, \Larena\Env\Server\SiteProfile>|null $server the server's own kinds, when it lists them
      *
      * @return array<string, string>
      */
-    private static function input(Request $request, PanelActor $actor, ?array $server = null): array
+    private static function input(array $raw, PanelActor $actor, ?array $server = null): array
     {
         $input = [];
         foreach (self::FIELDS as $field) {
-            $value = $request->input($field);
+            $value = $raw[$field] ?? null;
             if (is_string($value) && trim($value) !== '') {
                 $input[$field] = trim($value);
             }
@@ -290,7 +388,7 @@ final readonly class NewSiteController
         return NoticeRedirect::to($request, route('larena.env.admin.sites.new', [], false).'?'.http_build_query($input), $this->reasonText($reason));
     }
 
-    private function reasonText(string $reason): string
+    public function reasonText(string $reason): string
     {
         $key = 'larena-env::admin.reasons.'.$reason;
         $line = (string) $this->translator->get($key);

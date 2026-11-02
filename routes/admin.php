@@ -90,6 +90,9 @@ $router->middleware(['access:env.sites.operate'])->group(static function ($route
     $router->get('/sites/new', [NewSiteController::class, 'create'])->name('larena.env.admin.sites.new');
     $router->post('/sites/new/plan', [NewSiteController::class, 'plan'])->name('larena.env.admin.sites.plan');
     $router->post('/sites/new/run', [NewSiteController::class, 'run'])->name('larena.env.admin.sites.run');
+    // The new site's fields in the Framework property view (its port), and the plan of what it was filled for.
+    $router->post('/sites/new/port', [NewSiteController::class, 'port'])->name('larena.env.admin.sites.port');
+    $router->get('/sites/new/plan/{draft}', [NewSiteController::class, 'planDraft'])->where('draft', 'draft-[0-9a-f]{16}')->name('larena.env.admin.sites.plan.draft');
     $router->post('/sites/{domain}/plan', [SiteAdminController::class, 'plan'])->where('domain', $domain)->name('larena.env.admin.site.plan');
     $router->post('/sites/{domain}/run', [SiteAdminController::class, 'run'])->where('domain', $domain)->name('larena.env.admin.site.run');
     // A site's own domain pointed at this server, at either level (Panel plan, stage 7).

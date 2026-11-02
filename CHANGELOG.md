@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- The new-site wizard's fields are the Framework property view (`sf-property-view`, create mode) over the new site's own
+  port (`NewSitePropertyViewPort`, `POST /admin/server/sites/new/port`, `env.sites.operate`): collection
+  `env.new_site.<kind>`, the fields the kind takes in groups «Адрес», «PHP и база данных», «Приложение», «1С-Битрикс» and
+  «Резервная копия», with the server's choices and defaults. record.create plans site:add exactly as the form does, keeps
+  the values in the person's session as a draft and leads to its plan screen (`/admin/server/sites/new/plan/<draft>`); a
+  value the gateway would refuse, or a choice it does not offer, is said under its field before the server is asked. The
+  plain form stays as the view's fallback. An owner gets no owner field and cannot name one.
+
 - The Larena Panel 0.3.0 assembly: build.json takes Root 28b4be24 for the Framework assets, and the lock takes access
   050716f, admin d6c66967, audit b7041203 and notification 70e9ac62, the revisions Root pins.
 
