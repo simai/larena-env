@@ -63,7 +63,7 @@
         @if ($tab === 'overview')
             <section class="larena-panel larena-panel-padded" data-env-state="ok" aria-labelledby="env-site-facts">
                 <h2 id="env-site-facts">{{ __('larena-env::admin.site.facts') }}</h2>
-                <dl class="m-0" data-env-facts>
+                <dl class="m-0" style="display: block;" data-env-facts>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-answers="{{ $site->answersChecked ? ($site->answers ?? 'none') : 'unchecked' }}"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.answers') }}</dt><dd class="m-0 min-w-0 text-end">{{ __('larena-env::admin.sites.state.'.\Larena\Env\Admin\SiteState::of($site->answersChecked, $site->answers)) }}{{ $site->answers !== null ? ' · '.__('larena-env::admin.sites.answers_code', ['code' => (string) $site->answers]) : '' }}</dd></div>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.owner') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->owner ?? '—' }}</dd></div>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.profile') }}</dt><dd class="m-0 min-w-0 text-end">{{ __('larena-env::admin.new_site.profiles.'.$site->profile) }}</dd></div>
@@ -99,7 +99,7 @@
                 @if ($site->certificate === null)
                     <p>{{ __('larena-env::admin.certificate.none') }}</p>
                 @else
-                    <dl class="m-0" data-env-facts>
+                    <dl class="m-0" style="display: block;" data-env-facts>
                         <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.certificate.names') }}</dt><dd class="m-0 min-w-0 text-end">{{ implode(', ', $site->certificate->names) }}</dd></div>
                         <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.certificate.issuer') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->certificate->issuer ?? '—' }}</dd></div>
                         <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.certificate.not_after') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->certificate->notAfter ?? '—' }}</dd></div>
@@ -158,7 +158,7 @@
         @elseif ($tab === 'php')
             <section class="larena-panel larena-panel-padded" data-env-runtime aria-labelledby="env-site-runtime">
                 <h2 id="env-site-runtime">{{ __('larena-env::admin.runtime.title') }}</h2>
-                <dl class="m-0" data-env-facts>
+                <dl class="m-0" style="display: block;" data-env-facts>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.php') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->php }}</dd></div>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.runtime.service') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->service ?? '—' }}</dd></div>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.runtime.workers') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->workers === [] ? '—' : implode(', ', $site->workers) }}</dd></div>
@@ -170,7 +170,7 @@
                     @if ($phpSettings === [])
                         <p>{{ __('larena-env::admin.runtime.settings_none') }}</p>
                     @else
-                        <dl class="m-0" data-env-facts>
+                        <dl class="m-0" style="display: block;" data-env-facts>
                             @foreach ($phpSettings as $setting)
                                 <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-php-setting="{{ $setting->key }}"><dt class="color-on-surface-variant">{{ $setting->key }}</dt><dd class="m-0 min-w-0 text-end">{{ $setting->value }}@if ($setting->source !== null) · {{ $setting->source }}@endif</dd></div>
                             @endforeach
@@ -197,7 +197,7 @@
                 @if ($site->databaseEngine === null)
                     <p>{{ __('larena-env::admin.database.none') }}</p>
                 @else
-                    <dl class="m-0" data-env-facts>
+                    <dl class="m-0" style="display: block;" data-env-facts>
                         <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.database.engine') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->databaseEngine }}</dd></div>
                     </dl>
                     @if ($databases !== null)
@@ -256,7 +256,7 @@
         @elseif ($tab === 'releases')
             <section class="larena-panel larena-panel-padded" data-env-releases aria-labelledby="env-site-releases">
                 <h2 id="env-site-releases">{{ __('larena-env::admin.releases.title') }}</h2>
-                <dl class="m-0" data-env-facts>
+                <dl class="m-0" style="display: block;" data-env-facts>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.release') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->release ?? '—' }}</dd></div>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.site.previous_release') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->previousRelease ?? '—' }}</dd></div>
                 </dl>
@@ -348,7 +348,7 @@
         @elseif ($tab === 'access')
             <section class="larena-panel larena-panel-padded" data-env-access aria-labelledby="env-site-access">
                 <h2 id="env-site-access">{{ __('larena-env::admin.access.title') }}</h2>
-                <dl class="m-0" data-env-facts>
+                <dl class="m-0" style="display: block;" data-env-facts>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.owner') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->owner ?? __('larena-env::admin.access.own_account') }}</dd></div>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.access.runs_as') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->runsAs ?? '—' }}</dd></div>
                 </dl>

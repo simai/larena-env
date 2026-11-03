@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Facts are one column of rows on every screen: the admin's two-column rule for a panel's list put two rows side by side,
+  so on a phone a value such as «mysql» broke in the middle.
+
 - The panel assembly takes admin 6a13ba89 (a long site name in the heading stays whole on a phone, its marks wrap) and
   property 2c4c9193, which that admin needs, the revisions Root f1c978ab pins.
 

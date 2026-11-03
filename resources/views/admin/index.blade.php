@@ -51,7 +51,7 @@
         <div class="grid g-2 grid-col-1 lg:grid-col-2 m-bottom-2" style="align-items: start;">
             <section class="larena-panel p-2" style="margin: 0;" data-env-state="ok" aria-labelledby="env-server-status">
                 <h2 id="env-server-status" class="m-top-0">{{ __('larena-env::admin.status.server') }}</h2>
-                <dl class="m-0" data-env-facts>
+                <dl class="m-0" style="display: block;" data-env-facts>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.status.os') }}</dt><dd class="m-0" style="text-align: end;">{{ $overview->osId }} {{ $overview->osVersion }}</dd></div>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.status.env') }}</dt><dd class="m-0" style="text-align: end;">{{ $overview->envVersion }}</dd></div>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.status.php') }}</dt><dd class="m-0" style="text-align: end;">{{ implode(', ', $overview->phpVersions) }}</dd></div>

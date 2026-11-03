@@ -1,6 +1,6 @@
 {{-- What a safe update would change (simai-env 1.32.0), on the update screen and in its plan. --}}
 <div data-env-update-facts="{{ $update->target }}">
-    <dl class="m-0" data-env-facts>
+    <dl class="m-0" style="display: block;" data-env-facts>
         <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-update-current><dt class="color-on-surface-variant">{{ __('larena-env::admin.update.current') }}</dt><dd class="m-0 min-w-0 text-end">{{ $update->current ?? __('larena-env::admin.update.none') }}</dd></div>
         <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-update-available><dt class="color-on-surface-variant">{{ __('larena-env::admin.update.available') }}</dt><dd class="m-0 min-w-0 text-end">{{ $update->available ?? '—' }}</dd></div>
         @if ($update->backup !== null)

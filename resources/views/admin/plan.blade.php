@@ -21,7 +21,7 @@
         @foreach ($then ?? [] as $after)
             <p data-env-plan-then>{{ $after }}</p>
         @endforeach
-        <dl class="m-0" data-env-facts>
+        <dl class="m-0" style="display: block;" data-env-facts>
             <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.plan.command') }}</dt><dd class="m-0 min-w-0 text-end">{{ $plan->command }}</dd></div>
             <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.plan.target') }}</dt><dd class="m-0 min-w-0 text-end">{{ $plan->target ?? $target }}</dd></div>
             <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.plan.effects') }}</dt><dd class="m-0 min-w-0 text-end">{{ $plan->effects }}</dd></div>
@@ -29,7 +29,7 @@
         </dl>
         @if ($plan->args !== [])
             <h3 class="m-top-2 m-bottom-1 text-medium">{{ __('larena-env::admin.plan.arguments') }}</h3>
-            <dl class="m-0" data-env-facts>
+            <dl class="m-0" style="display: block;" data-env-facts>
                 @foreach ($plan->args as $name => $value)
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-plan-argument="{{ $name }}"><dt class="color-on-surface-variant">{{ $name }}</dt><dd class="m-0 min-w-0 text-end">{{ $value }}</dd></div>
                 @endforeach

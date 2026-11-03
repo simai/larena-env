@@ -29,7 +29,7 @@
             @if (($change ?? null) !== null)
                 @include('larena-env::admin.partials.timed-change', ['change' => $change, 'canKeep' => $canKeep ?? false, 'now' => $now ?? new \DateTimeImmutable()])
             @endif
-            <dl class="m-0" data-env-facts>
+            <dl class="m-0" style="display: block;" data-env-facts>
                 <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.plan.command') }}</dt><dd class="m-0 min-w-0 text-end">{{ $status->command }}</dd></div>
                 <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.job.started_at') }}</dt><dd class="m-0 min-w-0 text-end">{{ \Larena\Env\Server\Moment::human($status->createdAt) }}</dd></div>
                 <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.job.started_by') }}</dt><dd class="m-0 min-w-0 text-end">{{ $status->actor ?? '—' }}</dd></div>

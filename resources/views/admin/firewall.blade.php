@@ -17,7 +17,7 @@
             <p role="alert">{{ __('larena-env::admin.firewall.unreadable') }}</p>
         @else
             @include('larena-env::admin.partials.timed-change', ['change' => $pending, 'canKeep' => $allows['keep']])
-            <dl class="m-0" data-env-facts>
+            <dl class="m-0" style="display: block;" data-env-facts>
                 <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.firewall.state') }}</dt><dd class="m-0 min-w-0 text-end">{{ $status->active ? __('larena-env::admin.firewall.on') : __('larena-env::admin.firewall.off') }}</dd></div>
                 <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.firewall.default_incoming') }}</dt><dd class="m-0 min-w-0 text-end">{{ $status->defaultIncoming === null ? '—' : __('larena-env::admin.firewall.actions.'.($status->defaultIncoming === 'allow' ? 'allow' : 'deny')) }}</dd></div>
             </dl>

@@ -22,7 +22,7 @@
             @if (!$supported)
                 <p class="m-0 color-on-surface-variant" data-env-alerts-unsupported>{{ __('larena-env::admin.alerts.unsupported') }}</p>
             @else
-                <dl class="m-0" data-env-facts>
+                <dl class="m-0" style="display: block;" data-env-facts>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.alerts.kind') }}</dt><dd class="m-0" style="text-align: end;">{{ __('larena-env::admin.alerts.kinds.'.($channel['kind'] ?? 'off')) }}</dd></div>
                     @if (($channel['target_hint'] ?? null) !== null)
                         <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.alerts.target_hint') }}</dt><dd class="m-0 min-w-0" style="text-align: end; overflow-wrap: anywhere;">{{ $channel['target_hint'] }}</dd></div>
