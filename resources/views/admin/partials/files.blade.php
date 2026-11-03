@@ -5,7 +5,7 @@
         <p data-env-files-unsupported>{{ __('larena-env::admin.files.unsupported') }}</p>
     @else
         <p>{{ __('larena-env::admin.files.explain') }}</p>
-        <nav aria-label="{{ __('larena-env::admin.files.path') }}" data-env-files-crumbs style="display: flex; flex-wrap: wrap; gap: .25rem .5rem; overflow-wrap: anywhere;">
+        <nav aria-label="{{ __('larena-env::admin.files.path') }}" data-env-files-crumbs class="flex flex-wrap g-1" style="overflow-wrap: anywhere;">
             <a href="{{ $files['base'] }}&amp;path=.">{{ $domain }}</a>
             @foreach ($files['crumbs'] as $crumb)
                 <span aria-hidden="true">/</span>
@@ -15,7 +15,7 @@
                 <span aria-hidden="true">/</span><span>{{ basename($files['view']) }}</span>
             @endif
         </nav>
-        <p style="display: flex; flex-wrap: wrap; gap: .5rem 1rem;">
+        <p class="flex flex-wrap g-2">
             @if ($files['view'] !== null || $files['trashOpen'])
                 <a href="{{ $files['base'] }}&amp;path={{ rawurlencode($files['view'] !== null ? \Larena\Env\Files\FilePath::parent($files['view']) : $files['path']) }}" data-env-files-back>{{ __('larena-env::admin.files.back_to_folder') }}</a>
             @elseif ($files['parent'] !== null)
@@ -57,17 +57,17 @@
             @endif
         @elseif ($files['trash'] !== null)
             {{-- The trash: what was deleted or replaced, kept 14 days, put back where it was. --}}
-            <h3>{{ __('larena-env::admin.files.trash') }}</h3>
+            <h3 class="m-top-2 m-bottom-1 text-medium">{{ __('larena-env::admin.files.trash') }}</h3>
             <p>{{ __('larena-env::admin.files.trash_note') }}</p>
             @if ($files['trash'] === [])
                 <p data-env-files-trash-empty>{{ __('larena-env::admin.files.trash_empty') }}</p>
             @else
-                <ul class="larena-list" data-env-files-trash>
+                <ul class="m-0 p-0" style="list-style: none;" data-env-files-trash>
                     @foreach ($files['trash'] as $item)
-                        <li data-env-trash-item="{{ $item->id }}" style="display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; overflow-wrap: anywhere;">
+                        <li data-env-trash-item="{{ $item->id }}" class="flex flex-wrap items-cross-center g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" style="overflow-wrap: anywhere;">
                             <span>{{ $item->path }}@if ($item->deletedAt !== null) · {{ \Larena\Env\Server\Moment::human($item->deletedAt) }}@endif</span>
                             @if ($files['allows']['restore'])
-                                <form method="post" action="{{ route('larena.env.admin.site.files.plan', ['domain' => $domain], false) }}" data-env-files-op="restore">
+                                <form method="post" action="{{ route('larena.env.admin.site.files.plan', ['domain' => $domain], false) }}" class="m-0" data-env-files-op="restore">
                                     @csrf
                                     <input type="hidden" name="op" value="restore">
                                     <input type="hidden" name="id" value="{{ $item->id }}">
@@ -118,7 +118,7 @@
             @endif
 
             {{-- The changes of this folder: each form plans its change; nothing happens before the confirmation. --}}
-            <h3>{{ __('larena-env::admin.files.changes') }}</h3>
+            <h3 class="m-top-2 m-bottom-1 text-medium">{{ __('larena-env::admin.files.changes') }}</h3>
             @if ($files['allows']['mkdir'])
                 <form method="post" action="{{ route('larena.env.admin.site.files.plan', ['domain' => $domain], false) }}" class="larena-form" data-env-files-op="mkdir">
                     @csrf
@@ -140,7 +140,7 @@
                         <label for="env-files-upload">{{ __('larena-env::admin.files.upload') }}</label>
                         <input type="file" id="env-files-upload" name="file" required>
                     </div>
-                    <div class="larena-field" style="display: flex; align-items: center; gap: .5rem;">
+                    <div class="larena-field flex items-cross-center g-1">
                         <input type="checkbox" id="env-files-overwrite" name="overwrite" value="yes" style="width: auto; min-width: 1.25rem; min-height: 1.25rem;">
                         <label for="env-files-overwrite" style="margin: 0;">{{ __('larena-env::admin.files.overwrite') }}</label>
                     </div>
@@ -208,7 +208,7 @@
                         </div>
                     @endif
                     <input type="hidden" name="folder" value="{{ $files['path'] }}">
-                    <div class="larena-field" style="display: flex; align-items: center; gap: .5rem;">
+                    <div class="larena-field flex items-cross-center g-1">
                         <input type="checkbox" id="env-files-recursive" name="recursive" value="yes" style="width: auto; min-width: 1.25rem; min-height: 1.25rem;">
                         <label for="env-files-recursive" style="margin: 0;">{{ __('larena-env::admin.files.recursive') }}</label>
                     </div>

@@ -29,18 +29,18 @@
             @if (($change ?? null) !== null)
                 @include('larena-env::admin.partials.timed-change', ['change' => $change, 'canKeep' => $canKeep ?? false, 'now' => $now ?? new \DateTimeImmutable()])
             @endif
-            <dl class="larena-recipe-facts">
-                <div><dt>{{ __('larena-env::admin.plan.command') }}</dt><dd>{{ $status->command }}</dd></div>
-                <div><dt>{{ __('larena-env::admin.job.started_at') }}</dt><dd>{{ \Larena\Env\Server\Moment::human($status->createdAt) }}</dd></div>
-                <div><dt>{{ __('larena-env::admin.job.started_by') }}</dt><dd>{{ $status->actor ?? '—' }}</dd></div>
-                <div><dt>{{ __('larena-env::admin.job.exit_code') }}</dt><dd>{{ $status->exitCode ?? '—' }}</dd></div>
+            <dl class="m-0" data-env-facts>
+                <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.plan.command') }}</dt><dd class="m-0 min-w-0 text-end">{{ $status->command }}</dd></div>
+                <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.job.started_at') }}</dt><dd class="m-0 min-w-0 text-end">{{ \Larena\Env\Server\Moment::human($status->createdAt) }}</dd></div>
+                <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.job.started_by') }}</dt><dd class="m-0 min-w-0 text-end">{{ $status->actor ?? '—' }}</dd></div>
+                <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.job.exit_code') }}</dt><dd class="m-0 min-w-0 text-end">{{ $status->exitCode ?? '—' }}</dd></div>
             </dl>
             @if (! $status->state->isOver() && ($updating ?? null) !== null)
                 <p data-env-job-not-cancellable>{{ __('larena-env::admin.update.not_cancellable') }}</p>
             @elseif (! $status->state->isOver())
                 <form method="post" action="{{ route('larena.env.admin.job.cancel', ['job' => $status->jobId], false) }}" data-env-job-cancel>
                     @csrf
-                    <button type="submit">{{ __('larena-env::admin.job.cancel') }}</button>
+                    <button type="submit" class="larena-button">{{ __('larena-env::admin.job.cancel') }}</button>
                 </form>
             @endif
         </section>

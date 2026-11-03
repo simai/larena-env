@@ -8,36 +8,35 @@
     @elseif ($cron['jobs'] === [])
         <p data-env-cron-none>{{ __('larena-env::admin.cron.none') }}</p>
     @else
-        <ul class="larena-list" style="list-style: none; padding-inline-start: 0; display: grid; gap: .75rem;">
+        <ul class="m-0 p-0" style="list-style: none;">
             @foreach ($cron['jobs'] as $job)
-                <li data-env-cron-job="{{ $job->id }}" data-env-cron-enabled="{{ $job->enabled ? 'yes' : 'no' }}"
-                    style="display: grid; gap: .375rem; padding: .75rem; border: 1px solid var(--larena-line); border-radius: .625rem;">
-                    <strong data-env-cron-when>{{ $cron['when'][$job->id] ?? $job->schedule }}</strong>
-                    <code style="overflow-wrap: anywhere; white-space: pre-wrap;">{{ $job->command }}</code>
-                    <span>
+                <li data-env-cron-job="{{ $job->id }}" data-env-cron-enabled="{{ $job->enabled ? 'yes' : 'no' }}" class="grid g-1 p-y-2 border-top-1 border-top-solid border-outline-variant">
+                    <div class="flex flex-wrap items-cross-center g-1">
+                        <strong data-env-cron-when>{{ $cron['when'][$job->id] ?? $job->schedule }}</strong>
                         @if (!$job->enabled)
-                            {{ __('larena-env::admin.cron.off') }} ·
+                            <sf-badge appearance="tonal" status="neutral" text="{{ __('larena-env::admin.cron.off') }}"></sf-badge>
                         @endif
-                        @if ($job->lastRun === null)
-                            {{ __('larena-env::admin.cron.never_ran') }}
-                        @else
-                            <span @if (!$job->lastRun->succeeded()) role="alert" @endif data-env-cron-last="{{ $job->lastRun->succeeded() ? 'ok' : 'failed' }}">{{ $job->lastRun->succeeded()
+                        @if ($job->lastRun !== null)
+                            <sf-badge appearance="tonal" status="{{ $job->lastRun->succeeded() ? 'success' : 'error' }}" @if (!$job->lastRun->succeeded()) role="alert" @endif data-env-cron-last="{{ $job->lastRun->succeeded() ? 'ok' : 'failed' }}"
+                                text="{{ $job->lastRun->succeeded()
                                 ? __('larena-env::admin.cron.last_ok', ['time' => \Larena\Env\Server\Moment::human($job->lastRun->startedAt)])
-                                : __('larena-env::admin.cron.last_failed', ['time' => \Larena\Env\Server\Moment::human($job->lastRun->startedAt), 'code' => (string) ($job->lastRun->exitCode ?? '—')]) }}</span>
+                                : __('larena-env::admin.cron.last_failed', ['time' => \Larena\Env\Server\Moment::human($job->lastRun->startedAt), 'code' => (string) ($job->lastRun->exitCode ?? '—')]) }}"></sf-badge>
+                        @else
+                            <span class="text-small color-on-surface-variant">{{ __('larena-env::admin.cron.never_ran') }}</span>
                         @endif
-                    </span>
-                    <div style="display: flex; flex-wrap: wrap; gap: .5rem; align-items: center;">
+                    </div>
+                    <code class="mono text-small" style="overflow-wrap: anywhere; white-space: pre-wrap;">{{ $job->command }}</code>
+                    <div class="flex flex-wrap items-cross-center g-1">
                         @if ($cron['allows']['runs'])
-                            <a href="{{ route('larena.env.admin.site', ['domain' => $domain], false) }}?tab=cron&amp;runs={{ urlencode($job->id) }}#env-cron-runs" data-env-cron-runs-link="{{ $job->id }}"
-                                style="display: inline-flex; align-items: center; min-height: 2.75rem;">{{ __('larena-env::admin.cron.runs') }}</a>
+                            <a href="{{ route('larena.env.admin.site', ['domain' => $domain], false) }}?tab=cron&amp;runs={{ urlencode($job->id) }}#env-cron-runs" data-env-cron-runs-link="{{ $job->id }}" class="flex items-cross-center" style="min-height: 2.75rem;">{{ __('larena-env::admin.cron.runs') }}</a>
                         @endif
                         @foreach ($job->enabled ? ['disable', 'remove'] : ['enable', 'remove'] as $op)
                             @if ($cron['allows'][$op])
-                                <form method="post" action="{{ route('larena.env.admin.site.cron.plan', ['domain' => $domain], false) }}" data-env-cron-op="{{ $op }}">
+                                <form method="post" action="{{ route('larena.env.admin.site.cron.plan', ['domain' => $domain], false) }}" class="m-0" data-env-cron-op="{{ $op }}">
                                     @csrf
                                     <input type="hidden" name="op" value="{{ $op }}">
                                     <input type="hidden" name="id" value="{{ $job->id }}">
-                                    <button type="submit" style="min-height: 2.75rem;">{{ __('larena-env::admin.cron.operations.'.$op) }}</button>
+                                    <button type="submit" class="larena-button" style="min-height: 2.75rem;">{{ __('larena-env::admin.cron.operations.'.$op) }}</button>
                                 </form>
                             @endif
                         @endforeach

@@ -12,7 +12,7 @@
         <h2 id="env-plan">{{ __('larena-env::admin.plan.heading') }}</h2>
         <p>{{ $plan->description }}</p>
         @if (($replaces ?? null) !== null)
-            <h3>{{ __('larena-env::admin.plan.replaces') }}</h3>
+            <h3 class="m-top-2 m-bottom-1 text-medium">{{ __('larena-env::admin.plan.replaces') }}</h3>
             <p data-env-plan-replaces role="note">{{ $replaces }}</p>
         @endif
         @if (($update ?? null) !== null)
@@ -21,17 +21,17 @@
         @foreach ($then ?? [] as $after)
             <p data-env-plan-then>{{ $after }}</p>
         @endforeach
-        <dl class="larena-recipe-facts">
-            <div><dt>{{ __('larena-env::admin.plan.command') }}</dt><dd>{{ $plan->command }}</dd></div>
-            <div><dt>{{ __('larena-env::admin.plan.target') }}</dt><dd>{{ $plan->target ?? $target }}</dd></div>
-            <div><dt>{{ __('larena-env::admin.plan.effects') }}</dt><dd>{{ $plan->effects }}</dd></div>
-            <div><dt>{{ __('larena-env::admin.plan.lock') }}</dt><dd>{{ $plan->lock ?? '—' }}</dd></div>
+        <dl class="m-0" data-env-facts>
+            <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.plan.command') }}</dt><dd class="m-0 min-w-0 text-end">{{ $plan->command }}</dd></div>
+            <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.plan.target') }}</dt><dd class="m-0 min-w-0 text-end">{{ $plan->target ?? $target }}</dd></div>
+            <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.plan.effects') }}</dt><dd class="m-0 min-w-0 text-end">{{ $plan->effects }}</dd></div>
+            <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.plan.lock') }}</dt><dd class="m-0 min-w-0 text-end">{{ $plan->lock ?? '—' }}</dd></div>
         </dl>
         @if ($plan->args !== [])
-            <h3>{{ __('larena-env::admin.plan.arguments') }}</h3>
-            <dl class="larena-recipe-facts">
+            <h3 class="m-top-2 m-bottom-1 text-medium">{{ __('larena-env::admin.plan.arguments') }}</h3>
+            <dl class="m-0" data-env-facts>
                 @foreach ($plan->args as $name => $value)
-                    <div data-env-plan-argument="{{ $name }}"><dt>{{ $name }}</dt><dd>{{ $value }}</dd></div>
+                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-plan-argument="{{ $name }}"><dt class="color-on-surface-variant">{{ $name }}</dt><dd class="m-0 min-w-0 text-end">{{ $value }}</dd></div>
                 @endforeach
             </dl>
         @endif
@@ -40,7 +40,7 @@
             @foreach ($hidden as $field => $value)
                 <input type="hidden" name="{{ $field }}" value="{{ $value }}">
             @endforeach
-            <button type="submit" class="larena-button">{{ __('larena-env::admin.plan.confirm') }}</button>
+            <button type="submit" class="larena-button larena-button-primary">{{ __('larena-env::admin.plan.confirm') }}</button>
         </form>
         <p><a href="{{ $cancelUrl }}">{{ __('larena-env::admin.plan.cancel') }}</a></p>
     </section>

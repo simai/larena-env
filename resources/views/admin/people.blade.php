@@ -8,72 +8,83 @@
 @section('content')
     @include('larena-env::admin.partials.notes')
 
-    <section class="larena-panel larena-panel-padded" aria-labelledby="env-people" data-env-people>
-        <h2 id="env-people">{{ __('larena-env::admin.people.list') }}</h2>
-        <p>{{ __('larena-env::admin.people.explain') }}</p>
-        @if ($reasonText !== null)
-            <p role="alert">{{ $reasonText }}</p>
-        @endif
+    {{-- People and their spaces as rows (the approved panel layout): who, which space, act as them; then the spaces with
+         their disk and whether they are blocked. --}}
+    <section class="larena-panel" style="margin: 0 0 1rem;" aria-labelledby="env-people" data-env-people>
+        <div class="p-2 p-bottom-1">
+            <h2 id="env-people" class="m-0">{{ __('larena-env::admin.people.list') }}</h2>
+            <p class="m-0 m-top-1 color-on-surface-variant">{{ __('larena-env::admin.people.explain') }}</p>
+            @if ($reasonText !== null)
+                <p class="m-0 m-top-1 color-error" role="alert">{{ $reasonText }}</p>
+            @endif
+        </div>
         @if ($people === [])
-            <p data-env-people-empty>{{ __('larena-env::admin.people.empty') }}</p>
+            <p class="p-2 m-0 border-top-1 border-top-solid border-outline-variant color-on-surface-variant" data-env-people-empty>{{ __('larena-env::admin.people.empty') }}</p>
         @else
-            <table class="larena-table larena-table-stack">
-                <thead><tr><th>{{ __('larena-env::admin.people.person') }}</th><th>{{ __('larena-env::admin.people.space') }}</th><th></th></tr></thead>
-                <tbody>
+            <ul class="m-0 p-0" style="list-style: none;">
                 @foreach ($people as $person)
-                    <tr data-env-person="{{ $person['subject'] }}">
-                        <td data-label="{{ __('larena-env::admin.people.person') }}">{{ $person['label'] }}</td>
-                        <td data-label="{{ __('larena-env::admin.people.space') }}">
-                            <form method="post" action="{{ route('larena.env.admin.people.assign', [], false) }}">
-                                @csrf
-                                <input type="hidden" name="subject" value="{{ $person['subject'] }}">
-                                <label class="larena-visually-hidden" for="env-space-{{ $loop->index }}">{{ __('larena-env::admin.people.space') }}</label>
-                                <select id="env-space-{{ $loop->index }}" name="owner" style="width: 100%; min-height: 2.75rem; margin-bottom: .5rem; padding: 0 .75rem; border: 1px solid var(--larena-line); border-radius: .5rem; background: transparent; color: inherit; font: inherit;">
-                                    <option value="">{{ __('larena-env::admin.people.no_space') }}</option>
-                                    @foreach ($owners as $owner)
-                                        <option value="{{ $owner }}" @if ($person['owner'] === $owner) selected @endif>{{ $owner }}</option>
-                                    @endforeach
-                                    @if ($person['owner'] !== null && !in_array($person['owner'], $owners, true))
-                                        <option value="{{ $person['owner'] }}" selected>{{ $person['owner'] }}</option>
-                                    @endif
-                                </select>
-                                <button type="submit" class="larena-button">{{ __('larena-env::admin.people.save') }}</button>
-                            </form>
-                        </td>
-                        <td data-env-person-actions>
+                    <li class="flex flex-wrap items-cross-center g-2 p-x-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-person="{{ $person['subject'] }}">
+                        <div class="grow min-w-0" style="flex-basis: 12rem;">
+                            <div style="overflow-wrap: anywhere;">{{ $person['label'] }}</div>
+                            <div class="text-small color-on-surface-variant">{{ $person['owner'] === null ? __('larena-env::admin.people.no_space') : __('larena-env::admin.people.space').': '.$person['owner'] }}</div>
+                        </div>
+                        <form method="post" action="{{ route('larena.env.admin.people.assign', [], false) }}" class="flex flex-wrap items-cross-center g-1 m-0">
+                            @csrf
+                            <input type="hidden" name="subject" value="{{ $person['subject'] }}">
+                            <label class="larena-visually-hidden" for="env-space-{{ $loop->index }}">{{ __('larena-env::admin.people.space') }}</label>
+                            <select id="env-space-{{ $loop->index }}" name="owner" style="min-height: 2.75rem; max-width: 14rem;">
+                                <option value="">{{ __('larena-env::admin.people.no_space') }}</option>
+                                @foreach ($owners as $owner)
+                                    <option value="{{ $owner }}" @if ($person['owner'] === $owner) selected @endif>{{ $owner }}</option>
+                                @endforeach
+                                @if ($person['owner'] !== null && !in_array($person['owner'], $owners, true))
+                                    <option value="{{ $person['owner'] }}" selected>{{ $person['owner'] }}</option>
+                                @endif
+                            </select>
+                            <button type="submit" class="larena-button" style="min-height: 2.75rem;">{{ __('larena-env::admin.people.save') }}</button>
+                        </form>
+                        <div data-env-person-actions>
                             @if ($person['owner'] !== null)
-                                <form method="post" action="{{ route('larena.env.admin.people.act', [], false) }}">
+                                <form method="post" action="{{ route('larena.env.admin.people.act', [], false) }}" class="m-0">
                                     @csrf
                                     <input type="hidden" name="subject" value="{{ $person['subject'] }}">
-                                    <button type="submit" class="larena-button">{{ __('larena-env::admin.people.act_as') }}</button>
+                                    <button type="submit" class="larena-button" style="min-height: 2.75rem;">{{ __('larena-env::admin.people.act_as') }}</button>
                                 </form>
                             @endif
-                        </td>
-                    </tr>
+                        </div>
+                    </li>
                 @endforeach
-                </tbody>
-            </table>
+            </ul>
         @endif
-        <p>{{ __('larena-env::admin.people.levels') }} <a href="/admin/users">{{ __('larena-env::admin.people.users_link') }}</a></p>
+        <p class="p-2 m-0 border-top-1 border-top-solid border-outline-variant color-on-surface-variant text-small">{{ __('larena-env::admin.people.levels') }} <a href="/admin/users">{{ __('larena-env::admin.people.users_link') }}</a></p>
     </section>
 
     @if ($owners !== [])
-        <section class="larena-panel larena-panel-padded" aria-labelledby="env-owners" data-env-owners>
-            <h2 id="env-owners">{{ __('larena-env::admin.people.navigation') }}</h2>
-            @if ($canBlock ?? false)
-                <p>{{ __('larena-env::admin.people.block_explain') }}</p>
-            @endif
-            <ul class="larena-list">
+        <section class="larena-panel" style="margin: 0 0 1rem;" aria-labelledby="env-owners" data-env-owners>
+            <div class="p-2 p-bottom-1">
+                <h2 id="env-owners" class="m-0">{{ __('larena-env::admin.people.navigation') }}</h2>
+                @if ($canBlock ?? false)
+                    <p class="m-0 m-top-1 color-on-surface-variant">{{ __('larena-env::admin.people.block_explain') }}</p>
+                @endif
+            </div>
+            <ul class="m-0 p-0" style="list-style: none;">
                 @foreach ($owners as $owner)
-                    <li data-env-owner="{{ $owner }}" data-env-owner-blocked="{{ in_array($owner, $blockedOwners ?? [], true) ? 'yes' : 'no' }}">
-                        {{ $owner }}@if (isset($ownerDisk[$owner])) · {{ __('larena-env::admin.people.disk', ['size' => \Larena\Env\Server\Bytes::human($ownerDisk[$owner])]) }}@endif
-                        @if (in_array($owner, $blockedOwners ?? [], true)) · <strong>{{ __('larena-env::admin.people.blocked') }}</strong>@endif
+                    <li class="flex flex-wrap items-cross-center g-2 p-x-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-owner="{{ $owner }}" data-env-owner-blocked="{{ in_array($owner, $blockedOwners ?? [], true) ? 'yes' : 'no' }}">
+                        <div class="grow min-w-0 flex flex-wrap items-cross-center g-1" style="flex-basis: 12rem;">
+                            <span class="mono" style="overflow-wrap: anywhere;">{{ $owner }}</span>
+                            @if (in_array($owner, $blockedOwners ?? [], true))
+                                <sf-badge status="error" appearance="tonal" text="{{ __('larena-env::admin.people.blocked') }}"></sf-badge>
+                            @endif
+                            @if (isset($ownerDisk[$owner]))
+                                <span class="text-small color-on-surface-variant">{{ __('larena-env::admin.people.disk', ['size' => \Larena\Env\Server\Bytes::human($ownerDisk[$owner])]) }}</span>
+                            @endif
+                        </div>
                         @if ($canBlock ?? false)
-                            <form method="post" action="{{ route('larena.env.admin.people.owners.plan', [], false) }}" class="larena-inline-form">
+                            <form method="post" action="{{ route('larena.env.admin.people.owners.plan', [], false) }}" class="m-0">
                                 @csrf
                                 <input type="hidden" name="action" value="{{ in_array($owner, $blockedOwners ?? [], true) ? 'unblock' : 'block' }}">
                                 <input type="hidden" name="name" value="{{ $owner }}">
-                                <button type="submit" class="larena-button">{{ __('larena-env::admin.people.'.(in_array($owner, $blockedOwners ?? [], true) ? 'unblock' : 'block')) }}</button>
+                                <button type="submit" class="larena-button" style="min-height: 2.75rem;">{{ __('larena-env::admin.people.'.(in_array($owner, $blockedOwners ?? [], true) ? 'unblock' : 'block')) }}</button>
                             </form>
                         @endif
                     </li>

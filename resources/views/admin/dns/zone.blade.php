@@ -12,9 +12,9 @@
         <section class="larena-panel larena-panel-padded" data-env-dns-last aria-labelledby="env-dns-last">
             <h2 id="env-dns-last">{{ __('larena-env::admin.dns.last_change') }}</h2>
             <p>{{ __('larena-env::admin.dns.last_change_by', ['time' => \Larena\Env\Server\Moment::human($last['at']), 'count' => (string) count($last['changes'])]) }}</p>
-            <ul class="larena-list">
+            <ul class="m-0 p-0" style="list-style: none;">
                 @foreach ($last['changes'] as $done)
-                    <li>{{ __('larena-env::admin.dns.actions.'.$done['action']) }}: {{ ($done['after'] ?? $done['before'])?->line() }}</li>
+                    <li class="p-y-1 border-top-1 border-top-solid border-outline-variant">{{ __('larena-env::admin.dns.actions.'.$done['action']) }}: {{ ($done['after'] ?? $done['before'])?->line() }}</li>
                 @endforeach
             </ul>
             @if ($zone->editable())
@@ -46,7 +46,7 @@
                         <td>
                             @if ($zone->editable())
                                 <a href="?edit={{ $record->id }}#env-dns-edit">{{ __('larena-env::admin.dns.change') }}</a>
-                                <form method="post" action="{{ route('larena.env.admin.dns.zone.plan', ['zone' => $zone->id], false) }}" data-env-dns-delete="{{ $record->id }}">
+                                <form method="post" action="{{ route('larena.env.admin.dns.zone.plan', ['zone' => $zone->id], false) }}" class="m-0" data-env-dns-delete="{{ $record->id }}">
                                     @csrf
                                     <input type="hidden" name="action" value="delete">
                                     <input type="hidden" name="record" value="{{ $record->id }}">

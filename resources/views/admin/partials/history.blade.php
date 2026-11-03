@@ -7,7 +7,7 @@
             <p data-env-history-from-server>{{ __('larena-env::admin.history.from_server') }}</p>
         @endif
         @foreach ($history as $period => $line)
-            <h3>{{ __('larena-env::admin.history.'.$period) }}</h3>
+            <h3 class="m-top-2 m-bottom-1 text-medium">{{ __('larena-env::admin.history.'.$period) }}</h3>
             @if ($line->count === 0)
                 <p data-env-history-none="{{ $period }}">{{ __('larena-env::admin.history.none') }}</p>
             @else

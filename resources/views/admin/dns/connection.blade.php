@@ -14,20 +14,20 @@
             <p data-env-dns-connect>{{ __('larena-env::admin.dns.not_connected') }}</p>
             <p>{{ __('larena-env::admin.dns.token_help') }}</p>
         @else
-            <dl class="larena-recipe-facts">
-                <div><dt>{{ __('larena-env::admin.dns.provider') }}</dt><dd>{{ __('larena-env::admin.dns.providers.'.$connected->provider) }}</dd></div>
-                <div data-env-dns-token-tail><dt>{{ __('larena-env::admin.dns.token') }}</dt><dd>•••• {{ $connected->tokenTail }}</dd></div>
-                <div><dt>{{ __('larena-env::admin.dns.token_status') }}</dt><dd>{{ $connected->tokenStatus }}{{ $connected->tokenExpiresOn === null ? '' : ' · '.__('larena-env::admin.dns.token_expires', ['time' => \Larena\Env\Server\Moment::human($connected->tokenExpiresOn)]) }}</dd></div>
-                <div><dt>{{ __('larena-env::admin.dns.verified_at') }}</dt><dd>{{ \Larena\Env\Server\Moment::human($connected->verifiedAt) }}</dd></div>
+            <dl class="m-0" data-env-facts>
+                <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.dns.provider') }}</dt><dd class="m-0 min-w-0 text-end">{{ __('larena-env::admin.dns.providers.'.$connected->provider) }}</dd></div>
+                <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-dns-token-tail><dt class="color-on-surface-variant">{{ __('larena-env::admin.dns.token') }}</dt><dd class="m-0 min-w-0 text-end">•••• {{ $connected->tokenTail }}</dd></div>
+                <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.dns.token_status') }}</dt><dd class="m-0 min-w-0 text-end">{{ $connected->tokenStatus }}{{ $connected->tokenExpiresOn === null ? '' : ' · '.__('larena-env::admin.dns.token_expires', ['time' => \Larena\Env\Server\Moment::human($connected->tokenExpiresOn)]) }}</dd></div>
+                <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.dns.verified_at') }}</dt><dd class="m-0 min-w-0 text-end">{{ \Larena\Env\Server\Moment::human($connected->verifiedAt) }}</dd></div>
             </dl>
             @if ($reasonText !== null)
                 <p role="alert">{{ $reasonText }}</p>
             @elseif ($zones !== null)
-                <h3>{{ __('larena-env::admin.dns.token_zones') }}</h3>
+                <h3 class="m-top-2 m-bottom-1 text-medium">{{ __('larena-env::admin.dns.token_zones') }}</h3>
                 @if ($zones === [])
                     <p>{{ __('larena-env::admin.dns.zones_none') }}</p>
                 @else
-                    <ul class="larena-list" data-env-dns-token-zones>
+                    <ul class="m-0 p-0" style="list-style: none;" data-env-dns-token-zones>
                         @foreach ($zones as $zone)
                             <li>{{ $zone->name }} · {{ $zone->editable() ? __('larena-env::admin.dns.zone_editable') : __('larena-env::admin.dns.zone_read_only') }}@if ($zone->permissions !== []) · {{ implode(', ', $zone->permissions) }}@endif</li>
                         @endforeach

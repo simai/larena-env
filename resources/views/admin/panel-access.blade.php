@@ -22,9 +22,9 @@
             @elseif ($status->panelAccess === 'any')
                 <p data-env-panel-access-any>{{ __('larena-env::admin.panel_access.everyone') }}</p>
             @else
-                <ul class="larena-list" data-env-panel-access-list>
+                <ul class="m-0 p-0" style="list-style: none;" data-env-panel-access-list>
                     @foreach ($status->panelAccess as $item)
-                        <li style="overflow-wrap: anywhere;">{{ $item }}</li>
+                        <li class="p-y-1 border-top-1 border-top-solid border-outline-variant" style="overflow-wrap: anywhere;">{{ $item }}</li>
                     @endforeach
                 </ul>
             @endif
@@ -53,7 +53,7 @@
                     @csrf
                     <input type="hidden" name="op" value="access">
                     <input type="hidden" name="everyone" value="yes">
-                    <button type="submit" style="min-height: 2.75rem;">{{ __('larena-env::admin.panel_access.open_to_all') }}</button>
+                    <button type="submit" class="larena-button" style="min-height: 2.75rem;">{{ __('larena-env::admin.panel_access.open_to_all') }}</button>
                 </form>
             @endif
             <p>{{ __('larena-env::admin.timed.after_plan') }}</p>

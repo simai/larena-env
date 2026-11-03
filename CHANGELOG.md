@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- The rest of the panel's screens in the approved layout (owner's prototype 2026-11-02): state first as a coloured mark in a
+  section's head (services «all 4 running» or how many stopped, a stopped one first and its restart primary; the alert
+  channel, «the last one failed» in red; each update target current, available, blocked or unreadable); facts as rows on
+  every screen; lists as rows with marks (people and their spaces, a blocked space; firewall rules, a rule that cannot be
+  closed; a site's checks, PHP extensions, databases, backups, SFTP accounts, scheduled jobs with their last run in colour);
+  a site's actions as rows with their names at the block's size; sub-headings at the block's size; the site card's
+  sections wrap on a phone instead of scrolling, so the open one is always seen. Data attributes and texts are unchanged.
+
 - The new-site wizard's fields are the Framework property view (`sf-property-view`, create mode) over the new site's own
   port (`NewSitePropertyViewPort`, `POST /admin/server/sites/new/port`, `env.sites.operate`): collection
   `env.new_site.<kind>`, the fields the kind takes in groups «Адрес», «PHP и база данных», «Приложение», «1С-Битрикс» and
