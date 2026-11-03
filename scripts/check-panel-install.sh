@@ -284,7 +284,7 @@ _, proxied = post("/admin/server/sites/new/plan", {"_token": form_token(proxy), 
 assert 'data-env-plan="site:add"' in proxied and 'name="upstream-port" value="3000"' in proxied, "an app on a port is planned"
 # The same fields in the Framework property view, over the new site's port: record.create plans site:add and leads to
 # the plan screen, which is the one the form shows.
-assert '<sf-property-view collection="env.new_site.laravel" mode="create"' in laravel and "data-larena-record-fallback" in laravel, "the property view, the form its fallback"
+assert '<sf-view-properties collection="env.new_site.laravel" mode="create"' in laravel and "data-larena-record-fallback" in laravel, "the property view, the form its fallback"
 def port(payload):
     request = urllib.request.Request(base + "/admin/server/sites/new/port", data=json.dumps(payload).encode(),
         headers={"Content-Type": "application/json", "Accept": "application/json", "X-CSRF-TOKEN": csrf})

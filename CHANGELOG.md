@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- The new-site screen names the Framework's new tags (rename R3).
+
 - simai-env 1.36.0 (recorded answers set 12): certificates through DNS with Cloudflare. «DNS › Подключение» says whether
   the server keeps a Cloudflare token of its own (`ssl:dns-status`, `simai-ssl-dns/1`) and lets the administrator give it
   the panel's connected token or take it back (`ssl:dns-credentials`), planned and confirmed; the token is read from the

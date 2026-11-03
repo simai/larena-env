@@ -38,9 +38,9 @@
              the site and leads to that plan. The plain form is the view's fallback, hidden once the view has read its fields. --}}
         <div id="admin-record-view" data-larena-close-url="{{ route('larena.env.admin.index', [], false) }}">
         @if (($propertyView ?? null) !== null)
-            <sf-property-view collection="env.new_site.{{ $kind ?? 'static' }}" mode="create" size="1/2" data-env-new-site-view
+            <sf-view-properties collection="env.new_site.{{ $kind ?? 'static' }}" mode="create" size="1/2" data-env-new-site-view
                 aria-label="{{ __('larena-env::admin.new_site.heading') }}" empty-text="—"
-                data-larena-property-port="{{ $propertyView['port'] }}" data-larena-property-scope="{{ $propertyView['scope'] }}"></sf-property-view>
+                data-larena-property-port="{{ $propertyView['port'] }}" data-larena-property-scope="{{ $propertyView['scope'] }}"></sf-view-properties>
         @endif
         {{-- The fields the chosen kind asks: the server's own description of it where it lists its kinds (Panel plan 5.5). --}}
         <form @if (($propertyView ?? null) !== null) data-larena-record-fallback @endif method="post" action="{{ route('larena.env.admin.sites.plan', [], false) }}" class="larena-form" data-env-new-site>
