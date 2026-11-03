@@ -46,6 +46,13 @@ final readonly class RecordedAnswersGateway implements PanelGateway
         if ($owner !== null && (str_starts_with($request->command, 'firewall:') || str_starts_with($request->command, 'panel:') || str_starts_with($request->command, 'change:'))) {
             return $this->replay($request, 'refused.owner-admin-only.firewall-status.json');
         }
+        // And the token the server keeps for DNS certificates (simai-env 1.36.0); whether one is kept, anyone may read.
+        if ($owner !== null && $request->command === 'ssl:dns-credentials') {
+            return $this->replay($request, 'refused.owner-admin-only.ssl-dns-credentials.json');
+        }
+        if ($request->command === 'ssl:dns-status') {
+            return $this->replay($request, 'ssl-dns-status.json');
+        }
         if ($owner !== null && $domain !== null && $request->command !== 'site:add') {
             $own = $this->document("self-describe.owner-{$owner}.json");
             if (is_string($own)) {
@@ -92,6 +99,10 @@ final readonly class RecordedAnswersGateway implements PanelGateway
             $profile = $request->command === 'site:add' ? ($request->args['profile'] ?? null) : null;
             if (!$request->confirm && ($profile === 'proxy' || $profile === 'bitrix')) {
                 return "plan.{$name}-{$profile}.json";
+            }
+            // A certificate through DNS is recorded again (simai-env 1.36.0).
+            if (!$request->confirm && $request->command === 'ssl:letsencrypt' && ($request->args['challenge'] ?? null) === 'dns') {
+                return "plan.{$name}-dns.json";
             }
 
             return $request->confirm ? 'job-start.json' : "plan.{$name}.json";

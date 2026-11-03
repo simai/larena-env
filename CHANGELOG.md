@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- simai-env 1.36.0 (recorded answers set 12): certificates through DNS with Cloudflare. «DNS › Подключение» says whether
+  the server keeps a Cloudflare token of its own (`ssl:dns-status`, `simai-ssl-dns/1`) and lets the administrator give it
+  the panel's connected token or take it back (`ssl:dns-credentials`), planned and confirmed; the token is read from the
+  panel's connection at each step, never travels through the page and shows in the plan as «(stored)». Both the server's
+  and the DNS right are asked. Once the server keeps a token, getting a certificate offers the check through DNS and a
+  wildcard (`ssl:letsencrypt challenge, wildcard`); before that the form stays as it was.
+
 - Facts are one column of rows on every screen: the admin's two-column rule for a panel's list put two rows side by side,
   so on a phone a value such as «mysql» broke in the middle.
 

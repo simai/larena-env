@@ -88,7 +88,9 @@ enum SiteOperation: string
     public function fields(): array
     {
         return match ($this) {
-            self::CertificateIssue => ['email', 'redirect', 'hsts', 'staging'],
+            // How the certificate's domain is checked, and whether it covers every subdomain, where the server keeps a
+            // DNS token (simai-env 1.36.0); see dnsFields().
+            self::CertificateIssue => ['email', 'redirect', 'hsts', 'staging', 'challenge', 'wildcard'],
             self::Backup => ['db', 'files'],
             self::BackupRestoreDatabase, self::BackupExtractFiles => ['backup'],
             self::BackupVerify => ['backup'],
@@ -112,6 +114,9 @@ enum SiteOperation: string
     {
         return array_values(array_filter($this->fields(), fn (string $field): bool => $capabilities->takes($this->command(), $field)));
     }
+
+    /** The fields asked only where the server keeps a DNS token for certificates: without one a DNS check fails. */
+    public const array DNS_FIELDS = ['challenge', 'wildcard'];
 
     /** An SFTP account's own action names the account, not the site: the gateway checks it belongs to the site's owner. */
     public function namesSite(): bool

@@ -8,12 +8,16 @@ use Illuminate\Contracts\Translation\Translator;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Larena\Access\Runtime\AccessOperationAuthorizer;
 use Larena\Env\Dns\DnsChange;
 use Larena\Env\Dns\DnsFailed;
 use Larena\Env\Dns\DnsService;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\NoticeRedirect;
+use Larena\Env\Gateway\PanelCapabilities;
+use Larena\Env\Server\ServerOverviewReader;
 use Larena\Env\Server\SiteDetailsReader;
+use Larena\Env\Server\SiteExtrasReader;
 
 /**
  * The panel's DNS (Panel plan, stage 7). The system level connects a provider, reads its zones and changes records;
@@ -30,6 +34,9 @@ final readonly class DnsController
         private SiteDetailsReader $sites,
         private Factory $views,
         private Translator $translator,
+        private ?ServerOverviewReader $overviews = null,
+        private ?SiteExtrasReader $extras = null,
+        private ?AccessOperationAuthorizer $authorizer = null,
     ) {
     }
 
@@ -46,10 +53,20 @@ final readonly class DnsController
             }
         }
 
+        // Certificates through DNS (simai-env 1.36.0): whether the server keeps a token, and who may give it the panel's.
+        $actor = ResolvePanelActor::of($request);
+        $capabilities = $this->overviews?->read($actor)->overview->capabilities ?? PanelCapabilities::none();
+        $certificates = $capabilities->allows('ssl:dns-status') ? $this->extras?->dnsCertificates($actor) : null;
+
         return $this->views->make('larena-env::admin.dns.connection', [
             'connected' => $connected,
             'zones' => $zones,
             'reasonText' => $reason,
+            'certificatesSupported' => $capabilities->allows('ssl:dns-status'),
+            'certificates' => $certificates,
+            'certificatesAllowed' => $capabilities->allows('ssl:dns-credentials')
+                && ($this->authorizer?->authorize($request, 'env.server.operate')->isAllowed() ?? false)
+                && $this->authorizer->authorize($request, 'env.dns.operate')->isAllowed(),
             'notice' => $request->session()->get('larena_env_notice'),
         ]);
     }

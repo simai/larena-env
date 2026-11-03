@@ -66,6 +66,36 @@
                 </div>
             </form>
         </section>
+        @if ($certificatesSupported ?? false)
+            {{-- Certificates through DNS (simai-env 1.36.0): the server keeps its own copy of this token, root-only. --}}
+            <section class="larena-panel larena-panel-padded" id="env-dns-certificates" data-env-dns-certificates="{{ $certificates === null ? 'unknown' : ($certificates->configured ? 'stored' : 'none') }}" aria-labelledby="env-dns-certificates-title">
+                <h2 id="env-dns-certificates-title">{{ __('larena-env::admin.dns.certificates.title') }}</h2>
+                <p>{{ __('larena-env::admin.dns.certificates.explain') }}</p>
+                @if ($certificates === null)
+                    <p role="alert">{{ __('larena-env::admin.dns.certificates.unknown') }}</p>
+                @elseif ($certificates->configured)
+                    <p data-env-dns-certificates-state>{{ $certificates->updatedAt === null ? __('larena-env::admin.dns.certificates.stored') : __('larena-env::admin.dns.certificates.stored_at', ['time' => \Larena\Env\Server\Moment::human($certificates->updatedAt)]) }}</p>
+                @else
+                    <p data-env-dns-certificates-state>{{ __('larena-env::admin.dns.certificates.none') }}</p>
+                @endif
+                @if ($certificatesAllowed ?? false)
+                    <div class="flex flex-wrap g-1">
+                        <form method="post" action="{{ route('larena.env.admin.dns.certificates.plan', [], false) }}" class="m-0" data-env-dns-certificates-op="store">
+                            @csrf
+                            <input type="hidden" name="op" value="store">
+                            <button type="submit" class="larena-button">{{ $certificates?->configured ? __('larena-env::admin.dns.certificates.store_again') : __('larena-env::admin.dns.certificates.store') }}</button>
+                        </form>
+                        @if ($certificates?->configured)
+                            <form method="post" action="{{ route('larena.env.admin.dns.certificates.plan', [], false) }}" class="m-0" data-env-dns-certificates-op="remove">
+                                @csrf
+                                <input type="hidden" name="op" value="remove">
+                                <button type="submit" class="larena-button">{{ __('larena-env::admin.dns.certificates.remove') }}</button>
+                            </form>
+                        @endif
+                    </div>
+                @endif
+            </section>
+        @endif
         <section class="larena-panel larena-panel-padded" aria-labelledby="env-dns-disconnect">
             <h2 id="env-dns-disconnect">{{ __('larena-env::admin.dns.disconnect') }}</h2>
             <p>{{ __('larena-env::admin.dns.disconnect_explain') }}</p>

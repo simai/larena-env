@@ -56,6 +56,11 @@ final class PanelCommands
     private const string ALERT_TARGET = '/\A(?:https:\/\/[!-~]{1,500}|-?[0-9]{1,20}|@[A-Za-z0-9_]{5,32})\z/D';
     private const string BOT_TOKEN = '/\A[0-9]{5,12}:[A-Za-z0-9_-]{30,64}\z/D';
     private const string PERIOD = '/\A(?:day|week|month)\z/D';
+    // Certificates through Cloudflare DNS (simai-env 1.36.0): the API token is stored on the server once, sent as text
+    // that reaches the command as a file and is shown as (stored) everywhere; the challenge http or dns.
+    private const string DNS_PROVIDER = '/\A(?:cloudflare)\z/D';
+    private const string CF_TOKEN = '/\A[A-Za-z0-9_-]{30,64}\z/D';
+    private const string CHALLENGE = '/\A(?:http|dns)\z/D';
     // What a safe update replaces: simai-env itself, or the panel's build (simai-env 1.32.0).
     private const string UPDATE_TARGET = '/\A(?:env|panel)\z/D';
     // A service of the server's fixed list, only those it has (simai-env 1.33.0).
@@ -105,7 +110,8 @@ final class PanelCommands
             'required' => ['domain'], 'since' => '1.21.0', 'kind' => self::READ],
         // Actions of the certificates, backups, releases and services screens (simai-env 1.21.0).
         'ssl:letsencrypt' => ['args' => ['domain' => self::DOMAIN, 'email' => self::EMAIL, 'redirect' => self::YES_NO,
-            'hsts' => self::YES_NO, 'staging' => self::YES_NO], 'required' => ['domain', 'email'], 'since' => '1.21.0', 'kind' => self::ACTION],
+            'hsts' => self::YES_NO, 'staging' => self::YES_NO, 'challenge' => self::CHALLENGE, 'wildcard' => self::YES_NO],
+            'required' => ['domain', 'email'], 'since' => '1.21.0', 'kind' => self::ACTION],
         'ssl:renew' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => '1.21.0', 'kind' => self::ACTION],
         'backup:data' => ['args' => ['domain' => self::DOMAIN, 'db' => self::YES_NO, 'files' => self::YES_NO],
             'required' => ['domain'], 'since' => '1.21.0', 'kind' => self::ACTION],
@@ -204,6 +210,10 @@ final class PanelCommands
         // confirmation in time, the server puts the previous one back by itself.
         'change:confirm' => ['args' => ['change_id' => self::CHANGE_ID], 'required' => ['change_id'], 'since' => '1.35.0', 'kind' => self::ACTION],
         'change:status' => ['args' => ['change_id' => self::CHANGE_ID], 'required' => ['change_id'], 'since' => '1.35.0', 'kind' => self::READ],
+        // The token the server keeps for DNS-01 certificates, the administrator's alone, and whether one is kept (1.36.0).
+        'ssl:dns-credentials' => ['args' => ['provider' => self::DNS_PROVIDER, 'token' => self::CF_TOKEN, 'remove' => self::YES_NO],
+            'required' => ['provider'], 'since' => '1.36.0', 'kind' => self::ACTION],
+        'ssl:dns-status' => ['args' => [], 'required' => [], 'since' => '1.36.0', 'kind' => self::READ],
         'job:status' => ['args' => ['job_id' => self::JOB_ID], 'required' => ['job_id'], 'since' => '1.21.0', 'kind' => self::JOB],
         'job:log' => ['args' => ['job_id' => self::JOB_ID, 'after' => self::CURSOR], 'required' => ['job_id'], 'since' => '1.21.0', 'kind' => self::JOB],
         'job:cancel' => ['args' => ['job_id' => self::JOB_ID], 'required' => ['job_id'], 'since' => '1.21.0', 'kind' => self::JOB],
@@ -220,6 +230,8 @@ final class PanelCommands
         // An app on a local port and a 1C-Bitrix site's installer (simai-env 1.33.0).
         'site:add' => ['backup' => '1.30.0', 'upstream-port' => '1.33.0', 'upstream-path' => '1.33.0', 'websockets' => '1.33.0', 'bitrix-files' => '1.33.0'],
         'backup:data-schedule' => ['verify' => '1.30.0'],
+        // A certificate through Cloudflare DNS, also for every subdomain (simai-env 1.36.0).
+        'ssl:letsencrypt' => ['challenge' => '1.36.0', 'wildcard' => '1.36.0'],
     ];
 
     /**

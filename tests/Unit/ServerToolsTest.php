@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 // Panel plan stage 5 on the panel's side, on recorded answers: the services and the kinds of site the server makes
 // (simai-env 1.33.0, set 9), a site's scheduled jobs (1.34.0, set 10), the firewall and who reaches the panel, each
-// change undone by the server unless kept in time (1.35.0, set 11).
+// change undone by the server unless kept in time (1.35.0, set 11), the server's own DNS token for certificates (1.36.0, set 12).
 
 use Illuminate\Events\Dispatcher;
 use Illuminate\Filesystem\Filesystem;
@@ -240,6 +240,35 @@ $done = \Larena\Env\Operations\PanelJobStatus::fromData(['job_id' => 'j1', 'stat
     'result' => ['change_id' => 'c966b67eb35b', 'kind' => 'firewall', 'expires_at' => '2026-11-03T08:55:29Z']]);
 env_assert($done->change?->changeId === 'c966b67eb35b' && $done->change->kind === 'firewall' && $done->change->pending(), 'The job\'s result names the change to keep (job:status result).');
 env_assert(\Larena\Env\Operations\PanelJobStatus::fromData(['job_id' => 'j1', 'state' => 'succeeded', 'command' => 'site:deploy', 'args' => [], 'result' => null])->change === null, 'Other jobs have none.');
+
+// Certificates through DNS (simai-env 1.36.0, set 12): the server keeps a Cloudflare token of its own, the administrator's
+// alone to give or take back; an owner reads only whether there is one. A certificate through DNS needs it.
+foreach (['ssl:dns-credentials', 'ssl:dns-status'] as $command) {
+    env_assert(PanelCommands::since($command) === '1.36.0' && (new PanelCapabilities('1.36.0'))->allows($command) && !(new PanelCapabilities('1.35.0'))->allows($command),
+        "{$command} from simai-env 1.36.0.");
+}
+env_assert((new PanelCapabilities('1.36.0'))->takes('ssl:letsencrypt', 'challenge') && (new PanelCapabilities('1.36.0'))->takes('ssl:letsencrypt', 'wildcard')
+    && !(new PanelCapabilities('1.35.0'))->takes('ssl:letsencrypt', 'challenge'), 'A certificate through DNS from 1.36.0.');
+foreach ([['ssl:dns-credentials', ['provider' => 'cloudflare', 'token' => str_repeat('a', 40)]], ['ssl:dns-credentials', ['provider' => 'cloudflare', 'remove' => 'yes']],
+    ['ssl:letsencrypt', ['domain' => 'demo-php.test', 'email' => 'admin@example.com', 'challenge' => 'dns', 'wildcard' => 'yes']]] as [$command, $args]) {
+    env_assert($refusedWith(static fn () => PanelCommands::check($command, $args)) === null, "Accepted: {$command} ".json_encode($args));
+}
+foreach ([['ssl:dns-credentials', ['provider' => 'route53', 'token' => str_repeat('a', 40)]], ['ssl:dns-credentials', ['provider' => 'cloudflare', 'token' => 'short']],
+    ['ssl:dns-credentials', ['provider' => 'cloudflare', 'token' => str_repeat('a', 39).';']], ['ssl:dns-credentials', ['token' => str_repeat('a', 40)]],
+    ['ssl:letsencrypt', ['domain' => 'demo-php.test', 'email' => 'admin@example.com', 'challenge' => 'tls']]] as [$command, $args]) {
+    env_assert($refusedWith(static fn () => PanelCommands::check($command, $args)) === 'invalid_argument', "Refused: {$command} ".json_encode($args));
+}
+$dnsPlan = $operations->planCommand($admin, 'ssl:dns-credentials', ['provider' => 'cloudflare', 'token' => str_repeat('a', 40)]);
+env_assert($dnsPlan->plan?->command === 'ssl:dns-credentials' && !str_contains(json_encode($dnsPlan->plan, JSON_THROW_ON_ERROR), str_repeat('a', 40)), 'The plan shows the token as stored, never itself.');
+env_assert($operations->planCommand($owner, 'ssl:dns-credentials', ['provider' => 'cloudflare', 'remove' => 'yes'])->reason === 'not_allowed', 'An owner cannot give or take the server\'s token.');
+env_assert($operations->planCommand($admin, 'ssl:letsencrypt', ['domain' => 'demo-php.test', 'email' => 'admin@example.com', 'challenge' => 'dns'])->plan?->command === 'ssl:letsencrypt', 'A certificate through DNS is planned.');
+$noToken = $extras->dnsCertificates($admin);
+env_assert($noToken !== null && !$noToken->configured && $noToken->updatedAt === null, 'The recorded server keeps no token yet (simai-ssl-dns/1).');
+$withToken = \Larena\Env\Certificates\DnsCertificates::fromData(['schema' => 'simai-ssl-dns/1', 'providers' => [['provider' => 'cloudflare', 'configured' => true, 'updated_at' => '2026-11-03T10:00:00Z']]]);
+env_assert($withToken?->configured === true && $withToken->updatedAt === '2026-11-03T10:00:00Z', 'A token kept since then.');
+env_assert(\Larena\Env\Certificates\DnsCertificates::fromData(['schema' => 'simai-ssl-dns/2', 'providers' => []]) === null
+    && \Larena\Env\Certificates\DnsCertificates::fromData(['schema' => 'simai-ssl-dns/1', 'providers' => [['provider' => 'other', 'configured' => true]]])?->configured !== true,
+    'Another schema is not read; another provider is not Cloudflare.');
 
 // The screens on stubs of the admin's layout.
 $files = new Filesystem();

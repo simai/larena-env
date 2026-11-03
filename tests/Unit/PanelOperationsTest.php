@@ -30,8 +30,8 @@ env_assert(PanelCommands::kind('job:status') === PanelCommands::JOB, 'A job comm
 env_assert(PanelCommands::kind('site:remove') === null && PanelCommands::kind('self:bootstrap') === null, 'Commands this package may not send.');
 // 23 of the card, a new site and the owners; 10 of a site's files, 2 of its nginx directives and the confirmation of a
 // timed change (stage 6); 3 of the server's alerts (simai-env 1.31.0); the safe update (simai-env 1.32.0); 2 of the services,
-// 4 of a site's scheduled jobs, 4 of the firewall and the panel's access (stage 5).
-env_assert(count(PanelCommands::actions()) === 51, 'The card\'s actions, a new site, the owners, the files, the nginx directives, the alerts, the update, the services, the jobs and the firewall.');
+// 4 of a site's scheduled jobs, 4 of the firewall and the panel's access (stage 5); the DNS token for certificates (simai-env 1.36.0).
+env_assert(count(PanelCommands::actions()) === 52, 'The card\'s actions, a new site, the owners, the files, the nginx directives, the alerts, the update, the services, the jobs, the firewall and the DNS token.');
 // fs:archive's paths are the one list an argument may be: up to 100, each a path; nothing else takes a list.
 PanelCommands::check('fs:archive', ['domain' => 'demo-php.test', 'paths' => ['public', 'notes.txt'], 'name' => 'a.zip', 'format' => 'zip']);
 foreach ([['paths' => ['../x']], ['paths' => array_fill(0, 101, 'a')], ['paths' => []]] as $bad) {
@@ -125,6 +125,7 @@ foreach (SiteOperation::cases() as $operation) {
     env_assert(PanelCommands::kind($operation->command()) === PanelCommands::ACTION, "{$operation->value} is an action of the table.");
 }
 env_assert(SiteOperation::Backup->arguments('demo-php.test', ['db' => 'yes', 'files' => ''])  === ['domain' => 'demo-php.test', 'db' => 'yes'], 'An empty field is simply not sent.');
-env_assert(SiteOperation::CertificateIssue->fields() === ['email', 'redirect', 'hsts', 'staging'], 'The fields the certificate asks for.');
+env_assert(SiteOperation::CertificateIssue->fields() === ['email', 'redirect', 'hsts', 'staging', 'challenge', 'wildcard'], 'The fields the certificate asks for; the DNS ones only with a token on the server (1.36.0).');
+env_assert(SiteOperation::CertificateIssue->arguments('demo-php.test', ['challenge' => 'dns', 'wildcard' => 'yes']) === ['domain' => 'demo-php.test', 'challenge' => 'dns', 'wildcard' => 'yes'], 'A certificate through DNS.');
 
 echo "PanelOperationsTest passed.\n";

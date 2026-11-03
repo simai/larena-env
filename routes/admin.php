@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Larena\Env\Http\Controllers\AlertsController;
+use Larena\Env\Http\Controllers\DnsCertificatesController;
 use Larena\Env\Http\Controllers\DnsController;
 use Larena\Env\Http\Controllers\FirewallController;
 use Larena\Env\Http\Controllers\NewSiteController;
@@ -74,6 +75,10 @@ $router->middleware(['access:env.server.operate'])->group(static function ($rout
     $router->post('/firewall/run', [FirewallController::class, 'run'])->name('larena.env.admin.firewall.run');
     // Keeping a timed change in time, from the panel over the new rules (change:confirm).
     $router->post('/changes/keep', [FirewallController::class, 'keep'])->name('larena.env.admin.change.keep');
+    // The panel's Cloudflare token given to the server for certificates through DNS, or taken back (simai-env 1.36.0):
+    // the server's change made with the DNS connection, so both rights.
+    $router->post('/dns/certificates/plan', [DnsCertificatesController::class, 'plan'])->middleware('access:env.dns.operate')->name('larena.env.admin.dns.certificates.plan');
+    $router->post('/dns/certificates/run', [DnsCertificatesController::class, 'run'])->middleware('access:env.dns.operate')->name('larena.env.admin.dns.certificates.run');
 });
 $router->middleware(['access:env.sites.operate'])->group(static function ($router): void {
     $router->post('/alerts/ack/plan', [AlertsController::class, 'ackPlan'])->name('larena.env.admin.alerts.ack.plan');

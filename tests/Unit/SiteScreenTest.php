@@ -69,7 +69,7 @@ env_assert($site->profile === 'generic' && $site->php === '8.3' && $site->ssl ==
 env_assert($site->certificate === null && $site->backupSchedule?->time === '03:30' && $site->backupSchedule->keep === 7 && $site->backupSchedule->verify === false
     && $site->release === null, 'No certificate, a daily backup at 03:30 kept 7, not checked, no release.');
 env_assert($site->lastVerify?->ok === true && $site->lastVerify->restoreTest && $site->lastVerify->backup === '20260101-000000', 'The server\'s last check of a copy (simai-env 1.30.0).');
-env_assert(count($site->backups) === 1 && $site->backups[0]->name === '20261103-085330' && $site->backups[0]->sizeBytes === 4361, 'A backup is named by its own name, not its path.');
+env_assert(count($site->backups) === 1 && $site->backups[0]->name === '20261103-135504' && $site->backups[0]->sizeBytes === 4360, 'A backup is named by its own name, not its path.');
 env_assert($site->answersChecked && $site->diskBytes !== null, 'Whether it answers and its disk (simai-env 1.27.0).');
 env_assert($site->backups[0]->parts === ['config', 'db', 'files'] && $site->backups[0]->encrypted === false, 'What the backup holds.');
 $typed = serialize($site);
@@ -122,12 +122,12 @@ env_assert(substr_count($ok, 'data-env-tab=') === count(\Larena\Env\Http\Control
 // Backups have their tab: the list, «Back up now», and restoring and checking only where the server has them.
 $older = \Larena\Env\Gateway\PanelCapabilities::fromHostDescription(['simai_env' => ['version' => '1.27.0']]);
 $backups = $screen(['site' => $site, 'tab' => 'backups', 'tabOperations' => $onTab('backups', $older)]);
-env_assert(str_contains($backups, 'data-env-backup="20261103-085330"') && str_contains($backups, '4.3 KB') && str_contains($backups, 'data-env-operation="backup"'), 'The backups and «Back up now».');
+env_assert(str_contains($backups, 'data-env-backup="20261103-135504"') && str_contains($backups, '4.3 KB') && str_contains($backups, 'data-env-operation="backup"'), 'The backups and «Back up now».');
 env_assert(!str_contains($backups, 'data-env-operation="backup-restore-database"'), 'No restore while the server\'s gateway has none.');
 $more = \Larena\Env\Gateway\PanelCapabilities::fromHostDescription(['simai_env' => ['version' => '1.27.0'], 'gate' => ['commands' => ['backup:data', 'backup:data-restore', 'backup:data-schedule', 'site:db-rotate', 'site:php-ini-set', 'access:create-project', 'access:disable']]]);
 $restore = $screen(['site' => $site, 'tab' => 'backups', 'tabOperations' => $onTab('backups', $more)]);
 env_assert(str_contains($restore, 'data-env-operation="backup-restore-database"') && str_contains($restore, 'data-env-operation="backup-extract-files"')
-    && str_contains($restore, '<option value="20261103-085330">') && str_contains($restore, 'data-env-restore-note'), 'Restoring chooses a backup and says a copy is taken first.');
+    && str_contains($restore, '<option value="20261103-135504">') && str_contains($restore, 'data-env-restore-note'), 'Restoring chooses a backup and says a copy is taken first.');
 env_assert(str_contains($restore, 'data-env-operation="backup-schedule"') && str_contains($restore, 'type="time"'), 'The daily backup, at a time of day.');
 // simai-env 1.30.0: each new copy is checked, asked where the server takes it, on by default; the last check is said.
 $checked = \Larena\Env\Server\SiteDetails::fromDescription(['schema' => 'simai-site/1', 'domain' => 'demo-php.test', 'profile' => 'generic', 'php' => '8.3', 'ssl' => 'none',
@@ -160,6 +160,10 @@ env_assert(!str_contains($ok, 'data-env-log=') && !str_contains($ok, 'data-env-o
 $domains = $screen(['site' => $site, 'tab' => 'domains', 'tabOperations' => $onTab('domains')]);
 env_assert(str_contains($domains, 'data-env-certificate="none"') && str_contains($domains, 'data-env-operation="certificate-issue"')
     && !str_contains($domains, 'data-env-operation="certificate-renew"'), 'A site without a certificate says so and offers to get one, not to renew.');
+// Through DNS only when the server keeps a token for it (simai-env 1.36.0).
+env_assert(!str_contains($domains, 'data-env-challenge') && !str_contains($domains, 'name="wildcard"'), 'Without a token on the server: no DNS choices.');
+$throughDns = $screen(['site' => $site, 'tab' => 'domains', 'tabOperations' => $onTab('domains'), 'dnsCertificates' => true]);
+env_assert(str_contains($throughDns, 'data-env-challenge') && str_contains($throughDns, '<option value="dns">') && str_contains($throughDns, 'name="wildcard"'), 'With one: the check through DNS and a wildcard.');
 $php = $screen(['site' => $site, 'tab' => 'php', 'tabOperations' => $onTab('php', $older),
     'phpSettings' => [\Larena\Env\Server\PhpSetting::fromData(['key' => 'memory_limit', 'value' => '256M', 'source' => 'site'])],
     'phpExtensions' => [\Larena\Env\Server\PhpExtension::fromData(['name' => 'intl', 'enabled' => true])]]);
@@ -331,7 +335,7 @@ foreach (['site', 'plan', 'job', 'new-site', 'people', 'partials/notes', 'partia
 $extras = new \Larena\Env\Server\SiteExtrasReader($gateway);
 $envUpdate = $extras->updatePlan(new PanelActor($user), 'env');
 $panelUpdate = $extras->updatePlan(new PanelActor($user), 'panel');
-env_assert($envUpdate instanceof \Larena\Env\Update\UpdatePlan && $envUpdate->current === '1.35.0' && $envUpdate->available === '9.9.0'
+env_assert($envUpdate instanceof \Larena\Env\Update\UpdatePlan && $envUpdate->current === '1.36.0' && $envUpdate->available === '9.9.0'
     && $envUpdate->updateAvailable && $envUpdate->blocked === null && $envUpdate->notes === [['version' => '9.9.0', 'text' => '- An example release note.']]
     && count($envUpdate->checks) === 4 && $envUpdate->notesUrl !== null, 'simai-env\'s update reads: the versions, the notes and the sites it checks.');
 env_assert($panelUpdate instanceof \Larena\Env\Update\UpdatePlan && $panelUpdate->current === null && $panelUpdate->blocked === 'not_installed'

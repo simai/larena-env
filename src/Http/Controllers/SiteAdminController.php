@@ -133,6 +133,8 @@ final readonly class SiteAdminController
             'warningsBack' => $request->getRequestUri(),
             'canAcknowledge' => $capabilities->allows('self:alerts-ack') && $this->canOperate($request),
             'capabilities' => $capabilities,
+            // Whether a certificate may be checked through DNS: the server keeps a Cloudflare token (simai-env 1.36.0).
+            'dnsCertificates' => $ask('ssl:dns-status', 'domains') && $this->extras->dnsCertificates($actor)?->configured === true,
             'tabOperations' => array_values(array_filter($operations, static fn (SiteOperation $operation): bool => $operation->tab() === $tab)),
             'source' => $result->source,
             'site' => $site,
@@ -329,7 +331,13 @@ final readonly class SiteAdminController
     private function input(Request $request, PanelActor $actor, SiteOperation $operation): array
     {
         $input = [];
-        foreach ($operation->fieldsOn($this->overviews->read($actor)->overview->capabilities ?? PanelCapabilities::none()) as $field) {
+        $capabilities = $this->overviews->read($actor)->overview->capabilities ?? PanelCapabilities::none();
+        $dns = $operation === SiteOperation::CertificateIssue && $capabilities->allows('ssl:dns-status')
+            && $this->extras->dnsCertificates($actor)?->configured === true;
+        foreach ($operation->fieldsOn($capabilities) as $field) {
+            if (!$dns && in_array($field, SiteOperation::DNS_FIELDS, true)) {
+                continue;
+            }
             $value = $request->input($field);
             if (is_string($value) && $value !== '') {
                 $input[$field] = $value;

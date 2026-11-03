@@ -21,6 +21,12 @@ use Larena\Env\Dns\DnsZone;
 use Larena\Env\Dns\SiteDns;
 
 require_once dirname(__DIR__).'/Support/env-test.php';
+
+/** @param array<string, mixed> $parameters */
+function route(string $name, array $parameters = [], bool $absolute = true): string
+{
+    return '/admin/server/'.$name.($parameters === [] ? '' : '/'.implode('/', $parameters));
+}
 require_once dirname(__DIR__).'/Support/AdminPresenceHost.php';
 
 $refuses = static function (callable $call, string $reason): bool {
@@ -211,8 +217,55 @@ env_assert($refuses(static fn () => $dns->planRecord($found, DnsChange::CREATE, 
 // A plan survives the session as plain data.
 env_assert(DnsChange::fromArray($txt[0]->toArray())->after?->line() === $txt[0]->after?->line(), 'A planned change round-trips.');
 
+// Certificates through DNS (simai-env 1.36.0): the connection's token is handed to the server, planned and confirmed;
+// the page never carries it. Without a Cloudflare connection, or with a token the server would not take, nothing is asked.
+$translator = new class implements Illuminate\Contracts\Translation\Translator {
+    public function get($key, array $replace = [], $locale = null)
+    {
+        return $key;
+    }
+
+    public function choice($key, $number, array $replace = [], $locale = null)
+    {
+        return $key;
+    }
+
+    public function getLocale()
+    {
+        return 'en';
+    }
+
+    public function setLocale($locale): void
+    {
+    }
+};
+$files = new Illuminate\Filesystem\Filesystem();
+$engines = new Illuminate\View\Engines\EngineResolver();
+$engines->register('blade', static fn () => new Illuminate\View\Engines\FileEngine($files));
+$views = new Illuminate\View\Factory($engines, new Illuminate\View\FileViewFinder($files, []), new Illuminate\Events\Dispatcher());
+$views->addExtension('blade.php', 'blade');
+$views->addNamespace('larena-env', dirname(__DIR__, 2).'/resources/views');
+$certificates = new Larena\Env\Http\Controllers\DnsCertificatesController(
+    new Larena\Env\Operations\PanelOperations(new Larena\Env\Gateway\RecordedAnswersGateway(env_recorded_path())), $connection, $views, $translator);
+$asked = static function (string $op, string $as = 'admin@stand.test'): Illuminate\Http\Request {
+    $request = Illuminate\Http\Request::create('/admin/server/dns/certificates/plan', 'POST', ['op' => $op]);
+    $request->attributes->set(Larena\Env\Http\Middleware\ResolvePanelActor::ATTRIBUTE, new Larena\Env\Gateway\PanelActor($as));
+
+    return $request;
+};
+$stored = $certificates->plan($asked('store'));
+env_assert($stored instanceof Illuminate\View\View && $stored->getData()['plan']->command === 'ssl:dns-credentials' && $stored->getData()['hidden'] === ['op' => 'store']
+    && !str_contains(json_encode($stored->getData()['hidden'], JSON_THROW_ON_ERROR), $token), 'Giving the token is planned; the page carries the step, not the token.');
+env_assert($certificates->plan($asked('remove')) instanceof Illuminate\View\View, 'Taking it back is planned too.');
+$run = $certificates->run($asked('store'));
+env_assert($run->getTargetUrl() !== '' && str_contains($run->getTargetUrl(), 'larena.env.admin.job'), 'Confirmed, a job: '.$run->getTargetUrl());
+$wrong = $certificates->plan($asked('other'));
+env_assert($wrong instanceof Illuminate\Http\RedirectResponse && str_ends_with($wrong->getTargetUrl(), '#env-dns-certificates'), 'Anything else goes back to the connection.');
+
 // Disconnecting forgets the token.
 $dns->disconnect('user:admin_identity:1');
 env_assert($connection->token() === null && $dns->connection() === null, 'The token is gone.');
+env_assert(str_ends_with($certificates->plan($asked('store'))->getTargetUrl(), '#env-dns-certificates') && $certificates->plan($asked('remove')) instanceof Illuminate\View\View,
+    'Without a connection nothing is given; the server\'s copy can still be taken back.');
 
 echo "DnsTest passed\n";

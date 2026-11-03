@@ -144,6 +144,14 @@ final readonly class SiteExtrasReader
         return $data === null ? null : \Larena\Env\Firewall\FirewallStatus::fromData($data);
     }
 
+    /** Whether the server keeps a Cloudflare token for certificates through DNS (simai-env 1.36.0). */
+    public function dnsCertificates(PanelActor $actor): ?\Larena\Env\Certificates\DnsCertificates
+    {
+        $data = $this->data($actor, 'ssl:dns-status', []);
+
+        return $data === null ? null : \Larena\Env\Certificates\DnsCertificates::fromData($data);
+    }
+
     /**
      * @template T
      *

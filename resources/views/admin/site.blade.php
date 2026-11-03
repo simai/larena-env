@@ -385,6 +385,7 @@
                         <input type="hidden" name="operation" value="{{ $operation->value }}">
                         <h3 class="m-0 m-bottom-1 text-medium">{{ __('larena-env::admin.operations.'.$operation->value) }}</h3>
                         @foreach (($capabilities ?? null) === null ? $operation->fields() : $operation->fieldsOn($capabilities) as $field)
+                            @continue(!($dnsCertificates ?? false) && in_array($field, \Larena\Env\Operations\SiteOperation::DNS_FIELDS, true))
                             <div class="larena-field">
                                 <label for="env-{{ $operation->value }}-{{ $field }}">{{ __('larena-env::admin.fields.'.$field) }}</label>
                                 @if ($field === 'email')
@@ -416,6 +417,12 @@
                                         <option value="yes" @if ($site->backupSchedule?->verify !== false) selected @endif>{{ __('larena-env::admin.yes') }}</option>
                                         <option value="no" @if ($site->backupSchedule?->verify === false) selected @endif>{{ __('larena-env::admin.no') }}</option>
                                     </select>
+                                @elseif ($field === 'challenge')
+                                    <select id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}" aria-describedby="env-{{ $operation->value }}-{{ $field }}-hint" data-env-challenge>
+                                        <option value="http">{{ __('larena-env::admin.fields.challenge_http') }}</option>
+                                        <option value="dns">{{ __('larena-env::admin.fields.challenge_dns') }}</option>
+                                    </select>
+                                    <p id="env-{{ $operation->value }}-{{ $field }}-hint" class="m-0 text-small color-on-surface-variant">{{ __('larena-env::admin.fields.challenge_hint') }}</p>
                                 @elseif ($field === 'keep')
                                     <input type="number" id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}" min="1" max="90" value="{{ $site->backupSchedule?->keep ?? '7' }}">
                                 @elseif (in_array($field, ['login', 'name', 'value'], true))

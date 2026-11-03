@@ -48,7 +48,7 @@ $names = array_keys($with['routes']);
 sort($names);
 env_assert($names === ['larena.env.admin.alerts.ack.plan', 'larena.env.admin.alerts.ack.run', 'larena.env.admin.alerts.channel',
     'larena.env.admin.alerts.channel.plan', 'larena.env.admin.alerts.channel.run', 'larena.env.admin.alerts.test.plan', 'larena.env.admin.alerts.test.run',
-    'larena.env.admin.change.keep', 'larena.env.admin.dns', 'larena.env.admin.dns.connection', 'larena.env.admin.dns.connection.addresses',
+    'larena.env.admin.change.keep', 'larena.env.admin.dns', 'larena.env.admin.dns.certificates.plan', 'larena.env.admin.dns.certificates.run', 'larena.env.admin.dns.connection', 'larena.env.admin.dns.connection.addresses',
     'larena.env.admin.dns.connection.disconnect', 'larena.env.admin.dns.connection.save', 'larena.env.admin.dns.run', 'larena.env.admin.dns.zone',
     'larena.env.admin.dns.zone.plan', 'larena.env.admin.dns.zone.undo', 'larena.env.admin.firewall', 'larena.env.admin.firewall.plan', 'larena.env.admin.firewall.run',
     'larena.env.admin.index', 'larena.env.admin.job', 'larena.env.admin.job.cancel', 'larena.env.admin.overview',
@@ -84,9 +84,10 @@ foreach ($with['routes'] as $name => $route) {
     $update = str_starts_with($name, 'larena.env.admin.update');
     $updateChanges = $update && $name !== 'larena.env.admin.update';
     // The services, the firewall and who reaches the panel are the administrator's (Panel plan 5.1–5.3); keeping a
-    // timed change is a change of the server too. A site's own scheduled jobs are a site's (5.4).
+    // timed change is a change of the server too, and so is giving the server the DNS token for certificates (1.36.0).
+    // A site's own scheduled jobs are a site's (5.4).
     $serverTools = str_starts_with($name, 'larena.env.admin.services') || str_starts_with($name, 'larena.env.admin.firewall')
-        || $name === 'larena.env.admin.panel.access' || $name === 'larena.env.admin.change.keep';
+        || $name === 'larena.env.admin.panel.access' || $name === 'larena.env.admin.change.keep' || str_starts_with($name, 'larena.env.admin.dns.certificates');
     $serverToolChanges = $serverTools && (str_ends_with($name, '.plan') || str_ends_with($name, '.run') || $name === 'larena.env.admin.change.keep');
     // Changing a site is a right of its own: a new site, a site's action and stopping a job ask for it.
     $changes = !$people && !$dns && !$nginx && !$channel && !$update && !$serverTools && (str_ends_with($name, '.plan') || str_ends_with($name, '.run') || str_ends_with($name, '.cancel')
