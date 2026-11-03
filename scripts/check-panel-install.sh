@@ -148,10 +148,10 @@ roots = [item["key"] for item in items]
 print("menu roots:", roots)
 assert roots == ["sites", "journal", "users", "server", "settings"], roots
 children = {item["key"]: [row["key"] for row in item.get("children", []) if row.get("kind") == "page"] for item in items}
-# The services came with simai-env 1.33.0; the firewall and who reaches the panel wait for theirs, unlisted and unshown.
-assert sorted(children["server"]) == ["auth.diagnostics", "env.dns", "env.server.overview", "env.services", "env.update"], children
+# The services came with simai-env 1.33.0, the firewall and who reaches the panel with 1.35.0.
+assert sorted(children["server"]) == ["auth.diagnostics", "env.dns", "env.firewall", "env.server.overview", "env.services", "env.update"], children
 assert sorted(children["users"]) == ["auth.users", "env.people"], children
-assert sorted(children["settings"]) == ["admin.settings_general", "admin.site_backgrounds", "env.alerts.channel", "env.dns.connection"], children
+assert sorted(children["settings"]) == ["admin.settings_general", "admin.site_backgrounds", "env.alerts.channel", "env.dns.connection", "env.panel.access"], children
 assert "site-switch" not in json.dumps(menu.get("capabilities", [])), "the panel has no site switcher"
 hrefs = [item["href"] for item in items if item.get("href")] + [row["href"] for item in items for row in item.get("children", []) if row.get("href")]
 for href in hrefs:
@@ -235,11 +235,19 @@ _, refused = post("/admin/server/services/plan", {"_token": form_token(services)
 assert 'data-env-plan=' not in refused, "no reread where the service cannot"
 _, journal = get("/admin/server/services?log=nginx")
 assert 'data-env-service-log="nginx"' in journal and "Started nginx.service" in journal, "the journal's lines"
-# The firewall and who reaches the panel (1.35.0, not yet released): the screens open and say a newer simai-env is needed.
+# The firewall and who reaches the panel (simai-env 1.35.0, set 11): the rules with the protected ones locked, the
+# blocked address with the blocks, each change by plan; no panel on the recording stand, so its list is not known there.
 status, walls = get("/admin/server/firewall")
-assert status == 200 and "data-env-firewall-unsupported" in walls, "the firewall waits for its release"
+assert status == 200 and 'data-env-firewall="on"' in walls and 'data-env-firewall-rule="efdea676"' in walls and walls.count("data-env-firewall-locked") == 3, "the firewall's rules"
+assert 'data-env-firewall-block="203.0.113.7"' in walls and 'data-env-firewall-rule="8da948cb"' not in walls, "a blocked address is shown with the blocks"
+_, blocking = post("/admin/server/firewall/plan", {"_token": form_token(walls), "op": "block", "address": "198.51.100.20", "ttl": "3600"})
+assert 'data-env-plan="firewall:block"' in blocking and 'name="args[ttl]" value="3600"' in blocking, "a block is planned"
+_, removing = post("/admin/server/firewall/plan", {"_token": form_token(walls), "op": "rule-remove", "id": "dbcc1294"})
+assert 'data-env-plan=' not in removing and "data-env-firewall" in removing, "SSH's rule cannot be removed"
+_, closing = post("/admin/server/firewall/plan", {"_token": form_token(walls), "op": "rule-add", "port": "443", "proto": "tcp", "action": "deny", "from": ""})
+assert 'data-env-plan=' not in closing, "443 cannot be closed for everyone"
 status, reach = get("/admin/server/panel-access")
-assert status == 200 and "data-env-panel-access-unsupported" in reach, "who reaches the panel waits for its release"
+assert status == 200 and 'data-env-panel-access="unknown"' in reach, "who reaches the panel: no panel on the recording stand"
 print("stage 4:", "ok", unread, "unread")
 
 # The second level: a person at the user level (the editor role), made the way an administrator's tooling would.

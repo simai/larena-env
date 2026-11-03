@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-// Panel plan stage 5 on the panel's side: the services, a site's scheduled jobs, the firewall and who reaches the panel,
-// and the kinds of site the server makes. No simai-env release has the commands yet: they are offered only by a server
-// that lists them, and a stand-in on recorded answers answers them for the tests and the install check.
+// Panel plan stage 5 on the panel's side, on recorded answers: the services and the kinds of site the server makes
+// (simai-env 1.33.0, set 9), a site's scheduled jobs (1.34.0, set 10), the firewall and who reaches the panel, each
+// change undone by the server unless kept in time (1.35.0, set 11).
 
 use Illuminate\Events\Dispatcher;
 use Illuminate\Filesystem\Filesystem;
@@ -17,7 +17,7 @@ use Larena\Core\Process\RecordingProcessExecutor;
 use Larena\Env\Cron\CronSchedule;
 use Larena\Env\Firewall\AddressList;
 use Larena\Env\Firewall\TimedChange;
-use Larena\Env\Gateway\FakeServerToolsGateway;
+use Larena\Env\Firewall\FirewallStatus;
 use Larena\Env\Gateway\PanelActor;
 use Larena\Env\Gateway\PanelCapabilities;
 use Larena\Env\Gateway\PanelCommands;
@@ -84,9 +84,9 @@ foreach (['cron:list', 'cron:job-add', 'cron:job-remove', 'cron:job-enable', 'cr
     env_assert(PanelCommands::since($command) === '1.34.0' && (new PanelCapabilities('1.34.0'))->allows($command) && !(new PanelCapabilities('1.33.0'))->allows($command),
         "{$command} from simai-env 1.34.0.");
 }
-foreach (['firewall:status', 'firewall:rule-add', 'panel:access'] as $command) {
-    env_assert(PanelCommands::since($command) === null && !(new PanelCapabilities('9.9.9'))->allows($command)
-        && (new PanelCapabilities('1.32.0', [$command]))->allows($command), "{$command} only where the server lists it.");
+foreach (['firewall:status', 'firewall:rule-add', 'firewall:rule-remove', 'firewall:block', 'firewall:unblock', 'panel:access', 'change:confirm', 'change:status'] as $command) {
+    env_assert(PanelCommands::since($command) === '1.35.0' && (new PanelCapabilities('1.35.0'))->allows($command) && !(new PanelCapabilities('1.34.0'))->allows($command),
+        "{$command} from simai-env 1.35.0.");
 }
 
 // The table refuses before the gateway does: a service off the list, a schedule of other than five fields, a command of
@@ -97,8 +97,9 @@ foreach ([['service:restart', ['name' => 'nginx']], ['service:reload', ['name' =
     ['cron:job-runs', ['id' => 'a1b2c3d4', 'limit' => '50']],
     ['site:add', ['domain' => 'app.test', 'profile' => 'proxy', 'upstream-port' => '3000', 'upstream-path' => '/', 'websockets' => 'yes']],
     ['site:add', ['domain' => 'shop.test', 'profile' => 'bitrix', 'bitrix-files' => 'restore']],
-    ['firewall:rule-add', ['port' => '8000:8100', 'proto' => 'tcp', 'from' => '203.0.113.0/24', 'action' => 'allow']],
-    ['firewall:block', ['address' => '2001:db8::1', 'ttl' => '3600']],
+    ['firewall:rule-add', ['port' => '8080', 'proto' => 'tcp', 'from' => '203.0.113.0/24', 'action' => 'allow']], ['firewall:rule-add', ['port' => '53', 'proto' => 'udp']],
+    ['firewall:rule-remove', ['id' => 'efdea676']], ['firewall:block', ['address' => '2001:db8::1', 'ttl' => '3600']], ['firewall:block', ['address' => '203.0.113.7', 'ttl' => '0']],
+    ['change:confirm', ['change_id' => 'c966b67eb35b']],
     ['panel:access', ['allow' => ['203.0.113.7', '198.51.100.0/24']]], ['panel:access', ['allow' => 'any']]] as [$command, $args]) {
     env_assert($refusedWith(static fn () => PanelCommands::check($command, $args)) === null, "Accepted: {$command} ".json_encode($args));
 }
@@ -113,7 +114,9 @@ foreach ([['service:restart', ['name' => 'sshd']], ['service:restart', ['name' =
     ['site:add', ['domain' => 'app.test', 'profile' => 'proxy', 'upstream-port' => '80']], ['site:add', ['domain' => 'app.test', 'profile' => 'proxy', 'upstream-port' => '443']],
     ['site:add', ['domain' => 'shop.test', 'profile' => 'bitrix', 'bitrix-files' => 'download']], ['service:restart', ['name' => 'redis']],
     ['site:add', ['domain' => 'app.test', 'profile' => 'proxy', 'upstream-port' => '3000', 'upstream-path' => 'http://evil']],
-    ['firewall:rule-add', ['port' => '22', 'action' => 'reject']], ['firewall:block', ['address' => 'example.com']],
+    ['firewall:rule-add', ['port' => '22', 'proto' => 'tcp', 'action' => 'reject']], ['firewall:rule-add', ['port' => '8000:8100', 'proto' => 'tcp']],
+    ['firewall:rule-add', ['port' => '8080', 'proto' => 'any']], ['firewall:rule-add', ['port' => '8080']], ['firewall:rule-remove', ['id' => '1']],
+    ['firewall:block', ['address' => 'example.com']], ['firewall:block', ['address' => '203.0.113.7', 'ttl' => '5']],
     ['panel:access', ['allow' => []]], ['panel:access', ['allow' => array_fill(0, 51, '203.0.113.7')]], ['panel:access', ['allow' => ['any; drop']]]] as [$command, $args]) {
     env_assert($refusedWith(static fn () => PanelCommands::check($command, $args)) === 'invalid_argument', "Refused: {$command} ".json_encode($args));
 }
@@ -144,14 +147,10 @@ $change = new TimedChange('c1', 'firewall', '2026-01-01T00:02:00Z');
 env_assert($change->secondsLeft(new DateTimeImmutable('2026-01-01T00:00:30Z')) === 90 && $change->secondsLeft(new DateTimeImmutable('2026-01-01T01:00:00Z')) === 0,
     'How long a change waits to be kept.');
 
-// The stand-in: only when its folder is configured, on top of the files' one too.
-$directory = env_temp_directory();
-$gateway = PanelGatewayFactory::make(['driver' => 'recorded', 'recorded' => ['path' => env_recorded_path(), 'tools' => $directory.'/tools']], true, static fn () => new RecordingProcessExecutor());
-env_assert($gateway instanceof FakeServerToolsGateway, 'The stand-in only when its folder is configured.');
-env_assert(PanelGatewayFactory::make(['driver' => 'recorded', 'recorded' => ['path' => env_recorded_path(), 'files' => $directory.'/files', 'tools' => $directory.'/tools']],
-    true, static fn () => new RecordingProcessExecutor()) instanceof FakeServerToolsGateway, 'Both stand-ins together.');
+// The recorded answers list the commands of 1.35.0 to the administrator; an owner is never offered the server's tools.
+$gateway = PanelGatewayFactory::make(['driver' => 'recorded', 'recorded' => ['path' => env_recorded_path()]], true, static fn () => new RecordingProcessExecutor());
 $listed = (new ServerOverviewReader($gateway))->read($admin)->overview->capabilities;
-env_assert($listed->allows('service:restart') && $listed->allows('firewall:status') && $listed->allows('cron:list') && $listed->allows('self:profiles'), 'The host description lists them.');
+env_assert($listed->allows('service:restart') && $listed->allows('firewall:status') && $listed->allows('change:confirm') && $listed->allows('cron:list') && $listed->allows('self:profiles'), 'The host description lists them.');
 $ownListed = (new ServerOverviewReader($gateway))->read($owner)->overview?->capabilities;
 env_assert($ownListed === null || (!$ownListed->allows('service:restart') && !$ownListed->allows('firewall:status')), 'An owner is never offered the services or the firewall.');
 
@@ -215,34 +214,32 @@ env_assert($operations->planCommand($owner, 'cron:job-add', ['domain' => 'demo-p
     && $extras->cronJobs($owner, 'demo-php.test') === null && count($extras->cronJobs($owner, 'demo-owned.test') ?? []) === 1, 'An owner\'s own sites only.');
 env_assert($operations->planCommand($admin, 'cron:job-disable', ['id' => 'ffffffff'])->reason === 'unknown_cron_job', 'A job the server does not have.');
 
-// The firewall (5.2): a change is applied, waits to be kept, and comes back by itself; SSH and the panel's port stay open.
+// The firewall (5.2, recorded set 11): its rules with the protected ones, a rule about an address as a whole, the
+// blocks, no panel on the recording stand; every change planned, its job's result naming the change to keep in time.
 $status = $extras->firewall($admin);
-env_assert($status !== null && $status->active && count($status->rules) === 3 && $status->rules[0]->protected && !$status->rules[1]->protected
-    && $status->panelAccess === 'any' && $status->pending === [], 'The firewall\'s state.');
-env_assert($operations->planCommand($admin, 'firewall:rule-remove', ['id' => '1'])->reason === 'firewall_protected'
-    && $operations->planCommand($admin, 'firewall:rule-add', ['port' => '22', 'action' => 'deny'])->reason === 'firewall_protected', 'SSH cannot be closed.');
-$applied = $operations->startCommand($admin, 'firewall:rule-add', ['port' => '8080', 'proto' => 'tcp', 'action' => 'allow']);
-$appliedView = $operations->view($admin, (string) $applied->jobId);
-$pending = $appliedView->status?->change;
-env_assert($pending !== null && $pending->kind === 'firewall' && $pending->pending() && $pending->secondsLeft(new DateTimeImmutable()) > 60,
-    'The job\'s result names the change and when it is undone.');
-$status = $extras->firewall($admin);
-env_assert(count($status->rules) === 4 && $status->pendingOf('firewall')?->changeId === $pending->changeId, 'Applied, and waiting to be kept.');
-$kept = $operations->startCommand($admin, 'change:confirm', ['change_id' => $pending->changeId]);
-env_assert($kept->jobId !== null && $extras->firewall($admin)->pending === [] && count($extras->firewall($admin)->rules) === 4, 'Kept in time: it stays.');
-env_assert($operations->startCommand($admin, 'change:confirm', ['change_id' => $pending->changeId])->reason === 'unknown_change', 'A change kept already cannot be kept again.');
-$blocked = $operations->view($admin, (string) $operations->startCommand($admin, 'firewall:block', ['address' => '203.0.113.9', 'ttl' => '3600'])->jobId)->status?->change;
-env_assert(count($extras->firewall($admin)->blocks) === 1 && $blocked !== null, 'An address is blocked, waiting to be kept.');
-$state = json_decode((string) file_get_contents($directory.'/tools/state.json'), true);
-$state['changes'][$blocked->changeId]['expires_at'] = '2000-01-01T00:00:00Z';
-file_put_contents($directory.'/tools/state.json', json_encode($state));
-env_assert($extras->firewall($admin)->blocks === [] && count($extras->firewall($admin)->rules) === 4, 'Not kept in time: the previous rules come back by themselves.');
-env_assert($extras->firewall($owner) === null && $operations->planCommand($owner, 'firewall:block', ['address' => '203.0.113.9'])->reason === 'owner_admin_only', 'The firewall is the administrator\'s.');
-
-// Who reaches the panel (5.3): a list or anyone, kept like the firewall.
-$access = $operations->view($admin, (string) $operations->startCommand($admin, 'panel:access', ['allow' => ['203.0.113.7', '198.51.100.0/24']])->jobId)->status?->change;
-env_assert($access?->kind === 'panel_access' && $extras->firewall($admin)->panelAccess === ['203.0.113.7', '198.51.100.0/24']
-    && $extras->firewall($admin)->pendingOf('panel_access') !== null, 'The panel\'s allow list, waiting to be kept.');
+env_assert($status !== null && $status->active && $status->backend === 'ufw' && $status->defaultIncoming === 'deny' && count($status->rules) === 5
+    && $status->rules[0]->port === null && $status->rules[0]->from === '203.0.113.7' && $status->rules[0]->action === 'deny' && !$status->rules[0]->protected
+    && $status->rules[1]->protected && $status->rules[2]->port === '80' && $status->rules[2]->protected && $status->rules[4]->id === 'efdea676'
+    && $status->rules[4]->rule === 'allow from 192.0.2.10 to any port 3306 proto tcp' && !$status->rules[4]->protected, 'The firewall\'s rules (simai-firewall/1).');
+env_assert($status->blocks === [['address' => '203.0.113.7', 'until' => null]] && $status->panelAccess === null && $status->pending === null, 'Its blocks; no panel there; nothing waiting.');
+foreach ([['firewall:rule-add', ['port' => '8080', 'proto' => 'tcp', 'action' => 'allow']], ['firewall:rule-remove', ['id' => 'efdea676']],
+    ['firewall:block', ['address' => '198.51.100.20', 'ttl' => '3600']], ['firewall:unblock', ['address' => '203.0.113.7']],
+    ['panel:access', ['allow' => ['192.0.2.10', '198.51.100.0/24']]], ['change:confirm', ['change_id' => 'c966b67eb35b']]] as [$command, $args]) {
+    env_assert($operations->planCommand($admin, $command, $args)->plan?->command === $command, "{$command} is planned.");
+}
+env_assert($operations->startCommand($admin, 'firewall:block', ['address' => '198.51.100.20', 'ttl' => '3600'])->jobId !== null, 'Confirmed, a job.');
+env_assert($extras->firewall($owner) === null && $operations->planCommand($owner, 'firewall:block', ['address' => '203.0.113.9'])->reason === 'not_allowed'
+    && $operations->planCommand($owner, 'panel:access', ['allow' => 'any'])->reason === 'not_allowed', 'The firewall is the administrator\'s.');
+$waiting = FirewallStatus::fromData(['active' => true, 'rules' => [], 'blocks' => [['address' => '203.0.113.9', 'until' => '2999-01-01T00:00:00Z', 'created_at' => '2026-11-03T08:53:29Z']],
+    'panel_access' => ['domain' => 'panel.example.com', 'allow' => ['192.0.2.10']],
+    'pending_change' => ['change_id' => 'c966b67eb35b', 'kind' => 'panel_access', 'domain' => 'panel.example.com', 'state' => 'pending', 'summary' => 'allow 192.0.2.10', 'expires_at' => '2999-01-01T00:00:00Z']]);
+env_assert($waiting->pendingOf('panel_access')?->changeId === 'c966b67eb35b' && $waiting->pendingOf('firewall') === null && $waiting->panelAccess === ['192.0.2.10']
+    && $waiting->blocks[0]['until'] === '2999-01-01T00:00:00Z' && $waiting->pending?->summary === 'allow 192.0.2.10', 'The one change waiting, of its kind; the panel\'s allow list.');
+env_assert(FirewallStatus::fromData(['pending_change' => ['change_id' => 'c966b67eb35b', 'kind' => 'firewall', 'state' => 'restored']])->pending === null, 'An undone change waits no more.');
+$done = \Larena\Env\Operations\PanelJobStatus::fromData(['job_id' => 'j1', 'state' => 'succeeded', 'command' => 'firewall:block', 'args' => [],
+    'result' => ['change_id' => 'c966b67eb35b', 'kind' => 'firewall', 'expires_at' => '2026-11-03T08:55:29Z']]);
+env_assert($done->change?->changeId === 'c966b67eb35b' && $done->change->kind === 'firewall' && $done->change->pending(), 'The job\'s result names the change to keep (job:status result).');
+env_assert(\Larena\Env\Operations\PanelJobStatus::fromData(['job_id' => 'j1', 'state' => 'succeeded', 'command' => 'site:deploy', 'args' => [], 'result' => null])->change === null, 'Other jobs have none.');
 
 // The screens on stubs of the admin's layout.
 $files = new Filesystem();
@@ -264,20 +261,22 @@ env_assert(str_contains($readOnly, 'data-env-services-unsupported') && !str_cont
 env_assert(str_contains($servicesPage(['logOf' => 'nginx', 'log' => ['line <b>']]), 'line &lt;b&gt;'), 'The journal, escaped.');
 
 $firewall = static fn (array $data): string => $factory->make('larena-env::admin.firewall', $data + ['source' => 'recorded', 'supported' => true,
-    'status' => $extras->firewall($admin), 'allows' => ['rule-add' => true, 'rule-remove' => true, 'block' => true, 'unblock' => true, 'access' => true, 'keep' => true],
+    'status' => $status, 'allows' => ['rule-add' => true, 'rule-remove' => true, 'block' => true, 'unblock' => true, 'access' => true, 'keep' => true],
     'pending' => null, 'now' => new DateTimeImmutable(), 'ttls' => \Larena\Env\Http\Controllers\FirewallController::BLOCK_TTLS, 'address' => '203.0.113.7',
     'addressListed' => true, 'notice' => null])->render();
-$walls = $firewall(['pending' => new TimedChange('c9', 'firewall', '2999-01-01T00:00:00Z')]);
-env_assert(str_contains($walls, 'data-env-firewall="on"') && str_contains($walls, 'data-env-timed-keep="c9"') && str_contains($walls, 'data-env-firewall-locked')
-    && preg_match('/data-env-firewall-rule="1"\s+data-env-firewall-protected/', $walls) === 1 && substr_count($walls, 'data-env-firewall-op="rule-remove"') === 2
-    && str_contains($walls, 'data-env-firewall-op="block"'), 'The firewall: its rules, the protected ones locked, a change to keep in time: '.$walls);
+$walls = $firewall(['pending' => new TimedChange('c966b67eb35b', 'firewall', '2999-01-01T00:00:00Z')]);
+env_assert(str_contains($walls, 'data-env-firewall="on"') && str_contains($walls, 'data-env-timed-keep="c966b67eb35b"') && substr_count($walls, 'data-env-firewall-locked') === 3
+    && preg_match('/data-env-firewall-rule="dbcc1294"\s+data-env-firewall-protected/', $walls) === 1 && substr_count($walls, 'data-env-firewall-op="rule-remove"') === 1
+    && !str_contains($walls, 'data-env-firewall-rule="8da948cb"') && str_contains($walls, 'data-env-firewall-block="203.0.113.7"')
+    && str_contains($walls, 'Let in port 3306 (TCP) from 192.0.2.10') && !str_contains($walls, 'value="any"')
+    && str_contains($walls, 'data-env-firewall-op="block"'), 'The firewall: its rules, the protected ones locked, a blocked address with the blocks, a change to keep in time: '.$walls);
 env_assert(str_contains($firewall(['supported' => false, 'status' => null]), 'data-env-firewall-unsupported'), 'An older server: said, nothing offered.');
 $panelPage = static fn (array $data): string => $factory->make('larena-env::admin.panel-access', $data + ['source' => 'recorded', 'supported' => true,
-    'status' => $extras->firewall($admin), 'allows' => ['access' => true, 'keep' => true], 'pending' => $extras->firewall($admin)->pendingOf('panel_access'),
+    'status' => $waiting, 'allows' => ['access' => true, 'keep' => true], 'pending' => $waiting->pendingOf('panel_access'),
     'now' => new DateTimeImmutable(), 'address' => '192.0.2.1', 'addressListed' => false, 'ttls' => [], 'notice' => null])->render();
 $outside = $panelPage([]);
 env_assert(str_contains($outside, 'data-env-panel-access="list"') && str_contains($outside, 'data-env-panel-access-outside') && str_contains($outside, 'data-env-timed-keep=')
-    && str_contains($outside, 'data-env-panel-access-everyone') && str_contains($outside, '198.51.100.0/24'), 'Your address is not in the list: said before anything changes: '.$outside);
+    && str_contains($outside, 'data-env-panel-access-everyone') && str_contains($outside, '192.0.2.10'), 'Your address is not in the list: said before anything changes: '.$outside);
 
 $cronTab = static fn (array $cron): string => $factory->make('larena-env::admin.partials.cron', ['domain' => 'demo-php.test', 'cron' => $cron + ['jobs' => null,
     'opened' => null, 'runs' => null, 'allows' => ['add' => true, 'remove' => true, 'enable' => true, 'disable' => true, 'runs' => true],
@@ -295,7 +294,8 @@ $failedRun = $cronTab(['jobs' => [\Larena\Env\Cron\CronJob::fromData(['id' => 'b
 env_assert(str_contains($failedRun, 'data-env-cron-last="failed"') && str_contains($failedRun, 'data-env-cron-op="enable"'), 'A failed run, and a job turned off.');
 env_assert(str_contains($cronTab(['jobs' => []]), 'data-env-cron-none') && str_contains($cronTab([]), 'data-env-cron="unreadable"'), 'No jobs, or none readable, said so.');
 
-$job = $factory->make('larena-env::admin.job', ['jobId' => (string) $applied->jobId, 'source' => 'recorded', 'status' => $appliedView->status, 'log' => $appliedView->log,
+$appliedView = $operations->view($admin, (string) $operations->startCommand($admin, 'firewall:block', ['address' => '198.51.100.20', 'ttl' => '3600'])->jobId);
+$job = $factory->make('larena-env::admin.job', ['jobId' => 'fixture', 'source' => 'recorded', 'status' => $appliedView->status, 'log' => $appliedView->log,
     'refused' => false, 'reasonText' => null, 'notice' => null, 'change' => new TimedChange('c7', 'firewall', '2999-01-01T00:00:00Z'), 'canKeep' => true,
     'now' => new DateTimeImmutable()])->render();
 env_assert(str_contains($job, 'data-env-timed-change="c7"') && str_contains($job, 'data-env-timed-keep="c7"') && str_contains($job, 'name="kind" value="firewall"'), 'The job of a timed change offers to keep it: '.$job);

@@ -42,6 +42,10 @@ final readonly class RecordedAnswersGateway implements PanelGateway
         if ($owner !== null && str_starts_with($request->command, 'service:')) {
             return $this->replay($request, 'refused.owner-admin-only.service-restart.json');
         }
+        // And the firewall, who reaches the panel and their timed changes (simai-env 1.35.0).
+        if ($owner !== null && (str_starts_with($request->command, 'firewall:') || str_starts_with($request->command, 'panel:') || str_starts_with($request->command, 'change:'))) {
+            return $this->replay($request, 'refused.owner-admin-only.firewall-status.json');
+        }
         if ($owner !== null && $domain !== null && $request->command !== 'site:add') {
             $own = $this->document("self-describe.owner-{$owner}.json");
             if (is_string($own)) {

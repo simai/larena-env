@@ -30,11 +30,8 @@ final class PanelGatewayFactory
             $recorded = new RecordedAnswersGateway($settings['recorded']['path']);
             // Files on a local folder, where no recording of them exists yet (tests and the install check only).
             $files = $settings['recorded']['files'] ?? null;
-            $gateway = is_string($files) && $files !== '' ? new FakeFilesGateway($recorded, $files) : $recorded;
-            // The services, scheduled jobs, firewall and panel's access (Panel plan stage 5), likewise.
-            $tools = $settings['recorded']['tools'] ?? null;
 
-            return is_string($tools) && $tools !== '' ? new FakeServerToolsGateway($gateway, $tools) : $gateway;
+            return is_string($files) && $files !== '' ? new FakeFilesGateway($recorded, $files) : $recorded;
         }
         $ssh = $settings['ssh'] ?? null;
         if ($driver === 'ssh' && is_array($ssh)) {

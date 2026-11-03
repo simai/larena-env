@@ -19,10 +19,11 @@ final readonly class TimedChange
         public ?string $kind,
         public ?string $expiresAt,
         public string $state = 'pending',
+        public ?string $summary = null,
     ) {
     }
 
-    /** @param array<array-key, mixed> $data a change as the server names it: change_id, kind, expires_at, state */
+    /** @param array<array-key, mixed> $data a change as the server names it: change_id, kind, expires_at, state, summary */
     public static function fromData(array $data): ?self
     {
         $id = $data['change_id'] ?? null;
@@ -32,7 +33,8 @@ final readonly class TimedChange
 
         return new self($id, is_string($data['kind'] ?? null) ? $data['kind'] : null,
             is_string($data['expires_at'] ?? null) ? $data['expires_at'] : null,
-            is_string($data['state'] ?? null) ? $data['state'] : 'pending');
+            is_string($data['state'] ?? null) ? $data['state'] : 'pending',
+            is_string($data['summary'] ?? null) ? $data['summary'] : null);
     }
 
     public function pending(): bool

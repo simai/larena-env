@@ -23,13 +23,15 @@ use Larena\Env\Server\SiteExtrasReader;
  * «Сервер › Файрвол» (Panel plan 5.2) and «Настройки панели › Доступ к панели» (5.3), the system level's. Every change
  * is planned and confirmed, and then the server applies it and puts the previous rules back by itself unless the
  * change is kept in time: the keeping comes from the panel over the new rules, so a panel that shut itself out never
- * keeps it and the change is undone. SSH and the panel's own port can never be closed.
+ * keeps it and the change is undone. SSH, 80 and 443 can never be closed for everyone (simai-env 1.35.0).
  */
 final readonly class FirewallController
 {
     /** The changes and the gateway command of each. */
     public const array OPERATIONS = ['rule-add' => 'firewall:rule-add', 'rule-remove' => 'firewall:rule-remove', 'block' => 'firewall:block',
         'unblock' => 'firewall:unblock', 'access' => 'panel:access'];
+    /** The ports the server never closes for everyone: SSH, the sites' and the panel's. */
+    public const array PROTECTED_PORTS = ['22', '80', '443'];
     /** How long an address stays blocked: an hour, a day, a week, or until it is unblocked. */
     public const array BLOCK_TTLS = ['3600', '86400', '604800', ''];
     /** Which page each kind of timed change is kept from. */
@@ -96,6 +98,10 @@ final readonly class FirewallController
         $args = $this->arguments($request, $actor, $op);
         if (is_string($args)) {
             return $this->back($request, $back, $args);
+        }
+        // One change of a kind waits at a time: the server would fail a second one's job.
+        if ($this->extras->firewall($actor)?->pendingOf($back) !== null) {
+            return $this->back($request, $back, 'change_pending');
         }
         $result = $this->operations->planCommand($actor, self::OPERATIONS[$op], $args);
         if ($result->plan === null) {
@@ -183,12 +189,11 @@ final readonly class FirewallController
         };
         switch ($op) {
             case 'rule-add':
-                $args = ['port' => $field('port'), 'action' => $field('action') === 'deny' ? 'deny' : 'allow'];
-                $proto = $field('proto');
-                if (in_array($proto, ['tcp', 'udp'], true)) {
-                    $args['proto'] = $proto;
-                }
+                $args = ['port' => $field('port'), 'proto' => $field('proto') === 'udp' ? 'udp' : 'tcp', 'action' => $field('action') === 'deny' ? 'deny' : 'allow'];
                 $from = $field('from');
+                if ($args['action'] === 'deny' && ($from === '' || $from === 'any') && in_array($args['port'], self::PROTECTED_PORTS, true)) {
+                    return 'firewall_protected';
+                }
                 if ($from !== '' && $from !== 'any') {
                     if (!AddressList::valid($from)) {
                         return 'address_invalid';

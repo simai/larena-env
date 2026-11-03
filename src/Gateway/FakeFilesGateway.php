@@ -48,7 +48,10 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
         if (in_array($command, ['job:status', 'job:log'], true) && is_file($this->jobFile($request->args['job_id'] ?? ''))) {
             return $this->job($request);
         }
-        if (!in_array($command, self::COMMANDS, true)) {
+        // A timed change of the firewall or of who reaches the panel is the server's own (simai-env 1.35.0, twelve hex
+        // digits); the stand-in names its own with sixteen.
+        $foreignChange = str_starts_with($command, 'change:') && preg_match('/\A[a-f0-9]{16}\z/D', (string) ($request->args['change_id'] ?? '')) !== 1;
+        if (!in_array($command, self::COMMANDS, true) || $foreignChange) {
             $answer = $this->inner->ask($request);
 
             return $command === 'self:describe' ? $this->listed($request, $answer) : $answer;

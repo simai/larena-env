@@ -35,7 +35,7 @@
         @endif
     </section>
 
-    @if ($supported && $status !== null && $allows['access'])
+    @if ($supported && $status !== null && $status->panelAccess !== null && $allows['access'])
         <section class="larena-panel larena-panel-padded" aria-labelledby="env-panel-access-change">
             <h2 id="env-panel-access-change">{{ __('larena-env::admin.panel_access.change') }}</h2>
             <form method="post" action="{{ route('larena.env.admin.firewall.plan', [], false) }}" class="larena-form" data-env-panel-access-form>

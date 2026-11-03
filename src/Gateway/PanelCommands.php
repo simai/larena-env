@@ -72,14 +72,16 @@ final class PanelCommands
     private const string CRON_COMMAND = '/\A(?![-\s])[^\x00-\x1f\x7f]{1,1000}(?<!\s)\z/Du';
     private const string CRON_ID = '/\A[a-f0-9]{8}\z/D';
     private const string CRON_LIMIT = '/\A(?:[1-9]|[1-4][0-9]|50)\z/D';
-    // The firewall (ufw): a port or a range, a protocol, where from, and what to do; an address or a network to block.
-    private const string FW_PORT = '/\A[1-9][0-9]{0,4}(?::[1-9][0-9]{0,4})?\z/D';
-    private const string FW_PROTO = '/\A(?:tcp|udp|any)\z/D';
+    // The firewall (ufw, simai-env 1.35.0): one port, tcp or udp, from anywhere or an address or network, allowed or
+    // denied; a rule's id is the server's eight hex digits; an address is blocked for 60 seconds to a year, or until
+    // unblocked (0), the range checked by the server. The server checks every address fully again.
+    private const string FW_PORT = '/\A[1-9][0-9]{0,4}\z/D';
+    private const string FW_PROTO = '/\A(?:tcp|udp)\z/D';
     private const string FW_ACTION = '/\A(?:allow|deny)\z/D';
     private const string ADDRESS = '/\A(?:[0-9]{1,3}(?:\.[0-9]{1,3}){3}(?:\/(?:[0-9]|[12][0-9]|3[0-2]))?|[0-9A-Fa-f]{0,4}(?::[0-9A-Fa-f]{0,4}){2,7}(?:\/[0-9]{1,3})?)\z/D';
     private const string FW_FROM = '/\A(?:any|[0-9]{1,3}(?:\.[0-9]{1,3}){3}(?:\/(?:[0-9]|[12][0-9]|3[0-2]))?|[0-9A-Fa-f]{0,4}(?::[0-9A-Fa-f]{0,4}){2,7}(?:\/[0-9]{1,3})?)\z/D';
-    private const string FW_RULE_ID = '/\A[A-Za-z0-9][A-Za-z0-9._-]{0,63}\z/D';
-    private const string TTL = '/\A[1-9][0-9]{0,7}\z/D';
+    private const string FW_RULE_ID = '/\A[a-f0-9]{8}\z/D';
+    private const string TTL = '/\A(?:0|[1-9][0-9]{1,7})\z/D';
     // Who reaches the panel: `any`, or a list of addresses and networks (panel:access, the list's one argument).
     private const string PANEL_ALLOW = '/\A(?:any|[0-9]{1,3}(?:\.[0-9]{1,3}){3}(?:\/(?:[0-9]|[12][0-9]|3[0-2]))?|[0-9A-Fa-f]{0,4}(?::[0-9A-Fa-f]{0,4}){2,7}(?:\/[0-9]{1,3})?)\z/D';
     /**
@@ -159,7 +161,7 @@ final class PanelCommands
         // Panel plan stage 5. The server's services, the administrator's, each checked before a restart or a reload (nginx
         // -t, php-fpm -t), and the kinds of site the server makes, with their arguments (simai-env 1.33.0); a site's own
         // scheduled jobs, as its user (1.34.0); the firewall and who reaches the panel, each change undone by the server
-        // itself unless it is kept in time with change:confirm (1.35.0): that waits for its release, unlisted.
+        // itself unless it is kept in time with change:confirm (1.35.0).
         'service:list' => ['args' => [], 'required' => [], 'since' => '1.33.0', 'kind' => self::READ],
         'service:restart' => ['args' => ['name' => self::SERVICE], 'required' => ['name'], 'since' => '1.33.0', 'kind' => self::ACTION],
         'service:reload' => ['args' => ['name' => self::SERVICE], 'required' => ['name'], 'since' => '1.33.0', 'kind' => self::ACTION],
@@ -172,13 +174,13 @@ final class PanelCommands
         'cron:job-enable' => ['args' => ['id' => self::CRON_ID], 'required' => ['id'], 'since' => '1.34.0', 'kind' => self::ACTION],
         'cron:job-disable' => ['args' => ['id' => self::CRON_ID], 'required' => ['id'], 'since' => '1.34.0', 'kind' => self::ACTION],
         'cron:job-runs' => ['args' => ['id' => self::CRON_ID, 'limit' => self::CRON_LIMIT], 'required' => ['id'], 'since' => '1.34.0', 'kind' => self::READ],
-        'firewall:status' => ['args' => [], 'required' => [], 'since' => null, 'kind' => self::READ],
+        'firewall:status' => ['args' => [], 'required' => [], 'since' => '1.35.0', 'kind' => self::READ],
         'firewall:rule-add' => ['args' => ['port' => self::FW_PORT, 'proto' => self::FW_PROTO, 'from' => self::FW_FROM, 'action' => self::FW_ACTION],
-            'required' => ['port', 'action'], 'since' => null, 'kind' => self::ACTION],
-        'firewall:rule-remove' => ['args' => ['id' => self::FW_RULE_ID], 'required' => ['id'], 'since' => null, 'kind' => self::ACTION],
-        'firewall:block' => ['args' => ['address' => self::ADDRESS, 'ttl' => self::TTL], 'required' => ['address'], 'since' => null, 'kind' => self::ACTION],
-        'firewall:unblock' => ['args' => ['address' => self::ADDRESS], 'required' => ['address'], 'since' => null, 'kind' => self::ACTION],
-        'panel:access' => ['args' => ['allow' => self::PANEL_ALLOW], 'required' => ['allow'], 'since' => null, 'kind' => self::ACTION],
+            'required' => ['port', 'proto'], 'since' => '1.35.0', 'kind' => self::ACTION],
+        'firewall:rule-remove' => ['args' => ['id' => self::FW_RULE_ID], 'required' => ['id'], 'since' => '1.35.0', 'kind' => self::ACTION],
+        'firewall:block' => ['args' => ['address' => self::ADDRESS, 'ttl' => self::TTL], 'required' => ['address'], 'since' => '1.35.0', 'kind' => self::ACTION],
+        'firewall:unblock' => ['args' => ['address' => self::ADDRESS], 'required' => ['address'], 'since' => '1.35.0', 'kind' => self::ACTION],
+        'panel:access' => ['args' => ['allow' => self::PANEL_ALLOW], 'required' => ['allow'], 'since' => '1.35.0', 'kind' => self::ACTION],
         // Files of a site, as its own user and inside its root only (simai-env, after 1.35.0; Panel plan 6.1, 6.2).
         'fs:list' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH], 'required' => ['domain', 'path'], 'since' => null, 'kind' => self::READ],
         'fs:read' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH, 'max_bytes' => self::FS_MAX_BYTES], 'required' => ['domain', 'path'], 'since' => null, 'kind' => self::READ],
@@ -200,8 +202,8 @@ final class PanelCommands
         'site:nginx-overlay-clear' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => null, 'kind' => self::ACTION],
         // A timed change kept by the person who made it (the firewall, the panel's access, nginx directives): without the
         // confirmation in time, the server puts the previous one back by itself.
-        'change:confirm' => ['args' => ['change_id' => self::CHANGE_ID], 'required' => ['change_id'], 'since' => null, 'kind' => self::ACTION],
-        'change:status' => ['args' => ['change_id' => self::CHANGE_ID], 'required' => ['change_id'], 'since' => null, 'kind' => self::READ],
+        'change:confirm' => ['args' => ['change_id' => self::CHANGE_ID], 'required' => ['change_id'], 'since' => '1.35.0', 'kind' => self::ACTION],
+        'change:status' => ['args' => ['change_id' => self::CHANGE_ID], 'required' => ['change_id'], 'since' => '1.35.0', 'kind' => self::READ],
         'job:status' => ['args' => ['job_id' => self::JOB_ID], 'required' => ['job_id'], 'since' => '1.21.0', 'kind' => self::JOB],
         'job:log' => ['args' => ['job_id' => self::JOB_ID, 'after' => self::CURSOR], 'required' => ['job_id'], 'since' => '1.21.0', 'kind' => self::JOB],
         'job:cancel' => ['args' => ['job_id' => self::JOB_ID], 'required' => ['job_id'], 'since' => '1.21.0', 'kind' => self::JOB],

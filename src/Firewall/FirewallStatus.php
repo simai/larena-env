@@ -5,16 +5,16 @@ declare(strict_types=1);
 namespace Larena\Env\Firewall;
 
 /**
- * The server's firewall (Panel plan 5.2) and who reaches the panel (5.3): whether it is on, what it does by default,
- * its rules, the addresses kept out (some until a time), the changes waiting to be kept, and the panel's own allow
- * list (null when the server does not say; `any` is everyone).
+ * The server's firewall (Panel plan 5.2) and who reaches the panel (5.3), as simai-env 1.35.0 reads them
+ * (`simai-firewall/1`): whether it is on, what it does by default, its rules, the addresses kept out (some until a time),
+ * the one change waiting to be kept, and the panel's own allow list (null when no panel is installed there; `any` is
+ * everyone).
  */
 final readonly class FirewallStatus
 {
     /**
      * @param list<FirewallRule> $rules
-     * @param list<array{address: string, expires_at: ?string}> $blocks
-     * @param list<TimedChange> $pending
+     * @param list<array{address: string, until: ?string}> $blocks
      * @param list<string>|'any'|null $panelAccess
      */
     public function __construct(
@@ -23,7 +23,7 @@ final readonly class FirewallStatus
         public ?string $defaultIncoming,
         public array $rules,
         public array $blocks,
-        public array $pending,
+        public ?TimedChange $pending,
         public array|string|null $panelAccess,
     ) {
     }
@@ -41,16 +41,11 @@ final readonly class FirewallStatus
         $blocks = [];
         foreach (is_array($data['blocks'] ?? null) ? $data['blocks'] : [] as $block) {
             if (is_array($block) && is_string($block['address'] ?? null)) {
-                $blocks[] = ['address' => $block['address'], 'expires_at' => is_string($block['expires_at'] ?? null) ? $block['expires_at'] : null];
+                $blocks[] = ['address' => $block['address'], 'until' => is_string($block['until'] ?? null) ? $block['until'] : null];
             }
         }
-        $pending = [];
-        foreach (is_array($data['pending'] ?? null) ? $data['pending'] : [] as $change) {
-            $made = is_array($change) ? TimedChange::fromData($change) : null;
-            if ($made !== null && $made->pending()) {
-                $pending[] = $made;
-            }
-        }
+        // One change of a kind waits at a time; the server names the one waiting.
+        $pending = is_array($data['pending_change'] ?? null) ? TimedChange::fromData($data['pending_change']) : null;
         $allow = is_array($data['panel_access'] ?? null) ? ($data['panel_access']['allow'] ?? null) : null;
         $panelAccess = $allow === 'any' ? 'any'
             : (is_array($allow) ? array_values(array_filter($allow, 'is_string')) : null);
@@ -61,7 +56,7 @@ final readonly class FirewallStatus
             is_string($data['default_incoming'] ?? null) ? $data['default_incoming'] : null,
             $rules,
             $blocks,
-            $pending,
+            $pending !== null && $pending->pending() ? $pending : null,
             $panelAccess,
         );
     }
@@ -69,12 +64,6 @@ final readonly class FirewallStatus
     /** The change of this kind waiting to be kept, if any (`firewall`, `panel_access`). */
     public function pendingOf(string $kind): ?TimedChange
     {
-        foreach ($this->pending as $change) {
-            if ($change->kind === $kind) {
-                return $change;
-            }
-        }
-
-        return null;
+        return $this->pending?->kind === $kind ? $this->pending : null;
     }
 }

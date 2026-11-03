@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- simai-env 1.35.0 (recorded answers set 11): the firewall and who reaches the panel (Panel plan 5.2, 5.3), the
+  administrator's alone. «Сервер › Файрвол» reads `firewall:status` (`simai-firewall/1`): the rules with SSH, 80 and 443
+  allowed for everyone locked, a blocked address with the blocks and its time, one port, TCP or UDP, per new rule. A rule
+  is added and removed, an address blocked for an hour, a day, a week or until unblocked and let in again, each by plan;
+  closing SSH, 80 or 443 for everyone, removing their rules and a second change while one of its kind waits are said
+  before the server is asked. Every change is timed: the job's result names it, and the page that loaded over the new
+  rules keeps it with `change:confirm`, else the server undoes it. «Доступ к панели» reads the panel's allow list from the
+  same status and offers no change where the server knows no panel. The stand-in for these commands is gone
+  (`LARENA_ENV_RECORDED_TOOLS`); the files' stand-in passes the server's own timed changes on.
+
 - The rest of the panel's screens in the approved layout (owner's prototype 2026-11-02): state first as a coloured mark in a
   section's head (services «all 4 running» or how many stopped, a stopped one first and its restart primary; the alert
   channel, «the last one failed» in red; each update target current, available, blocked or unreadable); facts as rows on
