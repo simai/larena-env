@@ -22,7 +22,7 @@
         "ext-tokenizer": "*",
         "laravel/framework": "^13.8",
         "larena/access": "dev-main#050716f79bd0aa87426962fbe150a440260d64fa",
-        "larena/admin": "dev-main#d6c6696724e85945d65ad8efa14018a038f914f1",
+        "larena/admin": "dev-main#6a13ba89f4d70bfee702a2e9c30a3b8f5594dab5",
         "larena/audit": "dev-main#b704120342456f1b4d1c073dc868f7b7a4ebafb6",
         "larena/auth": "dev-main#6d3876554a76b80634f3a58fd1a4365e54493d6a",
         "larena/core": "dev-main#6bdd0607b2c42dc9b63191e77c7ccafcf8e3dad0",
@@ -30,7 +30,7 @@
         "larena/env": "dev-main",
         "larena/filesystem": "dev-main#0516a162e10a02b35f872574034374e25d1398f7",
         "larena/notification": "dev-main#70e9ac626686ab9028de85b3bc3fd8a788872d28",
-        "larena/property": "dev-main#6a8b5895d03b7c6e0492ebded943fc1410104e23",
+        "larena/property": "dev-main#2c4c9193a900a57fcbe84a17e18e8939c9458f24",
         "larena/setting": "dev-main#6a165243fd51d3f958b3dedfe9daf40248ad0e42",
         "larena/ui": "dev-main#9c975c230c278ae26488a3a793152f82915d7047"
     },

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "e38fa62db052aa446e05d87f5145d69b",
+    "content-hash": "494c55b1bc11475c8d54e94f72fcb547",
     "packages": [
         {
             "name": "brick/math",
@@ -1573,12 +1573,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:simai/larena-admin.git",
-                "reference": "d6c6696724e85945d65ad8efa14018a038f914f1"
+                "reference": "6a13ba89f4d70bfee702a2e9c30a3b8f5594dab5"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-admin/zipball/d6c6696724e85945d65ad8efa14018a038f914f1",
-                "reference": "d6c6696724e85945d65ad8efa14018a038f914f1",
+                "url": "https://api.github.com/repos/simai/larena-admin/zipball/6a13ba89f4d70bfee702a2e9c30a3b8f5594dab5",
+                "reference": "6a13ba89f4d70bfee702a2e9c30a3b8f5594dab5",
                 "shasum": ""
             },
             "require": {
@@ -1796,7 +1796,11 @@
                 }
             ],
             "description": "Larena Admin: Object-based, permission-aware administration platform for package contributions, screens, actions and diagnostics.",
-            "time": "2026-11-01T15:39:45+00:00"
+            "support": {
+                "source": "https://github.com/simai/larena-admin/tree/main",
+                "issues": "https://github.com/simai/larena-admin/issues"
+            },
+            "time": "2026-11-03T09:24:13+00:00"
         },
         {
             "name": "larena/audit",
@@ -2345,10 +2349,12 @@
             "require-dev": {
                 "illuminate/view": "^13.0",
                 "larena/admin": "dev-main",
+                "larena/notification": "dev-main",
                 "phpstan/phpstan": "^2.0"
             },
             "suggest": {
-                "larena/admin": "The server screen and its menu entry (/admin/server). Env contributes them only where the admin is installed; the gateway and the typed reads work without it."
+                "larena/admin": "The server screen and its menu entry (/admin/server). Env contributes them only where the admin is installed; the gateway and the typed reads work without it.",
+                "larena/notification": "The panel's check (larena:env-check) tells people what needs attention through their notifications; without it the check only measures the server."
             },
             "type": "library",
             "extra": {
@@ -2380,8 +2386,14 @@
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/EnvBootTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/ServerScreenTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/SiteScreenTest.php",
+                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/SiteExtrasReaderTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PanelOperationsTest.php",
-                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PanelActorResolverTest.php"
+                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PanelActorResolverTest.php",
+                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PanelWarningsTest.php",
+                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/DnsTest.php",
+                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/FilesTest.php",
+                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/ServerToolsTest.php",
+                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/NewSitePortTest.php"
                 ],
                 "test:unit": [
                     "@test"
@@ -2648,12 +2660,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:simai/larena-property.git",
-                "reference": "6a8b5895d03b7c6e0492ebded943fc1410104e23"
+                "reference": "2c4c9193a900a57fcbe84a17e18e8939c9458f24"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-property/zipball/6a8b5895d03b7c6e0492ebded943fc1410104e23",
-                "reference": "6a8b5895d03b7c6e0492ebded943fc1410104e23",
+                "url": "https://api.github.com/repos/simai/larena-property/zipball/2c4c9193a900a57fcbe84a17e18e8939c9458f24",
+                "reference": "2c4c9193a900a57fcbe84a17e18e8939c9458f24",
                 "shasum": ""
             },
             "require": {
@@ -2699,6 +2711,8 @@
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PropertyFieldTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PropertyLookupTypeTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PropertyCommonTypesTest.php",
+                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PropertyDocumentTypesTest.php",
+                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PropertyItemsTypeTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PropertyPageContentTypesTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PropertyDisplayProjectorTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PropertyPresentationRegistryTest.php",
@@ -2752,7 +2766,11 @@
                 }
             ],
             "description": "Larena Property: Universal property layer for field type registry, field definitions, structured render models, validation, templates and typed value interaction across settings, admin, storage and future content models.",
-            "time": "2026-10-31T01:35:31+00:00"
+            "support": {
+                "source": "https://github.com/simai/larena-property/tree/main",
+                "issues": "https://github.com/simai/larena-property/issues"
+            },
+            "time": "2026-11-02T23:21:13+00:00"
         },
         {
             "name": "larena/setting",

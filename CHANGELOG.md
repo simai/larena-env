@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- The panel assembly takes admin 6a13ba89 (a long site name in the heading stays whole on a phone, its marks wrap) and
+  property 2c4c9193, which that admin needs, the revisions Root f1c978ab pins.
+
 - simai-env 1.35.0 (recorded answers set 11): the firewall and who reaches the panel (Panel plan 5.2, 5.3), the
   administrator's alone. «Сервер › Файрвол» reads `firewall:status` (`simai-firewall/1`): the rules with SSH, 80 and 443
   allowed for everyone locked, a blocked address with the blocks and its time, one port, TCP or UDP, per new rule. A rule
