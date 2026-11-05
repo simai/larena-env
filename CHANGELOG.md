@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- The panel assembly takes the revisions Root 1abd799d pins (admin b30fb81a, ui 57e4af35 with the Framework pair
+  pro-ce48954dd94b over ui-4cd23cd8b490, access, audit, property, setting), so the panel draws the alert bar and a
+  site's menu in the second column.
 - At most two menus (the panel's UX audit, NAV-01): a site's sections are its menu in the menu's second column
   (`SiteObjectMenu`, the admin's navigation port 1.1.0 `context`): the site's name, what it runs and whether it works,
   «← Все сайты», its sections with a mark where something needs attention, the open one marked. The site's page has no
