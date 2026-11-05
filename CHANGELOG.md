@@ -11,7 +11,7 @@
 
 - Screens answer without waiting for the server again (owner decision 2026-11-05, after the panel's UX audit: a click
   answers within half a second). `CachingPanelGateway` keeps a read of the server's state for
-  `larena-env.gateway.cache_seconds` (30, `LARENA_ENV_GATEWAY_CACHE_SECONDS`; 0 turns it off) per person, asks the
+  `larena-env.gateway.cache_seconds` (30, `LARENA_ENV_GATEWAY_CACHE_SECONDS`; 0 turns it off) per person, the site's checks (`site:doctor`) included, asks the
   same read once per page, and drops every kept answer after a confirmed action or a look at a job. Logs, files'
   contents, job runs and refusals are never kept.
 

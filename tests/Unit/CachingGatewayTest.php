@@ -90,7 +90,7 @@ env_assert($refused->ask(PanelRequest::read($admin, 'firewall:status'))->status 
 $odd = new Repository(new ArrayStore());
 $probe = new CachingPanelGateway($server, $odd, 30);
 $probe->ask(PanelRequest::read($admin, 'php:list'));
-env_assert(CachingPanelGateway::keeps(PanelRequest::read($admin, 'php:list')) && !CachingPanelGateway::keeps(PanelRequest::read($admin, 'file:read', ['domain' => 'a.test', 'path' => 'x']))
+env_assert(CachingPanelGateway::keeps(PanelRequest::read($admin, 'php:list')) && CachingPanelGateway::keeps(PanelRequest::read($admin, 'site:doctor', ['domain' => 'a.test'])) && !CachingPanelGateway::keeps(PanelRequest::read($admin, 'file:read', ['domain' => 'a.test', 'path' => 'x']))
     && $probe->source() === 'sudo', 'Only the reads of the server\'s state are kept.');
 
 echo "CachingGatewayTest passed.\n";
