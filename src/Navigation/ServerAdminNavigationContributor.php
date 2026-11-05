@@ -161,6 +161,25 @@ final class ServerAdminNavigationContributor implements AdminNavigationContribut
             activeRoutePattern: 'larena.env.admin.services*',
             icon: 'restart_alt',
         ), new AdminNavigationDescriptor(
+            // The server's PHP versions: installed, updated, removed, their extensions (simai-env 1.37.0).
+            id: 'env.software.php',
+            ownerPackage: $this->ownerPackage(),
+            label: 'PHP',
+            routeName: 'larena.env.admin.software.php',
+            routeUri: '/admin/server/software/php',
+            category: 'operations',
+            state: 'operator_slice',
+            accessScope: 'env.server.read',
+            auditEvent: 'env.software_php.viewed',
+            statusCap: 'env_panel_skeleton',
+            order: 13,
+            group: 'operations',
+            knownLimitations: ['not_production_ready'],
+            surface: 'product',
+            labelKey: 'larena-env::admin.software.php.navigation',
+            activeRoutePattern: 'larena.env.admin.software.php*',
+            icon: 'code',
+        ), new AdminNavigationDescriptor(
             // The firewall, each change undone by the server unless kept in time (Panel plan 5.2).
             id: 'env.firewall',
             ownerPackage: $this->ownerPackage(),
@@ -218,7 +237,7 @@ final class ServerAdminNavigationContributor implements AdminNavigationContribut
             icon: 'dns',
         )];
         // Each row of a screen a newer simai-env brings, by the command it needs (Panel plan stage 5).
-        $needs = ['env.services' => 'service:list', 'env.firewall' => 'firewall:status', 'env.panel.access' => 'panel:access'];
+        $needs = ['env.services' => 'service:list', 'env.software.php' => 'php:list', 'env.firewall' => 'firewall:status', 'env.panel.access' => 'panel:access'];
 
         return array_values(array_filter($rows, fn (AdminNavigationDescriptor $row): bool => !isset($needs[$row->id])
             || ($this->listed !== null && ($this->listed)($needs[$row->id]))));

@@ -58,7 +58,7 @@ env_assert($names === ['larena.env.admin.alerts.ack.plan', 'larena.env.admin.ale
     'larena.env.admin.site.files.download', 'larena.env.admin.site.files.plan', 'larena.env.admin.site.files.run', 'larena.env.admin.site.nginx.plan',
     'larena.env.admin.site.nginx.run', 'larena.env.admin.site.plan',
     'larena.env.admin.site.run', 'larena.env.admin.sites.new', 'larena.env.admin.sites.plan', 'larena.env.admin.sites.plan.draft', 'larena.env.admin.sites.port',
-    'larena.env.admin.sites.run',
+    'larena.env.admin.sites.run', 'larena.env.admin.software.php', 'larena.env.admin.software.php.plan', 'larena.env.admin.software.php.run',
     'larena.env.admin.update', 'larena.env.admin.update.plan', 'larena.env.admin.update.run'],
     'The screens of the panel: '.implode(', ', $names));
 env_assert($with['routes']['larena.env.admin.index']['uri'] === 'admin/server', 'The sites keep their address.');
@@ -83,11 +83,13 @@ foreach ($with['routes'] as $name => $route) {
     // A safe update is the administrator's alone: the screen reads the server, the update changes it (simai-env 1.32.0).
     $update = str_starts_with($name, 'larena.env.admin.update');
     $updateChanges = $update && $name !== 'larena.env.admin.update';
-    // The services, the firewall and who reaches the panel are the administrator's (Panel plan 5.1–5.3); keeping a
+    // The services, the firewall, who reaches the panel and the server's software are the administrator's (Panel plan 5.1–5.3); keeping a
     // timed change is a change of the server too, and so is giving the server the DNS token for certificates (1.36.0).
     // A site's own scheduled jobs are a site's (5.4).
     $serverTools = str_starts_with($name, 'larena.env.admin.services') || str_starts_with($name, 'larena.env.admin.firewall')
-        || $name === 'larena.env.admin.panel.access' || $name === 'larena.env.admin.change.keep' || str_starts_with($name, 'larena.env.admin.dns.certificates');
+        || $name === 'larena.env.admin.panel.access' || $name === 'larena.env.admin.change.keep' || str_starts_with($name, 'larena.env.admin.dns.certificates')
+        // And the server's PHP versions (simai-env 1.37.0).
+        || str_starts_with($name, 'larena.env.admin.software.');
     $serverToolChanges = $serverTools && (str_ends_with($name, '.plan') || str_ends_with($name, '.run') || $name === 'larena.env.admin.change.keep');
     // Changing a site is a right of its own: a new site, a site's action and stopping a job ask for it.
     $changes = !$people && !$dns && !$nginx && !$channel && !$update && !$serverTools && (str_ends_with($name, '.plan') || str_ends_with($name, '.run') || str_ends_with($name, '.cancel')
@@ -95,7 +97,8 @@ foreach ($with['routes'] as $name => $route) {
     env_assert(in_array('access:env.sites.operate', $route['middleware'], true) === $changes, "{$name} asks for the wrong right.");
     // The server's overview and the people's spaces are the system level's; giving a space or acting for someone changes the server.
     $reads = in_array($name, ['larena.env.admin.overview', 'larena.env.admin.people', 'larena.env.admin.people.stop', 'larena.env.admin.alerts.channel',
-        'larena.env.admin.update', 'larena.env.admin.services', 'larena.env.admin.firewall', 'larena.env.admin.panel.access'], true);
+        'larena.env.admin.update', 'larena.env.admin.services', 'larena.env.admin.firewall', 'larena.env.admin.panel.access',
+        'larena.env.admin.software.php'], true);
     env_assert(in_array('access:env.server.read', $route['middleware'], true) === $reads, "{$name} asks for the wrong level.");
     env_assert(in_array('access:env.server.operate', $route['middleware'], true) === (($people && !$reads) || $nginx || $channelChanges || $updateChanges || $serverToolChanges), "{$name} must ask for the server's right.");
 }

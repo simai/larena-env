@@ -64,6 +64,8 @@ final class PanelCommands
     // What a safe update replaces: simai-env itself, or the panel's build (simai-env 1.32.0).
     private const string UPDATE_TARGET = '/\A(?:env|panel)\z/D';
     // A service of the server's fixed list, only those it has (simai-env 1.33.0).
+    // A PHP extension's name, as php:extension takes it (simai-env 1.37.0).
+    private const string PHP_EXT = '/\A[a-z0-9_]{2,32}\z/D';
     private const string SERVICE = '/\A(?:nginx|php[5-9]\.[0-9]-fpm|mysql|mariadb|postgresql|redis-server|cron)\z/D';
     // A proxy site forwards to a port of this same server only (127.0.0.1), never nginx's own 80 or 443, and a path on it.
     private const string PORT = '/\A(?!(?:80|443)\z)(?:[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])\z/D';
@@ -214,6 +216,13 @@ final class PanelCommands
         'ssl:dns-credentials' => ['args' => ['provider' => self::DNS_PROVIDER, 'token' => self::CF_TOKEN, 'remove' => self::YES_NO],
             'required' => ['provider'], 'since' => '1.36.0', 'kind' => self::ACTION],
         'ssl:dns-status' => ['args' => [], 'required' => [], 'since' => '1.36.0', 'kind' => self::READ],
+        // The server's PHP versions, the administrator's (simai-env 1.37.0): a new version installed next to the others and
+        // touching no site, a free one removed, an extension turned on or off, fixes within a version with its sites checked.
+        'php:list' => ['args' => [], 'required' => [], 'since' => '1.37.0', 'kind' => self::READ],
+        'php:install' => ['args' => ['php' => self::PHP, 'include-common' => self::YES_NO], 'required' => ['php'], 'since' => '1.37.0', 'kind' => self::ACTION],
+        'php:remove' => ['args' => ['php' => self::PHP], 'required' => ['php'], 'since' => '1.37.0', 'kind' => self::ACTION],
+        'php:extension' => ['args' => ['php' => self::PHP, 'name' => self::PHP_EXT, 'enabled' => self::YES_NO], 'required' => ['php', 'name', 'enabled'], 'since' => '1.37.0', 'kind' => self::ACTION],
+        'php:update' => ['args' => ['php' => self::PHP], 'required' => ['php'], 'since' => '1.37.0', 'kind' => self::ACTION],
         'job:status' => ['args' => ['job_id' => self::JOB_ID], 'required' => ['job_id'], 'since' => '1.21.0', 'kind' => self::JOB],
         'job:log' => ['args' => ['job_id' => self::JOB_ID, 'after' => self::CURSOR], 'required' => ['job_id'], 'since' => '1.21.0', 'kind' => self::JOB],
         'job:cancel' => ['args' => ['job_id' => self::JOB_ID], 'required' => ['job_id'], 'since' => '1.21.0', 'kind' => self::JOB],

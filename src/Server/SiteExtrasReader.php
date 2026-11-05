@@ -10,6 +10,7 @@ use Larena\Env\History\MetricHistory;
 use Larena\Env\Gateway\PanelActor;
 use Larena\Env\Gateway\PanelRefused;
 use Larena\Env\Gateway\PanelRequest;
+use Larena\Env\Software\PhpVersions;
 use Larena\Env\Update\UpdatePlan;
 use UnexpectedValueException;
 
@@ -99,6 +100,14 @@ final readonly class SiteExtrasReader
     public function services(PanelActor $actor): ?array
     {
         return $this->list($actor, 'service:list', [], 'services', HostService::fromData(...));
+    }
+
+    /** The server's PHP versions and what it could install (php:list, simai-env 1.37.0); the administrator's alone. */
+    public function phpVersions(PanelActor $actor): ?PhpVersions
+    {
+        $data = $this->data($actor, 'php:list', []);
+
+        return $data === null ? null : PhpVersions::fromData($data);
     }
 
     public function serviceLog(PanelActor $actor, string $name, int $lines = 100): ?array

@@ -1,0 +1,51 @@
+{
+  "schema": "simai-panel-answer/1",
+  "request_id": "fixture-plan.software-update",
+  "status": "ok",
+  "kind": "plan",
+  "data": {
+    "command": "software:update",
+    "args": {
+      "security-only": "yes"
+    },
+    "target": "host",
+    "description": "Install waiting system package updates and check every site",
+    "effects": "write",
+    "lock": "host",
+    "applied": false,
+    "update": {
+      "updates": 4,
+      "security": 3,
+      "packages": [
+        {
+          "name": "libapt-pkg6.0t64",
+          "from": "2.8.3",
+          "to": "2.8.4ubuntu0.1",
+          "security": true
+        },
+        {
+          "name": "apt",
+          "from": "2.8.3",
+          "to": "2.8.4ubuntu0.1",
+          "security": true
+        },
+        {
+          "name": "libpcre2-8-0",
+          "from": "10.42-4ubuntu2.1",
+          "to": "10.42-4ubuntu2.2",
+          "security": true
+        },
+        {
+          "name": "libsqlite3-0",
+          "from": "3.45.1-1ubuntu2.8",
+          "to": "3.45.1-1ubuntu2.9",
+          "security": false
+        }
+      ],
+      "kept_back": [],
+      "reboot_required": false,
+      "reboot_packages": [],
+      "index_age_seconds": 10659
+    }
+  }
+}

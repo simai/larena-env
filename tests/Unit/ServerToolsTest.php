@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 // Panel plan stage 5 on the panel's side, on recorded answers: the services and the kinds of site the server makes
 // (simai-env 1.33.0, set 9), a site's scheduled jobs (1.34.0, set 10), the firewall and who reaches the panel, each
-// change undone by the server unless kept in time (1.35.0, set 11), the server's own DNS token for certificates (1.36.0, set 12).
+// change undone by the server unless kept in time (1.35.0, set 11), the server's own DNS token for certificates (1.36.0, set 12), the server's PHP versions (1.37.0, set 13).
 
 use Illuminate\Events\Dispatcher;
 use Illuminate\Filesystem\Filesystem;
@@ -353,7 +353,39 @@ $brokenJob = $factory->make('larena-env::admin.job', ['jobId' => 'j1', 'source' 
     'notice' => null, 'change' => null, 'configFailed' => 'nginx'])->render();
 env_assert(str_contains($brokenJob, 'data-env-job-config-failed="nginx"') && str_contains($brokenJob, 'keeps running as it was'), 'A broken configuration said in words: '.$brokenJob);
 
-foreach (['services', 'firewall', 'panel-access', 'partials/cron', 'partials/timed-change'] as $name) {
+// The server's PHP versions (simai-env 1.37.0, set 13): read, each change planned and confirmed, the administrator's alone.
+foreach (['php:list', 'php:install', 'php:remove', 'php:extension', 'php:update'] as $command) {
+    env_assert(PanelCommands::since($command) === '1.37.0' && (new PanelCapabilities('1.37.0'))->allows($command) && !(new PanelCapabilities('1.36.0'))->allows($command),
+        "{$command} from simai-env 1.37.0.");
+}
+$php = $extras->phpVersions($admin);
+env_assert($php !== null && $php->native === '8.3' && count($php->versions) === 1 && $php->versions[0]->version === '8.3' && $php->versions[0]->fpmActive
+    && $php->versions[0]->native && $php->versions[0]->cliDefault && $php->versions[0]->sites === ['demo-owned.test', 'demo-php.test']
+    && $php->versions[0]->packageVersion === '8.3.6-0ubuntu0.24.04.13' && $php->versions[0]->updates === [] && !$php->versions[0]->removable
+    && $php->installable === [], 'The server\'s PHP (simai-php/1).');
+foreach ([['php:install', ['php' => '8.4', 'include-common' => 'yes']], ['php:remove', ['php' => '8.4']], ['php:update', ['php' => '8.3']],
+    ['php:extension', ['php' => '8.3', 'name' => 'imagick', 'enabled' => 'yes']]] as [$command, $args]) {
+    env_assert($operations->planCommand($admin, $command, $args)->plan?->command === $command, "{$command} is planned first.");
+}
+env_assert($operations->planCommand($admin, 'php:extension', ['php' => '8.3', 'name' => 'Bad-Name', 'enabled' => 'yes'])->reason === 'invalid_argument', 'An extension\'s name is checked.');
+env_assert($extras->phpVersions($owner) === null && $operations->planCommand($owner, 'php:install', ['php' => '8.4'])->reason === 'not_allowed', 'An owner cannot see or change the server\'s PHP.');
+$phpPage = static fn (array $data): string => $factory->make('larena-env::admin.software-php', $data + ['source' => 'recorded', 'php' => $php, 'reasonText' => null,
+    'allows' => ['install' => true, 'update' => true, 'remove' => true, 'extension' => true], 'extensionsOf' => null, 'extensions' => null, 'notice' => null])->render();
+$two = new \Larena\Env\Software\PhpVersions('8.3', [...$php->versions, new \Larena\Env\Software\PhpVersion('8.4', false, [], false, false, '8.4.1', ['php8.4-fpm'], true)], ['8.5']);
+$page = $phpPage(['php' => $two]);
+env_assert(str_contains($page, 'data-env-php-version="8.3"') && str_contains($page, 'data-env-php-version="8.4"') && substr_count($page, 'data-env-php-op="remove"') === 1
+    && substr_count($page, 'data-env-php-op="update"') === 2 && str_contains($page, 'data-env-php-updates="1"') && str_contains($page, 'data-env-php-native')
+    && str_contains($page, 'PHP-FPM is stopped') && str_contains($page, '<option value="8.5">') && str_contains($page, 'data-env-php-op="install"'),
+    'Each version, its sites and fixes, removal only where free, and the install form: '.$page);
+env_assert(str_contains($phpPage([]), 'data-env-php-installable="none"'), 'Nothing left to install, said in words.');
+$readOnlyPhp = $phpPage(['allows' => ['install' => false, 'update' => false, 'remove' => false, 'extension' => false]]);
+env_assert(!str_contains($readOnlyPhp, 'data-env-php-op') && str_contains($readOnlyPhp, 'data-env-php-extensions-link'), 'Without the right, the state only.');
+$withExtensions = $phpPage(['extensionsOf' => '8.3', 'extensions' => [new \Larena\Env\Server\PhpExtension('curl', true), new \Larena\Env\Server\PhpExtension('imagick', false)]]);
+env_assert(str_contains($withExtensions, 'data-env-php-extensions="8.3"') && str_contains($withExtensions, 'name="enabled" value="no"')
+    && str_contains($withExtensions, 'name="enabled" value="yes"') && str_contains($withExtensions, 'Turn on imagick in PHP 8.3'), 'Extensions turned on or off: '.$withExtensions);
+env_assert(str_contains($phpPage(['php' => null, 'reasonText' => 'No PHP <b>']), 'No PHP &lt;b&gt;'), 'A server without it says so.');
+
+foreach (['services', 'firewall', 'panel-access', 'software-php', 'partials/cron', 'partials/timed-change'] as $name) {
     $source = (string) file_get_contents(dirname(__DIR__, 2).'/resources/views/admin/'.$name.'.blade.php');
     env_assert(!str_contains($source, '{!!') && preg_match('/<style\b|<script\b|@php\b/i', $source) !== 1, "The {$name} view prints nothing raw and holds no script.");
 }

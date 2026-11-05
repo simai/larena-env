@@ -14,6 +14,7 @@ use Larena\Env\Http\Controllers\ServicesController;
 use Larena\Env\Http\Controllers\SiteCronController;
 use Larena\Env\Http\Controllers\SiteAdminController;
 use Larena\Env\Http\Controllers\SiteFilesController;
+use Larena\Env\Http\Controllers\SoftwarePhpController;
 use Larena\Env\Http\Controllers\UpdateController;
 
 /** @var Illuminate\Routing\Router $router */
@@ -67,10 +68,14 @@ $router->middleware(['access:env.server.read'])->group(static function ($router)
     $router->get('/services', [ServicesController::class, 'index'])->name('larena.env.admin.services');
     $router->get('/firewall', [FirewallController::class, 'index'])->name('larena.env.admin.firewall');
     $router->get('/panel-access', [FirewallController::class, 'access'])->name('larena.env.admin.panel.access');
+    // The server's PHP versions (simai-env 1.37.0).
+    $router->get('/software/php', [SoftwarePhpController::class, 'index'])->name('larena.env.admin.software.php');
 });
 $router->middleware(['access:env.server.operate'])->group(static function ($router): void {
     $router->post('/services/plan', [ServicesController::class, 'plan'])->name('larena.env.admin.services.plan');
     $router->post('/services/run', [ServicesController::class, 'run'])->name('larena.env.admin.services.run');
+    $router->post('/software/php/plan', [SoftwarePhpController::class, 'plan'])->name('larena.env.admin.software.php.plan');
+    $router->post('/software/php/run', [SoftwarePhpController::class, 'run'])->name('larena.env.admin.software.php.run');
     $router->post('/firewall/plan', [FirewallController::class, 'plan'])->name('larena.env.admin.firewall.plan');
     $router->post('/firewall/run', [FirewallController::class, 'run'])->name('larena.env.admin.firewall.run');
     // Keeping a timed change in time, from the panel over the new rules (change:confirm).
