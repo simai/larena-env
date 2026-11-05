@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- The release build carries the panel's own words (assembly/lang/vendor): `tar --exclude=./vendor` dropped lang/vendor
+  too, so «Пользователи панели», «Страница входа» and the sign-in tab title never reached the stand. The build names
+  the assembly's top-level entries instead, and stops if the words are missing.
+
 - Speed (the panel's UX audit, 0.5 s a click): the reads that take seconds on the server and change only through an
   action — software:list, php:list, php:extensions, self:update-plan, self:profiles, self:commands — are kept for 10
   minutes (`slow_cache_seconds`, LARENA_ENV_GATEWAY_SLOW_CACHE_SECONDS) instead of 30 seconds; an action or a job still

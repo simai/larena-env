@@ -39,7 +39,11 @@ mkdir -p "$APP" "$ENV_SOURCE" "$TOOLS" "$OUTPUT"
 
 # The application, and larena/env as composer's path repository (the assembly names it ../env-source).
 ENV_PATHS=(src config database resources routes composer.json module.yaml access.yaml audit.yaml LICENSE NOTICE)
-(cd "${ENV_REPO}/assembly" && tar --exclude=./vendor --exclude=./.env -cf - .) | tar -xf - -C "$APP"
+# The assembly's top-level entries but vendor/ and .env, named one by one: a tar --exclude=./vendor also drops
+# lang/vendor, the panel's own words over the packages'.
+(cd "${ENV_REPO}/assembly" && find . -mindepth 1 -maxdepth 1 ! -name vendor ! -name .env -print0 | xargs -0 tar -cf -) | tar -xf - -C "$APP"
+[[ -f "${APP}/lang/vendor/larena-auth/ru/auth.php" ]] || { echo "the panel's own words (lang/vendor) are missing from the build" >&2; exit 1; }
+[[ -f "${APP}/lang/vendor/larena-auth/ru/auth.php" ]] || { echo "the panel's lang overrides are missing from the build" >&2; exit 1; }
 if [[ "$DIRTY" == yes ]]; then
   (cd "$ENV_REPO" && tar -cf - "${ENV_PATHS[@]}") | tar -xf - -C "$ENV_SOURCE"
 else
