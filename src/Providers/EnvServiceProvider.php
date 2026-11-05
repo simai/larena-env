@@ -45,11 +45,17 @@ final class EnvServiceProvider extends ServiceProvider
             /** @var Config $config */
             $config = $app->make(Config::class);
 
-            return PanelGatewayFactory::make(
+            $gateway = PanelGatewayFactory::make(
                 (array) $config->get('larena-env.gateway', []),
                 $app->environment((array) $config->get('larena-env.gateway.recorded.allowed_environments', [])),
                 static fn (): ProcessExecutor => $app->make(ProcessExecutor::class),
             );
+            // The server's state is kept for a short while, so moving between screens does not wait for it again.
+            $ttl = (int) $config->get('larena-env.gateway.cache_seconds', 30);
+
+            return $ttl > 0 && $app->bound('cache')
+                ? new \Larena\Env\Gateway\CachingPanelGateway($gateway, $app->make('cache')->store(), $ttl)
+                : $gateway;
         });
         $this->app->bind(ServerOverviewReader::class, static fn (Application $app): ServerOverviewReader => new ServerOverviewReader($app->make(PanelGateway::class)));
         $this->app->bind(SiteDetailsReader::class, static fn (Application $app): SiteDetailsReader => new SiteDetailsReader($app->make(PanelGateway::class)));

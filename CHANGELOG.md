@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Screens answer without waiting for the server again (owner decision 2026-11-05, after the panel's UX audit: a click
+  answers within half a second). `CachingPanelGateway` keeps a read of the server's state for
+  `larena-env.gateway.cache_seconds` (30, `LARENA_ENV_GATEWAY_CACHE_SECONDS`; 0 turns it off) per person, asks the
+  same read once per page, and drops every kept answer after a confirmed action or a look at a job. Logs, files'
+  contents, job runs and refusals are never kept.
+
 - The panel's warnings join the admin's alert bar on every admin page (owner decision 2026-11-05) through
   `EnvAdminAlertSource`: the server's open alerts (or the panel's own reading) for the person's level, errors as
   danger, each linking to where it is dealt with; an acknowledged alert stays out. The server is asked at most once

@@ -9,6 +9,9 @@ return [
         // recorded: replays the answers in recorded.path, only in recorded.allowed_environments.
         // Anything else, or an incomplete target: the screen says it is not configured.
         'driver' => getenv('LARENA_ENV_GATEWAY') ?: 'sudo',
+        // How long a read of the server's state is kept, in seconds; 0 asks the server on every screen. Any confirmed
+        // action or a look at a job makes the kept answers stale at once.
+        'cache_seconds' => (int) (getenv('LARENA_ENV_GATEWAY_CACHE_SECONDS') === false ? 30 : getenv('LARENA_ENV_GATEWAY_CACHE_SECONDS')),
         'recorded' => [
             'path' => getenv('LARENA_ENV_RECORDED_PATH') ?: dirname(__DIR__).'/resources/recorded-answers',
             'allowed_environments' => ['local', 'testing'],
