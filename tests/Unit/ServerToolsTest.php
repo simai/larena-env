@@ -394,7 +394,7 @@ $software = $extras->serverSoftware($admin);
 env_assert($software !== null && array_map(static fn ($component): string => $component->name, $software->components) === ['nginx', 'mysql', 'postgresql', 'redis', 'node', 'certbot']
     && $software->component('nginx')?->active === true && !$software->component('nginx')->installable && $software->component('redis')?->installable === true
     && $software->system->updates === 4 && $software->system->security === 3 && count($software->system->packages) === 4 && !$software->system->rebootRequired
-    && $software->system->indexAgeMinutes() === 177, 'The server\'s software (simai-software/1).');
+    && $software->system->indexAgeMinutes() === 207, 'The server\'s software (simai-software/1).');
 $systemPlan = $operations->planCommand($admin, 'software:update', ['security-only' => 'yes'])->plan;
 env_assert($systemPlan?->system?->security === 3 && $systemPlan->update === null, 'A system update\'s plan names its packages.');
 env_assert($operations->planCommand($admin, 'software:install', ['name' => 'redis'])->plan?->command === 'software:install', 'A component is planned first.');
@@ -407,7 +407,7 @@ $page = $softwarePage([]);
 env_assert(str_contains($page, 'data-env-system-updates="4"') && str_contains($page, 'data-env-system-security-count="3"') && substr_count($page, 'data-env-system-security ') + substr_count($page, 'data-env-system-security>') === 3
     && str_contains($page, 'data-env-software-op="update-security"') && str_contains($page, 'data-env-software-op="update-all"') && str_contains($page, 'data-env-software-op="refresh"')
     && str_contains($page, 'data-env-software-op="install-redis"') && str_contains($page, 'data-env-software-op="install-node"') && !str_contains($page, 'data-env-software-op="install-nginx"')
-    && str_contains($page, 'Checked 177 min ago') && substr_count($page, 'data-env-software-component=') === 6, 'The components and the system\'s updates: '.$page);
+    && str_contains($page, 'Checked 207 min ago') && substr_count($page, 'data-env-software-component=') === 6, 'The components and the system\'s updates: '.$page);
 $readOnlySoftware = $softwarePage(['allows' => ['refresh' => false, 'update' => false, 'install' => false]]);
 env_assert(!str_contains($readOnlySoftware, 'data-env-software-op') && str_contains($readOnlySoftware, 'data-env-system-package="apt"'), 'Without the right, the state only.');
 env_assert(str_contains($softwarePage(['software' => null, 'system' => null, 'reasonText' => 'No list <b>']), 'No list &lt;b&gt;'), 'A server without it says so.');

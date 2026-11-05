@@ -637,11 +637,10 @@ return [
         'replaces_upload' => 'The file at :path is replaced; the previous one cannot be brought back.',
         'replaces_remove' => ':path is removed for good, a folder with everything inside. There is no trash. When in doubt, back up the site first.',
         'replaces_extract' => 'Files of the same names in :to are replaced.',
-        'replaces_overlay' => 'The site\'s own nginx directives are replaced. The server checks them (nginx -t) first; if you do not confirm the change within two minutes, or the panel stops answering, the previous directives come back by themselves.',
+        'replaces_nginx' => 'The site\'s own nginx directives are replaced. If you do not confirm the change within two minutes, the previous ones come back by themselves.',
         'operations' => [
             'write' => 'Save the file', 'create' => 'Make the file', 'upload' => 'Upload the file', 'mkdir' => 'Make the folder', 'rename' => 'Rename',
-            'remove' => 'Remove', 'archive' => 'Pack', 'extract' => 'Unpack', 'overlay-set' => 'Apply the nginx directives',
-            'overlay-clear' => 'Remove the nginx directives', 'overlay-confirm' => 'Keep the nginx directives',
+            'remove' => 'Remove', 'archive' => 'Pack', 'extract' => 'Unpack', 'nginx-save' => 'Apply the nginx directives', 'nginx-clear' => 'Remove the nginx directives',
         ],
         'reasons' => [
             'path_outside' => 'That path leads outside the site\'s folder: the server refuses it.',
@@ -666,15 +665,18 @@ return [
     ],
     'nginx' => [
         'title' => 'nginx directives',
-        'unsupported' => 'This server cannot take a site\'s own nginx directives yet: they come with a later simai-env release.',
+        'unsupported' => 'This server does not take a site\'s own nginx directives yet: it needs simai-env 1.41.0 or newer.',
         'unreadable' => 'The server did not answer with the site\'s directives.',
-        'explain' => 'Directives of this site\'s own, kept apart from what the server generates: they stay through updates and changes of the site\'s kind.',
-        'allowlist' => 'Allowed: location blocks, add_header, return, rewrite, try_files, expires, client_max_body_size, gzip_* and proxy_* to this server only. Refused: root, alias, include, user, load_module, ssl_* and logs to other paths.',
+        'explain' => 'A site\'s own directives are kept apart from what the server makes and included in its virtual host (HTTP and HTTPS): they outlive updates and a change of the site\'s kind.',
+        'allowlist' => 'For what the site\'s kind does not cover: extra location blocks, headers, client_max_body_size, rewrites. Up to 60 KB; an empty text removes them.',
+        'not_included' => 'The site\'s virtual host does not include these directives yet: the server adds the include on the first save.',
         'content' => 'Directives',
-        'apply_note' => 'The server checks them with nginx -t and reloads; you then confirm within two minutes, or they are undone by themselves.',
-        'pending' => 'The last change is applied but not kept yet: if it is not confirmed in time, the previous directives come back by themselves.',
-        'keep' => 'Keep the change…',
-        'pending_until' => 'Confirm it before :time.',
+        'save' => 'Save…',
+        'apply_note' => 'The server tests the directives with nginx -t and reloads nginx. If nginx rejects them or the site stops answering, nothing changes. Otherwise confirm the change within two minutes, or it is undone by itself.',
+        'wait' => 'Until the last change is kept or undone, a new one cannot be saved.',
+        'reasons' => [
+            'too_large' => 'Too many directives: the panel saves up to 60 KB.',
+        ],
     ],
     // A safe update of simai-env and of the panel (simai-env 1.32.0, Panel plan 4.7).
     'update' => [

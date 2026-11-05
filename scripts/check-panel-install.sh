@@ -324,7 +324,7 @@ for tab in ("overview", "domains", "dns", "php", "database", "backups", "files",
     if tab == "files":
         assert 'data-env-files="on"' in card and "data-env-files-problem" in card, "the files tab, a folder the recording lacks said in words"
     if tab == "nginx":
-        assert 'data-env-nginx="unsupported"' in card and "data-env-nginx-op" not in card, "no nginx directives: said, nothing offered"
+        assert 'data-env-nginx="on"' in card and 'data-env-nginx-op="nginx-save"' in card and "data-env-nginx-op=\"nginx-clear\"" not in card, "the nginx directives: none yet, the form to write them"
     if tab == "access":
         assert 'data-env-operation="sftp-create"' in card and "data-env-sftp-uploads" in card, "a new SFTP access by key, and the note on uploads"
         assert 'data-env-operation="sftp-disable"' not in card, "a site without accounts has none to turn off"
@@ -384,16 +384,9 @@ os.symlink("/etc", fake + "/sites/demo-php.test/escape")
 _, outside = get("/admin/server/sites/demo-php.test?tab=files&path=escape")
 assert "data-env-files-problem" in outside and "outside the site" in outside, "a link out of the site is refused in words"
 _, nginx = get("/admin/server/sites/demo-php.test?tab=nginx")
-assert 'data-env-nginx="on"' in nginx and "data-env-nginx-allowlist" in nginx, "the nginx directives, with what is allowed"
-planned, done = plan_and_run("/admin/server/sites/demo-php.test/nginx/plan", {"_token": form_token(nginx), "op": "overlay-set", "content": "add_header X-Check 1;\n"})
-assert 'data-env-plan="site:nginx-overlay-set"' in planned and "data-env-plan-replaces" in planned and 'data-env-job-state="succeeded"' in done, "directives applied by plan"
-_, pending = get("/admin/server/sites/demo-php.test?tab=nginx")
-change = re.search(r'data-env-nginx-pending="([^"]+)"', pending)
-assert change and 'name="op" value="overlay-confirm"' in pending, "applied, waiting to be kept"
-planned, done = plan_and_run("/admin/server/sites/demo-php.test/nginx/plan", {"_token": form_token(pending), "op": "overlay-confirm", "change": change.group(1)})
-assert 'data-env-job-state="succeeded"' in done, "kept once confirmed"
-_, kept = get("/admin/server/sites/demo-php.test?tab=nginx")
-assert "data-env-nginx-pending" not in kept and "add_header X-Check 1;" in kept, "the change is kept"
+assert 'data-env-nginx="on"' in nginx and "data-env-nginx-allowlist" in nginx and 'name="op" value="nginx-save"' in nginx, "the site's own nginx directives (simai-env 1.41.0)"
+planned, done = plan_and_run("/admin/server/sites/demo-php.test/nginx/plan", {"_token": form_token(nginx), "op": "nginx-save", "content": "add_header X-Check 1;\n"})
+assert 'data-env-plan="site:nginx-custom"' in planned and "data-env-plan-replaces" in planned and "data-env-job" in done, "directives applied by plan, followed as a job"
 print("files:", "ok")
 _, sftp = get("/admin/server/sites/demo-owned.test?tab=access")
 assert 'data-env-sftp="demo-staff"' in sftp and 'data-env-sftp-path="/site"' in sftp, "the site's own SFTP access, where it lands"
@@ -460,7 +453,7 @@ assert 'data-env-files="on"' not in others, "another owner's files are not shown
 _, own_nginx = get("/admin/server/sites/demo-owned.test?tab=nginx")
 assert 'data-env-tab="nginx"' not in own_nginx and "data-env-nginx" not in own_nginx, "the nginx directives are the system level's"
 try:
-    status, _ = post("/admin/server/sites/demo-owned.test/nginx/plan", {"_token": form_token(own_files), "op": "overlay-clear"})
+    status, _ = post("/admin/server/sites/demo-owned.test/nginx/plan", {"_token": form_token(own_files), "op": "nginx-clear"})
 except urllib.error.HTTPError as error:
     status = error.code
 assert status == 403, ("the person cannot plan nginx directives", status)

@@ -25,7 +25,7 @@ use Larena\Env\Server\ServerOverviewReader;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * A site's files (simai-env 1.39.0–1.40.0) and its own nginx directives (Panel plan 6.1–6.3). Every change goes the
+ * A site's files (simai-env 1.39.0–1.40.0) and its own nginx directives (1.41.0). Every change goes the
  * panel's one way: the server says what it would do, a person confirms, and only then it runs as a job. A saved text
  * travels in the request with the sha256 it was read with, so a change made meanwhile is refused, never overwritten.
  * An uploaded file waits on the panel's disk between the plan and the confirmation, named in the person's session by
@@ -39,9 +39,8 @@ final readonly class SiteFilesController
         'rename' => 'file:rename', 'remove' => 'file:remove', 'archive' => 'file:archive', 'extract' => 'file:extract'];
     /** The formats file:archive makes, by the name it is given. */
     public const array ARCHIVE_FORMATS = ['zip', 'tar.gz'];
-    /** The nginx directives', the system level's only. */
-    public const array OVERLAY_OPERATIONS = ['overlay-set' => 'site:nginx-overlay-set', 'overlay-clear' => 'site:nginx-overlay-clear',
-        'overlay-confirm' => 'change:confirm'];
+    /** The nginx directives', the system level's only (simai-env 1.41.0); removing them is saving none. */
+    public const array OVERLAY_OPERATIONS = ['nginx-save' => 'site:nginx-custom', 'nginx-clear' => 'site:nginx-custom'];
 
     private const string STAGED = 'larena_env_staged';
     private const int STAGED_SECONDS = 3600;
@@ -68,7 +67,7 @@ final readonly class SiteFilesController
         }
         $args = $this->arguments($request, $op, $domain);
         if ($args === null) {
-            return $this->back($request, $domain, $tab, 'path_invalid');
+            return $this->back($request, $domain, $tab, $tab === 'nginx' ? PanelReason::TOO_LARGE : 'path_invalid');
         }
         $staged = null;
         if (PanelCommands::attachmentLimit($command) !== null) {
@@ -114,13 +113,11 @@ final readonly class SiteFilesController
         $command = $this->offered($actor, $op);
         $tab = isset(self::OVERLAY_OPERATIONS[$op]) ? 'nginx' : 'files';
         $args = array_filter((array) $request->input('args', []), static fn (mixed $value, mixed $name): bool => is_string($name) && is_string($value), ARRAY_FILTER_USE_BOTH);
-        // A saved text goes back as it was planned, its spaces and last line end kept.
-        if (array_key_exists('content', $args)) {
+        // A saved text goes back as it was planned, its spaces and last line end kept, an empty one too.
+        if ($command === 'file:write' || $command === 'site:nginx-custom') {
             $args['content'] = str_replace("\r\n", "\n", self::rawText($request, 'content', 'args'));
         }
-        // Keeping a timed change names the change only (change:confirm); every other change names its site.
-        $site = $op === 'overlay-confirm' ? $domain : ($args['domain'] ?? null);
-        if ($command === null || $site !== $domain) {
+        if ($command === null || ($args['domain'] ?? null) !== $domain) {
             return $this->back($request, $domain, $tab, PanelReason::NOT_ALLOWED);
         }
         $attachment = null;
@@ -240,21 +237,19 @@ final readonly class SiteFilesController
                 return self::name($archive) === null ? null : $args + ['path' => $path, 'to' => FilePath::join(FilePath::parent($path), $archive)];
             case 'extract':
                 return !$entry || $folder === null ? null : $args + ['path' => $path, 'to' => $folder, 'overwrite' => $request->input('overwrite') === 'yes' ? 'yes' : 'no'];
-            case 'overlay-set':
-            case 'overlay-clear':
-                return $args;
-            case 'overlay-confirm':
-                $change = $request->input('change');
+            case 'nginx-save':
+                $content = str_replace("\r\n", "\n", self::rawText($request, 'content'));
 
-                // The shared confirmation of a timed change names the change only; the server knows its site.
-                return is_string($change) && preg_match('/\A[A-Za-z0-9][A-Za-z0-9._-]{0,63}\z/D', $change) === 1 ? ['change_id' => $change] : null;
+                return mb_check_encoding($content, 'UTF-8') && SiteFiles::savable($content) ? $args + ['content' => $content] : null;
+            case 'nginx-clear':
+                return $args + ['content' => ''];
         }
 
         return null;
     }
 
     /**
-     * Keeps the file a change sends on the panel's disk until it is confirmed: an upload, nginx directives. The session names it with its sha256, so another file cannot be sent in its place.
+     * Keeps the file an upload sends on the panel's disk until it is confirmed. The session names it with its sha256, so another file cannot be sent in its place.
      *
      * @return array{id: string, attachment: PanelAttachment}|string the staged file, or why it cannot be
      */
@@ -346,7 +341,7 @@ final readonly class SiteFilesController
             'upload' => ($args['expect-sha256'] ?? 'new') === 'any' ? 'replaces_upload' : null,
             'remove' => 'replaces_remove',
             'extract' => ($args['overwrite'] ?? 'no') === 'yes' ? 'replaces_extract' : null,
-            'overlay-set', 'overlay-clear' => 'replaces_overlay',
+            'nginx-save', 'nginx-clear' => 'replaces_nginx',
             default => null,
         };
 
@@ -393,8 +388,12 @@ final readonly class SiteFilesController
 
     private function back(Request $request, string $domain, string $tab, string $reason, ?string $path = null, ?string $op = null): RedirectResponse
     {
-        $key = 'larena-env::admin.files.reasons.'.$reason;
+        $key = 'larena-env::admin.'.($tab === 'nginx' ? 'nginx' : 'files').'.reasons.'.$reason;
         $line = (string) $this->translator->get($key);
+        if ($line === $key && $tab === 'nginx') {
+            $key = 'larena-env::admin.files.reasons.'.$reason;
+            $line = (string) $this->translator->get($key);
+        }
         if ($line === $key) {
             $key = 'larena-env::admin.reasons.'.$reason;
             $line = (string) $this->translator->get($key);

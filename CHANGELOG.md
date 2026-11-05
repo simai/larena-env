@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- simai-env 1.41.0 (set 17): a site's own nginx directives go through `site:nginx-custom-show` and `site:nginx-custom`,
+  which replace the panel's earlier overlay draft. The tab shows the server's allowlist and whether the file is included;
+  a save is planned first (the plan names the size only), applied as a timed change and kept with «Оставить» before its
+  time runs out, or rolled back by the server. While a change waits, the text is read-only. «Очистить» removes the
+  directives. Administrator only.
+
 - simai-env 1.39.0–1.40.0 (recorded answers set 16): a site's files go through the server's `file:*` commands, which
   replace the panel's earlier draft (`fs:*`). A folder lists folders first with size, time, permissions and a link's
   target; a text opens in the editor and is saved with the sha256 it was read with, so a change made meanwhile is refused

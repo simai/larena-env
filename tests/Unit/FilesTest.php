@@ -127,7 +127,7 @@ env_assert((new SudoGateway(new SudoGatewayTarget(), new RecordingProcessExecuto
 $recorded = new SiteFiles(new RecordedAnswersGateway(env_recorded_path()));
 $own = $recorded->folder($owner, 'demo-owned.test', '.');
 env_assert(is_array($own) && $own['entries'][0]->name === 'public' && $own['entries'][0]->isDir() && $own['entries'][0]->mode === '775'
-    && $own['entries'][0]->mtime === gmdate('Y-m-d\TH:i:s\Z', 1793841558), 'The recorded folder (simai-files/1).');
+    && $own['entries'][0]->mtime === gmdate('Y-m-d\TH:i:s\Z', 1793843350), 'The recorded folder (simai-files/1).');
 env_assert($recorded->folder($owner, 'demo-php.test', '.') === 'owner_scope', 'Another owner\'s site is refused.');
 
 // The stand-in on recorded answers: it lists the file commands and works inside a site's folder only.
@@ -136,9 +136,7 @@ $gateway = PanelGatewayFactory::make(['driver' => 'recorded', 'recorded' => ['pa
 env_assert($gateway instanceof FakeFilesGateway, 'The stand-in only when its folder is configured.');
 env_assert(PanelGatewayFactory::make(['driver' => 'recorded', 'recorded' => ['path' => env_recorded_path(), 'files' => '']], true, static fn () => new RecordingProcessExecutor()) instanceof RecordedAnswersGateway, 'Without it, the recorded answers alone.');
 $described = $gateway->ask(PanelRequest::read($admin, 'self:describe'));
-env_assert(in_array('file:list', $described->data['gate']['commands'], true) && in_array('site:nginx-overlay-set', $described->data['gate']['commands'], true), 'The host description lists the file commands.');
-$ownDescribed = $gateway->ask(PanelRequest::read($owner, 'self:describe'));
-env_assert(!is_array($ownDescribed->data['gate']['commands'] ?? null) || !in_array('site:nginx-overlay-set', $ownDescribed->data['gate']['commands'], true), 'An owner is never offered the nginx directives.');
+env_assert(in_array('file:list', $described->data['gate']['commands'], true), 'The host description lists the file commands.');
 $files = new SiteFiles($gateway);
 $listed = $files->folder($admin, 'demo-php.test', '.');
 env_assert(is_array($listed) && $listed['entries'][0]->name === 'public' && $listed['entries'][0]->isDir(), 'A site\'s folder, folders first.');
@@ -178,16 +176,15 @@ env_assert($files->download($admin, 'demo-php.test', '.', $directory.'/served2')
 // The owner: their own site only, and never the nginx directives.
 env_assert($files->folder($owner, 'demo-php.test', '.') === 'owner_scope', 'Another owner\'s site is refused.');
 env_assert(is_array($files->folder($owner, 'demo-owned.test', '.')), 'Their own site\'s files.');
-env_assert($files->overlay($owner, 'demo-owned.test') === 'owner_admin_only', 'The nginx directives are the system level\'s.');
-$overlay = new PanelOperations($gateway);
-file_put_contents($directory.'/overlay.conf', "add_header X-Test 1;\n");
-$set = $overlay->startCommand($admin, 'site:nginx-overlay-set', ['domain' => 'demo-php.test'], PanelAttachment::fromFile($directory.'/overlay.conf'));
-$current = $files->overlay($admin, 'demo-php.test');
-env_assert($set->jobId !== null && is_array($current) && $current['content'] === "add_header X-Test 1;\n" && $current['pending'] !== null
-    && is_string($current['expires']), 'Directives applied, waiting to be kept until a time.');
-// One confirmation for every timed change (simai-env): it names the change only.
-$kept = $overlay->startCommand($admin, 'change:confirm', ['change_id' => (string) $current['pending']]);
-env_assert($kept->jobId !== null && $files->overlay($admin, 'demo-php.test')['pending'] === null, 'Kept once confirmed.');
-env_assert($overlay->startCommand($admin, 'change:confirm', ['change_id' => (string) $current['pending']])->reason === 'unknown_change', 'A change kept already is unknown.');
+
+// A site's own nginx directives (simai-env 1.41.0, set 17): the system level's, a timed change kept by change:confirm.
+$nginx = $recorded->nginxCustom($admin, 'demo-php.test');
+env_assert(is_array($nginx) && $nginx['content'] === '' && $nginx['included'] && !$nginx['present'] && $nginx['pending'] === null, 'The recorded directives (simai-nginx-custom/1).');
+env_assert($recorded->nginxCustom($owner, 'demo-owned.test') === 'not_allowed', 'The nginx directives are the system level\'s.');
+$nginxPlan = (new PanelOperations(new RecordedAnswersGateway(env_recorded_path())))->planCommand($admin, 'site:nginx-custom', ['domain' => 'demo-php.test', 'content' => "add_header X-Test 1;\n"]);
+env_assert($nginxPlan->plan?->command === 'site:nginx-custom' && $nginxPlan->plan->args['content'] === '(26 bytes)', 'Directives are planned first; the plan names their size only.');
+env_assert(PanelCommands::since('site:nginx-custom') === '1.41.0' && PanelCommands::attachmentLimit('site:nginx-custom') === null, 'From 1.41.0, in the request line.');
+$waiting = \Larena\Env\Firewall\TimedChange::fromData(['change_id' => 'c0ffee12', 'expires_at' => '2026-01-01T00:02:00Z', 'kind' => 'nginx_custom']);
+env_assert($waiting?->kind === 'nginx_custom' && $waiting->secondsLeft(new DateTimeImmutable('2026-01-01T00:00:30Z')) === 90, 'A change applied, kept within its time.');
 
 echo "FilesTest passed.\n";

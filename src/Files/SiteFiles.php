@@ -6,6 +6,7 @@ namespace Larena\Env\Files;
 
 use Larena\Env\Contracts\PanelFileGateway;
 use Larena\Env\Contracts\PanelGateway;
+use Larena\Env\Firewall\TimedChange;
 use Larena\Env\Gateway\PanelActor;
 use Larena\Env\Gateway\PanelAnswerStatus;
 use Larena\Env\Gateway\PanelDownload;
@@ -80,23 +81,25 @@ final readonly class SiteFiles
     }
 
     /**
-     * The site's own nginx directives and a change applied but not kept yet: its id and when the server puts the previous
-     * directives back by itself.
+     * The site's own nginx directives (site:nginx-custom-show, simai-nginx-custom/1, simai-env 1.41.0): their text,
+     * whether the site's configuration includes them, and a change applied but not kept yet, which the server undoes by
+     * itself when its time is up.
      *
-     * @return array{content: string, pending: ?string, expires: ?string}|string
+     * @return array{content: string, present: bool, included: bool, pending: ?TimedChange}|string
      */
-    public function overlay(PanelActor $actor, string $domain): array|string
+    public function nginxCustom(PanelActor $actor, string $domain): array|string
     {
-        $data = $this->data($actor, 'site:nginx-overlay-get', ['domain' => $domain]);
+        $data = $this->data($actor, 'site:nginx-custom-show', ['domain' => $domain]);
         if (is_string($data)) {
             return $data;
         }
+        if (!is_string($data['content'] ?? null)) {
+            return PanelReason::ANSWER_SHAPE_INVALID;
+        }
+        $pending = is_array($data['pending_change'] ?? null) ? TimedChange::fromData($data['pending_change'] + ['kind' => 'nginx_custom']) : null;
 
-        $pending = is_array($data['pending'] ?? null) ? $data['pending'] : [];
-        $change = is_string($pending['change_id'] ?? null) && $pending['change_id'] !== '' ? $pending['change_id'] : null;
-
-        return ['content' => is_string($data['content'] ?? null) ? $data['content'] : '', 'pending' => $change,
-            'expires' => $change !== null && is_string($pending['expires_at'] ?? null) ? $pending['expires_at'] : null];
+        return ['content' => $data['content'], 'present' => ($data['present'] ?? false) === true, 'included' => ($data['included'] ?? true) !== false,
+            'pending' => $pending];
     }
 
     /** The file written to $into and checked, or its reason in the answer. */

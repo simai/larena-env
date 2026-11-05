@@ -9,26 +9,21 @@ use Larena\Env\Contracts\PanelGateway;
 use Throwable;
 
 /**
- * A stand-in for the server's file commands (simai-env 1.39.0–1.40.0) and a site's nginx directives on recorded answers,
- * for tests and the install check only: the recordings hold one folder and a few plans, never the bytes of a download or
- * an upload. It answers file:* and site:nginx-overlay-* the way the gateway does, on a local folder per site, and lists
- * them in the host description; everything else goes to the recorded answers it wraps. Paths are checked as the gateway
+ * A stand-in for the server's file commands (simai-env 1.39.0–1.40.0) on recorded answers, for tests and the install
+ * check only: the recordings hold one folder and a few plans, never the bytes of a download or an upload. It answers
+ * file:* the way the gateway does, on a local folder per site; everything else goes to the recorded answers it wraps. Paths are checked as the gateway
  * checks them: nothing outside a site's folder, no `..`, no link that leaves it.
  */
 final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
 {
     /** The commands this stand-in answers, added to the host description's own list. */
     public const array COMMANDS = ['file:list', 'file:stat', 'file:read', 'file:download', 'file:write', 'file:upload', 'file:mkdir', 'file:rename',
-        'file:remove', 'file:archive', 'file:extract', 'site:nginx-overlay-get', 'site:nginx-overlay-set', 'site:nginx-overlay-clear', 'change:confirm', 'change:status'];
-
-    /** How long an applied change waits for its confirmation before the server would put the previous one back. */
-    private const int CHANGE_SECONDS = 120;
+        'file:remove', 'file:archive', 'file:extract'];
 
     private const array DESCRIPTIONS = [
         'file:write' => 'Replace or create a text file of a site', 'file:upload' => 'Put a file into a site', 'file:mkdir' => 'Make a directory',
         'file:rename' => 'Rename or move', 'file:remove' => 'Remove a file, a link or a directory with its contents',
-        'file:archive' => 'Pack a file or directory into a new archive', 'file:extract' => 'Unpack an archive into a directory', 'site:nginx-overlay-set' => 'Apply nginx directives',
-        'site:nginx-overlay-clear' => 'Remove nginx directives', 'change:confirm' => 'Keep the change',
+        'file:archive' => 'Pack a file or directory into a new archive', 'file:extract' => 'Unpack an archive into a directory',
     ];
 
     public function __construct(private PanelGateway $inner, private string $root)
@@ -46,10 +41,7 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
         if (in_array($command, ['job:status', 'job:log'], true) && is_file($this->jobFile($request->args['job_id'] ?? ''))) {
             return $this->job($request);
         }
-        // A timed change of the firewall or of who reaches the panel is the server's own (simai-env 1.35.0, twelve hex
-        // digits); the stand-in names its own with sixteen.
-        $foreignChange = str_starts_with($command, 'change:') && preg_match('/\A[a-f0-9]{16}\z/D', (string) ($request->args['change_id'] ?? '')) !== 1;
-        if (!in_array($command, self::COMMANDS, true) || $foreignChange) {
+        if (!in_array($command, self::COMMANDS, true)) {
             $answer = $this->inner->ask($request);
 
             return $command === 'self:describe' ? $this->listed($request, $answer) : $answer;
@@ -57,8 +49,7 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
         if ($command === 'file:download') {
             return PanelAnswer::refused($request->requestId, PanelReason::NOT_ALLOWED);
         }
-        // A timed change is named by its id alone; the stand-in knows only the nginx directives' changes.
-        $domain = str_starts_with($command, 'change:') ? $this->changeDomain($request->args['change_id'] ?? '') : $request->args['domain'];
+        $domain = $request->args['domain'];
         $scope = $this->scope($request, $domain);
         if ($scope !== null) {
             return $scope;
@@ -124,17 +115,17 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
             'command_status' => $answer->commandStatus, 'operation_id' => $answer->operationId]);
     }
 
-    /** @return list<string> an owner gets the files, never the nginx directives (the system level's) */
+    /** @return list<string> */
     private function offered(PanelRequest $request): array
     {
-        return $request->actor->owner === null ? self::COMMANDS : array_values(array_filter(self::COMMANDS, static fn (string $command): bool => str_starts_with($command, 'file:')));
+        return self::COMMANDS;
     }
 
-    /** An owner works on their own sites only, and never on nginx: as the gateway, through the recorded description. */
+    /** An owner works on their own sites only: as the gateway, through the recorded description. */
     private function scope(PanelRequest $request, string $domain): ?PanelAnswer
     {
         if ($request->actor->owner === null) {
-            return $domain === '' ? PanelAnswer::refused($request->requestId, 'unknown_change') : null;
+            return null;
         }
         if (!str_starts_with($request->command, 'file:')) {
             return PanelAnswer::refused($request->requestId, 'owner_admin_only');
@@ -153,18 +144,6 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
      */
     private function read(string $command, string $domain, array $args): array
     {
-        if ($command === 'site:nginx-overlay-get') {
-            $file = $this->root.'/overlay/'.$domain.'.conf';
-
-            return ['content' => is_file($file) ? (string) file_get_contents($file) : '', 'applied_at' => is_file($file) ? gmdate('Y-m-d\TH:i:s\Z', (int) filemtime($file)) : null,
-                'pending' => $this->pending($domain)];
-        }
-        if ($command === 'change:status') {
-            $pending = $this->pending($domain);
-
-            return ['change_id' => $args['change_id'], 'kind' => 'nginx_overlay', 'domain' => $domain,
-                'state' => ($pending['change_id'] ?? null) === $args['change_id'] ? 'pending' : 'confirmed', 'expires_at' => $pending['expires_at'] ?? null];
-        }
         $relative = $args['path'] ?? '';
         $path = $this->path($domain, $relative);
         if ($command === 'file:list') {
@@ -300,26 +279,6 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
                 }
 
                 return ["Unpacked {$args['path']} into {$args['to']}", 'files: 0, dirs: 0, skipped: 0'];
-            case 'site:nginx-overlay-set':
-            case 'site:nginx-overlay-clear':
-                @mkdir($this->root.'/overlay', 0o775, true);
-                $content = $command === 'site:nginx-overlay-clear' ? '' : (string) file_get_contents(($request->attachment ?? throw new FakeRefusal('bad_request'))->path);
-                file_put_contents($this->root.'/overlay/'.$domain.'.conf', $content);
-                $change = bin2hex(random_bytes(8));
-                @mkdir($this->root.'/overlay/changes', 0o775, true);
-                file_put_contents($this->root.'/overlay/'.$domain.'.pending', json_encode(['change_id' => $change,
-                    'expires_at' => gmdate('Y-m-d\TH:i:s\Z', time() + self::CHANGE_SECONDS)], JSON_THROW_ON_ERROR));
-                file_put_contents($this->root.'/overlay/changes/'.$change, $domain);
-
-                return ['nginx -t: ok', 'Reloaded nginx', 'Change '.$change.': confirm within '.self::CHANGE_SECONDS.' seconds or it is undone'];
-            case 'change:confirm':
-                if (($this->pending($domain)['change_id'] ?? null) !== $args['change_id']) {
-                    throw new FakeRefusal('unknown_change');
-                }
-                unlink($this->root.'/overlay/'.$domain.'.pending');
-                unlink($this->root.'/overlay/changes/'.$args['change_id']);
-
-                return ["Change {$args['change_id']} kept"];
         }
 
         throw new FakeRefusal('not_allowed');
@@ -373,23 +332,6 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
         }
 
         return true;
-    }
-
-    /** @return array{change_id: string, expires_at: string}|null the nginx directives' change applied and not kept yet */
-    private function pending(string $domain): ?array
-    {
-        $pending = json_decode((string) @file_get_contents($this->root.'/overlay/'.$domain.'.pending'), true);
-
-        return is_array($pending) && is_string($pending['change_id'] ?? null) && is_string($pending['expires_at'] ?? null)
-            ? ['change_id' => $pending['change_id'], 'expires_at' => $pending['expires_at']] : null;
-    }
-
-    /** The site a pending change belongs to; '' for a change the stand-in does not know. */
-    private function changeDomain(string $change): string
-    {
-        $file = $this->root.'/overlay/changes/'.$change;
-
-        return preg_match('/\A[a-f0-9]{16}\z/D', $change) === 1 && is_file($file) ? trim((string) file_get_contents($file)) : '';
     }
 
     /** @param array<string, mixed> $data */

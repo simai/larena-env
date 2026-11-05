@@ -45,7 +45,7 @@ final class PanelCommands
     private const string FS_PATH = '/\A(?!\/)(?!(?:.*\/)?\.\.(?:\/|\z))[^\x00-\x1f\x7f]{1,1024}\z/D';
     // An archive file:archive makes: a path whose name says the format.
     private const string FS_ARCHIVE = '/\A(?!\/)(?!(?:.*\/)?\.\.(?:\/|\z))[^\x00-\x1f\x7f]{1,1024}\.(?:zip|tar\.gz|tgz|tar)\z/D';
-    // A file's text in the request line, which the gateway takes up to 64 KiB in all (simai-env 1.39.0).
+    // A file's text or a site's nginx directives in the request line, which the gateway takes up to 64 KiB in all.
     private const string FILE_CONTENT = '/\A[^\x00]{0,61440}\z/D';
     // What file:write and file:upload expect at the path: the sha256 read before, nothing yet, or anything.
     private const string EXPECT_SHA256 = '/\A(?:[a-f0-9]{64}|new|any)\z/D';
@@ -207,10 +207,10 @@ final class PanelCommands
         'file:upload' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH, 'expect-sha256' => self::EXPECT_SHA256], 'required' => ['domain', 'path'], 'since' => '1.40.0', 'kind' => self::ACTION],
         'file:archive' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH, 'to' => self::FS_ARCHIVE], 'required' => ['domain', 'path', 'to'], 'since' => '1.40.0', 'kind' => self::ACTION],
         'file:extract' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH, 'to' => self::FS_PATH, 'overwrite' => self::YES_NO], 'required' => ['domain', 'path', 'to'], 'since' => '1.40.0', 'kind' => self::ACTION],
-        // The site's own nginx directives, the system level's (Panel plan 6.3): applied, then kept only once confirmed.
-        'site:nginx-overlay-get' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => null, 'kind' => self::READ],
-        'site:nginx-overlay-set' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => null, 'kind' => self::ACTION],
-        'site:nginx-overlay-clear' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => null, 'kind' => self::ACTION],
+        // The site's own nginx directives, the system level's (simai-env 1.41.0): a timed change, applied once nginx takes
+        // them and the site answers, then undone after two minutes unless change:confirm keeps it. Empty removes them.
+        'site:nginx-custom-show' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => '1.41.0', 'kind' => self::READ],
+        'site:nginx-custom' => ['args' => ['domain' => self::DOMAIN, 'content' => self::FILE_CONTENT], 'required' => ['domain', 'content'], 'since' => '1.41.0', 'kind' => self::ACTION],
         // A timed change kept by the person who made it (the firewall, the panel's access, nginx directives): without the
         // confirmation in time, the server puts the previous one back by itself.
         'change:confirm' => ['args' => ['change_id' => self::CHANGE_ID], 'required' => ['change_id'], 'since' => '1.35.0', 'kind' => self::ACTION],
@@ -257,7 +257,6 @@ final class PanelCommands
      */
     private const array ATTACHMENTS = [
         'file:upload' => 1_073_741_824,
-        'site:nginx-overlay-set' => 65_536,
     ];
 
     /** A download answers a JSON line and then exactly `size` bytes: the most the panel takes. */

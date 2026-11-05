@@ -156,6 +156,11 @@ final readonly class FirewallController
         $change = $request->input('change');
         $kind = $request->input('kind');
         $page = is_string($kind) && isset(self::CHANGE_PAGES[$kind]) ? route(self::CHANGE_PAGES[$kind], [], false) : route('larena.env.admin.index', [], false);
+        // A site's own nginx directives (simai-env 1.41.0) go back to that site's tab.
+        $domain = $request->input('domain');
+        if ($kind === 'nginx_custom' && is_string($domain) && preg_match('/\A[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?\z/D', $domain) === 1) {
+            $page = route('larena.env.admin.site', ['domain' => $domain], false).'?tab=nginx';
+        }
         $capabilities = $this->overviews->read($actor)->overview->capabilities ?? PanelCapabilities::none();
         if (!is_string($change) || preg_match('/\A[A-Za-z0-9][A-Za-z0-9._-]{0,63}\z/D', $change) !== 1 || !$capabilities->allows('change:confirm')) {
             return NoticeRedirect::to($request, $page, $this->reasonText('not_allowed'));

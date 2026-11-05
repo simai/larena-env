@@ -69,7 +69,7 @@ env_assert($site->profile === 'generic' && $site->php === '8.3' && $site->ssl ==
 env_assert($site->certificate === null && $site->backupSchedule?->time === '03:30' && $site->backupSchedule->keep === 7 && $site->backupSchedule->verify === false
     && $site->release === null, 'No certificate, a daily backup at 03:30 kept 7, not checked, no release.');
 env_assert($site->lastVerify?->ok === true && $site->lastVerify->restoreTest && $site->lastVerify->backup === '20260101-000000', 'The server\'s last check of a copy (simai-env 1.30.0).');
-env_assert(count($site->backups) === 1 && $site->backups[0]->name === '20261105-011928' && $site->backups[0]->sizeBytes === 4359, 'A backup is named by its own name, not its path.');
+env_assert(count($site->backups) === 1 && $site->backups[0]->name === '20261105-014919' && $site->backups[0]->sizeBytes === 4377, 'A backup is named by its own name, not its path.');
 env_assert($site->answersChecked && $site->diskBytes !== null, 'Whether it answers and its disk (simai-env 1.27.0).');
 env_assert($site->backups[0]->parts === ['config', 'db', 'files'] && $site->backups[0]->encrypted === false, 'What the backup holds.');
 $typed = serialize($site);
@@ -122,12 +122,12 @@ env_assert(substr_count($ok, 'data-env-tab=') === count(\Larena\Env\Http\Control
 // Backups have their tab: the list, «Back up now», and restoring and checking only where the server has them.
 $older = \Larena\Env\Gateway\PanelCapabilities::fromHostDescription(['simai_env' => ['version' => '1.27.0']]);
 $backups = $screen(['site' => $site, 'tab' => 'backups', 'tabOperations' => $onTab('backups', $older)]);
-env_assert(str_contains($backups, 'data-env-backup="20261105-011928"') && str_contains($backups, '4.3 KB') && str_contains($backups, 'data-env-operation="backup"'), 'The backups and «Back up now».');
+env_assert(str_contains($backups, 'data-env-backup="20261105-014919"') && str_contains($backups, '4.3 KB') && str_contains($backups, 'data-env-operation="backup"'), 'The backups and «Back up now».');
 env_assert(!str_contains($backups, 'data-env-operation="backup-restore-database"'), 'No restore while the server\'s gateway has none.');
 $more = \Larena\Env\Gateway\PanelCapabilities::fromHostDescription(['simai_env' => ['version' => '1.27.0'], 'gate' => ['commands' => ['backup:data', 'backup:data-restore', 'backup:data-schedule', 'site:db-rotate', 'site:php-ini-set', 'access:create-project', 'access:disable']]]);
 $restore = $screen(['site' => $site, 'tab' => 'backups', 'tabOperations' => $onTab('backups', $more)]);
 env_assert(str_contains($restore, 'data-env-operation="backup-restore-database"') && str_contains($restore, 'data-env-operation="backup-extract-files"')
-    && str_contains($restore, '<option value="20261105-011928">') && str_contains($restore, 'data-env-restore-note'), 'Restoring chooses a backup and says a copy is taken first.');
+    && str_contains($restore, '<option value="20261105-014919">') && str_contains($restore, 'data-env-restore-note'), 'Restoring chooses a backup and says a copy is taken first.');
 env_assert(str_contains($restore, 'data-env-operation="backup-schedule"') && str_contains($restore, 'type="time"'), 'The daily backup, at a time of day.');
 // simai-env 1.30.0: each new copy is checked, asked where the server takes it, on by default; the last check is said.
 $checked = \Larena\Env\Server\SiteDetails::fromDescription(['schema' => 'simai-site/1', 'domain' => 'demo-php.test', 'profile' => 'generic', 'php' => '8.3', 'ssl' => 'none',
@@ -317,12 +317,18 @@ $notText = $screen(['site' => $site, 'tab' => 'files', 'files' => ['view' => 'pu
 env_assert(str_contains($notText, 'data-env-files-problem') && !str_contains($notText, 'data-env-files-editor') && str_contains($notText, 'data-env-files-download'), 'Not text: downloaded, not edited.');
 $outside = $screen(['site' => $site, 'tab' => 'files', 'files' => ['problem' => 'That path leads outside the site\'s folder: the server refuses it.'] + $filesBase]);
 env_assert(str_contains($outside, 'data-env-files-problem') && str_contains($outside, 'outside the site'), 'A refusal is said in words.');
-$nginx = $screen(['site' => $site, 'tab' => 'nginx', 'overlaySupported' => true, 'overlay' => ['content' => "add_header X-Test 1;\n", 'pending' => 'c1', 'expires' => '2026-01-01T00:02:00Z'],
-    'overlayProblem' => null, 'overlayAllows' => ['set' => true, 'clear' => true, 'confirm' => true]]);
-env_assert(str_contains($nginx, 'data-env-nginx-allowlist') && str_contains($nginx, 'data-env-nginx-pending="c1"') && str_contains($nginx, 'name="op" value="overlay-confirm"')
-    && str_contains($nginx, 'data-env-nginx-op="overlay-clear"') && str_contains($nginx, 'data-env-nginx-expires') && str_contains($nginx, '2026-01-01 00:02 UTC'),
-    'The nginx directives: what is allowed, a change to keep in time, and until when.');
-$noNginx = $screen(['site' => $site, 'tab' => 'nginx', 'overlaySupported' => false, 'overlay' => null, 'overlayProblem' => null, 'overlayAllows' => ['set' => false, 'clear' => false, 'confirm' => false]]);
+$pendingChange = \Larena\Env\Firewall\TimedChange::fromData(['change_id' => 'c1', 'expires_at' => '2026-01-01T00:02:00Z', 'kind' => 'nginx_custom']);
+$nginx = $screen(['site' => $site, 'tab' => 'nginx', 'nginxSupported' => true, 'nginx' => ['content' => "add_header X-Test 1;\n", 'present' => true, 'included' => true, 'pending' => $pendingChange],
+    'nginxProblem' => null, 'nginxAllows' => ['save' => true, 'keep' => true]]);
+env_assert(str_contains($nginx, 'data-env-nginx-allowlist') && str_contains($nginx, 'data-env-timed-change="c1"') && str_contains($nginx, 'data-env-timed-keep="c1"')
+    && str_contains($nginx, 'name="kind" value="nginx_custom"') && str_contains($nginx, 'name="domain" value="demo-php.test"') && str_contains($nginx, 'data-env-nginx-wait')
+    && !str_contains($nginx, 'data-env-nginx-op="nginx-clear"') && str_contains($nginx, ' readonly'),
+    'The nginx directives: a change waiting to be kept, kept for this site, nothing new saved meanwhile.');
+$nginxIdle = $screen(['site' => $site, 'tab' => 'nginx', 'nginxSupported' => true, 'nginx' => ['content' => "add_header X-Test 1;\n", 'present' => true, 'included' => false, 'pending' => null],
+    'nginxProblem' => null, 'nginxAllows' => ['save' => true, 'keep' => true]]);
+env_assert(str_contains($nginxIdle, 'name="op" value="nginx-save"') && str_contains($nginxIdle, 'data-env-nginx-op="nginx-clear"') && str_contains($nginxIdle, 'data-env-nginx-not-included')
+    && !str_contains($nginxIdle, 'data-env-timed-change'), 'Saved and removed by plan; an include the server still adds is said.');
+$noNginx = $screen(['site' => $site, 'tab' => 'nginx', 'nginxSupported' => false, 'nginx' => null, 'nginxProblem' => null, 'nginxAllows' => ['save' => false, 'keep' => false]]);
 env_assert(str_contains($noNginx, 'data-env-nginx-unsupported') && !str_contains($noNginx, 'data-env-nginx-op'), 'No directives command: said, nothing offered.');
 
 foreach (['site', 'plan', 'job', 'new-site', 'people', 'partials/notes', 'partials/warnings', 'partials/history', 'partials/files', 'partials/nginx', 'dns/connection', 'dns/index', 'dns/zone', 'dns/record-form', 'dns/plan', 'update', 'partials/update-plan', 'services', 'firewall', 'panel-access', 'partials/cron', 'partials/timed-change'] as $view) {
@@ -335,7 +341,7 @@ foreach (['site', 'plan', 'job', 'new-site', 'people', 'partials/notes', 'partia
 $extras = new \Larena\Env\Server\SiteExtrasReader($gateway);
 $envUpdate = $extras->updatePlan(new PanelActor($user), 'env');
 $panelUpdate = $extras->updatePlan(new PanelActor($user), 'panel');
-env_assert($envUpdate instanceof \Larena\Env\Update\UpdatePlan && $envUpdate->current === '1.40.0' && $envUpdate->available === '9.9.0'
+env_assert($envUpdate instanceof \Larena\Env\Update\UpdatePlan && $envUpdate->current === '1.41.0' && $envUpdate->available === '9.9.0'
     && $envUpdate->updateAvailable && $envUpdate->blocked === null && $envUpdate->notes === [['version' => '9.9.0', 'text' => '- An example release note.']]
     && count($envUpdate->checks) === 4 && $envUpdate->notesUrl !== null, 'simai-env\'s update reads: the versions, the notes and the sites it checks.');
 env_assert($panelUpdate instanceof \Larena\Env\Update\UpdatePlan && $panelUpdate->current === null && $panelUpdate->blocked === 'not_installed'

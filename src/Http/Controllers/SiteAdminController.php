@@ -97,7 +97,7 @@ final readonly class SiteAdminController
         $operations = $site === null ? [] : SiteOperation::offeredFor($site, $capabilities);
         $ask = static fn (string $command, string $onTab): bool => $site !== null && $tab === $onTab && $capabilities->allows($command);
         $sftpAccounts = $ask('access:list', 'access') ? $this->extras->sftpAccounts($actor, $domain) : null;
-        $overlay = $ask('site:nginx-overlay-get', 'nginx') && $actor->owner === null ? $this->files?->overlay($actor, $domain) : null;
+        $nginx = $ask('site:nginx-custom-show', 'nginx') && $actor->owner === null ? $this->files?->nginxCustom($actor, $domain) : null;
         // What needs attention on this site (Panel plan 4.4): the server's own alerts where it keeps them, as the sites' list says it.
         $siteWarnings = $overview === null ? null : ($this->warningSource ?? new PanelWarningSource($this->extras))->ofSite($actor, $overview, $domain, PanelWarnings::now());
 
@@ -114,11 +114,12 @@ final readonly class SiteAdminController
             // The domain's records through the panel's DNS provider, and whether it points here (Panel plan, stage 7).
             // The site's files (simai-env 1.39.0–1.40.0): a folder or a file open in the editor.
             'files' => $site !== null && $tab === 'files' ? $this->filesTab($request, $actor, $domain, $capabilities) : null,
-            'overlay' => is_array($overlay) ? $overlay : null,
-            'overlayProblem' => is_string($overlay) ? $this->filesReasonText($overlay) : null,
-            'overlaySupported' => $capabilities->allows('site:nginx-overlay-get'),
-            'overlayAllows' => ['set' => $capabilities->allows('site:nginx-overlay-set'), 'clear' => $capabilities->allows('site:nginx-overlay-clear'),
-                'confirm' => $capabilities->allows('change:confirm')],
+            // The site's own nginx directives (simai-env 1.41.0), the system level's.
+            'nginx' => is_array($nginx) ? $nginx : null,
+            'nginxProblem' => is_string($nginx) ? $this->filesReasonText($nginx) : null,
+            'nginxSupported' => $capabilities->allows('site:nginx-custom-show'),
+            'nginxAllows' => ['save' => $capabilities->allows('site:nginx-custom'),
+                'keep' => $capabilities->allows('change:confirm')],
             'siteDns' => $site !== null && $tab === 'dns' ? $this->dns?->forSite($domain) : null,
             // The site's own scheduled jobs (Panel plan 5.4), and the runs of one of them when it is opened.
             'cron' => $site !== null && $tab === 'cron' ? $this->cronTab($request, $actor, $domain, $capabilities) : null,
