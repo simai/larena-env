@@ -32,7 +32,7 @@ env_assert(PanelCommands::kind('site:remove') === null && PanelCommands::kind('s
 // timed change (stage 6); 3 of the server's alerts (simai-env 1.31.0); the safe update (simai-env 1.32.0); 2 of the services,
 // 4 of a site's scheduled jobs, 4 of the firewall and the panel's access (stage 5); the DNS token for certificates (simai-env 1.36.0);
 // 4 of the server's PHP versions (simai-env 1.37.0).
-env_assert(count(PanelCommands::actions()) === 56, 'The card\'s actions, a new site, the owners, the files, the nginx directives, the alerts, the update, the services, the jobs, the firewall, the DNS token and PHP.');
+env_assert(count(PanelCommands::actions()) === 59, 'The card\'s actions, a new site, the owners, the files, the nginx directives, the alerts, the update, the services, the jobs, the firewall, the DNS token, PHP and the server\'s software.');
 // fs:archive's paths are the one list an argument may be: up to 100, each a path; nothing else takes a list.
 PanelCommands::check('fs:archive', ['domain' => 'demo-php.test', 'paths' => ['public', 'notes.txt'], 'name' => 'a.zip', 'format' => 'zip']);
 foreach ([['paths' => ['../x']], ['paths' => array_fill(0, 101, 'a')], ['paths' => []]] as $bad) {

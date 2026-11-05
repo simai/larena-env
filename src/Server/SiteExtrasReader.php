@@ -11,6 +11,7 @@ use Larena\Env\Gateway\PanelActor;
 use Larena\Env\Gateway\PanelRefused;
 use Larena\Env\Gateway\PanelRequest;
 use Larena\Env\Software\PhpVersions;
+use Larena\Env\Software\ServerSoftware;
 use Larena\Env\Update\UpdatePlan;
 use UnexpectedValueException;
 
@@ -108,6 +109,13 @@ final readonly class SiteExtrasReader
         $data = $this->data($actor, 'php:list', []);
 
         return $data === null ? null : PhpVersions::fromData($data);
+    }
+
+    public function serverSoftware(PanelActor $actor): ?ServerSoftware
+    {
+        $data = $this->data($actor, 'software:list', []);
+
+        return $data === null ? null : ServerSoftware::fromData($data);
     }
 
     public function serviceLog(PanelActor $actor, string $name, int $lines = 100): ?array

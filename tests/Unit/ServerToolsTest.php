@@ -385,7 +385,38 @@ env_assert(str_contains($withExtensions, 'data-env-php-extensions="8.3"') && str
     && str_contains($withExtensions, 'name="enabled" value="yes"') && str_contains($withExtensions, 'Turn on imagick in PHP 8.3'), 'Extensions turned on or off: '.$withExtensions);
 env_assert(str_contains($phpPage(['php' => null, 'reasonText' => 'No PHP <b>']), 'No PHP &lt;b&gt;'), 'A server without it says so.');
 
-foreach (['services', 'firewall', 'panel-access', 'software-php', 'partials/cron', 'partials/timed-change'] as $name) {
+// The server's software and the system's updates (simai-env 1.38.0, set 14): read, each change planned and confirmed, the administrator's alone.
+foreach (['software:list', 'software:refresh', 'software:update', 'software:install'] as $command) {
+    env_assert(PanelCommands::since($command) === '1.38.0' && (new PanelCapabilities('1.38.0'))->allows($command) && !(new PanelCapabilities('1.37.0'))->allows($command),
+        "{$command} from simai-env 1.38.0.");
+}
+$software = $extras->serverSoftware($admin);
+env_assert($software !== null && array_map(static fn ($component): string => $component->name, $software->components) === ['nginx', 'mysql', 'postgresql', 'redis', 'node', 'certbot']
+    && $software->component('nginx')?->active === true && !$software->component('nginx')->installable && $software->component('redis')?->installable === true
+    && $software->system->updates === 4 && $software->system->security === 3 && count($software->system->packages) === 4 && !$software->system->rebootRequired
+    && $software->system->indexAgeMinutes() === 177, 'The server\'s software (simai-software/1).');
+$systemPlan = $operations->planCommand($admin, 'software:update', ['security-only' => 'yes'])->plan;
+env_assert($systemPlan?->system?->security === 3 && $systemPlan->update === null, 'A system update\'s plan names its packages.');
+env_assert($operations->planCommand($admin, 'software:install', ['name' => 'redis'])->plan?->command === 'software:install', 'A component is planned first.');
+env_assert($operations->planCommand($admin, 'software:install', ['name' => 'nginx'])->reason === 'invalid_argument'
+    && $operations->planCommand($admin, 'software:install', ['name' => 'node', 'version' => '2x'])->reason === 'invalid_argument', 'Only what software:install adds, in a two-digit major.');
+env_assert($extras->serverSoftware($owner) === null && $operations->planCommand($owner, 'software:update', [])->reason === 'not_allowed', 'An owner cannot see or change the server\'s software.');
+$softwarePage = static fn (array $data): string => $factory->make('larena-env::admin.software', $data + ['source' => 'recorded', 'software' => $software, 'system' => $software->system,
+    'reasonText' => null, 'allows' => ['refresh' => true, 'update' => true, 'install' => true], 'notice' => null])->render();
+$page = $softwarePage([]);
+env_assert(str_contains($page, 'data-env-system-updates="4"') && str_contains($page, 'data-env-system-security-count="3"') && substr_count($page, 'data-env-system-security ') + substr_count($page, 'data-env-system-security>') === 3
+    && str_contains($page, 'data-env-software-op="update-security"') && str_contains($page, 'data-env-software-op="update-all"') && str_contains($page, 'data-env-software-op="refresh"')
+    && str_contains($page, 'data-env-software-op="install-redis"') && str_contains($page, 'data-env-software-op="install-node"') && !str_contains($page, 'data-env-software-op="install-nginx"')
+    && str_contains($page, 'Checked 177 min ago') && substr_count($page, 'data-env-software-component=') === 6, 'The components and the system\'s updates: '.$page);
+$readOnlySoftware = $softwarePage(['allows' => ['refresh' => false, 'update' => false, 'install' => false]]);
+env_assert(!str_contains($readOnlySoftware, 'data-env-software-op') && str_contains($readOnlySoftware, 'data-env-system-package="apt"'), 'Without the right, the state only.');
+env_assert(str_contains($softwarePage(['software' => null, 'system' => null, 'reasonText' => 'No list <b>']), 'No list &lt;b&gt;'), 'A server without it says so.');
+$withReboot = new \Larena\Env\Software\SystemUpdates(0, 0, [], ['linux-image'], true, ['linux-image-6.8'], null);
+$rebootPage = $softwarePage(['software' => new \Larena\Env\Software\ServerSoftware([], $withReboot), 'system' => $withReboot]);
+env_assert(str_contains($rebootPage, 'data-env-system-reboot') && str_contains($rebootPage, 'linux-image-6.8') && str_contains($rebootPage, 'data-env-system-kept-back')
+    && !str_contains($rebootPage, 'data-env-software-op="update-all"'), 'A pending reboot and kept-back packages said in words, nothing to install: '.$rebootPage);
+
+foreach (['services', 'firewall', 'panel-access', 'software-php', 'software', 'partials/system-updates', 'partials/cron', 'partials/timed-change'] as $name) {
     $source = (string) file_get_contents(dirname(__DIR__, 2).'/resources/views/admin/'.$name.'.blade.php');
     env_assert(!str_contains($source, '{!!') && preg_match('/<style\b|<script\b|@php\b/i', $source) !== 1, "The {$name} view prints nothing raw and holds no script.");
 }

@@ -161,6 +161,25 @@ final class ServerAdminNavigationContributor implements AdminNavigationContribut
             activeRoutePattern: 'larena.env.admin.services*',
             icon: 'restart_alt',
         ), new AdminNavigationDescriptor(
+            // The server's software and the system's updates (simai-env 1.38.0).
+            id: 'env.software',
+            ownerPackage: $this->ownerPackage(),
+            label: 'Программы',
+            routeName: 'larena.env.admin.software',
+            routeUri: '/admin/server/software',
+            category: 'operations',
+            state: 'operator_slice',
+            accessScope: 'env.server.read',
+            auditEvent: 'env.software.viewed',
+            statusCap: 'env_panel_skeleton',
+            order: 12,
+            group: 'operations',
+            knownLimitations: ['not_production_ready'],
+            surface: 'product',
+            labelKey: 'larena-env::admin.software.overview.navigation',
+            activeRoutePattern: 'larena.env.admin.software',
+            icon: 'deployed_code',
+        ), new AdminNavigationDescriptor(
             // The server's PHP versions: installed, updated, removed, their extensions (simai-env 1.37.0).
             id: 'env.software.php',
             ownerPackage: $this->ownerPackage(),
@@ -237,7 +256,7 @@ final class ServerAdminNavigationContributor implements AdminNavigationContribut
             icon: 'dns',
         )];
         // Each row of a screen a newer simai-env brings, by the command it needs (Panel plan stage 5).
-        $needs = ['env.services' => 'service:list', 'env.software.php' => 'php:list', 'env.firewall' => 'firewall:status', 'env.panel.access' => 'panel:access'];
+        $needs = ['env.services' => 'service:list', 'env.software' => 'software:list', 'env.software.php' => 'php:list', 'env.firewall' => 'firewall:status', 'env.panel.access' => 'panel:access'];
 
         return array_values(array_filter($rows, fn (AdminNavigationDescriptor $row): bool => !isset($needs[$row->id])
             || ($this->listed !== null && ($this->listed)($needs[$row->id]))));

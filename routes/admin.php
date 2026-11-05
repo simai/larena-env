@@ -14,6 +14,7 @@ use Larena\Env\Http\Controllers\ServicesController;
 use Larena\Env\Http\Controllers\SiteCronController;
 use Larena\Env\Http\Controllers\SiteAdminController;
 use Larena\Env\Http\Controllers\SiteFilesController;
+use Larena\Env\Http\Controllers\SoftwareController;
 use Larena\Env\Http\Controllers\SoftwarePhpController;
 use Larena\Env\Http\Controllers\UpdateController;
 
@@ -69,11 +70,15 @@ $router->middleware(['access:env.server.read'])->group(static function ($router)
     $router->get('/firewall', [FirewallController::class, 'index'])->name('larena.env.admin.firewall');
     $router->get('/panel-access', [FirewallController::class, 'access'])->name('larena.env.admin.panel.access');
     // The server's PHP versions (simai-env 1.37.0).
+    // The server's software and the system's updates (simai-env 1.38.0).
+    $router->get('/software', [SoftwareController::class, 'index'])->name('larena.env.admin.software');
     $router->get('/software/php', [SoftwarePhpController::class, 'index'])->name('larena.env.admin.software.php');
 });
 $router->middleware(['access:env.server.operate'])->group(static function ($router): void {
     $router->post('/services/plan', [ServicesController::class, 'plan'])->name('larena.env.admin.services.plan');
     $router->post('/services/run', [ServicesController::class, 'run'])->name('larena.env.admin.services.run');
+    $router->post('/software/plan', [SoftwareController::class, 'plan'])->name('larena.env.admin.software.plan');
+    $router->post('/software/run', [SoftwareController::class, 'run'])->name('larena.env.admin.software.run');
     $router->post('/software/php/plan', [SoftwarePhpController::class, 'plan'])->name('larena.env.admin.software.php.plan');
     $router->post('/software/php/run', [SoftwarePhpController::class, 'run'])->name('larena.env.admin.software.php.run');
     $router->post('/firewall/plan', [FirewallController::class, 'plan'])->name('larena.env.admin.firewall.plan');

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Larena\Env\Operations;
 
+use Larena\Env\Software\SystemUpdates;
 use Larena\Env\Update\UpdatePlan;
 use UnexpectedValueException;
 
@@ -13,6 +14,7 @@ final readonly class PanelPlan
     /**
      * @param array<string, string> $args
      * @param ?UpdatePlan $update what a safe update would change (self:update's plan carries it, simai-env 1.32.0)
+     * @param ?SystemUpdates $system the packages a system update would install (software:update's plan, simai-env 1.38.0)
      */
     public function __construct(
         public string $command,
@@ -22,6 +24,7 @@ final readonly class PanelPlan
         public string $effects,
         public ?string $lock,
         public ?UpdatePlan $update = null,
+        public ?SystemUpdates $system = null,
     ) {
     }
 
@@ -62,6 +65,7 @@ final readonly class PanelPlan
             effects: $effects,
             lock: is_string($data['lock'] ?? null) ? $data['lock'] : null,
             update: is_array($data['update'] ?? null) ? UpdatePlan::fromData($data['update']) : null,
+            system: $command === 'software:update' && is_array($data['update'] ?? null) ? SystemUpdates::fromData($data['update']) : null,
         );
     }
 }

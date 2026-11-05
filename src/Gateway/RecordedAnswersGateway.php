@@ -50,6 +50,10 @@ final readonly class RecordedAnswersGateway implements PanelGateway
         if ($owner !== null && str_starts_with($request->command, 'php:') && $request->command !== 'php:extensions') {
             return $this->replay($request, 'refused.owner-admin-only.php-list.json');
         }
+        // And the server's software and the system's updates (simai-env 1.38.0).
+        if ($owner !== null && str_starts_with($request->command, 'software:')) {
+            return $this->replay($request, 'refused.owner-admin-only.software-list.json');
+        }
         // And the token the server keeps for DNS certificates (simai-env 1.36.0); whether one is kept, anyone may read.
         if ($owner !== null && $request->command === 'ssl:dns-credentials') {
             return $this->replay($request, 'refused.owner-admin-only.ssl-dns-credentials.json');

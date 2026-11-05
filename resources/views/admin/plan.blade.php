@@ -18,6 +18,10 @@
         @if (($update ?? null) !== null)
             @include('larena-env::admin.partials.update-plan', ['update' => $update])
         @endif
+        @if (($system ?? null) !== null)
+            <h3 class="m-top-2 m-bottom-1 text-medium">{{ __('larena-env::admin.software.overview.packages') }}</h3>
+            @include('larena-env::admin.partials.system-updates', ['system' => $system])
+        @endif
         @foreach ($then ?? [] as $after)
             <p data-env-plan-then>{{ $after }}</p>
         @endforeach
