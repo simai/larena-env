@@ -33,8 +33,8 @@ final readonly class SoftwareController
         private SiteExtrasReader $extras,
         private Factory $views,
         private Translator $translator,
+        private UpdateController $updates,
         private ?AccessOperationAuthorizer $authorizer = null,
-        private ?UpdateController $updates = null,
     ) {
     }
 
@@ -53,7 +53,7 @@ final readonly class SoftwareController
             'reasonText' => $software === null ? $this->reasonText($read->reason ?? ($capabilities?->allows('software:list') === true ? 'unreadable' : 'unsupported')) : null,
             'allows' => array_map(static fn (string $command): bool => $canOperate && $capabilities?->allows($command) === true, self::OPERATIONS),
             'notice' => $request->session()->get('larena_env_notice'),
-        ] + ($this->updates?->state($request, $actor, $capabilities) ?? []));
+        ] + $this->updates->state($request, $actor, $capabilities));
     }
 
     /** What the asked change would do, with a confirmation that does it and nothing else. */
