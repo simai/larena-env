@@ -1,7 +1,7 @@
 {{-- A site's files (simai-env 1.39.0–1.40.0): a folder or a file open in the editor. Every change is planned and
      confirmed; there is no trash, so a removal says it is final. --}}
 <section class="larena-panel larena-panel-padded" data-env-files="{{ $files['supported'] ? 'on' : 'unsupported' }}" aria-labelledby="env-site-files">
-    <h2 id="env-site-files">{{ __('larena-env::admin.files.title') }}</h2>
+    <h2 id="env-site-files" class="text-2">{{ __('larena-env::admin.files.title') }}</h2>
     @if (!$files['supported'])
         <p data-env-files-unsupported>{{ __('larena-env::admin.files.unsupported') }}</p>
     @else

@@ -12,7 +12,7 @@
          their disk and whether they are blocked. --}}
     <section class="larena-panel" style="margin: 0 0 1rem;" aria-labelledby="env-people" data-env-people>
         <div class="p-2 p-bottom-1">
-            <h2 id="env-people" class="m-0">{{ __('larena-env::admin.people.list') }}</h2>
+            <h2 id="env-people" class="m-0 text-2">{{ __('larena-env::admin.people.list') }}</h2>
             <p class="m-0 m-top-1 color-on-surface-variant">{{ __('larena-env::admin.people.explain') }}</p>
             @if ($reasonText !== null)
                 <p class="m-0 m-top-1 color-error" role="alert">{{ $reasonText }}</p>
@@ -62,7 +62,7 @@
     @if ($owners !== [])
         <section class="larena-panel" style="margin: 0 0 1rem;" aria-labelledby="env-owners" data-env-owners>
             <div class="p-2 p-bottom-1">
-                <h2 id="env-owners" class="m-0">{{ __('larena-env::admin.people.navigation') }}</h2>
+                <h2 id="env-owners" class="m-0 text-2">{{ __('larena-env::admin.people.navigation') }}</h2>
                 @if ($canBlock ?? false)
                     <p class="m-0 m-top-1 color-on-surface-variant">{{ __('larena-env::admin.people.block_explain') }}</p>
                 @endif
@@ -94,7 +94,7 @@
     @endif
 
     <section class="larena-panel larena-panel-padded" aria-labelledby="env-new-owner" data-env-new-owner-form>
-        <h2 id="env-new-owner">{{ __('larena-env::admin.people.new_owner') }}</h2>
+        <h2 id="env-new-owner" class="text-2">{{ __('larena-env::admin.people.new_owner') }}</h2>
         <p>{{ __('larena-env::admin.people.new_owner_explain') }}</p>
         <form method="post" action="{{ route('larena.env.admin.people.owners.plan', [], false) }}" class="larena-form">
             @csrf

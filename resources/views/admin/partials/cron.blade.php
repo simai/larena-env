@@ -1,6 +1,6 @@
 {{-- A site's own scheduled jobs (Panel plan 5.4): each runs as the site's user in its folder, never more often than every minute. --}}
 <section class="larena-panel larena-panel-padded" data-env-cron="{{ $cron['jobs'] === null ? 'unreadable' : 'on' }}" aria-labelledby="env-site-cron">
-    <h2 id="env-site-cron">{{ __('larena-env::admin.cron.title') }}</h2>
+    <h2 id="env-site-cron" class="text-2">{{ __('larena-env::admin.cron.title') }}</h2>
     <p>{{ __('larena-env::admin.cron.explain') }}</p>
     <p data-env-cron-hint>{{ __('larena-env::admin.cron.where_and_overlap') }}</p>
     @if ($cron['jobs'] === null)
@@ -49,7 +49,7 @@
 
 @if ($cron['opened'] !== null)
     <section class="larena-panel larena-panel-padded" data-env-cron-runs="{{ $cron['opened']->id }}" aria-labelledby="env-cron-runs">
-        <h2 id="env-cron-runs">{{ __('larena-env::admin.cron.runs_of') }}</h2>
+        <h2 id="env-cron-runs" class="text-2">{{ __('larena-env::admin.cron.runs_of') }}</h2>
         <p><code style="overflow-wrap: anywhere;">{{ $cron['opened']->command }}</code></p>
         @if ($cron['runs'] === null)
             <p role="alert">{{ __('larena-env::admin.cron.runs_unreadable') }}</p>
@@ -75,7 +75,7 @@
     </section>
 @elseif ($cron['allows']['add'])
     <section class="larena-panel larena-panel-padded" aria-labelledby="env-cron-add">
-        <h2 id="env-cron-add">{{ __('larena-env::admin.cron.operations.add') }}</h2>
+        <h2 id="env-cron-add" class="text-2">{{ __('larena-env::admin.cron.operations.add') }}</h2>
         <form method="post" action="{{ route('larena.env.admin.site.cron.plan', ['domain' => $domain], false) }}" class="larena-form" data-env-cron-op="add">
             @csrf
             <input type="hidden" name="op" value="add">

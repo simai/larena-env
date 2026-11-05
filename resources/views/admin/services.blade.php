@@ -13,7 +13,7 @@
     <div class="grid g-2">
         <section class="larena-panel" style="margin: 0;" data-env-services="{{ $allows['restart'] || $allows['reload'] ? 'on' : 'read' }}" aria-labelledby="env-services">
             <div class="flex flex-wrap items-cross-center content-main-between g-1 p-2 p-bottom-1">
-                <h2 id="env-services" class="m-0">{{ __('larena-env::admin.services.list') }}</h2>
+                <h2 id="env-services" class="m-0 text-2">{{ __('larena-env::admin.services.list') }}</h2>
                 @if ($services !== [])
                     <sf-badge data-env-services-summary status="{{ count(array_filter($services, static fn ($service): bool => !$service->isActive())) === 0 ? 'success' : 'error' }}" appearance="tonal"
                         text="{{ count(array_filter($services, static fn ($service): bool => !$service->isActive())) === 0 ? __('larena-env::admin.services.all_running', ['total' => (string) count($services)]) : __('larena-env::admin.services.some_stopped', ['stopped' => (string) count(array_filter($services, static fn ($service): bool => !$service->isActive())), 'total' => (string) count($services)]) }}"></sf-badge>
@@ -77,7 +77,7 @@
 
         @if ($logOf !== null)
             <section class="larena-panel p-2" style="margin: 0;" data-env-service-log="{{ $logOf }}" aria-labelledby="env-service-log">
-                <h2 id="env-service-log" class="m-top-0">{{ __('larena-env::admin.services.journal_of', ['name' => $logOf]) }}</h2>
+                <h2 id="env-service-log" class="m-top-0 text-2">{{ __('larena-env::admin.services.journal_of', ['name' => $logOf]) }}</h2>
                 @if ($log === null)
                     <p class="m-0" role="alert">{{ __('larena-env::admin.services.journal_unreadable') }}</p>
                 @elseif ($log === [])

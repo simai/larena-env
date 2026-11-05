@@ -2,7 +2,7 @@
      percent of the whole, as the panel's check measured it. $history is null where the person may not see the server. --}}
 @if (($history ?? null) !== null)
     <section class="larena-panel larena-panel-padded" data-env-history aria-labelledby="env-history">
-        <h2 id="env-history">{{ __('larena-env::admin.history.title') }}</h2>
+        <h2 id="env-history" class="text-2">{{ __('larena-env::admin.history.title') }}</h2>
         @if ($historyFromServer ?? false)
             <p data-env-history-from-server>{{ __('larena-env::admin.history.from_server') }}</p>
         @endif

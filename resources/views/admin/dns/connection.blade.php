@@ -9,7 +9,7 @@
     @include('larena-env::admin.partials.notes')
 
     <section class="larena-panel larena-panel-padded" data-env-dns-connection="{{ $connected === null ? 'none' : 'connected' }}" aria-labelledby="env-dns-connection">
-        <h2 id="env-dns-connection">{{ __('larena-env::admin.dns.provider') }}</h2>
+        <h2 id="env-dns-connection" class="text-2">{{ __('larena-env::admin.dns.provider') }}</h2>
         @if ($connected === null)
             <p data-env-dns-connect>{{ __('larena-env::admin.dns.not_connected') }}</p>
             <p>{{ __('larena-env::admin.dns.token_help') }}</p>
@@ -49,7 +49,7 @@
 
     @if ($connected !== null)
         <section class="larena-panel larena-panel-padded" data-env-dns-addresses aria-labelledby="env-dns-addresses">
-            <h2 id="env-dns-addresses">{{ __('larena-env::admin.dns.addresses') }}</h2>
+            <h2 id="env-dns-addresses" class="text-2">{{ __('larena-env::admin.dns.addresses') }}</h2>
             <p>{{ __('larena-env::admin.dns.addresses_help') }}</p>
             <form method="post" action="{{ route('larena.env.admin.dns.connection.addresses', [], false) }}" class="larena-form">
                 @csrf
@@ -69,7 +69,7 @@
         @if ($certificatesSupported ?? false)
             {{-- Certificates through DNS (simai-env 1.36.0): the server keeps its own copy of this token, root-only. --}}
             <section class="larena-panel larena-panel-padded" id="env-dns-certificates" data-env-dns-certificates="{{ $certificates === null ? 'unknown' : ($certificates->configured ? 'stored' : 'none') }}" aria-labelledby="env-dns-certificates-title">
-                <h2 id="env-dns-certificates-title">{{ __('larena-env::admin.dns.certificates.title') }}</h2>
+                <h2 id="env-dns-certificates-title" class="text-2">{{ __('larena-env::admin.dns.certificates.title') }}</h2>
                 <p>{{ __('larena-env::admin.dns.certificates.explain') }}</p>
                 @if ($certificates === null)
                     <p role="alert">{{ __('larena-env::admin.dns.certificates.unknown') }}</p>
@@ -97,7 +97,7 @@
             </section>
         @endif
         <section class="larena-panel larena-panel-padded" aria-labelledby="env-dns-disconnect">
-            <h2 id="env-dns-disconnect">{{ __('larena-env::admin.dns.disconnect') }}</h2>
+            <h2 id="env-dns-disconnect" class="text-2">{{ __('larena-env::admin.dns.disconnect') }}</h2>
             <p>{{ __('larena-env::admin.dns.disconnect_explain') }}</p>
             <form method="post" action="{{ route('larena.env.admin.dns.connection.disconnect', [], false) }}" data-env-dns-disconnect>
                 @csrf

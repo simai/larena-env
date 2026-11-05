@@ -11,18 +11,18 @@
     @if ($status === null && ($updating ?? null) !== null && ! $refused)
         {{-- An update replaces the gate and the panel while its job runs: the server may not answer for a moment. --}}
         <section class="larena-panel larena-panel-padded" data-env-job-restarting="{{ $updating }}" role="status">
-            <h2>{{ __('larena-env::admin.update.restarting_title') }}</h2>
+            <h2 class="text-2">{{ __('larena-env::admin.update.restarting_title') }}</h2>
             <p>{{ __('larena-env::admin.update.restarting') }}</p>
             <p><a href="{{ route('larena.env.admin.job', ['job' => $jobId], false) }}" class="larena-button">{{ __('larena-env::admin.update.reload') }}</a></p>
         </section>
     @elseif ($status === null)
         <section class="larena-panel larena-empty" data-env-state="{{ $refused ? 'refused' : 'failed' }}" role="alert">
-            <h2>{{ $refused ? __('larena-env::admin.refused_title') : __('larena-env::admin.failed_title') }}</h2>
+            <h2 class="text-2">{{ $refused ? __('larena-env::admin.refused_title') : __('larena-env::admin.failed_title') }}</h2>
             <p>{{ $reasonText }}</p>
         </section>
     @else
         <section class="larena-panel larena-panel-padded" data-env-job="{{ $status->jobId }}" data-env-job-state="{{ $status->state->value }}" aria-labelledby="env-job">
-            <h2 id="env-job">{{ __('larena-env::admin.job.states.'.$status->state->value) }}</h2>
+            <h2 id="env-job" class="text-2">{{ __('larena-env::admin.job.states.'.$status->state->value) }}</h2>
             @if (($configFailed ?? null) !== null)
                 <p role="alert" data-env-job-config-failed="{{ $configFailed }}">{{ __('larena-env::admin.services.config_failed', ['name' => $configFailed]) }}</p>
             @endif
@@ -46,7 +46,7 @@
         </section>
 
         <section class="larena-panel larena-panel-padded" data-env-job-log aria-labelledby="env-job-log">
-            <h2 id="env-job-log">{{ __('larena-env::admin.job.log') }}</h2>
+            <h2 id="env-job-log" class="text-2">{{ __('larena-env::admin.job.log') }}</h2>
             @if ($log === null)
                 <p>{{ $reasonText ?? __('larena-env::admin.job.no_log') }}</p>
             @else

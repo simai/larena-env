@@ -13,7 +13,7 @@
         items="{{ json_encode([['label' => __('larena-env::admin.new_site.steps.fill')], ['label' => __('larena-env::admin.new_site.steps.plan'), 'disabled' => true],
             ['label' => __('larena-env::admin.new_site.steps.make'), 'disabled' => true]], JSON_UNESCAPED_UNICODE) }}"></sf-steps>
     <section class="larena-panel larena-panel-padded" aria-labelledby="env-new-site">
-        <h2 id="env-new-site" class="m-top-0">{{ __('larena-env::admin.new_site.profile') }}</h2>
+        <h2 id="env-new-site" class="m-top-0 text-2">{{ __('larena-env::admin.new_site.profile') }}</h2>
         {{-- First what it runs, as tiles: each kind with what the server sets up; the fields below ask only what that kind
              takes. Utilities until the Framework's choice cards ship (msg-993e1e39151942c19b23). --}}
         <nav aria-labelledby="env-new-site" data-env-new-kinds>
@@ -33,7 +33,7 @@
         </nav>
     </section>
     <section class="larena-panel larena-panel-padded m-top-2" aria-labelledby="env-new-site-fields">
-        <h2 id="env-new-site-fields" class="m-top-0">{{ __('larena-env::admin.new_site.fields_title', ['kind' => ($serverProfiles ?? null) !== null ? $serverProfiles[$kind ?? 'static']['label'] : __('larena-env::admin.new_site.profiles.'.($kind ?? 'static'))]) }}</h2>
+        <h2 id="env-new-site-fields" class="m-top-0 text-2">{{ __('larena-env::admin.new_site.fields_title', ['kind' => ($serverProfiles ?? null) !== null ? $serverProfiles[$kind ?? 'static']['label'] : __('larena-env::admin.new_site.profiles.'.($kind ?? 'static'))]) }}</h2>
         {{-- The fields the chosen kind asks, in the Framework property view over the new site's port: record.create plans
              the site and leads to that plan. The plain form is the view's fallback, hidden once the view has read its fields. --}}
         <div id="admin-record-view" data-larena-close-url="{{ route('larena.env.admin.index', [], false) }}">

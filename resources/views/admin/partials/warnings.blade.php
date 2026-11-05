@@ -14,7 +14,7 @@
         <section class="larena-panel m-bottom-2" data-env-warnings="{{ count($warnings) }}" aria-labelledby="env-warnings"
             @if (array_filter($warnings, static fn ($warning): bool => $warning->severity === 'error') !== []) role="alert" @endif>
             <div class="flex flex-wrap items-cross-center g-1 p-2 p-bottom-1">
-                <h2 id="env-warnings" class="m-0">{{ __('larena-env::admin.warnings.title') }}</h2>
+                <h2 id="env-warnings" class="m-0 text-2">{{ __('larena-env::admin.warnings.title') }}</h2>
                 <sf-badge status="{{ array_filter($warnings, static fn ($warning): bool => $warning->severity === 'error') !== [] ? 'error' : 'warning' }}" text="{{ count($warnings) }}"></sf-badge>
                 @if ($fromServer ?? false)
                     <span class="color-on-surface-variant" data-env-warnings-from-server>{{ __('larena-env::admin.warnings.from_server') }}</span>

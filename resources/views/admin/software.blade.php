@@ -10,8 +10,7 @@
 
     {{-- One place for what the server runs and its updates (the panel's UX audit): simai-env and the panel first. --}}
     @isset($plans)
-        <section class="m-bottom-3" id="update" data-env-software-updates aria-labelledby="env-software-panel-update">
-            <h2 id="env-software-panel-update" class="m-top-0">{{ __('larena-env::admin.software.overview.panel_title') }}</h2>
+        <section class="m-bottom-3" id="update" data-env-software-updates aria-label="{{ __('larena-env::admin.software.overview.panel_title') }}">
             @include('larena-env::admin.partials.update-targets')
         </section>
     @endisset
@@ -24,7 +23,7 @@
         {{-- The system's package updates first: what waits, how fresh the list is, and the two ways to install it. --}}
         <section class="larena-panel larena-panel-padded" data-env-system-updates="{{ $system->updates }}" aria-labelledby="env-system-updates">
             <div class="flex flex-wrap items-cross-center content-main-between g-1">
-                <h2 id="env-system-updates" class="m-0">{{ __('larena-env::admin.software.overview.system_title') }}</h2>
+                <h2 id="env-system-updates" class="m-0 text-2">{{ __('larena-env::admin.software.overview.system_title') }}</h2>
                 @if ($allows['refresh'])
                     <form method="post" action="{{ route('larena.env.admin.software.plan', [], false) }}" class="m-0" data-env-software-op="refresh">
                         @csrf
@@ -73,7 +72,7 @@
              server can add it. --}}
         <section class="larena-panel" style="margin: 0;" data-env-software="on" aria-labelledby="env-software-components">
             <div class="p-2 p-bottom-1">
-                <h2 id="env-software-components" class="m-0">{{ __('larena-env::admin.software.overview.components_title') }}</h2>
+                <h2 id="env-software-components" class="m-0 text-2">{{ __('larena-env::admin.software.overview.components_title') }}</h2>
             </div>
             <ul class="m-0 p-0" style="list-style: none;">
                 @foreach ($software->components as $component)

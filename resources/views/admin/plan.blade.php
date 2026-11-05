@@ -9,7 +9,7 @@
     @include('larena-env::admin.partials.notes')
 
     <section class="larena-panel larena-panel-padded" data-env-plan="{{ $plan->command }}" aria-labelledby="env-plan">
-        <h2 id="env-plan">{{ __('larena-env::admin.plan.heading') }}</h2>
+        <h2 id="env-plan" class="text-2">{{ __('larena-env::admin.plan.heading') }}</h2>
         <p>{{ $plan->description }}</p>
         @if (($replaces ?? null) !== null)
             <h3 class="m-top-2 m-bottom-1 text-medium">{{ __('larena-env::admin.plan.replaces') }}</h3>

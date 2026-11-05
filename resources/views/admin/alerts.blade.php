@@ -13,7 +13,7 @@
     <div class="grid g-2 grid-col-1 lg:grid-col-2" style="align-items: start;">
         <section class="larena-panel p-2" style="margin: 0;" data-env-alerts-channel="{{ $supported ? ($channel['kind'] ?? 'off') : 'unsupported' }}" aria-labelledby="env-alerts-now">
             <div class="flex flex-wrap items-cross-center content-main-between g-1 m-bottom-1">
-                <h2 id="env-alerts-now" class="m-0">{{ __('larena-env::admin.alerts.now') }}</h2>
+                <h2 id="env-alerts-now" class="m-0 text-2">{{ __('larena-env::admin.alerts.now') }}</h2>
                 @if ($supported)
                     <sf-badge status="{{ ($channel['last_error'] ?? null) !== null ? 'error' : (($channel['kind'] ?? 'off') === 'off' ? 'warning' : 'success') }}" appearance="tonal"
                         text="{{ ($channel['last_error'] ?? null) !== null ? __('larena-env::admin.alerts.state_failing') : __('larena-env::admin.alerts.kinds.'.($channel['kind'] ?? 'off')) }}"></sf-badge>
@@ -44,7 +44,7 @@
 
         @if ($supported)
             <section class="larena-panel p-2" style="margin: 0;" aria-labelledby="env-alerts-change">
-                <h2 id="env-alerts-change" class="m-top-0">{{ __('larena-env::admin.alerts.change') }}</h2>
+                <h2 id="env-alerts-change" class="m-top-0 text-2">{{ __('larena-env::admin.alerts.change') }}</h2>
                 <form method="post" action="{{ route('larena.env.admin.alerts.channel.plan', [], false) }}" class="larena-form" data-env-alerts-form>
                     @csrf
                     <div class="larena-field">

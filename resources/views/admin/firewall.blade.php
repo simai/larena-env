@@ -10,7 +10,7 @@
 
     {{-- The server's firewall (Panel plan 5.2), the system level's: every change is undone by the server unless kept in time. --}}
     <section class="larena-panel larena-panel-padded" data-env-firewall="{{ !$supported ? 'unsupported' : ($status === null ? 'unreadable' : ($status->active ? 'on' : 'off')) }}" aria-labelledby="env-firewall">
-        <h2 id="env-firewall">{{ __('larena-env::admin.firewall.now') }}</h2>
+        <h2 id="env-firewall" class="text-2">{{ __('larena-env::admin.firewall.now') }}</h2>
         @if (!$supported)
             <p data-env-firewall-unsupported>{{ __('larena-env::admin.firewall.unsupported') }}</p>
         @elseif ($status === null)
@@ -27,7 +27,7 @@
 
     @if ($supported && $status !== null)
         <section class="larena-panel larena-panel-padded" data-env-firewall-rules aria-labelledby="env-firewall-rules">
-            <h2 id="env-firewall-rules">{{ __('larena-env::admin.firewall.rules') }}</h2>
+            <h2 id="env-firewall-rules" class="text-2">{{ __('larena-env::admin.firewall.rules') }}</h2>
             @if ($status->rules === [])
                 <p>{{ __('larena-env::admin.firewall.no_rules') }}</p>
             @else
@@ -90,7 +90,7 @@
         </section>
 
         <section class="larena-panel larena-panel-padded" data-env-firewall-blocks aria-labelledby="env-firewall-blocks">
-            <h2 id="env-firewall-blocks">{{ __('larena-env::admin.firewall.blocks') }}</h2>
+            <h2 id="env-firewall-blocks" class="text-2">{{ __('larena-env::admin.firewall.blocks') }}</h2>
             @if ($status->blocks === [])
                 <p>{{ __('larena-env::admin.firewall.no_blocks') }}</p>
             @else

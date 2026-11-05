@@ -10,7 +10,7 @@
     @foreach ($plans as $target => $update)
         <section class="larena-panel p-2" style="margin: 0;" data-env-update="{{ $target }}" data-env-update-state="{{ $update === null ? 'unknown' : ($update->blocked ?? ($update->updateAvailable ? 'available' : 'current')) }}" aria-labelledby="env-update-{{ $target }}">
             <div class="flex flex-wrap items-cross-center content-main-between g-1 m-bottom-1">
-                <h2 id="env-update-{{ $target }}" class="m-0">{{ __('larena-env::admin.update.targets.'.$target) }}</h2>
+                <h2 id="env-update-{{ $target }}" class="m-0 text-2">{{ __('larena-env::admin.update.targets.'.$target) }}</h2>
                 <sf-badge appearance="tonal" status="{{ $update === null ? 'error' : ($update->blocked !== null ? 'warning' : ($update->updateAvailable ? 'info' : 'success')) }}"
                     text="{{ __('larena-env::admin.update.states.'.($update === null ? 'unknown' : ($update->blocked !== null ? 'blocked' : ($update->updateAvailable ? 'available' : 'current')))) }}"></sf-badge>
             </div>

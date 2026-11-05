@@ -7,7 +7,7 @@
 
 @section('content')
     <section class="larena-panel larena-panel-padded" data-env-dns-plan="{{ count($changes) }}" aria-labelledby="env-dns-plan">
-        <h2 id="env-dns-plan">{{ __('larena-env::admin.plan.heading') }}</h2>
+        <h2 id="env-dns-plan" class="text-2">{{ __('larena-env::admin.plan.heading') }}</h2>
         <p>{{ __('larena-env::admin.dns.plan_explain') }}</p>
         <ul class="m-0 p-0" style="list-style: none;">
             @foreach ($changes as $change)

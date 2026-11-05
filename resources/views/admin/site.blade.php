@@ -29,7 +29,7 @@
 
     @if ($site === null)
         <section class="larena-panel larena-empty" data-env-state="{{ $refused ? 'refused' : 'failed' }}" role="alert">
-            <h2>{{ $refused ? __('larena-env::admin.refused_title') : __('larena-env::admin.failed_title') }}</h2>
+            <h2 class="text-2">{{ $refused ? __('larena-env::admin.refused_title') : __('larena-env::admin.failed_title') }}</h2>
             <p>{{ $reasonText }}</p>
             <p><a href="{{ route('larena.env.admin.index', [], false) }}">{{ __('larena-env::admin.site.back') }}</a></p>
         </section>
@@ -62,7 +62,7 @@
             <div class="lg:col-span-3 min-w-0">
         @if ($tab === 'overview')
             <section class="larena-panel larena-panel-padded" data-env-state="ok" aria-labelledby="env-site-facts">
-                <h2 id="env-site-facts">{{ __('larena-env::admin.site.facts') }}</h2>
+                <h2 id="env-site-facts" class="text-2">{{ __('larena-env::admin.site.facts') }}</h2>
                 <dl class="m-0" style="display: block;" data-env-facts>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-answers="{{ $site->answersChecked ? ($site->answers ?? 'none') : 'unchecked' }}"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.answers') }}</dt><dd class="m-0 min-w-0 text-end">{{ __('larena-env::admin.sites.state.'.\Larena\Env\Admin\SiteState::of($site->answersChecked, $site->answers)) }}{{ $site->answers !== null ? ' · '.__('larena-env::admin.sites.answers_code', ['code' => (string) $site->answers]) : '' }}</dd></div>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.owner') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->owner ?? '—' }}</dd></div>
@@ -79,7 +79,7 @@
                 </dl>
             </section>
             <section class="larena-panel larena-panel-padded" data-env-doctor="{{ $doctor?->status ?? 'unknown' }}" aria-labelledby="env-site-doctor">
-                <h2 id="env-site-doctor">{{ __('larena-env::admin.doctor.title') }}</h2>
+                <h2 id="env-site-doctor" class="text-2">{{ __('larena-env::admin.doctor.title') }}</h2>
                 @if ($doctor === null)
                     <p>{{ __('larena-env::admin.doctor.none') }}</p>
                 @elseif ($doctor->problems === [])
@@ -99,7 +99,7 @@
             </section>
         @elseif ($tab === 'domains')
             <section class="larena-panel larena-panel-padded" data-env-certificate="{{ $site->certificate ? 'present' : 'none' }}" aria-labelledby="env-site-certificate">
-                <h2 id="env-site-certificate">{{ __('larena-env::admin.certificate.title') }}</h2>
+                <h2 id="env-site-certificate" class="text-2">{{ __('larena-env::admin.certificate.title') }}</h2>
                 @if ($site->certificate === null)
                     <p>{{ __('larena-env::admin.certificate.none') }}</p>
                 @else
@@ -121,7 +121,7 @@
             @include('larena-env::admin.partials.site-dns', ['siteDns' => $siteDns ?? null])
         @elseif ($tab === 'php')
             <section class="larena-panel larena-panel-padded" data-env-runtime aria-labelledby="env-site-runtime">
-                <h2 id="env-site-runtime">{{ __('larena-env::admin.runtime.title') }}</h2>
+                <h2 id="env-site-runtime" class="text-2">{{ __('larena-env::admin.runtime.title') }}</h2>
                 <dl class="m-0" style="display: block;" data-env-facts>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.php') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->php }}</dd></div>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.runtime.service') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->service ?? '—' }}</dd></div>
@@ -133,7 +133,7 @@
             </section>
             @if ($phpSettings !== null)
                 <section class="larena-panel larena-panel-padded" data-env-php-settings aria-labelledby="env-site-php-settings">
-                    <h2 id="env-site-php-settings">{{ __('larena-env::admin.runtime.settings') }}</h2>
+                    <h2 id="env-site-php-settings" class="text-2">{{ __('larena-env::admin.runtime.settings') }}</h2>
                     @if ($phpSettings === [])
                         <p>{{ __('larena-env::admin.runtime.settings_none') }}</p>
                     @else
@@ -147,7 +147,7 @@
             @endif
             @if ($phpExtensions !== null)
                 <section class="larena-panel larena-panel-padded" data-env-php-extensions aria-labelledby="env-site-php-extensions">
-                    <h2 id="env-site-php-extensions">{{ __('larena-env::admin.runtime.extensions', ['php' => $site->php]) }}</h2>
+                    <h2 id="env-site-php-extensions" class="text-2">{{ __('larena-env::admin.runtime.extensions', ['php' => $site->php]) }}</h2>
                     <ul class="m-0 p-0 grid g-x-2 grid-col-1 md:grid-col-2 xl:grid-col-3" style="list-style: none;">
                         @foreach ($phpExtensions as $extension)
                             <li class="flex items-cross-center content-main-between g-1 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-php-extension="{{ $extension->name }}">
@@ -164,7 +164,7 @@
             @endif
         @elseif ($tab === 'database')
             <section class="larena-panel larena-panel-padded" data-env-database="{{ $site->databaseEngine ?? 'none' }}" aria-labelledby="env-site-database">
-                <h2 id="env-site-database">{{ __('larena-env::admin.database.title') }}</h2>
+                <h2 id="env-site-database" class="text-2">{{ __('larena-env::admin.database.title') }}</h2>
                 @if ($site->databaseEngine === null)
                     <p>{{ __('larena-env::admin.database.none') }}</p>
                 @else
@@ -186,7 +186,7 @@
             </section>
         @elseif ($tab === 'backups')
             <section class="larena-panel larena-panel-padded" data-env-backups aria-labelledby="env-site-backups">
-                <h2 id="env-site-backups">{{ __('larena-env::admin.backups.title') }}</h2>
+                <h2 id="env-site-backups" class="text-2">{{ __('larena-env::admin.backups.title') }}</h2>
                 @if ($site->backupSchedule === null)
                     <p>{{ __('larena-env::admin.backups.no_schedule') }}</p>
                 @else
@@ -227,7 +227,7 @@
             @include('larena-env::admin.partials.files')
         @elseif ($tab === 'releases')
             <section class="larena-panel larena-panel-padded" data-env-releases aria-labelledby="env-site-releases">
-                <h2 id="env-site-releases">{{ __('larena-env::admin.releases.title') }}</h2>
+                <h2 id="env-site-releases" class="text-2">{{ __('larena-env::admin.releases.title') }}</h2>
                 <dl class="m-0" style="display: block;" data-env-facts>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.release') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->release ?? '—' }}</dd></div>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.site.previous_release') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->previousRelease ?? '—' }}</dd></div>
@@ -238,7 +238,7 @@
             </section>
         @elseif ($tab === 'log')
             <section class="larena-panel larena-panel-padded" data-env-log="{{ $logKind }}" aria-labelledby="env-site-log">
-                <h2 id="env-site-log">{{ __('larena-env::admin.log.title') }}</h2>
+                <h2 id="env-site-log" class="text-2">{{ __('larena-env::admin.log.title') }}</h2>
                 <form method="get" action="{{ route('larena.env.admin.site', ['domain' => $domain], false) }}" class="larena-form" data-env-log-filter role="search">
                     <input type="hidden" name="tab" value="log">
                     <div class="larena-field">
@@ -319,7 +319,7 @@
             </section>
         @elseif ($tab === 'access')
             <section class="larena-panel larena-panel-padded" data-env-access aria-labelledby="env-site-access">
-                <h2 id="env-site-access">{{ __('larena-env::admin.access.title') }}</h2>
+                <h2 id="env-site-access" class="text-2">{{ __('larena-env::admin.access.title') }}</h2>
                 <dl class="m-0" style="display: block;" data-env-facts>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.owner') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->owner ?? __('larena-env::admin.access.own_account') }}</dd></div>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.access.runs_as') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->runsAs ?? '—' }}</dd></div>
@@ -347,7 +347,7 @@
 
         @if ($tabOperations !== [])
             <section class="larena-panel larena-panel-padded" data-env-operations aria-labelledby="env-site-operations">
-                <h2 id="env-site-operations">{{ __('larena-env::admin.operations.title') }}</h2>
+                <h2 id="env-site-operations" class="text-2">{{ __('larena-env::admin.operations.title') }}</h2>
                 <p>{{ __('larena-env::admin.operations.explain') }}</p>
                 @foreach ($tabOperations as $operation)
                     @continue(!$operation->namesSite() && ($sftpChoices[$operation->value] ?? []) === [])

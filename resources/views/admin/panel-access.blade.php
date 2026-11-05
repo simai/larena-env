@@ -10,7 +10,7 @@
 
     {{-- Who reaches the panel (Panel plan 5.3), the system level's: kept only when confirmed in time, from the panel itself. --}}
     <section class="larena-panel larena-panel-padded" data-env-panel-access="{{ !$supported ? 'unsupported' : ($status?->panelAccess === null ? 'unknown' : (is_string($status->panelAccess) ? 'any' : 'list')) }}" aria-labelledby="env-panel-access">
-        <h2 id="env-panel-access">{{ __('larena-env::admin.panel_access.now') }}</h2>
+        <h2 id="env-panel-access" class="text-2">{{ __('larena-env::admin.panel_access.now') }}</h2>
         @if (!$supported)
             <p data-env-panel-access-unsupported>{{ __('larena-env::admin.panel_access.unsupported') }}</p>
         @elseif ($status === null)
@@ -37,7 +37,7 @@
 
     @if ($supported && $status !== null && $status->panelAccess !== null && $allows['access'])
         <section class="larena-panel larena-panel-padded" aria-labelledby="env-panel-access-change">
-            <h2 id="env-panel-access-change">{{ __('larena-env::admin.panel_access.change') }}</h2>
+            <h2 id="env-panel-access-change" class="text-2">{{ __('larena-env::admin.panel_access.change') }}</h2>
             <form method="post" action="{{ route('larena.env.admin.firewall.plan', [], false) }}" class="larena-form" data-env-panel-access-form>
                 @csrf
                 <input type="hidden" name="op" value="access">

@@ -12,7 +12,7 @@
          waiting and what may be done to it; a removal only where the server says the version is free. --}}
     <section class="larena-panel" style="margin: 0;" data-env-php="{{ $php === null ? 'unreadable' : 'on' }}" aria-labelledby="env-php">
         <div class="flex flex-wrap items-cross-center content-main-between g-1 p-2 p-bottom-1">
-            <h2 id="env-php" class="m-0">{{ __('larena-env::admin.software.php.versions') }}</h2>
+            <h2 id="env-php" class="m-0 text-2">{{ __('larena-env::admin.software.php.versions') }}</h2>
         </div>
         @if ($php === null)
             <p class="p-x-2 p-bottom-2 m-0" role="alert">{{ $reasonText }}</p>
@@ -74,7 +74,7 @@
 
     @if ($php !== null && $allows['install'])
         <section class="larena-panel larena-panel-padded" data-env-php-install aria-labelledby="env-php-install">
-            <h2 id="env-php-install">{{ __('larena-env::admin.software.php.install_title') }}</h2>
+            <h2 id="env-php-install" class="text-2">{{ __('larena-env::admin.software.php.install_title') }}</h2>
             @if ($php->installable === [])
                 <p class="m-0" data-env-php-installable="none">{{ __('larena-env::admin.software.php.nothing_to_install') }}</p>
             @else
@@ -101,7 +101,7 @@
 
     @if ($extensionsOf !== null)
         <section class="larena-panel larena-panel-padded" data-env-php-extensions="{{ $extensionsOf }}" aria-labelledby="env-php-extensions">
-            <h2 id="env-php-extensions">{{ __('larena-env::admin.software.php.extensions_of', ['php' => $extensionsOf]) }}</h2>
+            <h2 id="env-php-extensions" class="text-2">{{ __('larena-env::admin.software.php.extensions_of', ['php' => $extensionsOf]) }}</h2>
             @if ($extensions === null)
                 <p class="m-0" role="alert">{{ __('larena-env::admin.software.php.extensions_unreadable') }}</p>
             @else

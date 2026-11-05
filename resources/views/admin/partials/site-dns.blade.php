@@ -1,6 +1,6 @@
 {{-- The domain's DNS records through the panel's DNS provider, inside «Домены и HTTPS» (owner decision 2026-11-05). --}}
     <section class="larena-panel larena-panel-padded" data-env-dns="{{ $siteDns?->state ?? 'not_connected' }}" aria-labelledby="env-site-dns">
-        <h2 id="env-site-dns">{{ __('larena-env::admin.dns.site_title') }}</h2>
+        <h2 id="env-site-dns" class="text-2">{{ __('larena-env::admin.dns.site_title') }}</h2>
         @if ($siteDns === null || $siteDns->state === 'not_connected')
             <p data-env-dns-connect>{{ __('larena-env::admin.dns.site_not_connected') }}</p>
             @if ($wholeServer ?? false)

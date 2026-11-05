@@ -6,6 +6,8 @@
   panel's updates head it, then the system's updates and the server's software. `/admin/server/update` opens it with
   the last notice kept; a plan's «cancel» and the overview's hint lead there; the menu has no separate «Обновление».
   A panel built here is never offered an older published version as its update (`UpdatePlan::beside`).
+- One heading scale on every panel screen (the panel's UX audit): a section's heading is the Framework's `text-2`
+  (1.25rem), smaller than the page's own; before, each section read larger than the page title.
 
 - A site's sections in plain words (the panel's UX audit, 2026-11-05): DNS joins «Домены и HTTPS» and the nginx
   directives join «PHP и веб-сервер» (old `?tab=dns` and `?tab=nginx` links open there); «Выпуски» shows only for a

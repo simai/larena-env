@@ -10,7 +10,7 @@
 
     @if ($last !== null)
         <section class="larena-panel larena-panel-padded" data-env-dns-last aria-labelledby="env-dns-last">
-            <h2 id="env-dns-last">{{ __('larena-env::admin.dns.last_change') }}</h2>
+            <h2 id="env-dns-last" class="text-2">{{ __('larena-env::admin.dns.last_change') }}</h2>
             <p>{{ __('larena-env::admin.dns.last_change_by', ['time' => \Larena\Env\Server\Moment::human($last['at']), 'count' => (string) count($last['changes'])]) }}</p>
             <ul class="m-0 p-0" style="list-style: none;">
                 @foreach ($last['changes'] as $done)
@@ -27,7 +27,7 @@
     @endif
 
     <section class="larena-panel larena-panel-padded" data-env-dns-records="{{ count($records) }}" aria-labelledby="env-dns-records">
-        <h2 id="env-dns-records">{{ __('larena-env::admin.dns.records') }}</h2>
+        <h2 id="env-dns-records" class="text-2">{{ __('larena-env::admin.dns.records') }}</h2>
         @if (!$zone->editable())
             <p role="note">{{ __('larena-env::admin.dns.zone_read_only_explain') }}</p>
         @endif
@@ -65,12 +65,12 @@
         @foreach ($records as $record)
             @continue($record->id !== $edit)
             <section class="larena-panel larena-panel-padded" id="env-dns-edit" aria-labelledby="env-dns-edit-heading">
-                <h2 id="env-dns-edit-heading">{{ __('larena-env::admin.dns.change_record', ['record' => $record->line()]) }}</h2>
+                <h2 id="env-dns-edit-heading" class="text-2">{{ __('larena-env::admin.dns.change_record', ['record' => $record->line()]) }}</h2>
                 @include('larena-env::admin.dns.record-form', ['action' => 'update', 'record' => $record])
             </section>
         @endforeach
         <section class="larena-panel larena-panel-padded" aria-labelledby="env-dns-add">
-            <h2 id="env-dns-add">{{ __('larena-env::admin.dns.add') }}</h2>
+            <h2 id="env-dns-add" class="text-2">{{ __('larena-env::admin.dns.add') }}</h2>
             @include('larena-env::admin.dns.record-form', ['action' => 'create', 'record' => null])
         </section>
     @endif

@@ -1,7 +1,7 @@
 {{-- A site's own nginx directives (simai-env 1.41.0), the system level's only: applied once nginx takes them and the site
      still answers, then undone after two minutes unless kept. --}}
 <section class="larena-panel larena-panel-padded" data-env-nginx="{{ $nginxSupported ? 'on' : 'unsupported' }}" aria-labelledby="env-site-nginx">
-    <h2 id="env-site-nginx">{{ __('larena-env::admin.nginx.title') }}</h2>
+    <h2 id="env-site-nginx" class="text-2">{{ __('larena-env::admin.nginx.title') }}</h2>
     @if (!$nginxSupported)
         <p data-env-nginx-unsupported>{{ __('larena-env::admin.nginx.unsupported') }}</p>
     @elseif ($nginx === null)
