@@ -13,49 +13,103 @@ use Larena\Env\Update\UpdatePlan;
  */
 final readonly class SoftwareScreen
 {
-    /** The table's groups, in order; `php` is the row that opens the PHP screen. */
+    /**
+     * The table's groups, in order, with the programs a server before the catalogue (simai-env 1.38.0) puts in each;
+     * a catalogue row carries its own group. `php` is the row that opens the PHP screen.
+     */
     public const array GROUPS = [
         'web' => ['nginx', 'apache'],
+        'security' => [],
         'databases' => ['mysql', 'postgresql'],
         'cache' => ['redis'],
         'languages' => ['php', 'node'],
+        'tools' => [],
         'certificates' => ['certbot'],
     ];
+
+    /** The filters of the table: every program, the installed ones, the ones to add, the ones with an update. */
+    public const array FILTERS = ['all', 'installed', 'available', 'updates'];
 
     private function __construct()
     {
     }
 
     /**
-     * The groups with their components, in the table's order; a group the server says nothing of is left out.
+     * The groups with their programs, in the table's order, the ones the filter and the search leave; a group left
+     * empty is left out. PHP is a row of «languages»: the catalogue's own row, or one added for an older server.
      *
+     * @param callable(SoftwareComponent): string $words what the search looks in besides the name (the row's words)
      * @return list<array{key: string, php: bool, components: list<SoftwareComponent>}>
      */
-    public static function groups(ServerSoftware $software, bool $withPhp): array
+    public static function groups(ServerSoftware $software, bool $withPhp, string $filter = 'all', string $query = '', ?callable $words = null): array
     {
-        $groups = [];
-        $placed = [];
+        $legacy = [];
         foreach (self::GROUPS as $key => $names) {
-            $components = [];
             foreach ($names as $name) {
-                $component = $software->component($name);
-                if ($component !== null) {
-                    $components[] = $component;
-                    $placed[] = $name;
-                }
-            }
-            $php = $withPhp && in_array('php', $names, true);
-            if ($components !== [] || $php) {
-                $groups[] = ['key' => $key, 'php' => $php, 'components' => $components];
+                $legacy[$name] = $key;
             }
         }
-        // A component the groups do not name still has its row, at the end of the first group.
-        $rest = array_values(array_filter($software->components, static fn (SoftwareComponent $component): bool => !in_array($component->name, $placed, true)));
-        if ($rest !== [] && $groups !== []) {
-            $groups[0]['components'] = [...$groups[0]['components'], ...$rest];
+        $query = mb_strtolower(trim($query));
+        $byGroup = array_fill_keys(array_keys(self::GROUPS), []);
+        foreach ($software->components as $component) {
+            // PHP has its own row, which opens its screen.
+            if ($component->managedElsewhere() || $component->name === 'php') {
+                continue;
+            }
+            if (!self::passes($component, $filter) || ($query !== '' && !str_contains(mb_strtolower($component->name.' '.$component->title.' '.($words !== null ? $words($component) : '')), $query))) {
+                continue;
+            }
+            $group = $component->group ?? $legacy[$component->name] ?? 'tools';
+            $byGroup[$group][] = $component;
+        }
+        // PHP is installed and has no update of its own here: it shows under «all» and «installed», and in a search for it.
+        $php = $withPhp && in_array($filter, ['all', 'installed'], true) && ($query === '' || str_contains('php', $query));
+        $groups = [];
+        foreach ($byGroup as $key => $components) {
+            $withPhpRow = $php && $key === 'languages';
+            if ($components !== [] || $withPhpRow) {
+                $groups[] = ['key' => $key, 'php' => $withPhpRow, 'components' => $components];
+            }
         }
 
         return $groups;
+    }
+
+    /** How many programs each filter leaves, for its label. @return array<string, int> */
+    public static function counts(ServerSoftware $software): array
+    {
+        $counts = array_fill_keys(self::FILTERS, 0);
+        foreach ($software->components as $component) {
+            foreach (self::FILTERS as $filter) {
+                $counts[$filter] += self::passes($component, $filter) ? 1 : 0;
+            }
+        }
+
+        return $counts;
+    }
+
+    /**
+     * Whether a row has a menu: something the administrator may do to it, or why the server would not remove it.
+     *
+     * @param array<string, bool> $allows
+     */
+    public static function hasMenu(SoftwareComponent $component, array $allows): bool
+    {
+        return (($allows['install'] ?? false) && $component->installable)
+            || (($allows['upgrade'] ?? false) && $component->canUpdate)
+            || (($allows['update'] ?? false) && $component->update)
+            || (($allows['remove'] ?? false) && $component->canRemove)
+            || ($component->installed && in_array($component->removeBlocked['code'] ?? null, ['used_by_sites', 'has_certificates'], true));
+    }
+
+    private static function passes(SoftwareComponent $component, string $filter): bool
+    {
+        return match ($filter) {
+            'installed' => $component->installed,
+            'available' => !$component->installed && $component->installable,
+            'updates' => $component->update,
+            default => true,
+        };
     }
 
     /**

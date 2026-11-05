@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- «Программы» reads simai-env 1.43.0's catalogue (recorded answers set 20, simai-env 1.43.1): 17 programs in their
+  groups (web servers, security, databases, cache, languages, tools), each with what it is for in the panel's words,
+  «Нужна simai-env» on the ones the server keeps, and a row menu: «Установить» (Node.js and PostgreSQL with a major
+  version), «Обновить до …» for one program alone (software:install on an installed one), «Удалить» (software:remove,
+  1.43.0; the plan says what stays on the server), or why not (the sites that use it, the certificates). Filters
+  (all, installed, can install, updates, each with its count) and a search by name, kept in the address. A server
+  before the catalogue still shows its fixed list.
+
 - The panel assembly takes Root a3c85ee1's pins: admin 27f33cb7 (tab title, menu options) and ui 35617b56 (sf-admin-menu 1.7.1).
 
 - «Программы и обновления» is one table of the server's programs, grouped by what they do (web servers, databases,

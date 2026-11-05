@@ -65,8 +65,9 @@ final class PanelCommands
     // What a safe update replaces: simai-env itself, or the panel's build (simai-env 1.32.0).
     private const string UPDATE_TARGET = '/\A(?:env|panel)\z/D';
     // A service of the server's fixed list, only those it has (simai-env 1.33.0).
-    // A component software:install adds, and the major version it may take (simai-env 1.38.0).
-    private const string SOFTWARE_NAME = '/\A(?:node|redis|postgresql)\z/D';
+    // A program software:install adds or updates and software:remove takes away (simai-env 1.43.0's catalogue; 1.38.0
+    // took node, redis and postgresql), and the major version node and postgresql may take.
+    private const string SOFTWARE_NAME = '/\A(?:node|redis|postgresql|apache|certbot|fail2ban|memcached|imagemagick|jpegoptim|optipng|ffmpeg|supervisor)\z/D';
     private const string MAJOR = '/\A[0-9]{2}\z/D';
     // A PHP extension's name, as php:extension takes it (simai-env 1.37.0).
     private const string PHP_EXT = '/\A[a-z0-9_]{2,32}\z/D';
@@ -233,6 +234,8 @@ final class PanelCommands
         'software:refresh' => ['args' => [], 'required' => [], 'since' => '1.38.0', 'kind' => self::ACTION],
         'software:update' => ['args' => ['security-only' => self::YES_NO], 'required' => [], 'since' => '1.38.0', 'kind' => self::ACTION],
         'software:install' => ['args' => ['name' => self::SOFTWARE_NAME, 'version' => self::MAJOR], 'required' => ['name'], 'since' => '1.38.0', 'kind' => self::ACTION],
+        // A program taken away, its configuration and data kept; refused while sites need it (simai-env 1.43.0).
+        'software:remove' => ['args' => ['name' => self::SOFTWARE_NAME], 'required' => ['name'], 'since' => '1.43.0', 'kind' => self::ACTION],
         'job:status' => ['args' => ['job_id' => self::JOB_ID], 'required' => ['job_id'], 'since' => '1.21.0', 'kind' => self::JOB],
         'job:log' => ['args' => ['job_id' => self::JOB_ID, 'after' => self::CURSOR], 'required' => ['job_id'], 'since' => '1.21.0', 'kind' => self::JOB],
         'job:cancel' => ['args' => ['job_id' => self::JOB_ID], 'required' => ['job_id'], 'since' => '1.21.0', 'kind' => self::JOB],

@@ -391,35 +391,58 @@ foreach (['software:list', 'software:refresh', 'software:update', 'software:inst
         "{$command} from simai-env 1.38.0.");
 }
 $software = $extras->serverSoftware($admin);
-env_assert($software !== null && array_map(static fn ($component): string => $component->name, $software->components) === ['nginx', 'mysql', 'postgresql', 'redis', 'node', 'certbot', 'apache']
+env_assert($software !== null && array_map(static fn ($component): string => $component->name, $software->components) === ['nginx', 'apache', 'certbot', 'fail2ban', 'mysql', 'postgresql', 'redis', 'memcached', 'php', 'node', 'composer', 'git', 'imagemagick', 'jpegoptim', 'optipng', 'ffmpeg', 'supervisor']
     && $software->component('nginx')?->active === true && !$software->component('nginx')->installable && $software->component('redis')?->installable === true
-    && $software->system->updates === 4 && $software->system->security === 3 && count($software->system->packages) === 4 && !$software->system->rebootRequired
-    && $software->system->indexAgeMinutes() === 54, 'The server\'s software (simai-software/1).');
+    && $software->system->updates === 5 && $software->system->security === 4 && count($software->system->packages) === 5 && !$software->system->rebootRequired
+    && $software->system->indexAgeMinutes() === 63, 'The server\'s software (simai-software/1).');
+// simai-env 1.43.0's catalogue: each row's group, what it is for, and what the server would do to it or why not.
+$certbot = $software->component('certbot');
+$mysql = $software->component('mysql');
+env_assert($certbot?->canRemove === true && $certbot->group === 'security' && $certbot->keeps === ['/etc/letsencrypt'] && !$certbot->installable
+    && $mysql?->requiredByEnv() === true && $mysql->sites === ['demo-php.test'] && !$mysql->canRemove
+    && $software->component('php')?->managedElsewhere() === true && $software->component('memcached')?->installable === true && $software->component('memcached')->purpose !== null,
+    'The catalogue\'s rows.');
+env_assert(PanelCommands::since('software:remove') === '1.43.0' && !(new PanelCapabilities('1.42.0'))->allows('software:remove')
+    && $operations->planCommand($admin, 'software:remove', ['name' => 'memcached'])->plan?->command === 'software:remove'
+    && $operations->planCommand($admin, 'software:remove', ['name' => 'nginx'])->reason === 'invalid_argument', 'A removal is planned first, and never of nginx.');
+// A row from a server before the catalogue still reads, by its fixed list.
+$old = \Larena\Env\Software\SoftwareComponent::fromData(['name' => 'node', 'installed' => false, 'installable' => true]);
+env_assert($old?->installable === true && $old->group === null && \Larena\Env\Software\SoftwareComponent::fromData(['name' => 'memcached', 'installable' => true]) === null,
+    'A server before the catalogue: its fixed list, software:install for node, redis and postgresql.');
 $systemPlan = $operations->planCommand($admin, 'software:update', ['security-only' => 'yes'])->plan;
-env_assert($systemPlan?->system?->security === 3 && $systemPlan->update === null, 'A system update\'s plan names its packages.');
+env_assert($systemPlan?->system?->security === 4 && $systemPlan->update === null, 'A system update\'s plan names its packages.');
 env_assert($operations->planCommand($admin, 'software:install', ['name' => 'redis'])->plan?->command === 'software:install', 'A component is planned first.');
 env_assert($operations->planCommand($admin, 'software:install', ['name' => 'nginx'])->reason === 'invalid_argument'
     && $operations->planCommand($admin, 'software:install', ['name' => 'node', 'version' => '2x'])->reason === 'invalid_argument', 'Only what software:install adds, in a two-digit major.');
 env_assert($extras->serverSoftware($owner) === null && $operations->planCommand($owner, 'software:update', [])->reason === 'not_allowed', 'An owner cannot see or change the server\'s software.');
 $softwarePage = static fn (array $data): string => $factory->make('larena-env::admin.software', $data + ['source' => 'recorded', 'software' => $software, 'system' => $software->system,
-    'reasonText' => null, 'allows' => ['refresh' => true, 'update' => true, 'install' => true], 'notice' => null])->render();
+    'reasonText' => null, 'allows' => ['refresh' => true, 'update' => true, 'install' => true, 'upgrade' => true, 'remove' => true], 'notice' => null])->render();
 $page = $softwarePage([]);
-env_assert(str_contains($page, 'data-env-system-updates="4"') && str_contains($page, 'data-env-system-security-count="3"') && substr_count($page, 'data-env-system-security ') + substr_count($page, 'data-env-system-security>') === 3
+env_assert(str_contains($page, 'data-env-system-updates="5"') && str_contains($page, 'data-env-system-security-count="4"') && substr_count($page, 'data-env-system-security ') + substr_count($page, 'data-env-system-security>') === 4
     && str_contains($page, 'data-env-software-op="update-security"') && str_contains($page, 'data-env-software-op="update-all"') && str_contains($page, 'data-env-software-op="refresh"')
     && str_contains($page, 'data-env-software-op="install-redis"') && str_contains($page, 'data-env-software-op="install-node"') && !str_contains($page, 'data-env-software-op="install-nginx"')
-    && str_contains($page, 'List checked 54 min ago') && substr_count($page, 'data-env-software-component=') === 7, 'The components and the system\'s updates: '.$page);
+    && str_contains($page, 'List checked 1 h ago') && substr_count($page, 'data-env-software-component=') === 16, 'The components and the system\'s updates: '.$page);
 // simai-env's and the panel's updates head the same screen (the panel's UX audit): one place for software and updates.
 $joined = $softwarePage(['supported' => false, 'plans' => ['env' => null, 'panel' => null], 'canUpdate' => false, 'panelBuild' => null]);
 env_assert(str_contains($joined, 'data-env-software-updates') && str_contains($joined, 'data-env-update="unsupported"')
     && strpos($joined, 'data-env-software-updates') < strpos($joined, 'data-env-system-updates='), 'The updates of simai-env and the panel come first: '.$joined);
 env_assert(!str_contains($page, 'data-env-software-updates aria'), 'Without the update\'s state, no empty block.');
 // One table of programs grouped by what they do, PHP as its row, the updates in one line (the panel's UX audit).
-env_assert(str_contains($page, 'data-env-software-table') && substr_count($page, 'data-env-software-group=') === 5 && !str_contains($page, 'data-env-software-php=')
+env_assert(str_contains($page, 'data-env-software-table') && substr_count($page, 'data-env-software-group=') === 6 && !str_contains($page, 'data-env-software-php=')
+    && str_contains($page, 'data-env-software-op="remove-certbot"') && !str_contains($page, 'data-env-software-op="remove-nginx"') && str_contains($page, 'data-env-software-op="install-memcached"')
+    && substr_count($page, 'data-env-software-required') === 4 && str_contains($page, 'data-env-software-filter="updates"')
     && str_contains($page, 'data-env-software-update-badge="system"') && preg_match('/<details\s+open\s+data-env-software-updates-details/', $page) !== 1
     && str_contains($page, 'data-env-software-op="update-nginx"') === ($software->component('nginx')?->update === true), 'The programs\' table: '.$page);
 $withPhpRow = $softwarePage(['withPhp' => true, 'phpRow' => \Larena\Env\Software\SoftwareScreen::php($extras->phpVersions($admin))]);
 env_assert(preg_match('/data-env-software-php="[1-9]/', $withPhpRow) === 1 && str_contains($withPhpRow, 'data-env-software-php-open')
     && strpos($withPhpRow, 'data-env-software-group="languages"') < strpos($withPhpRow, 'data-env-software-php='), 'PHP is a row among the languages: '.$withPhpRow);
+// The filters and the search leave their rows, and say when none is left.
+$installedOnly = $softwarePage(['filter' => 'installed']);
+env_assert(substr_count($installedOnly, 'data-env-software-component=') === count(array_filter($software->components, static fn ($component): bool => $component->installed && $component->name !== 'php'))
+    && !str_contains($installedOnly, 'data-env-software-op="install-') && str_contains($installedOnly, 'aria-current="page"'), 'Only the installed programs: '.$installedOnly);
+$found = $softwarePage(['query' => 'Мемк']);
+env_assert(str_contains($softwarePage(['query' => 'memc']), 'data-env-software-component="memcached"') && substr_count($softwarePage(['query' => 'memc']), 'data-env-software-component=') === 1
+    && str_contains($found, 'data-env-software-none') && str_contains($softwarePage(['query' => 'memc']), 'q=memc'), 'The search finds by name and keeps itself in the filters\' links.');
 $quiet = new \Larena\Env\Software\SystemUpdates(0, 0, [], [], false, [], null);
 env_assert(preg_match('/<details\s+open\s+data-env-software-updates-details/', $softwarePage(['software' => new \Larena\Env\Software\ServerSoftware($software->components, $quiet), 'system' => $quiet])) !== 1,
     'Nothing waits: the updates stay folded.');

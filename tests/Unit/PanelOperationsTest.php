@@ -31,8 +31,9 @@ env_assert(PanelCommands::kind('site:remove') === null && PanelCommands::kind('s
 // 23 of the card, a new site and the owners; 1 of a site's nginx directives (1.41.0) and the confirmation of a timed change (stage 6);
 // 3 of the server's alerts (simai-env 1.31.0); the safe update (simai-env 1.32.0); 2 of the services, 4 of a site's scheduled
 // jobs, 4 of the firewall and the panel's access (stage 5); the DNS token for certificates (simai-env 1.36.0); 4 of the server's
-// PHP versions (simai-env 1.37.0); 3 of the server's software (1.38.0); 7 of a site's files (1.39.0–1.40.0); Apache for a PHP site (1.42.0).
-env_assert(count(PanelCommands::actions()) === 56, 'The card\'s actions, a new site, the owners, the nginx directives, the alerts, the update, the services, the jobs, the firewall, the DNS token, PHP, the server\'s software and the files.');
+// PHP versions (simai-env 1.37.0); 3 of the server's software (1.38.0); 7 of a site's files (1.39.0–1.40.0); Apache for a PHP site (1.42.0);
+// a program removed (1.43.0).
+env_assert(count(PanelCommands::actions()) === 57, 'The card\'s actions, a new site, the owners, the nginx directives, the alerts, the update, the services, the jobs, the firewall, the DNS token, PHP, the server\'s software and the files.');
 // The addresses that reach the panel are the one list an argument may be; nothing else takes a list.
 try {
     PanelCommands::check('file:remove', ['domain' => 'demo-php.test', 'path' => ['public']]);

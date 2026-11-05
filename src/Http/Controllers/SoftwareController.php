@@ -15,6 +15,7 @@ use Larena\Env\Http\Support\NoticeRedirect;
 use Larena\Env\Operations\PanelOperations;
 use Larena\Env\Server\ServerOverviewReader;
 use Larena\Env\Server\SiteExtrasReader;
+use Larena\Env\Software\SoftwareComponent;
 use Larena\Env\Software\SoftwareScreen;
 
 /**
@@ -26,7 +27,11 @@ use Larena\Env\Software\SoftwareScreen;
 final readonly class SoftwareController
 {
     /** What the screen offers, and the gateway command of each. */
-    public const array OPERATIONS = ['refresh' => 'software:refresh', 'update' => 'software:update', 'install' => 'software:install'];
+    public const array OPERATIONS = [
+        'refresh' => 'software:refresh', 'update' => 'software:update', 'install' => 'software:install',
+        // One program updated alone, and one taken away (simai-env 1.43.0's catalogue).
+        'upgrade' => 'software:install', 'remove' => 'software:remove',
+    ];
 
     public function __construct(
         private PanelOperations $operations,
@@ -58,6 +63,9 @@ final readonly class SoftwareController
             'allows' => array_map(static fn (string $command): bool => $canOperate && $capabilities?->allows($command) === true, self::OPERATIONS),
             'notice' => $request->session()->get('larena_env_notice'),
             'withPhp' => $withPhp,
+            // The table's filter and search, from the address so a link keeps them.
+            'filter' => in_array($request->query('show'), SoftwareScreen::FILTERS, true) ? (string) $request->query('show') : 'all',
+            'query' => is_string($request->query('q')) ? mb_substr(trim($request->query('q')), 0, 64) : '',
             'phpRow' => $withPhp ? SoftwareScreen::php($this->extras->phpVersions($actor)) : null,
             'updateStates' => SoftwareScreen::updateStates($updates['plans']),
         ] + $updates);
@@ -86,7 +94,7 @@ final readonly class SoftwareController
             'runUrl' => route('larena.env.admin.software.run', [], false),
             'cancelUrl' => route('larena.env.admin.software', [], false),
             'hidden' => ['op' => $op] + $args,
-            'then' => [(string) $this->translator->get('larena-env::admin.software.overview.then.'.$op)],
+            'then' => $this->then($actor, $op, $args),
         ]);
     }
 
@@ -107,8 +115,9 @@ final readonly class SoftwareController
     }
 
     /**
-     * The operation and its arguments, when the server lists the command: a component added only where the server says
-     * it can be, with a two-digit major version for Node.js or PostgreSQL. A form left from an older page is refused.
+     * The operation and its arguments, when the server lists the command: a program added, updated alone or removed
+     * only where the server says it would be, with a two-digit major version for Node.js or PostgreSQL. A form left
+     * from an older page is refused.
      *
      * @return array{0: ?string, 1: array<string, string>}
      */
@@ -127,12 +136,18 @@ final readonly class SoftwareController
         }
         $name = $request->input('name');
         $component = is_string($name) ? $this->extras->serverSoftware($actor)?->component($name) : null;
-        if ($component === null || !$component->installable) {
+        // Only what the server says it would do to that program.
+        $offered = match ($op) {
+            'install' => $component?->installable,
+            'upgrade' => $component?->canUpdate,
+            default => $component?->canRemove,
+        };
+        if ($component === null || $offered !== true) {
             return [null, []];
         }
         $args = ['name' => $component->name];
         $version = $request->input('version');
-        if ($component->name !== 'redis' && is_string($version) && $version !== '') {
+        if ($op === 'install' && in_array($component->name, SoftwareComponent::VERSIONED, true) && is_string($version) && $version !== '') {
             if (preg_match('/\A[0-9]{2}\z/D', $version) !== 1) {
                 return [null, []];
             }
@@ -140,6 +155,23 @@ final readonly class SoftwareController
         }
 
         return [$op, $args];
+    }
+
+    /**
+     * What the confirmation does, in words; a removal names what stays on the server.
+     *
+     * @param array<string, string> $args
+     * @return list<string>
+     */
+    private function then(PanelActor $actor, string $op, array $args): array
+    {
+        $then = [(string) $this->translator->get('larena-env::admin.software.overview.then.'.$op)];
+        $keeps = $op === 'remove' ? $this->extras->serverSoftware($actor)?->component($args['name'] ?? '')->keeps ?? [] : [];
+        if ($keeps !== []) {
+            $then[] = (string) $this->translator->get('larena-env::admin.software.overview.keeps', ['paths' => implode(', ', $keeps)]);
+        }
+
+        return $then;
     }
 
     /** @param array<string, string> $args */
