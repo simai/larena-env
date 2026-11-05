@@ -8,6 +8,9 @@
   A panel built here is never offered an older published version as its update (`UpdatePlan::beside`).
 - One heading scale on every panel screen (the panel's UX audit): a section's heading is the Framework's `text-2`
   (1.25rem), smaller than the page's own; before, each section read larger than the page title.
+- A site's yes-or-no choices are ticks (the panel's UX audit): «Как решит сервер / Да / Нет» is gone; each box starts
+  as the server would do it (the database ticked where the site has one, files and the https redirect ticked) and an
+  unticked box sends no. The paragraph repeated above every tab's actions is gone: the button says what happens.
 
 - A site's sections in plain words (the panel's UX audit, 2026-11-05): DNS joins «Домены и HTTPS» and the nginx
   directives join «PHP и веб-сервер» (old `?tab=dns` and `?tab=nginx` links open there); «Выпуски» shows only for a

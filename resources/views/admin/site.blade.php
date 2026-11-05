@@ -348,7 +348,6 @@
         @if ($tabOperations !== [])
             <section class="larena-panel larena-panel-padded" data-env-operations aria-labelledby="env-site-operations">
                 <h2 id="env-site-operations" class="text-2">{{ __('larena-env::admin.operations.title') }}</h2>
-                <p>{{ __('larena-env::admin.operations.explain') }}</p>
                 @foreach ($tabOperations as $operation)
                     @continue(!$operation->namesSite() && ($sftpChoices[$operation->value] ?? []) === [])
                     {{-- Each action a row of the block: its name at the size of the block's text, its fields, its plan button. --}}
@@ -358,6 +357,16 @@
                         <h3 class="m-0 m-bottom-1 text-medium">{{ __('larena-env::admin.operations.'.$operation->value) }}</h3>
                         @foreach (($capabilities ?? null) === null ? $operation->fields() : $operation->fieldsOn($capabilities) as $field)
                             @continue(!($dnsCertificates ?? false) && in_array($field, \Larena\Env\Operations\SiteOperation::DNS_FIELDS, true))
+                            @if (in_array($field, \Larena\Env\Operations\SiteOperation::SWITCHES, true))
+                                <div class="larena-field" data-env-switch="{{ $field }}">
+                                    <input type="hidden" name="{{ $field }}" value="no">
+                                    <label class="flex items-cross-center g-1" for="env-{{ $operation->value }}-{{ $field }}">
+                                        <input type="checkbox" id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}" value="yes" @if (\Larena\Env\Operations\SiteOperation::switchedOn($field, $site)) checked @endif @if ($field === 'verify') data-env-verify-field @endif>
+                                        <span>{{ __('larena-env::admin.fields.'.$field) }}</span>
+                                    </label>
+                                </div>
+                                @continue
+                            @endif
                             <div class="larena-field">
                                 <label for="env-{{ $operation->value }}-{{ $field }}">{{ __('larena-env::admin.fields.'.$field) }}</label>
                                 @if ($field === 'email')

@@ -140,7 +140,6 @@ return [
     ],
     'operations' => [
         'title' => 'Actions',
-        'explain' => 'An action is shown in full before it runs; it starts only when you confirm that plan, and the server does it, not the panel.',
         'plan' => 'Show what this would do',
         'certificate-issue' => 'Get a certificate',
         'certificate-renew' => 'Renew the certificate',

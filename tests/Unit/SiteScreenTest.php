@@ -140,7 +140,7 @@ $checked = \Larena\Env\Server\SiteDetails::fromDescription(['schema' => 'simai-s
 env_assert($checked->backupSchedule?->keep === 7 && $checked->backupSchedule->verify === true && $checked->lastVerify?->ok === false, 'The schedule reads its number as digits, and the last check.');
 $newer = \Larena\Env\Gateway\PanelCapabilities::fromHostDescription(['simai_env' => ['version' => '1.30.0'], 'gate' => ['commands' => ['backup:data-schedule']]]);
 $verifying = $screen(['site' => $checked, 'tab' => 'backups', 'tabOperations' => $onTab('backups', $newer), 'capabilities' => $newer]);
-env_assert(str_contains($verifying, 'data-env-verify-field') && preg_match('/<option value="yes"\s+selected/', $verifying) === 1
+env_assert(preg_match('/value="yes"\s+checked\s+data-env-verify-field/', $verifying) === 1 && !str_contains($verifying, $text('fields.default'))
     && str_contains($verifying, 'data-env-backup-verify="yes"') && str_contains($verifying, 'data-env-last-verify="failed"'), 'A checked schedule, its last failed check, and the check asked for.');
 $beforeCheck = $screen(['site' => $site, 'tab' => 'backups', 'tabOperations' => $onTab('backups', $more), 'capabilities' => $more]);
 env_assert(str_contains($beforeCheck, 'data-env-operation="backup-schedule"') && !str_contains($beforeCheck, 'data-env-verify-field'), 'A server before 1.30.0 is not asked to check copies.');

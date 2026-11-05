@@ -119,6 +119,23 @@ enum SiteOperation: string
         return array_values(array_filter($this->fields(), fn (string $field): bool => $capabilities->takes($this->command(), $field)));
     }
 
+    /**
+     * The yes-or-no fields, asked as one tick each (the panel's UX audit): the box shows what the server would do
+     * anyway, so a person reads a plain choice instead of «как решит сервер»; an unticked box sends no.
+     */
+    public const array SWITCHES = ['db', 'files', 'redirect', 'hsts', 'staging', 'wildcard', 'enabled', 'verify'];
+
+    /** Whether a yes-or-no field starts ticked for this site. */
+    public static function switchedOn(string $field, ?\Larena\Env\Server\SiteDetails $site): bool
+    {
+        return match ($field) {
+            'db' => $site?->databaseEngine !== null,
+            'files', 'redirect', 'enabled' => true,
+            'verify' => $site?->backupSchedule?->verify !== false,
+            default => false,
+        };
+    }
+
     /** The fields asked only where the server keeps a DNS token for certificates: without one a DNS check fails. */
     public const array DNS_FIELDS = ['challenge', 'wildcard'];
 
