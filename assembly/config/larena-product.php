@@ -34,12 +34,11 @@ return [
             'env.dns.connection' => 'settings',
             // Where the server sends its own alerts (simai-env 1.31.0).
             'env.alerts.channel' => 'settings',
-            // A safe update of simai-env and of the panel (simai-env 1.32.0).
-            'env.update' => 'server',
             // The services and the firewall beside the server, who reaches the panel among its settings (Panel plan 5.1–5.3).
             'env.services' => 'server',
             'env.firewall' => 'server',
-            // The server's software and system updates, and its PHP versions (simai-env 1.37.0–1.38.0).
+            // The server's software with simai-env's, the panel's and the system's updates (one place since the
+            // panel's UX audit), and its PHP versions (simai-env 1.32.0–1.38.0).
             'env.software' => 'server',
             'env.software.php' => 'server',
             'env.panel.access' => 'settings',

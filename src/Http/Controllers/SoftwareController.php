@@ -17,7 +17,7 @@ use Larena\Env\Server\ServerOverviewReader;
 use Larena\Env\Server\SiteExtrasReader;
 
 /**
- * «Программы › Обзор» (simai-env 1.38.0): the server's components with their versions, the updates waiting and their
+ * «Программы и обновления» (simai-env 1.38.0, joined with the update by the panel's UX audit): the server's components with their versions, the updates waiting and their
  * services, a component added where the server can add it, and the system's package updates refreshed and installed,
  * each by plan and confirmation. The system level's alone. An update never reboots the server: the screen says when it
  * waits for one. PHP has its own screen.
@@ -34,6 +34,7 @@ final readonly class SoftwareController
         private Factory $views,
         private Translator $translator,
         private ?AccessOperationAuthorizer $authorizer = null,
+        private ?UpdateController $updates = null,
     ) {
     }
 
@@ -52,7 +53,7 @@ final readonly class SoftwareController
             'reasonText' => $software === null ? $this->reasonText($read->reason ?? ($capabilities?->allows('software:list') === true ? 'unreadable' : 'unsupported')) : null,
             'allows' => array_map(static fn (string $command): bool => $canOperate && $capabilities?->allows($command) === true, self::OPERATIONS),
             'notice' => $request->session()->get('larena_env_notice'),
-        ]);
+        ] + ($this->updates?->state($request, $actor, $capabilities) ?? []));
     }
 
     /** What the asked change would do, with a confirmation that does it and nothing else. */

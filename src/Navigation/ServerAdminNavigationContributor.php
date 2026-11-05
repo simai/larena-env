@@ -123,25 +123,6 @@ final class ServerAdminNavigationContributor implements AdminNavigationContribut
             activeRoutePattern: 'larena.env.admin.alerts.channel*',
             icon: 'notifications_active',
         ), new AdminNavigationDescriptor(
-            // A safe update of simai-env and of the panel (simai-env 1.32.0), beside the server's overview.
-            id: 'env.update',
-            ownerPackage: $this->ownerPackage(),
-            label: 'Update',
-            routeName: 'larena.env.admin.update',
-            routeUri: '/admin/server/update',
-            category: 'operations',
-            state: 'operator_slice',
-            accessScope: 'env.server.read',
-            auditEvent: 'env.update.viewed',
-            statusCap: 'env_panel_skeleton',
-            order: 9,
-            group: 'operations',
-            knownLimitations: ['not_production_ready'],
-            surface: 'product',
-            labelKey: 'larena-env::admin.update.navigation',
-            activeRoutePattern: 'larena.env.admin.update*',
-            icon: 'system_update',
-        ), new AdminNavigationDescriptor(
             // The server's services, restarted or reloaded by plan (Panel plan 5.1).
             id: 'env.services',
             ownerPackage: $this->ownerPackage(),

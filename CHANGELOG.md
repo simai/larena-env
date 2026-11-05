@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- «Программы» and «Обновление» are one place, «Программы и обновления» (the panel's UX audit): simai-env's and the
+  panel's updates head it, then the system's updates and the server's software. `/admin/server/update` opens it with
+  the last notice kept; a plan's «cancel» and the overview's hint lead there; the menu has no separate «Обновление».
+
 - A site's sections in plain words (the panel's UX audit, 2026-11-05): DNS joins «Домены и HTTPS» and the nginx
   directives join «PHP и веб-сервер» (old `?tab=dns` and `?tab=nginx` links open there); «Выпуски» shows only for a
   site that has releases. The site's checks, their areas, the HTTPS row and the services carry Russian names instead

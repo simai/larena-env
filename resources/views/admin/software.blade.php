@@ -8,6 +8,14 @@
 @section('content')
     @include('larena-env::admin.partials.notes')
 
+    {{-- One place for what the server runs and its updates (the panel's UX audit): simai-env and the panel first. --}}
+    @isset($plans)
+        <section class="m-bottom-3" id="update" data-env-software-updates aria-labelledby="env-software-panel-update">
+            <h2 id="env-software-panel-update" class="m-top-0">{{ __('larena-env::admin.software.overview.panel_title') }}</h2>
+            @include('larena-env::admin.partials.update-targets')
+        </section>
+    @endisset
+
     @if ($software === null)
         <section class="larena-panel larena-panel-padded" data-env-software="unreadable">
             <p class="m-0" role="alert">{{ $reasonText }}</p>

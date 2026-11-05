@@ -32,7 +32,7 @@
                         <li data-env-update-hint-target="{{ $update['target'] }}">{{ __('larena-env::admin.update.hint.'.$update['target'], ['available' => $update['available'] ?? '—']) }}</li>
                     @endforeach
                 </ul>
-                <a class="larena-button" href="{{ route('larena.env.admin.update', [], false) }}">{{ __('larena-env::admin.update.hint_open') }}</a>
+                <a class="larena-button" href="{{ route('larena.env.admin.software', [], false) }}#update">{{ __('larena-env::admin.update.hint_open') }}</a>
             </section>
         @endif
         @if (($metrics ?? null) !== null)

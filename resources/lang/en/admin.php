@@ -807,10 +807,11 @@ return [
     ],
     'software' => [
         'overview' => [
-            'navigation' => 'Software',
-            'title' => 'Software',
+            'navigation' => 'Software and updates',
+            'title' => 'Software and updates',
             'description' => 'The server\'s software and the system\'s updates: what is installed, what waits for an update, what can be added.',
             'target' => 'Server',
+            'panel_title' => 'The panel and simai-env',
             'system_title' => 'System updates',
             'refresh' => 'Check for updates',
             'updates' => 'Updates: :count',
