@@ -10,7 +10,6 @@ use Illuminate\Contracts\View\Factory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
-use Larena\Env\Files\FileModes;
 use Larena\Env\Files\FilePath;
 use Larena\Env\Files\SiteFiles;
 use Larena\Env\Gateway\PanelActor;
@@ -26,17 +25,20 @@ use Larena\Env\Server\ServerOverviewReader;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * A site's files and its own nginx directives (Panel plan 6.1–6.3). Every change goes the panel's one way: the server
- * says what it would do, a person confirms, and only then it runs as a job. A file that is saved or uploaded waits on the
- * panel's disk between the plan and the confirmation, named in the person's session by its sha256, and is sent after
- * the confirmed request; it is removed once sent. A download is checked against the size and sha256 the server named
- * before a byte of it reaches the browser.
+ * A site's files (simai-env 1.39.0–1.40.0) and its own nginx directives (Panel plan 6.1–6.3). Every change goes the
+ * panel's one way: the server says what it would do, a person confirms, and only then it runs as a job. A saved text
+ * travels in the request with the sha256 it was read with, so a change made meanwhile is refused, never overwritten.
+ * An uploaded file waits on the panel's disk between the plan and the confirmation, named in the person's session by
+ * its sha256, and is sent after the confirmed request; it is removed once sent. A download is checked against the size
+ * the server named before a byte of it reaches the browser. There is no trash: a removal is final, and the plan says so.
  */
 final readonly class SiteFilesController
 {
     /** The changes of the «Файлы» tab and the gateway command of each. */
-    public const array FILE_OPERATIONS = ['write' => 'fs:write', 'upload' => 'fs:upload', 'mkdir' => 'fs:mkdir', 'rename' => 'fs:rename',
-        'copy' => 'fs:copy', 'delete' => 'fs:delete', 'restore' => 'fs:restore', 'chmod' => 'fs:chmod', 'archive' => 'fs:archive', 'extract' => 'fs:extract'];
+    public const array FILE_OPERATIONS = ['write' => 'file:write', 'create' => 'file:write', 'upload' => 'file:upload', 'mkdir' => 'file:mkdir',
+        'rename' => 'file:rename', 'remove' => 'file:remove', 'archive' => 'file:archive', 'extract' => 'file:extract'];
+    /** The formats file:archive makes, by the name it is given. */
+    public const array ARCHIVE_FORMATS = ['zip', 'tar.gz'];
     /** The nginx directives', the system level's only. */
     public const array OVERLAY_OPERATIONS = ['overlay-set' => 'site:nginx-overlay-set', 'overlay-clear' => 'site:nginx-overlay-clear',
         'overlay-confirm' => 'change:confirm'];
@@ -81,14 +83,11 @@ final readonly class SiteFilesController
                 $this->unstage($request, $staged['id']);
             }
 
-            return $this->back($request, $domain, $tab, $result->reason ?? PanelReason::ANSWER_SHAPE_INVALID, $args['path'] ?? null);
+            return $this->back($request, $domain, $tab, $result->reason ?? PanelReason::ANSWER_SHAPE_INVALID, $args['path'] ?? null, $op);
         }
         $hidden = ['op' => $op];
         foreach ($args as $name => $value) {
-            // A list (fs:archive's paths) goes back item by item.
-            foreach (is_array($value) ? $value : [null => $value] as $index => $item) {
-                $hidden['args['.$name.']'.(is_int($index) ? '['.$index.']' : '')] = $item;
-            }
+            $hidden['args['.$name.']'] = $value;
         }
         if ($staged !== null) {
             $hidden['staged'] = $staged['id'];
@@ -114,8 +113,11 @@ final readonly class SiteFilesController
         $op = (string) $request->input('op');
         $command = $this->offered($actor, $op);
         $tab = isset(self::OVERLAY_OPERATIONS[$op]) ? 'nginx' : 'files';
-        $args = array_filter((array) $request->input('args', []), static fn (mixed $value, mixed $name): bool => is_string($name)
-            && (is_string($value) || ($name === 'paths' && is_array($value) && array_is_list($value) && array_filter($value, 'is_string') === $value)), ARRAY_FILTER_USE_BOTH);
+        $args = array_filter((array) $request->input('args', []), static fn (mixed $value, mixed $name): bool => is_string($name) && is_string($value), ARRAY_FILTER_USE_BOTH);
+        // A saved text goes back as it was planned, its spaces and last line end kept.
+        if (array_key_exists('content', $args)) {
+            $args['content'] = str_replace("\r\n", "\n", self::rawText($request, 'content', 'args'));
+        }
         // Keeping a timed change names the change only (change:confirm); every other change names its site.
         $site = $op === 'overlay-confirm' ? $domain : ($args['domain'] ?? null);
         if ($command === null || $site !== $domain) {
@@ -137,7 +139,7 @@ final readonly class SiteFilesController
             }
         }
         if ($started->jobId === null) {
-            return $this->back($request, $domain, $tab, $started->reason ?? PanelReason::ANSWER_SHAPE_INVALID, $args['path'] ?? $args['from'] ?? null);
+            return $this->back($request, $domain, $tab, $started->reason ?? PanelReason::ANSWER_SHAPE_INVALID, $args['path'] ?? null, $op);
         }
 
         return new RedirectResponse(route('larena.env.admin.job', ['job' => $started->jobId], false));
@@ -148,7 +150,7 @@ final readonly class SiteFilesController
     {
         $actor = ResolvePanelActor::of($request);
         $path = FilePath::clean($request->query('path'));
-        if (!$this->capabilities($actor)->allows('fs:download')) {
+        if (!$this->capabilities($actor)->allows('file:download')) {
             return $this->back($request, $domain, 'files', PanelReason::NOT_ALLOWED);
         }
         if ($path === null || $path === '.') {
@@ -192,7 +194,7 @@ final readonly class SiteFilesController
     /**
      * The gateway arguments of the change, from the form: paths are cleaned, never trusted as typed.
      *
-     * @return array<string, string|list<string>>|null null when a path or name is not one
+     * @return array<string, string>|null null when a path or name is not one
      */
     private function arguments(Request $request, string $op, string $domain): ?array
     {
@@ -200,18 +202,21 @@ final readonly class SiteFilesController
         $folder = FilePath::clean($request->input('folder'));
         $name = self::name($request->input('name'));
         $args = ['domain' => $domain];
+        $entry = $path !== null && $path !== '.';
         switch ($op) {
             case 'write':
-            case 'delete':
-                if ($path === null || $path === '.') {
+                // The sha256 the text was read with: a change made meanwhile is refused `changed`.
+                $sha256 = $request->input('sha256');
+                $content = str_replace("\r\n", "\n", self::rawText($request, 'content'));
+                if (!$entry || !is_string($sha256) || preg_match('/\A[a-f0-9]{64}\z/D', $sha256) !== 1 || !mb_check_encoding($content, 'UTF-8')) {
                     return null;
                 }
-                $args['path'] = $path;
-                if ($op === 'delete') {
-                    $args['recursive'] = $request->input('recursive') === 'yes' ? 'yes' : 'no';
-                }
 
-                return $args;
+                return $args + ['path' => $path, 'content' => $content, 'expect-sha256' => $sha256];
+            case 'create':
+                return $folder === null || $name === null ? null : $args + ['path' => FilePath::join($folder, $name), 'content' => '', 'expect-sha256' => 'new'];
+            case 'remove':
+                return $entry ? $args + ['path' => $path] : null;
             case 'upload':
                 $file = $request->file('file');
                 $uploaded = $file instanceof UploadedFile ? self::name($file->getClientOriginalName()) : null;
@@ -219,37 +224,22 @@ final readonly class SiteFilesController
                     return null;
                 }
 
-                return $args + ['path' => FilePath::join($folder, $uploaded), 'overwrite' => $request->input('overwrite') === 'yes' ? 'yes' : 'no'];
+                // A file already there is replaced only when the person said so.
+                return $args + ['path' => FilePath::join($folder, $uploaded), 'expect-sha256' => $request->input('overwrite') === 'yes' ? 'any' : 'new'];
             case 'mkdir':
                 return $folder === null || $name === null ? null : $args + ['path' => FilePath::join($folder, $name)];
             case 'rename':
-            case 'copy':
-                return $path === null || $path === '.' || $name === null ? null : $args + ['from' => $path, 'to' => FilePath::join(FilePath::parent($path), $name)];
-            case 'restore':
-                $id = $request->input('id');
-
-                return is_string($id) && preg_match('/\A[A-Za-z0-9][A-Za-z0-9._-]{0,127}\z/D', $id) === 1 ? $args + ['id' => $id] : null;
-            case 'chmod':
-                $mode = $request->input('mode');
-                if ($path === null || $path === '.' || !is_string($mode) || !in_array($mode, [...FileModes::FILE, ...FileModes::DIR], true)) {
-                    return null;
-                }
-                $folderMode = $request->input('kind') === 'dir';
-                if (!FileModes::allowed($mode, $folderMode)) {
-                    return null;
-                }
-
-                return $args + ['path' => $path, 'mode' => $mode, 'recursive' => $folderMode && $request->input('recursive') === 'yes' ? 'yes' : 'no'];
+                return !$entry || $name === null ? null : $args + ['path' => $path, 'to' => FilePath::join(FilePath::parent($path), $name)];
             case 'archive':
-                $format = $request->input('format') === 'tar.gz' ? 'tar.gz' : 'zip';
-                if ($path === null || $path === '.' || $name === null) {
+                $format = in_array($request->input('format'), self::ARCHIVE_FORMATS, true) ? (string) $request->input('format') : 'zip';
+                if (!$entry) {
                     return null;
                 }
-                $archive = str_ends_with($name, '.'.$format) ? $name : $name.'.'.$format;
+                $archive = ($name ?? basename($path)).'.'.$format;
 
-                return $args + ['paths' => [$path], 'name' => $archive, 'format' => $format];
+                return self::name($archive) === null ? null : $args + ['path' => $path, 'to' => FilePath::join(FilePath::parent($path), $archive)];
             case 'extract':
-                return $path === null || $path === '.' || $folder === null ? null : $args + ['path' => $path, 'into' => $folder];
+                return !$entry || $folder === null ? null : $args + ['path' => $path, 'to' => $folder, 'overwrite' => $request->input('overwrite') === 'yes' ? 'yes' : 'no'];
             case 'overlay-set':
             case 'overlay-clear':
                 return $args;
@@ -264,8 +254,7 @@ final readonly class SiteFilesController
     }
 
     /**
-     * Keeps the file a change sends on the panel's disk until it is confirmed: an editor's text, an upload, nginx
-     * directives. The session names it with its sha256, so another file cannot be sent in its place.
+     * Keeps the file a change sends on the panel's disk until it is confirmed: an upload, nginx directives. The session names it with its sha256, so another file cannot be sent in its place.
      *
      * @return array{id: string, attachment: PanelAttachment}|string the staged file, or why it cannot be
      */
@@ -354,13 +343,14 @@ final readonly class SiteFilesController
     {
         $key = match ($op) {
             'write' => 'replaces_write',
-            'upload' => $args['overwrite'] === 'yes' ? 'replaces_upload' : null,
-            'delete' => 'replaces_delete',
+            'upload' => ($args['expect-sha256'] ?? 'new') === 'any' ? 'replaces_upload' : null,
+            'remove' => 'replaces_remove',
+            'extract' => ($args['overwrite'] ?? 'no') === 'yes' ? 'replaces_extract' : null,
             'overlay-set', 'overlay-clear' => 'replaces_overlay',
             default => null,
         };
 
-        return $key === null ? null : (string) $this->translator->get('larena-env::admin.files.'.$key, ['path' => $args['path'] ?? '']);
+        return $key === null ? null : (string) $this->translator->get('larena-env::admin.files.'.$key, ['path' => $args['path'] ?? '', 'to' => $args['to'] ?? '']);
     }
 
     /** The change's command, when this server's gateway has it; the nginx directives only for the system level. */
@@ -380,16 +370,17 @@ final readonly class SiteFilesController
      * A text field as the browser sent it. The application's middleware trims input and turns an empty one into null,
      * which would take a file's last line end or leading spaces; the form's own body keeps them.
      */
-    private static function rawText(Request $request, string $field): string
+    private static function rawText(Request $request, string $field, ?string $within = null): string
     {
         if (str_starts_with((string) $request->headers->get('Content-Type'), 'application/x-www-form-urlencoded')) {
             parse_str((string) $request->getContent(), $body);
-            if (is_string($body[$field] ?? null)) {
-                return $body[$field];
+            $value = $within === null ? ($body[$field] ?? null) : (is_array($body[$within] ?? null) ? ($body[$within][$field] ?? null) : null);
+            if (is_string($value)) {
+                return $value;
             }
         }
 
-        return (string) $request->input($field, '');
+        return (string) $request->input($within === null ? $field : $within.'.'.$field, '');
     }
 
     /** A file or folder's own name: no slash, not `.` or `..`, no control characters. */
@@ -400,7 +391,7 @@ final readonly class SiteFilesController
         return $name === '' || $name === '.' || $name === '..' || strlen($name) > 255 || preg_match('/[\/\x00-\x1f\x7f]/', $name) === 1 ? null : $name;
     }
 
-    private function back(Request $request, string $domain, string $tab, string $reason, ?string $path = null): RedirectResponse
+    private function back(Request $request, string $domain, string $tab, string $reason, ?string $path = null, ?string $op = null): RedirectResponse
     {
         $key = 'larena-env::admin.files.reasons.'.$reason;
         $line = (string) $this->translator->get($key);
@@ -409,7 +400,8 @@ final readonly class SiteFilesController
             $line = (string) $this->translator->get($key);
             $line = $line !== $key ? $line : (string) $this->translator->get('larena-env::admin.reasons.unknown', ['reason' => $reason]);
         }
-        $folder = $path === null ? '' : '&path='.rawurlencode(FilePath::parent($path));
+        // A text changed meanwhile is opened again as it is now; the person's own text is in the plan they left.
+        $folder = $path === null ? '' : ($op === 'write' && $reason === 'changed' ? '&view='.rawurlencode($path) : '&path='.rawurlencode(FilePath::parent($path)));
 
         return NoticeRedirect::to($request, route('larena.env.admin.site', ['domain' => $domain], false).'?tab='.$tab.($tab === 'files' ? $folder : ''), $line);
     }

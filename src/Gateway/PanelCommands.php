@@ -43,11 +43,12 @@ final class PanelCommands
     // A path inside a site, from its root: never absolute, never a `..` segment, no control characters (Panel plan 6.1).
     // `.` is the root itself. The gateway checks every component again on the host (path_outside).
     private const string FS_PATH = '/\A(?!\/)(?!(?:.*\/)?\.\.(?:\/|\z))[^\x00-\x1f\x7f]{1,1024}\z/D';
-    private const string FS_NAME = '/\A(?!\.{1,2}\z)[^\/\x00-\x1f\x7f]{1,255}\z/D';
-    private const string FS_MODE = '/\A0?[0-7]{3}\z/D';
-    private const string FS_MAX_BYTES = '/\A[1-9][0-9]{0,6}\z/D';
-    private const string FS_TRASH_ID = '/\A[A-Za-z0-9][A-Za-z0-9._-]{0,127}\z/D';
-    private const string FS_FORMAT = '/\A(?:zip|tar\.gz)\z/D';
+    // An archive file:archive makes: a path whose name says the format.
+    private const string FS_ARCHIVE = '/\A(?!\/)(?!(?:.*\/)?\.\.(?:\/|\z))[^\x00-\x1f\x7f]{1,1024}\.(?:zip|tar\.gz|tgz|tar)\z/D';
+    // A file's text in the request line, which the gateway takes up to 64 KiB in all (simai-env 1.39.0).
+    private const string FILE_CONTENT = '/\A[^\x00]{0,61440}\z/D';
+    // What file:write and file:upload expect at the path: the sha256 read before, nothing yet, or anything.
+    private const string EXPECT_SHA256 = '/\A(?:[a-f0-9]{64}|new|any)\z/D';
     private const string CHANGE_ID = '/\A[A-Za-z0-9][A-Za-z0-9._-]{0,63}\z/D';
     // The server's alerts and where it sends them (simai-env 1.31.0). A webhook is https only; a Telegram chat is its
     // id or @name; the bot's token travels as text and reaches the command as a file, shown as (stored) everywhere.
@@ -95,10 +96,9 @@ final class PanelCommands
     // Who reaches the panel: `any`, or a list of addresses and networks (panel:access, the list's one argument).
     private const string PANEL_ALLOW = '/\A(?:any|[0-9]{1,3}(?:\.[0-9]{1,3}){3}(?:\/(?:[0-9]|[12][0-9]|3[0-2]))?|[0-9A-Fa-f]{0,4}(?::[0-9A-Fa-f]{0,4}){2,7}(?:\/[0-9]{1,3})?)\z/D';
     /**
-     * The arguments the gateway takes as a list: fs:archive's paths, up to 100, each checked as a path; the addresses
-     * that reach the panel (panel:access), up to 50.
+     * The arguments the gateway takes as a list: the addresses that reach the panel (panel:access), up to 50.
      */
-    private const array LIST_ARGUMENTS = ['fs:archive' => ['paths' => 100], 'panel:access' => ['allow' => 50]];
+    private const array LIST_ARGUMENTS = ['panel:access' => ['allow' => 50]];
 
     /**
      * `since`: the first simai-env release whose gateway allows the command; null for one no release has yet.
@@ -193,20 +193,20 @@ final class PanelCommands
         'firewall:unblock' => ['args' => ['address' => self::ADDRESS], 'required' => ['address'], 'since' => '1.35.0', 'kind' => self::ACTION],
         'panel:access' => ['args' => ['allow' => self::PANEL_ALLOW], 'required' => ['allow'], 'since' => '1.35.0', 'kind' => self::ACTION],
         // Files of a site, as its own user and inside its root only (simai-env, after 1.35.0; Panel plan 6.1, 6.2).
-        'fs:list' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH], 'required' => ['domain', 'path'], 'since' => null, 'kind' => self::READ],
-        'fs:read' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH, 'max_bytes' => self::FS_MAX_BYTES], 'required' => ['domain', 'path'], 'since' => null, 'kind' => self::READ],
-        'fs:trash-list' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => null, 'kind' => self::READ],
-        'fs:download' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH], 'required' => ['domain', 'path'], 'since' => null, 'kind' => self::READ],
-        'fs:write' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH, 'mode' => self::FS_MODE], 'required' => ['domain', 'path'], 'since' => null, 'kind' => self::ACTION],
-        'fs:upload' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH, 'overwrite' => self::YES_NO], 'required' => ['domain', 'path'], 'since' => null, 'kind' => self::ACTION],
-        'fs:mkdir' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH], 'required' => ['domain', 'path'], 'since' => null, 'kind' => self::ACTION],
-        'fs:rename' => ['args' => ['domain' => self::DOMAIN, 'from' => self::FS_PATH, 'to' => self::FS_PATH], 'required' => ['domain', 'from', 'to'], 'since' => null, 'kind' => self::ACTION],
-        'fs:copy' => ['args' => ['domain' => self::DOMAIN, 'from' => self::FS_PATH, 'to' => self::FS_PATH], 'required' => ['domain', 'from', 'to'], 'since' => null, 'kind' => self::ACTION],
-        'fs:delete' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH, 'recursive' => self::YES_NO], 'required' => ['domain', 'path'], 'since' => null, 'kind' => self::ACTION],
-        'fs:restore' => ['args' => ['domain' => self::DOMAIN, 'id' => self::FS_TRASH_ID], 'required' => ['domain', 'id'], 'since' => null, 'kind' => self::ACTION],
-        'fs:chmod' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH, 'mode' => self::FS_MODE, 'recursive' => self::YES_NO], 'required' => ['domain', 'path', 'mode'], 'since' => null, 'kind' => self::ACTION],
-        'fs:archive' => ['args' => ['domain' => self::DOMAIN, 'paths' => self::FS_PATH, 'name' => self::FS_NAME, 'format' => self::FS_FORMAT], 'required' => ['domain', 'paths', 'name', 'format'], 'since' => null, 'kind' => self::ACTION],
-        'fs:extract' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH, 'into' => self::FS_PATH], 'required' => ['domain', 'path', 'into'], 'since' => null, 'kind' => self::ACTION],
+        // A site's files, as its own user inside its folder, links never followed (simai-env 1.39.0); an upload, a packed
+        // folder and an unpacked archive came in 1.40.0. There is no trash: a removal is final.
+        'file:list' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH], 'required' => ['domain'], 'since' => '1.39.0', 'kind' => self::READ],
+        'file:stat' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH], 'required' => ['domain', 'path'], 'since' => '1.39.0', 'kind' => self::READ],
+        'file:read' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH], 'required' => ['domain', 'path'], 'since' => '1.39.0', 'kind' => self::READ],
+        'file:download' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH], 'required' => ['domain', 'path'], 'since' => '1.39.0', 'kind' => self::READ],
+        'file:write' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH, 'content' => self::FILE_CONTENT, 'expect-sha256' => self::EXPECT_SHA256],
+            'required' => ['domain', 'path', 'content'], 'since' => '1.39.0', 'kind' => self::ACTION],
+        'file:mkdir' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH], 'required' => ['domain', 'path'], 'since' => '1.39.0', 'kind' => self::ACTION],
+        'file:rename' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH, 'to' => self::FS_PATH], 'required' => ['domain', 'path', 'to'], 'since' => '1.39.0', 'kind' => self::ACTION],
+        'file:remove' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH], 'required' => ['domain', 'path'], 'since' => '1.39.0', 'kind' => self::ACTION],
+        'file:upload' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH, 'expect-sha256' => self::EXPECT_SHA256], 'required' => ['domain', 'path'], 'since' => '1.40.0', 'kind' => self::ACTION],
+        'file:archive' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH, 'to' => self::FS_ARCHIVE], 'required' => ['domain', 'path', 'to'], 'since' => '1.40.0', 'kind' => self::ACTION],
+        'file:extract' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH, 'to' => self::FS_PATH, 'overwrite' => self::YES_NO], 'required' => ['domain', 'path', 'to'], 'since' => '1.40.0', 'kind' => self::ACTION],
         // The site's own nginx directives, the system level's (Panel plan 6.3): applied, then kept only once confirmed.
         'site:nginx-overlay-get' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => null, 'kind' => self::READ],
         'site:nginx-overlay-set' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => null, 'kind' => self::ACTION],
@@ -256,13 +256,12 @@ final class PanelCommands
      * as site:deploy's release does; a plan carries only the metadata. With the most each one takes.
      */
     private const array ATTACHMENTS = [
-        'fs:write' => 5_242_880,
-        'fs:upload' => 536_870_912,
+        'file:upload' => 1_073_741_824,
         'site:nginx-overlay-set' => 65_536,
     ];
 
     /** A download answers a JSON line and then exactly `size` bytes: the most the panel takes. */
-    public const int DOWNLOAD_MAX_BYTES = 2_147_483_648;
+    public const int DOWNLOAD_MAX_BYTES = 1_073_741_824;
 
     private function __construct()
     {
@@ -274,10 +273,10 @@ final class PanelCommands
         return self::ATTACHMENTS[$command] ?? null;
     }
 
-    /** Whether the command's answer is followed by the file's bytes (fs:download): it is never asked the usual way. */
+    /** Whether the command's answer is followed by the file's bytes (file:download): it is never asked the usual way. */
     public static function streams(string $command): bool
     {
-        return $command === 'fs:download';
+        return $command === 'file:download';
     }
 
     /** The first simai-env release that takes the argument; that of the command for one it always took. */

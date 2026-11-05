@@ -12,14 +12,14 @@ use Throwable;
 
 /**
  * Whether the server lists the commands a menu row needs, so that a row shows only where its screen can do something
- * (the services, the firewall, who reaches the panel). The menu is built on every page, so the answer is read from the
+ * (the services, the server's software and PHP, the firewall, who reaches the panel). The menu is built on every page, so the answer is read from the
  * server's description once and kept for a few minutes in the application's cache; a server that does not answer
  * lists nothing, and the rows wait until it does.
  */
 final class ListedCommands
 {
     /** The commands the menu asks about. */
-    public const array COMMANDS = ['service:list', 'firewall:status', 'panel:access'];
+    public const array COMMANDS = ['service:list', 'software:list', 'php:list', 'firewall:status', 'panel:access'];
     private const string KEY = 'larena-env.listed-commands';
     private const int SECONDS = 300;
     private const int UNANSWERED_SECONDS = 60;

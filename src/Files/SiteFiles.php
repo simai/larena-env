@@ -16,13 +16,16 @@ use Larena\Env\Gateway\PanelRequest;
 use UnexpectedValueException;
 
 /**
- * The reads of a site's «Файлы» tab and its nginx directives (Panel plan 6.1–6.3): a folder, a text file, the trash, the
- * directives, and a file handed over for download. Each answers its data or a reason code the screen says in words.
+ * The reads of a site's «Файлы» tab and its nginx directives (simai-env 1.39.0, Panel plan 6.1–6.3): a folder, a text
+ * file, the directives, and a file handed over for download. Each answers its data or a reason code the screen says.
  */
 final readonly class SiteFiles
 {
-    /** The most of a file the editor shows: the gateway answers text up to 1 MB inline. */
-    public const int READ_MAX_BYTES = 1_048_576;
+    /**
+     * The most of a file the panel saves: its text travels in the request line, which the gateway takes up to 64 KiB in
+     * all. A longer text is shown, never saved from the editor; it is downloaded, changed and uploaded instead.
+     */
+    public const int WRITE_MAX_BYTES = 61_440;
 
     public function __construct(private PanelGateway $gateway)
     {
@@ -31,7 +34,7 @@ final readonly class SiteFiles
     /** @return array{entries: list<FileEntry>, truncated: bool}|string the folder, or why it cannot be shown */
     public function folder(PanelActor $actor, string $domain, string $path): array|string
     {
-        $data = $this->data($actor, 'fs:list', ['domain' => $domain, 'path' => $path]);
+        $data = $this->data($actor, 'file:list', $path === '.' ? ['domain' => $domain] : ['domain' => $domain, 'path' => $path]);
         if (is_string($data)) {
             return $data;
         }
@@ -46,31 +49,34 @@ final readonly class SiteFiles
         return ['entries' => $entries, 'truncated' => ($data['truncated'] ?? false) === true];
     }
 
-    /** @return array{content: ?string, binary: bool, size: ?int, mtime: ?string, truncated: bool}|string the file's text, or why it cannot be shown */
+    /**
+     * A text file as file:read answers it (UTF-8 up to 1 MiB) with the sha256 a save expects, so another person's change
+     * meanwhile is refused, never overwritten. A binary or larger file is a reason (`not_text`, `too_large`).
+     *
+     * @return array{content: string, sha256: string, size: ?int, mtime: ?string, savable: bool}|string
+     */
     public function text(PanelActor $actor, string $domain, string $path): array|string
     {
-        $data = $this->data($actor, 'fs:read', ['domain' => $domain, 'path' => $path, 'max_bytes' => (string) self::READ_MAX_BYTES]);
+        $data = $this->data($actor, 'file:read', ['domain' => $domain, 'path' => $path]);
         if (is_string($data)) {
             return $data;
         }
-        $binary = ($data['binary'] ?? false) === true || !is_string($data['content'] ?? null);
-
-        return ['content' => $binary ? null : (string) $data['content'], 'binary' => $binary, 'size' => is_int($data['size'] ?? null) ? $data['size'] : null,
-            'mtime' => is_string($data['mtime'] ?? null) ? $data['mtime'] : null, 'truncated' => ($data['truncated'] ?? false) === true];
-    }
-
-    /** @return list<TrashItem>|string */
-    public function trash(PanelActor $actor, string $domain): array|string
-    {
-        $data = $this->data($actor, 'fs:trash-list', ['domain' => $domain]);
-        if (is_string($data)) {
-            return $data;
-        }
-        try {
-            return array_map(static fn (mixed $item): TrashItem => TrashItem::fromData(is_array($item) ? $item : []), array_values((array) ($data['items'] ?? [])));
-        } catch (UnexpectedValueException) {
+        $content = $data['content'] ?? null;
+        $sha256 = $data['sha256'] ?? null;
+        if (!is_string($content) || !is_string($sha256) || preg_match('/\A[a-f0-9]{64}\z/D', $sha256) !== 1) {
             return PanelReason::ANSWER_SHAPE_INVALID;
         }
+
+        return ['content' => $content, 'sha256' => $sha256, 'size' => is_int($data['size'] ?? null) ? $data['size'] : null,
+            'mtime' => FileEntry::moment($data['mtime'] ?? null), 'savable' => self::savable($content)];
+    }
+
+    /** Whether the text fits the request line a save sends, as JSON writes it there. */
+    public static function savable(string $content): bool
+    {
+        $encoded = json_encode($content, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+
+        return is_string($encoded) && strlen($encoded) <= self::WRITE_MAX_BYTES;
     }
 
     /**
@@ -97,7 +103,7 @@ final readonly class SiteFiles
     public function download(PanelActor $actor, string $domain, string $path, string $into): PanelDownload
     {
         try {
-            $request = PanelRequest::read($actor, 'fs:download', ['domain' => $domain, 'path' => $path]);
+            $request = PanelRequest::read($actor, 'file:download', ['domain' => $domain, 'path' => $path]);
         } catch (PanelRefused $refused) {
             return PanelDownload::of(PanelAnswer::refused('panel-download', $refused->reasonCode));
         }

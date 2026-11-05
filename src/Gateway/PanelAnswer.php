@@ -7,7 +7,8 @@ namespace Larena\Env\Gateway;
 /** A gateway answer (simai-panel-answer/1) that has been read: a known status and, unless it is ok, a reason code. */
 final readonly class PanelAnswer
 {
-    private const array KINDS = ['result', 'plan', 'job'];
+    /** `download`: a file's path, size and time, its bytes following the line (file:download, simai-env 1.39.0). */
+    private const array KINDS = ['result', 'plan', 'job', 'download'];
     private const string REASON_PATTERN = '/\A[A-Za-z0-9][A-Za-z0-9._-]{0,127}\z/D';
     private const string JOB_ID_PATTERN = '/\A[a-f0-9]{24}\z/D';
 

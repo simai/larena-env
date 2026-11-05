@@ -39,6 +39,9 @@ return [
             // The services and the firewall beside the server, who reaches the panel among its settings (Panel plan 5.1–5.3).
             'env.services' => 'server',
             'env.firewall' => 'server',
+            // The server's software and system updates, and its PHP versions (simai-env 1.37.0–1.38.0).
+            'env.software' => 'server',
+            'env.software.php' => 'server',
             'env.panel.access' => 'settings',
             // Sign-in diagnostics under its own name, beside the server's overview.
             'auth.diagnostics' => 'server',

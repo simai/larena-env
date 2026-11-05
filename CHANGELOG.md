@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- simai-env 1.39.0–1.40.0 (recorded answers set 16): a site's files go through the server's `file:*` commands, which
+  replace the panel's earlier draft (`fs:*`). A folder lists folders first with size, time, permissions and a link's
+  target; a text opens in the editor and is saved with the sha256 it was read with, so a change made meanwhile is refused
+  `changed` and the newer text is shown; a text over 60 KB is read-only (it travels in the request line). Each entry has
+  Download, Rename, Pack (zip or tar.gz), Unpack for an archive (into a folder, replacing files only when ticked) and
+  Remove; the folder has New folder, New file and Upload (up to 1 GB, never replacing a file unasked). There is no trash:
+  a removal says it is final. A download is the answer line of the `download` kind and exactly its size in bytes.
+
+- simai-env 1.38.0 (set 14): «Программы» shows the server's components (version, update, service state, Install for
+  Node.js, Redis or PostgreSQL) and the system's updates (counts, security packages, reboot pending, index age) with
+  Refresh, Install security updates and Install all, each by plan with the package list. Administrator only.
+
+- simai-env 1.37.0 (set 13): «Программы › PHP» lists the server's PHP versions with their sites and pending fixes, and
+  installs, updates, removes a free version and turns extensions on or off, each by plan. Administrator only.
+
 - The new-site screen names the Framework's new tags (rename R3).
 
 - simai-env 1.36.0 (recorded answers set 12): certificates through DNS with Cloudflare. «DNS › Подключение» says whether

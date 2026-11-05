@@ -28,25 +28,27 @@ env_assert(PanelCommands::kind('site:describe') === PanelCommands::READ, 'A read
 env_assert(PanelCommands::kind('backup:data') === PanelCommands::ACTION, 'An action.');
 env_assert(PanelCommands::kind('job:status') === PanelCommands::JOB, 'A job command.');
 env_assert(PanelCommands::kind('site:remove') === null && PanelCommands::kind('self:bootstrap') === null, 'Commands this package may not send.');
-// 23 of the card, a new site and the owners; 10 of a site's files, 2 of its nginx directives and the confirmation of a
-// timed change (stage 6); 3 of the server's alerts (simai-env 1.31.0); the safe update (simai-env 1.32.0); 2 of the services,
-// 4 of a site's scheduled jobs, 4 of the firewall and the panel's access (stage 5); the DNS token for certificates (simai-env 1.36.0);
-// 4 of the server's PHP versions (simai-env 1.37.0).
-env_assert(count(PanelCommands::actions()) === 59, 'The card\'s actions, a new site, the owners, the files, the nginx directives, the alerts, the update, the services, the jobs, the firewall, the DNS token, PHP and the server\'s software.');
-// fs:archive's paths are the one list an argument may be: up to 100, each a path; nothing else takes a list.
-PanelCommands::check('fs:archive', ['domain' => 'demo-php.test', 'paths' => ['public', 'notes.txt'], 'name' => 'a.zip', 'format' => 'zip']);
-foreach ([['paths' => ['../x']], ['paths' => array_fill(0, 101, 'a')], ['paths' => []]] as $bad) {
-    try {
-        PanelCommands::check('fs:archive', ['domain' => 'demo-php.test', 'name' => 'a.zip', 'format' => 'zip'] + $bad);
-        env_assert(false, 'A wrong list is refused.');
-    } catch (\Larena\Env\Gateway\PanelRefused $refused) {
-        env_assert($refused->reasonCode === 'invalid_argument', 'A wrong list is an invalid argument.');
-    }
-}
+// 23 of the card, a new site and the owners; 2 of a site's nginx directives and the confirmation of a timed change (stage 6);
+// 3 of the server's alerts (simai-env 1.31.0); the safe update (simai-env 1.32.0); 2 of the services, 4 of a site's scheduled
+// jobs, 4 of the firewall and the panel's access (stage 5); the DNS token for certificates (simai-env 1.36.0); 4 of the server's
+// PHP versions (simai-env 1.37.0); 3 of the server's software (1.38.0); 7 of a site's files (1.39.0–1.40.0).
+env_assert(count(PanelCommands::actions()) === 56, 'The card\'s actions, a new site, the owners, the nginx directives, the alerts, the update, the services, the jobs, the firewall, the DNS token, PHP, the server\'s software and the files.');
+// The addresses that reach the panel are the one list an argument may be; nothing else takes a list.
 try {
-    PanelCommands::check('fs:delete', ['domain' => 'demo-php.test', 'path' => ['public']]);
-    env_assert(false, 'Only fs:archive\'s paths take a list.');
+    PanelCommands::check('file:remove', ['domain' => 'demo-php.test', 'path' => ['public']]);
+    env_assert(false, 'Only the panel\'s addresses take a list.');
 } catch (\Larena\Env\Gateway\PanelRefused) {
+}
+// A file's text travels in the request line: up to 60 KB; an archive's name says its format.
+PanelCommands::check('file:write', ['domain' => 'demo-php.test', 'path' => 'a.txt', 'content' => "line\n", 'expect-sha256' => 'new']);
+foreach ([['file:write', ['content' => str_repeat('a', 61_441)]], ['file:write', ['content' => "a\0b"]], ['file:write', ['content' => 'a', 'expect-sha256' => 'old']],
+    ['file:archive', ['to' => 'public.rar']], ['file:archive', ['to' => '../public.zip']]] as [$command, $bad]) {
+    try {
+        PanelCommands::check($command, $bad + ['domain' => 'demo-php.test', 'path' => 'public', 'content' => '', 'to' => 'x.zip']);
+        env_assert(false, $command.' takes what it may only: '.json_encode(array_map(static fn ($v) => substr((string) $v, 0, 20), $bad)));
+    } catch (\Larena\Env\Gateway\PanelRefused $refused) {
+        env_assert($refused->reasonCode === 'invalid_argument', 'A wrong argument is an invalid argument.');
+    }
 }
 // A Telegram bot's token has its shape; a webhook is https only.
 PanelCommands::check('self:alerts-channel', ['kind' => 'telegram', 'target' => '-1001234567', 'token' => '123456789:'.str_repeat('A', 35)]);

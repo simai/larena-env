@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Larena\Env\Gateway;
 
 /**
- * A file the gateway handed over: its answer, and where its checked bytes lie in the local file (after the answer's
- * line). Only an ok answer whose bytes matched its size and sha256 has a name and an offset.
+ * A file the gateway handed over (file:download, simai-env 1.39.0): its answer, and where its checked bytes lie in the
+ * local file (after the answer's line). Only an ok answer whose bytes matched its size has a name and an offset.
  */
 final readonly class PanelDownload
 {
@@ -35,8 +35,9 @@ final readonly class PanelDownload
     }
 
     /**
-     * Reads what a gateway wrote for fs:download: one JSON line, then exactly the bytes it names. A refusal is the line
-     * alone. Anything that does not add up is a failed answer, so a cut or altered file is never served.
+     * Reads what a gateway wrote for file:download: one JSON line of the `download` kind with the file's path, size and
+     * time, then exactly that many bytes. A refusal is the line alone. Fewer bytes mean the file changed while it was
+     * sent, more mean something else came: either is a failed answer, so a cut file is never served.
      */
     public static function read(string $requestId, string $path): self
     {
@@ -62,33 +63,18 @@ final readonly class PanelDownload
             }
             $data = $answer->data;
             $size = $data['size'] ?? null;
-            $sha256 = $data['sha256'] ?? null;
-            $name = $data['name'] ?? null;
-            $mime = $data['mime'] ?? 'application/octet-stream';
-            if ($answer->kind !== 'result' || !is_int($size) || $size < 0 || !is_string($sha256) || preg_match('/\A[a-f0-9]{64}\z/D', $sha256) !== 1
-                || !is_string($name) || $name === '' || !is_string($mime)) {
+            $name = is_string($data['path'] ?? null) ? basename(str_replace('\\', '/', $data['path'])) : '';
+            if ($answer->kind !== 'download' || !is_int($size) || $size < 0 || $name === '' || $name === '.') {
                 return self::of(PanelAnswer::failed($requestId, PanelReason::ANSWER_SHAPE_INVALID));
             }
             if ($size > PanelCommands::DOWNLOAD_MAX_BYTES) {
                 return self::of(PanelAnswer::failed($requestId, PanelReason::TOO_LARGE));
             }
-            // A short read, extra bytes or other bytes: the file is not what the server said it sent.
             if ($total - $offset !== $size) {
                 return self::of(PanelAnswer::failed($requestId, PanelReason::DOWNLOAD_MISMATCH));
             }
-            $hash = hash_init('sha256');
-            while (!feof($stream)) {
-                $chunk = fread($stream, 1_048_576);
-                if ($chunk === false) {
-                    return self::of(PanelAnswer::failed($requestId, PanelReason::DOWNLOAD_MISMATCH));
-                }
-                hash_update($hash, $chunk);
-            }
-            if (!hash_equals($sha256, hash_final($hash))) {
-                return self::of(PanelAnswer::failed($requestId, PanelReason::DOWNLOAD_MISMATCH));
-            }
 
-            return self::file($answer, basename(str_replace('\\', '/', $name)), $mime, $size, $offset);
+            return self::file($answer, $name, 'application/octet-stream', $size, $offset);
         } finally {
             fclose($stream);
         }

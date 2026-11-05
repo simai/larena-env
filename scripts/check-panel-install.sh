@@ -11,7 +11,7 @@
 #      row's address opens;
 #   5. peace of mind (stage 4): a new site gets its daily backup, each copy is checked, a restore says what it replaces, the check measures
 #      and tells the administrator, the sites, card and overview say what needs attention and draw the load;
-#   6. files (stage 6): the recorded server, which has no file commands, says so; then a stand-in for them lists a site's
+#   6. files (simai-env 1.39.0): the recorded server lists the commands; then a stand-in for its folders lists a site's
 #      folder, saves, deletes, restores and hands a file over, each change by plan, and keeps a site's nginx directives;
 #   7. the two levels (Panel plan, stage 2): the administrator gives a person of the user level a space (an owner of
 #      the server), looks at the panel as them (marked in the audit log), plans a new site and opens a site's tabs; the
@@ -149,7 +149,7 @@ print("menu roots:", roots)
 assert roots == ["sites", "journal", "users", "server", "settings"], roots
 children = {item["key"]: [row["key"] for row in item.get("children", []) if row.get("kind") == "page"] for item in items}
 # The services came with simai-env 1.33.0, the firewall and who reaches the panel with 1.35.0.
-assert sorted(children["server"]) == ["auth.diagnostics", "env.dns", "env.firewall", "env.server.overview", "env.services", "env.update"], children
+assert sorted(children["server"]) == ["auth.diagnostics", "env.dns", "env.firewall", "env.server.overview", "env.services", "env.software", "env.software.php", "env.update"], children
 assert sorted(children["users"]) == ["auth.users", "env.people"], children
 assert sorted(children["settings"]) == ["admin.settings_general", "admin.site_backgrounds", "env.alerts.channel", "env.dns.connection", "env.panel.access"], children
 assert "site-switch" not in json.dumps(menu.get("capabilities", [])), "the panel has no site switcher"
@@ -158,6 +158,7 @@ for href in hrefs:
     status, _ = get(href)
     assert status == 200, (href, status)
 print("menu rows open:", hrefs)
+assert "/admin/server/software" in hrefs and "/admin/server/software/php" in hrefs, "the server's software and PHP rows, listed by the server"
 
 # The breadcrumbs name the page's own place: Users › Spaces and Server › Overview, never the package's «Sites».
 def crumbs(html):
@@ -319,9 +320,9 @@ for tab in ("overview", "domains", "dns", "php", "database", "backups", "files",
     assert status == 200 and 'data-env-tab="' + tab + '"' in card, ("tab", tab)
     # SFTP is by key only (simai-env 1.30.0): no password field on any tab.
     assert 'type="password"' not in card and 'name="password"' not in card, ("no password", tab)
-    # The recorded server has no file commands (no simai-env release has them yet): said, with no dead buttons.
+    # The recorded server lists the file commands (1.39.0) but holds no folder of this site: said in words.
     if tab == "files":
-        assert 'data-env-files="unsupported"' in card and "data-env-files-op" not in card, "no file commands: said, nothing offered"
+        assert 'data-env-files="on"' in card and "data-env-files-problem" in card, "the files tab, a folder the recording lacks said in words"
     if tab == "nginx":
         assert 'data-env-nginx="unsupported"' in card and "data-env-nginx-op" not in card, "no nginx directives: said, nothing offered"
     if tab == "access":
@@ -341,7 +342,7 @@ assert 'data-env-dns-connection="none"' in connection and 'name="token"' in conn
 _, dns_tab = get("/admin/server/sites/demo-php.test?tab=dns")
 assert 'data-env-dns="not_connected"' in dns_tab and "/admin/server/dns/connection" in dns_tab, "the site's DNS tab says how to connect"
 print("dns:", "ok")
-# Files (Panel plan, stage 6) on a stand-in for the file commands, which no recording has yet: the server lists them now.
+# Files (simai-env 1.39.0–1.40.0) on a stand-in for the folders and bytes the recordings do not hold.
 import os
 fake = sys.argv[3] + "/fake-files"
 with open(sys.argv[5] + "/.env", "a") as dotenv:
@@ -359,27 +360,24 @@ def plan_and_run(path, fields):
     return planned, done
 _, files = get("/admin/server/sites/demo-php.test?tab=files")
 assert 'data-env-files="on"' in files and 'data-env-file="public"' in files and 'data-env-file="notes.txt"' in files, "a site's folder"
-assert 'data-env-files-op="upload"' in files and 'data-env-files-op="mkdir"' in files and "data-env-files-trash-link" in files, "its changes and the trash"
+assert 'data-env-files-op="upload"' in files and 'data-env-files-op="mkdir"' in files and 'data-env-files-op="remove"' in files, "its changes"
 _, opened = get("/admin/server/sites/demo-php.test?tab=files&view=notes.txt")
 assert "data-env-files-editor" in opened and "Notes of demo-php.test" in opened, "a text file opens in the editor"
-planned, done = plan_and_run("/admin/server/sites/demo-php.test/files/plan", {"_token": form_token(opened), "op": "write", "path": "notes.txt", "content": "Saved from the panel\r\n"})
-assert 'data-env-plan="fs:write"' in planned and "data-env-plan-replaces" in planned, "a save is planned and says what it replaces"
+sha = re.search(r'name="sha256" value="([a-f0-9]{64})"', opened)
+assert sha, "the editor keeps the sha256 the text was read with"
+planned, done = plan_and_run("/admin/server/sites/demo-php.test/files/plan", {"_token": form_token(opened), "op": "write", "path": "notes.txt", "sha256": sha.group(1), "content": "Saved from the panel\r\n"})
+assert 'data-env-plan="file:write"' in planned and "data-env-plan-replaces" in planned, "a save is planned and says what it replaces"
 assert 'data-env-job-state="succeeded"' in done, "the save runs as a job"
 _, reopened = get("/admin/server/sites/demo-php.test?tab=files&view=notes.txt")
 assert "Saved from the panel\n</textarea>" in reopened, "the file holds the saved text, with the server's line ends"
-_, trash = get("/admin/server/sites/demo-php.test?tab=files&trash=1")
-assert re.search(r'data-env-trash-item="[^"]+"', trash) and "notes.txt.bak-" in trash, "the previous version is in the trash"
-planned, done = plan_and_run("/admin/server/sites/demo-php.test/files/plan", {"_token": form_token(files), "op": "delete", "path": "notes.txt", "folder": "."})
-assert 'data-env-plan="fs:delete"' in planned and 'data-env-job-state="succeeded"' in done, "deleting goes to the trash by plan"
+_, refused = post("/admin/server/sites/demo-php.test/files/plan", {"_token": form_token(opened), "op": "write", "path": "notes.txt", "sha256": sha.group(1), "content": "Too late"})
+assert "data-env-notice" in refused and "data-env-files-editor" in refused and "Saved from the panel" in refused, "a save over a newer text is refused, and the newer text is shown"
+planned, done = plan_and_run("/admin/server/sites/demo-php.test/files/plan", {"_token": form_token(files), "op": "mkdir", "folder": ".", "name": "drafts"})
+assert 'data-env-plan="file:mkdir"' in planned and 'data-env-job-state="succeeded"' in done, "a folder made by plan"
+planned, done = plan_and_run("/admin/server/sites/demo-php.test/files/plan", {"_token": form_token(files), "op": "remove", "path": "drafts"})
+assert 'data-env-plan="file:remove"' in planned and "data-env-plan-replaces" in planned and 'data-env-job-state="succeeded"' in done, "removed by plan, said to be final"
 _, after = get("/admin/server/sites/demo-php.test?tab=files")
-assert 'data-env-file="notes.txt"' not in after, "deleted from the folder"
-_, trash = get("/admin/server/sites/demo-php.test?tab=files&trash=1")
-item = re.search(r'<li data-env-trash-item="([^"]+)"[^>]*>\s*<span>notes\.txt[ ·<]', trash)
-assert item, "the deleted file is in the trash"
-planned, done = plan_and_run("/admin/server/sites/demo-php.test/files/plan", {"_token": form_token(trash), "op": "restore", "id": item.group(1)})
-assert 'data-env-plan="fs:restore"' in planned and 'data-env-job-state="succeeded"' in done, "restored by plan"
-_, back = get("/admin/server/sites/demo-php.test?tab=files")
-assert 'data-env-file="notes.txt"' in back, "back where it was"
+assert 'data-env-file="drafts"' not in after and 'data-env-file="notes.txt"' in after, "gone from the folder"
 with web.open(base + "/admin/server/sites/demo-php.test/files/download?path=notes.txt") as answer:
     assert answer.read() == b"Saved from the panel\n" and "attachment" in answer.headers.get("Content-Disposition", ""), "a download, checked and handed over"
 os.symlink("/etc", fake + "/sites/demo-php.test/escape")

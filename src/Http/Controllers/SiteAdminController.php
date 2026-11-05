@@ -8,7 +8,6 @@ use Illuminate\Contracts\Translation\Translator;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Larena\Env\Files\FileModes;
 use Larena\Env\Files\FilePath;
 use Larena\Env\Files\SiteFiles;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
@@ -113,7 +112,7 @@ final readonly class SiteAdminController
             'databases' => $ask('db:list', 'database') ? $this->extras->databases($actor, $domain) : null,
             'sftpAccounts' => $sftpAccounts,
             // The domain's records through the panel's DNS provider, and whether it points here (Panel plan, stage 7).
-            // The site's files (Panel plan 6.1): a folder, a file open in the editor, or the trash.
+            // The site's files (simai-env 1.39.0–1.40.0): a folder or a file open in the editor.
             'files' => $site !== null && $tab === 'files' ? $this->filesTab($request, $actor, $domain, $capabilities) : null,
             'overlay' => is_array($overlay) ? $overlay : null,
             'overlayProblem' => is_string($overlay) ? $this->filesReasonText($overlay) : null,
@@ -154,32 +153,30 @@ final readonly class SiteAdminController
     }
 
     /**
-     * What the «Файлы» tab shows: nothing but a sentence on a server without the file commands; otherwise the folder,
-     * a file open in the editor, or the trash, and the changes this server allows.
+     * What the «Файлы» tab shows: nothing but a sentence on a server without the file commands; otherwise the folder or
+     * a file open in the editor, and the changes this server allows (simai-env 1.39.0; upload and archives 1.40.0).
      *
      * @return array<string, mixed>
      */
     private function filesTab(Request $request, PanelActor $actor, string $domain, PanelCapabilities $capabilities): array
     {
-        if (!$capabilities->allows('fs:list') || $this->files === null) {
+        if (!$capabilities->allows('file:list') || $this->files === null) {
             return ['supported' => false];
         }
         $path = FilePath::clean($request->query('path')) ?? '.';
         $view = $request->query('view') === null ? null : FilePath::clean($request->query('view'));
-        $trash = $request->query('trash') === '1' && $capabilities->allows('fs:trash-list');
         $allows = [];
         foreach (SiteFilesController::FILE_OPERATIONS as $op => $command) {
             $allows[$op] = $capabilities->allows($command);
         }
-        $allows['download'] = $capabilities->allows('fs:download');
-        $allows['read'] = $capabilities->allows('fs:read');
-        $allows['trash'] = $capabilities->allows('fs:trash-list');
+        $allows['download'] = $capabilities->allows('file:download');
+        $allows['read'] = $capabilities->allows('file:read');
+        $opened = $view !== null && $view !== '.' && $allows['read'];
 
-        $text = $view !== null && $view !== '.' && $allows['read'] ? $this->files->text($actor, $domain, $view) : null;
-        $trashed = $trash ? $this->files->trash($actor, $domain) : null;
-        $folder = $trash || ($view !== null && $view !== '.') ? null : $this->files->folder($actor, $domain, $path);
+        $text = $opened ? $this->files->text($actor, $domain, $view) : null;
+        $folder = $opened ? null : $this->files->folder($actor, $domain, $path);
         $problem = null;
-        foreach ([$folder, $text, $trashed] as $read) {
+        foreach ([$folder, $text] as $read) {
             if (is_string($read)) {
                 $problem = $this->filesReasonText($read);
             }
@@ -190,17 +187,14 @@ final readonly class SiteAdminController
             // The tab's own address, to which a folder's path or a file's is added.
             'base' => route('larena.env.admin.site', ['domain' => $domain], false).'?tab=files',
             'problem' => $problem,
-            'path' => $path,
-            'crumbs' => FilePath::crumbs($path),
+            'path' => $opened ? FilePath::parent($view) : $path,
+            'crumbs' => FilePath::crumbs($opened ? FilePath::parent($view) : $path),
             'parent' => $path === '.' ? null : FilePath::parent($path),
-            'view' => $view !== null && $view !== '.' && $allows['read'] ? $view : null,
+            'view' => $opened ? $view : null,
             'text' => is_array($text) ? $text : null,
-            'trash' => is_array($trashed) ? $trashed : null,
-            'trashOpen' => $trash,
             'folder' => is_array($folder) ? $folder : null,
             'allows' => $allows,
-            'fileModes' => FileModes::FILE,
-            'dirModes' => FileModes::DIR,
+            'formats' => SiteFilesController::ARCHIVE_FORMATS,
         ];
     }
 

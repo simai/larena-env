@@ -2,14 +2,13 @@
 
 declare(strict_types=1);
 
-// A site's files (Panel plan, stage 6): the command table's paths, an attachment after the request line, a download read
-// back and checked before it is served, and the stand-in for the file commands the recorded server has no answers for.
+// A site's files (simai-env 1.39.0–1.40.0): the command table's paths, an upload after the request line, a download read
+// back and checked before it is served, and the stand-in for the bytes and folders the recordings do not hold.
 
 use Larena\Core\Process\ProcessResult;
 use Larena\Core\Process\ProcessSpecification;
 use Larena\Core\Process\ProcOpenProcessExecutor;
 use Larena\Core\Process\RecordingProcessExecutor;
-use Larena\Env\Files\FileModes;
 use Larena\Env\Files\FilePath;
 use Larena\Env\Files\SiteFiles;
 use Larena\Env\Gateway\FakeFilesGateway;
@@ -43,52 +42,43 @@ $refusedWith = static function (callable $make): ?string {
 
 // Paths: from the site's root, never absolute, never `..`; the panel refuses them before the gateway does.
 foreach (['.', 'public', 'public/index.html', 'a b/ünï.txt', '.env', '..hidden'] as $good) {
-    env_assert($refusedWith(static fn () => new PanelRequest('r1', $admin, 'fs:list', ['domain' => 'demo-php.test', 'path' => $good])) === null, "A path inside the site: {$good}");
+    env_assert($refusedWith(static fn () => new PanelRequest('r1', $admin, 'file:list', ['domain' => 'demo-php.test', 'path' => $good])) === null, "A path inside the site: {$good}");
 }
 foreach (['/etc', '..', '../x', 'a/../b', 'a/..', "a\nb", ''] as $bad) {
-    env_assert($refusedWith(static fn () => new PanelRequest('r1', $admin, 'fs:list', ['domain' => 'demo-php.test', 'path' => $bad])) === 'invalid_argument', 'Refused: '.json_encode($bad));
+    env_assert($refusedWith(static fn () => new PanelRequest('r1', $admin, 'file:list', ['domain' => 'demo-php.test', 'path' => $bad])) === 'invalid_argument', 'Refused: '.json_encode($bad));
 }
 env_assert(FilePath::clean('/public//a/./b/') === 'public/a/b' && FilePath::clean('a/../b') === null && FilePath::clean('') === '.' && FilePath::clean("a\0") === null, 'A path from a form is cleaned.');
 env_assert(FilePath::crumbs('a/b') === [['name' => 'a', 'path' => 'a'], ['name' => 'b', 'path' => 'a/b']] && FilePath::parent('a/b') === 'a' && FilePath::parent('a') === '.', 'Crumbs and parents.');
-env_assert(FileModes::allowed('0644', false) && FileModes::allowed('0755', true) && !FileModes::allowed('0666', false) && !FileModes::allowed('0777', true)
-    && !FileModes::allowed('4755', true) && !FileModes::allowed('0755', false) && !FileModes::allowed('0300', false), 'Modes within the gateway\'s limits only.');
-foreach ([...FileModes::FILE] as $mode) {
-    env_assert(FileModes::allowed($mode, false), "Offered for a file: {$mode}");
-}
-foreach ([...FileModes::DIR] as $mode) {
-    env_assert(FileModes::allowed($mode, true), "Offered for a folder: {$mode}");
-}
-// No release has the file commands yet: they are offered only by a server that lists them.
-env_assert(!(new PanelCapabilities('9.9.9'))->allows('fs:list') && (new PanelCapabilities('1.30.0', ['fs:list']))->allows('fs:list'), 'Hidden until a server lists them.');
+// The file commands from simai-env 1.39.0; an upload and archives from 1.40.0.
+env_assert((new PanelCapabilities('1.39.0'))->allows('file:list') && !(new PanelCapabilities('1.38.0'))->allows('file:list')
+    && !(new PanelCapabilities('1.39.0'))->allows('file:upload') && (new PanelCapabilities('1.40.0'))->allows('file:extract'), 'Offered by the releases that have them.');
 
-// An attachment: the plan names it, the confirmation sends it after the line, nothing else carries one.
+// An upload: the plan names its file, the confirmation sends it after the line, nothing else carries one.
 $directory = env_temp_directory();
 file_put_contents($directory.'/page.html', "<h1>new</h1>\n");
 $attachment = PanelAttachment::fromFile($directory.'/page.html');
-$plan = PanelRequest::plan($admin, 'fs:write', ['domain' => 'demo-php.test', 'path' => 'public/index.html'], $attachment);
+$plan = PanelRequest::plan($admin, 'file:upload', ['domain' => 'demo-php.test', 'path' => 'public/page.html'], $attachment);
 env_assert($plan->toDocument()['attachment'] === ['sha256' => hash('sha256', "<h1>new</h1>\n"), 'size' => 13] && !$plan->sendsBytes() && $plan->stdin() === $plan->toLine(), 'A plan names the file and sends no bytes.');
-$confirmed = PanelRequest::confirmed($admin, 'fs:write', ['domain' => 'demo-php.test', 'path' => 'public/index.html'], $attachment);
+$confirmed = PanelRequest::confirmed($admin, 'file:upload', ['domain' => 'demo-php.test', 'path' => 'public/page.html'], $attachment);
 $stdin = $confirmed->stdin();
-env_assert(is_resource($stdin) && stream_get_contents($stdin) === $confirmed->toLine()."<h1>new</h1>\n", 'A confirmed save sends the line, then exactly the file.');
-env_assert($refusedWith(static fn () => PanelRequest::confirmed($admin, 'fs:write', ['domain' => 'demo-php.test', 'path' => 'a'])) === 'bad_request', 'A save without its file is refused.');
-env_assert($refusedWith(static fn () => PanelRequest::confirmed($admin, 'fs:mkdir', ['domain' => 'demo-php.test', 'path' => 'a'], $attachment)) === 'bad_request', 'Only the attachment commands carry one.');
-$big = fopen($directory.'/big', 'wb');
-ftruncate($big, PanelCommands::attachmentLimit('fs:write') + 1);
-fclose($big);
-env_assert($refusedWith(static fn () => PanelRequest::plan($admin, 'fs:write', ['domain' => 'demo-php.test', 'path' => 'a'], PanelAttachment::fromFile($directory.'/big'))) === 'too_large', 'An editor save is at most 5 MB.');
+env_assert(is_resource($stdin) && stream_get_contents($stdin) === $confirmed->toLine()."<h1>new</h1>\n", 'A confirmed upload sends the line, then exactly the file.');
+env_assert($refusedWith(static fn () => PanelRequest::confirmed($admin, 'file:upload', ['domain' => 'demo-php.test', 'path' => 'a'])) === 'bad_request', 'An upload without its file is refused.');
+env_assert($refusedWith(static fn () => PanelRequest::confirmed($admin, 'file:write', ['domain' => 'demo-php.test', 'path' => 'a', 'content' => 'x'], $attachment)) === 'bad_request', 'A saved text travels in the line, never as a file.');
+env_assert(PanelCommands::attachmentLimit('file:upload') === 1_073_741_824 && PanelCommands::attachmentLimit('file:write') === null, 'An upload up to 1 GB.');
+env_assert(SiteFiles::savable(str_repeat('a', 60_000)) && !SiteFiles::savable(str_repeat("\n", 40_000)) && !SiteFiles::savable(str_repeat('a', 61_440)), 'A text is saved from the panel while the line holds it.');
 
 // The real executor with a stand-in for sudo: the line and the file reach the gateway's stdin whole.
 $standIn = $directory.'/sudo';
 file_put_contents($standIn, "#!/bin/sh\n/bin/cat > ".escapeshellarg($directory.'/stdin')."\necho '{\"schema\":\"simai-panel-answer/1\",\"request_id\":null,\"status\":\"refused\",\"reason\":\"not_allowed\"}'\n");
 chmod($standIn, 0700);
-$sent = PanelRequest::confirmed($admin, 'fs:write', ['domain' => 'demo-php.test', 'path' => 'public/index.html'], $attachment);
+$sent = PanelRequest::confirmed($admin, 'file:upload', ['domain' => 'demo-php.test', 'path' => 'public/page.html'], $attachment);
 (new SudoGateway(new SudoGatewayTarget($standIn, '/usr/local/sbin/simai-panel-gate'), new ProcOpenProcessExecutor()))->ask($sent);
 env_assert(file_get_contents($directory.'/stdin') === $sent->toLine()."<h1>new</h1>\n", 'The real executor streams the line and the file.');
 
-// A download: the answer's line, then exactly its bytes, checked before anything is served.
-$frame = static function (string $id, string $bytes, ?int $size = null, ?string $sha = null): string {
-    return json_encode(['schema' => 'simai-panel-answer/1', 'request_id' => $id, 'status' => 'ok', 'kind' => 'result',
-        'data' => ['size' => $size ?? strlen($bytes), 'sha256' => $sha ?? hash('sha256', $bytes), 'name' => '../../etc/x.txt', 'mime' => 'text/plain']], JSON_THROW_ON_ERROR)."\n".$bytes;
+// A download: the answer's line of the `download` kind, then exactly its bytes, checked before anything is served.
+$frame = static function (string $id, string $bytes, ?int $size = null, string $kind = 'download'): string {
+    return json_encode(['schema' => 'simai-panel-answer/1', 'request_id' => $id, 'status' => 'ok', 'kind' => $kind,
+        'data' => ['path' => 'public/../x.txt', 'size' => $size ?? strlen($bytes), 'mtime' => 1767225600]], JSON_THROW_ON_ERROR)."\n".$bytes;
 };
 $read = static function (string $written) use ($directory): PanelDownload {
     file_put_contents($directory.'/download', $written);
@@ -97,13 +87,13 @@ $read = static function (string $written) use ($directory): PanelDownload {
 };
 $good = $read($frame('d1', "hello\n"));
 env_assert($good->ok() && $good->size === 6 && $good->name === 'x.txt' && file_get_contents($directory.'/download', false, null, $good->offset) === "hello\n", 'A file that matches: its bytes after the line, a plain name.');
-env_assert($read($frame('d1', "hello\n", null, str_repeat('0', 64)))->answer->reason === 'download_mismatch', 'Other bytes than named: refused.');
-env_assert($read($frame('d1', "hel", 6))->answer->reason === 'download_mismatch', 'A short read: refused.');
+env_assert($read($frame('d1', "hel", 6))->answer->reason === 'download_mismatch', 'A short read, the file changed meanwhile: refused.');
 env_assert($read($frame('d1', "hello\nmore", 6))->answer->reason === 'download_mismatch', 'Extra bytes: refused.');
-env_assert($read($frame('d1', '', PanelCommands::DOWNLOAD_MAX_BYTES + 1))->answer->reason === 'too_large', 'Over 2 GB: refused.');
+env_assert($read($frame('d1', "hello\n", null, 'result'))->answer->reason === 'answer_shape_invalid', 'Another kind of answer is no download.');
+env_assert($read($frame('d1', '', PanelCommands::DOWNLOAD_MAX_BYTES + 1))->answer->reason === 'too_large', 'Over 1 GB: refused.');
 env_assert($read($frame('d2', "hello\n"))->answer->reason === 'gateway_answer_invalid', 'Another request\'s answer: refused.');
-$refusal = $read('{"schema":"simai-panel-answer/1","request_id":"d1","status":"refused","reason":"path_outside"}'."\n");
-env_assert(!$refusal->ok() && $refusal->answer->status === PanelAnswerStatus::Refused && $refusal->answer->reason === 'path_outside', 'A refusal is the line alone.');
+$refusal = $read('{"schema":"simai-panel-answer/1","request_id":"d1","status":"refused","reason":"not_a_file"}'."\n");
+env_assert(!$refusal->ok() && $refusal->answer->status === PanelAnswerStatus::Refused && $refusal->answer->reason === 'not_a_file', 'A refusal is the line alone.');
 
 // Through a driver: the output goes to the file, never into memory; a cut stream is refused.
 $downloading = static function (string $output) use ($admin, $directory): PanelDownload {
@@ -112,10 +102,10 @@ $downloading = static function (string $output) use ($admin, $directory): PanelD
 
         return ProcessResult::finished(0, '');
     });
-    $request = PanelRequest::read($admin, 'fs:download', ['domain' => 'demo-php.test', 'path' => 'notes.txt']);
+    $request = PanelRequest::read($admin, 'file:download', ['domain' => 'demo-php.test', 'path' => 'notes.txt']);
     $download = (new SudoGateway(new SudoGatewayTarget(), $executor))->download($request, $directory.'/through');
     $spec = $executor->recorded()[0];
-    env_assert($spec->captureStdout === false && $spec->stdoutSink !== null && $spec->stdoutLimitBytes > PanelCommands::DOWNLOAD_MAX_BYTES, 'Streamed to a file, with room for 2 GB.');
+    env_assert($spec->captureStdout === false && $spec->stdoutSink !== null && $spec->stdoutLimitBytes > PanelCommands::DOWNLOAD_MAX_BYTES, 'Streamed to a file, with room for 1 GB.');
 
     return $download;
 };
@@ -127,19 +117,26 @@ $executorAnswer = static function (string $bytes) use ($admin, $directory, $fram
         return ProcessResult::finished(0, '');
     });
 
-    return (new SudoGateway(new SudoGatewayTarget(), $executor))->download(PanelRequest::read($admin, 'fs:download', ['domain' => 'demo-php.test', 'path' => 'notes.txt']), $directory.'/through');
+    return (new SudoGateway(new SudoGatewayTarget(), $executor))->download(PanelRequest::read($admin, 'file:download', ['domain' => 'demo-php.test', 'path' => 'notes.txt']), $directory.'/through');
 };
 env_assert($executorAnswer("notes\n")->ok(), 'A driver\'s download is read back and checked.');
 env_assert($downloading('not json')->answer->reason === 'gateway_answer_invalid', 'An unreadable answer is no file.');
-env_assert((new SudoGateway(new SudoGatewayTarget(), new RecordingProcessExecutor()))->ask(PanelRequest::read($admin, 'fs:download', ['domain' => 'demo-php.test', 'path' => 'a']))->reason === 'not_allowed', 'A download is never asked the usual way.');
+env_assert((new SudoGateway(new SudoGatewayTarget(), new RecordingProcessExecutor()))->ask(PanelRequest::read($admin, 'file:download', ['domain' => 'demo-php.test', 'path' => 'a']))->reason === 'not_allowed', 'A download is never asked the usual way.');
 
-// The stand-in on recorded answers: it lists the file commands, works inside a site's folder only, keeps the trash.
+// The recordings (set 16): an owner's folder, as the server lists it.
+$recorded = new SiteFiles(new RecordedAnswersGateway(env_recorded_path()));
+$own = $recorded->folder($owner, 'demo-owned.test', '.');
+env_assert(is_array($own) && $own['entries'][0]->name === 'public' && $own['entries'][0]->isDir() && $own['entries'][0]->mode === '775'
+    && $own['entries'][0]->mtime === gmdate('Y-m-d\TH:i:s\Z', 1793841558), 'The recorded folder (simai-files/1).');
+env_assert($recorded->folder($owner, 'demo-php.test', '.') === 'owner_scope', 'Another owner\'s site is refused.');
+
+// The stand-in on recorded answers: it lists the file commands and works inside a site's folder only.
 $root = $directory.'/fake';
 $gateway = PanelGatewayFactory::make(['driver' => 'recorded', 'recorded' => ['path' => env_recorded_path(), 'files' => $root]], true, static fn () => new RecordingProcessExecutor());
 env_assert($gateway instanceof FakeFilesGateway, 'The stand-in only when its folder is configured.');
 env_assert(PanelGatewayFactory::make(['driver' => 'recorded', 'recorded' => ['path' => env_recorded_path(), 'files' => '']], true, static fn () => new RecordingProcessExecutor()) instanceof RecordedAnswersGateway, 'Without it, the recorded answers alone.');
 $described = $gateway->ask(PanelRequest::read($admin, 'self:describe'));
-env_assert(in_array('fs:list', $described->data['gate']['commands'], true) && in_array('site:nginx-overlay-set', $described->data['gate']['commands'], true), 'The host description lists the file commands.');
+env_assert(in_array('file:list', $described->data['gate']['commands'], true) && in_array('site:nginx-overlay-set', $described->data['gate']['commands'], true), 'The host description lists the file commands.');
 $ownDescribed = $gateway->ask(PanelRequest::read($owner, 'self:describe'));
 env_assert(!is_array($ownDescribed->data['gate']['commands'] ?? null) || !in_array('site:nginx-overlay-set', $ownDescribed->data['gate']['commands'], true), 'An owner is never offered the nginx directives.');
 $files = new SiteFiles($gateway);
@@ -147,32 +144,36 @@ $listed = $files->folder($admin, 'demo-php.test', '.');
 env_assert(is_array($listed) && $listed['entries'][0]->name === 'public' && $listed['entries'][0]->isDir(), 'A site\'s folder, folders first.');
 env_assert($files->folder($admin, 'demo-php.test', 'public/../../x') === 'invalid_argument', 'A path out of the site is refused by the panel.');
 symlink('/etc', $root.'/sites/demo-php.test/escape');
-env_assert($files->folder($admin, 'demo-php.test', 'escape') === 'path_outside', 'A link that leaves the site is refused path_outside.');
+env_assert($files->folder($admin, 'demo-php.test', 'escape') === 'path_outside', 'A link that leaves the site is refused.');
 unlink($root.'/sites/demo-php.test/escape');
-env_assert($files->text($admin, 'demo-php.test', 'notes.txt')['content'] === "Notes of demo-php.test\n", 'A text file is read.');
+$notes = $files->text($admin, 'demo-php.test', 'notes.txt');
+env_assert(is_array($notes) && $notes['content'] === "Notes of demo-php.test\n" && $notes['sha256'] === hash('sha256', "Notes of demo-php.test\n") && $notes['savable'], 'A text file is read with its sha256.');
+file_put_contents($root.'/sites/demo-php.test/logo.png', "\x89PNG\0\0");
+env_assert($files->text($admin, 'demo-php.test', 'logo.png') === 'not_text', 'Not text: refused, downloaded instead.');
 
 $operations = new PanelOperations($gateway);
-$planned = $operations->planCommand($admin, 'fs:write', ['domain' => 'demo-php.test', 'path' => 'notes.txt'], $attachment);
-env_assert($planned->plan !== null && $planned->plan->command === 'fs:write', 'A save is planned first.');
-$job = $operations->startCommand($admin, 'fs:write', ['domain' => 'demo-php.test', 'path' => 'notes.txt'], $attachment);
+$save = ['domain' => 'demo-php.test', 'path' => 'notes.txt', 'content' => "<h1>new</h1>\n", 'expect-sha256' => $notes['sha256']];
+$planned = $operations->planCommand($admin, 'file:write', $save);
+env_assert($planned->plan !== null && $planned->plan->command === 'file:write' && $planned->plan->args['content'] === '(13 bytes)', 'A save is planned first; the plan names the text\'s size only.');
+$job = $operations->startCommand($admin, 'file:write', $save);
 env_assert($job->jobId !== null && $files->text($admin, 'demo-php.test', 'notes.txt')['content'] === "<h1>new</h1>\n", 'Confirmed, the file is saved.');
 $view = $operations->view($admin, (string) $job->jobId);
 env_assert($view->status !== null && $view->log !== null, 'Its job is followed like any other.');
-$trash = $files->trash($admin, 'demo-php.test');
-env_assert(is_array($trash) && count($trash) === 1 && str_starts_with($trash[0]->path, 'notes.txt.bak-'), 'The previous version is in the trash.');
-env_assert($operations->planCommand($admin, 'fs:mkdir', ['domain' => 'demo-php.test', 'path' => 'public'])->reason === 'exists', 'Something of that name: refused exists.');
-$operations->startCommand($admin, 'fs:delete', ['domain' => 'demo-php.test', 'path' => 'public', 'recursive' => 'yes']);
-$deleted = $files->trash($admin, 'demo-php.test');
-$publicItem = array_values(array_filter($deleted, static fn ($item): bool => $item->path === 'public'))[0];
-env_assert(!is_array($files->folder($admin, 'demo-php.test', 'public')), 'Deleted: gone from the site.');
-$operations->startCommand($admin, 'fs:mkdir', ['domain' => 'demo-php.test', 'path' => 'public']);
-env_assert($operations->planCommand($admin, 'fs:restore', ['domain' => 'demo-php.test', 'id' => $publicItem->id])->reason === 'exists', 'Its place reused: restoring is refused exists.');
-$operations->startCommand($admin, 'fs:rename', ['domain' => 'demo-php.test', 'from' => 'public', 'to' => 'public-new']);
-$operations->startCommand($admin, 'fs:restore', ['domain' => 'demo-php.test', 'id' => $publicItem->id]);
-env_assert(is_array($files->text($admin, 'demo-php.test', 'public/index.html')), 'Restored where it was.');
-env_assert($operations->planCommand($admin, 'fs:chmod', ['domain' => 'demo-php.test', 'path' => 'notes.txt', 'mode' => '0666'])->reason === 'invalid_argument', 'World-writable: refused.');
+env_assert($operations->planCommand($admin, 'file:write', $save)->reason === 'changed', 'Saved again over a newer text: refused changed, never overwritten.');
+env_assert($operations->planCommand($admin, 'file:write', ['domain' => 'demo-php.test', 'path' => 'notes.txt', 'content' => '', 'expect-sha256' => 'new'])->reason === 'exists', 'A new file where one is: refused exists.');
+env_assert($operations->planCommand($admin, 'file:mkdir', ['domain' => 'demo-php.test', 'path' => 'public'])->reason === 'exists', 'Something of that name: refused exists.');
+$operations->startCommand($admin, 'file:rename', ['domain' => 'demo-php.test', 'path' => 'public', 'to' => 'public-new']);
+env_assert(is_array($files->folder($admin, 'demo-php.test', 'public-new')) && !is_array($files->folder($admin, 'demo-php.test', 'public')), 'Renamed.');
+env_assert($operations->planCommand($admin, 'file:remove', ['domain' => 'demo-php.test', 'path' => '.'])->reason === 'bad_path', 'The site\'s folder itself is never removed.');
+$operations->startCommand($admin, 'file:remove', ['domain' => 'demo-php.test', 'path' => 'public-new']);
+env_assert($files->folder($admin, 'demo-php.test', 'public-new') === 'not_found', 'Removed for good, with what it held.');
+env_assert($operations->planCommand($admin, 'file:upload', ['domain' => 'demo-php.test', 'path' => 'notes.txt', 'expect-sha256' => 'new'], $attachment)->reason === 'exists', 'An upload never replaces a file unasked.');
+$uploaded = $operations->startCommand($admin, 'file:upload', ['domain' => 'demo-php.test', 'path' => 'page.html', 'expect-sha256' => 'new'], $attachment);
+env_assert($uploaded->jobId !== null && $files->text($admin, 'demo-php.test', 'page.html')['content'] === "<h1>new</h1>\n", 'An upload lands where it was asked.');
+env_assert($operations->planCommand($admin, 'file:archive', ['domain' => 'demo-php.test', 'path' => 'notes.txt', 'to' => 'notes.zip'])->plan?->command === 'file:archive', 'Packing is planned first.');
 $saved = $files->download($admin, 'demo-php.test', 'notes.txt', $directory.'/served');
-env_assert($saved->ok() && file_get_contents($directory.'/served', false, null, $saved->offset) === "<h1>new</h1>\n", 'A download through the stand-in, checked.');
+env_assert($saved->ok() && $saved->name === 'notes.txt' && file_get_contents($directory.'/served', false, null, $saved->offset) === "<h1>new</h1>\n", 'A download through the stand-in, checked.');
+env_assert($files->download($admin, 'demo-php.test', '.', $directory.'/served2')->answer->reason === 'not_a_file', 'A folder is not downloaded.');
 
 // The owner: their own site only, and never the nginx directives.
 env_assert($files->folder($owner, 'demo-php.test', '.') === 'owner_scope', 'Another owner\'s site is refused.');

@@ -12,7 +12,7 @@ final readonly class PanelRequest
     private const string REQUEST_ID_PATTERN = '/\A[A-Za-z0-9._:-]{1,64}\z/D';
 
     /**
-     * @param array<string, string|list<string>> $args option names without `--` => strings; a list only where the gateway takes one (fs:archive paths)
+     * @param array<string, string|list<string>> $args option names without `--` => strings; a list only where the gateway takes one (panel:access addresses)
      *
      * @throws PanelRefused
      */

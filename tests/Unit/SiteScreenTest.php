@@ -288,33 +288,33 @@ env_assert(str_contains($elsewhere, 'data-env-dns-points="elsewhere"') && str_co
 $here = $screen(['site' => $site, 'tab' => 'dns', 'wholeServer' => true, 'siteDns' => new \Larena\Env\Dns\SiteDns('ok', $dnsZone, $dnsRecords, \Larena\Env\Dns\SiteDns::HERE)]);
 env_assert(str_contains($here, 'data-env-dns-points="here"') && !str_contains($here, 'data-env-dns-point>') && !str_contains($here, 'data-env-dns-point '), 'Points here: nothing to offer.');
 
-// The files (Panel plan 6.1, 6.2): a server without the commands says so with no dead buttons; otherwise a folder, the
-// editor, the trash, each change a plan. The nginx directives (6.3) say what is allowed and that they undo themselves.
+// The files (simai-env 1.39.0–1.40.0): a server without the commands says so with no dead buttons; otherwise a folder or
+// the editor, each change a plan. The nginx directives (6.3) say what is allowed and that they undo themselves.
 $filesBase = ['supported' => true, 'base' => '/admin/server/sites/demo-php.test?tab=files', 'problem' => null, 'path' => 'public', 'crumbs' => \Larena\Env\Files\FilePath::crumbs('public'),
-    'parent' => '.', 'view' => null, 'text' => null, 'trash' => null, 'trashOpen' => false, 'folder' => null,
-    'allows' => array_fill_keys(['write', 'upload', 'mkdir', 'rename', 'copy', 'delete', 'restore', 'chmod', 'archive', 'extract', 'download', 'read', 'trash'], true),
-    'fileModes' => \Larena\Env\Files\FileModes::FILE, 'dirModes' => \Larena\Env\Files\FileModes::DIR];
+    'parent' => '.', 'view' => null, 'text' => null, 'folder' => null,
+    'allows' => array_fill_keys(['write', 'create', 'upload', 'mkdir', 'rename', 'remove', 'archive', 'extract', 'download', 'read'], true),
+    'formats' => \Larena\Env\Http\Controllers\SiteFilesController::ARCHIVE_FORMATS];
 $unsupported = $screen(['site' => $site, 'tab' => 'files', 'files' => ['supported' => false]]);
 env_assert(str_contains($unsupported, 'data-env-files="unsupported"') && str_contains($unsupported, 'data-env-files-unsupported') && !str_contains($unsupported, 'data-env-files-op'), 'No file commands: said, and nothing offered.');
 $folder = $screen(['site' => $site, 'tab' => 'files', 'files' => ['folder' => ['entries' => [
-    \Larena\Env\Files\FileEntry::fromData(['name' => 'assets', 'type' => 'dir', 'mode' => '0755']),
-    \Larena\Env\Files\FileEntry::fromData(['name' => 'index.html', 'type' => 'file', 'size' => 2048, 'mode' => '0644', 'mtime' => '2026-01-01T00:00:00Z']),
+    \Larena\Env\Files\FileEntry::fromData(['name' => 'assets', 'type' => 'dir', 'mode' => '755']),
+    \Larena\Env\Files\FileEntry::fromData(['name' => 'index.html', 'type' => 'file', 'size' => 2048, 'mode' => '644', 'mtime' => 1767225600]),
+    \Larena\Env\Files\FileEntry::fromData(['name' => 'site.zip', 'type' => 'file', 'size' => 10]),
+    \Larena\Env\Files\FileEntry::fromData(['name' => 'current', 'type' => 'link', 'target' => '/etc']),
     \Larena\Env\Files\FileEntry::fromData(['name' => '<b>x', 'type' => 'file', 'size' => 1]),
 ], 'truncated' => true]] + $filesBase]);
 env_assert(str_contains($folder, 'data-env-file="index.html"') && str_contains($folder, 'data-env-file-type="dir"') && str_contains($folder, 'path=public%2Fassets')
     && str_contains($folder, 'view=public%2Findex.html') && str_contains($folder, '2026-01-01 00:00 UTC') && str_contains($folder, 'data-env-files-truncated'), 'A folder: its entries, folders open, files open in the editor.');
-env_assert(str_contains($folder, 'data-env-files-op="mkdir"') && str_contains($folder, 'data-env-files-op="upload"') && str_contains($folder, 'enctype="multipart/form-data"')
-    && str_contains($folder, 'data-env-files-choice="delete"') && str_contains($folder, 'data-env-files-trash-link') && !str_contains($folder, '<b>x'), 'Its changes, the trash, and names escaped.');
-env_assert(!str_contains($folder, 'value="0666"') && !str_contains($folder, 'value="0777"') && str_contains($folder, 'value="0644"'), 'Only modes within the limits are offered.');
-$editor = $screen(['site' => $site, 'tab' => 'files', 'files' => ['view' => 'public/index.html', 'text' => ['content' => "<h1>hi</h1>\n", 'binary' => false, 'size' => 12]] + $filesBase]);
-env_assert(str_contains($editor, 'data-env-files-editor') && str_contains($editor, '&lt;h1&gt;hi&lt;/h1&gt;') && str_contains($editor, 'name="op" value="write"') && str_contains($editor, 'data-env-files-download'), 'A text file in the editor, saved by a plan.');
-$binary = $screen(['site' => $site, 'tab' => 'files', 'files' => ['view' => 'public/logo.png', 'text' => ['content' => null, 'binary' => true, 'size' => 5]] + $filesBase]);
-env_assert(str_contains($binary, 'data-env-files-binary') && !str_contains($binary, 'data-env-files-editor'), 'Not text: downloaded, not edited.');
-// Only the start of a longer text came (simai-env: truncated): shown, never saved.
-$cut = $screen(['site' => $site, 'tab' => 'files', 'files' => ['view' => 'big.log', 'text' => ['content' => "start\n", 'binary' => false, 'size' => 2_000_000, 'truncated' => true]] + $filesBase]);
-env_assert(str_contains($cut, 'data-env-files-text-truncated') && str_contains($cut, ' readonly') && !str_contains($cut, $text('files.save_note')), 'A cut text is read-only.');
-$trashed = $screen(['site' => $site, 'tab' => 'files', 'files' => ['trashOpen' => true, 'trash' => [\Larena\Env\Files\TrashItem::fromData(['id' => '20260101-a1', 'path' => 'notes.txt', 'deleted_at' => '2026-01-01T00:00:00Z'])]] + $filesBase]);
-env_assert(str_contains($trashed, 'data-env-trash-item="20260101-a1"') && str_contains($trashed, 'name="op" value="restore"'), 'The trash, each item restored by a plan.');
+env_assert(str_contains($folder, 'data-env-files-op="mkdir"') && str_contains($folder, 'data-env-files-op="create"') && str_contains($folder, 'data-env-files-op="upload"')
+    && str_contains($folder, 'enctype="multipart/form-data"') && substr_count($folder, 'data-env-files-op="remove"') === 5 && substr_count($folder, 'data-env-file-download') === 3
+    && substr_count($folder, 'data-env-files-op="extract"') === 1 && str_contains($folder, '→ /etc') && !str_contains($folder, '<b>x'), 'Each entry\'s own actions, unpacking for an archive, a link\'s target, names escaped.');
+$editor = $screen(['site' => $site, 'tab' => 'files', 'files' => ['view' => 'public/index.html', 'text' => ['content' => "<h1>hi</h1>\n", 'sha256' => str_repeat('a', 64), 'size' => 12, 'mtime' => null, 'savable' => true]] + $filesBase]);
+env_assert(str_contains($editor, 'data-env-files-editor') && str_contains($editor, '&lt;h1&gt;hi&lt;/h1&gt;') && str_contains($editor, 'name="op" value="write"')
+    && str_contains($editor, 'name="sha256" value="'.str_repeat('a', 64).'"') && str_contains($editor, 'data-env-files-download'), 'A text file in the editor, saved with the sha256 it was read with.');
+$long = $screen(['site' => $site, 'tab' => 'files', 'files' => ['view' => 'big.log', 'text' => ['content' => "start\n", 'sha256' => str_repeat('b', 64), 'size' => 900_000, 'mtime' => null, 'savable' => false]] + $filesBase]);
+env_assert(str_contains($long, 'data-env-files-too-long') && str_contains($long, ' readonly') && !str_contains($long, $text('files.save_note')), 'A text too long to send is read-only.');
+$notText = $screen(['site' => $site, 'tab' => 'files', 'files' => ['view' => 'public/logo.png', 'problem' => $text('files.reasons.not_text')] + $filesBase]);
+env_assert(str_contains($notText, 'data-env-files-problem') && !str_contains($notText, 'data-env-files-editor') && str_contains($notText, 'data-env-files-download'), 'Not text: downloaded, not edited.');
 $outside = $screen(['site' => $site, 'tab' => 'files', 'files' => ['problem' => 'That path leads outside the site\'s folder: the server refuses it.'] + $filesBase]);
 env_assert(str_contains($outside, 'data-env-files-problem') && str_contains($outside, 'outside the site'), 'A refusal is said in words.');
 $nginx = $screen(['site' => $site, 'tab' => 'nginx', 'overlaySupported' => true, 'overlay' => ['content' => "add_header X-Test 1;\n", 'pending' => 'c1', 'expires' => '2026-01-01T00:02:00Z'],

@@ -61,8 +61,8 @@ env_assert($overview->owners === ['demo'] && $overview->ownerDiskBytes === ['dem
 env_assert($overview->capabilities !== null && $overview->capabilities->allows('site:set-php') && $overview->capabilities->allows('self:metrics')
     && $overview->capabilities->allows('access:create-project') && $overview->capabilities->allows('self:alerts')
     && $overview->capabilities->allows('self:metrics-history') && $overview->capabilities->allows('self:update-plan')
-    && $overview->capabilities->allows('self:update') && $overview->capabilities->allows('change:confirm') && !$overview->capabilities->allows('fs:list'),
-    'What the gateway allows, by the server\'s own list: the load, SFTP (1.30.0), its alerts and load history (1.31.0), safe updates (1.32.0), timed changes (1.35.0); no files yet.');
+    && $overview->capabilities->allows('self:update') && $overview->capabilities->allows('change:confirm') && $overview->capabilities->allows('file:list') && $overview->capabilities->allows('file:upload'),
+    'What the gateway allows, by the server\'s own list: the load, SFTP (1.30.0), its alerts and load history (1.31.0), safe updates (1.32.0), timed changes (1.35.0), files (1.39.0–1.40.0).');
 env_assert($overview->capabilities->takes('site:add', 'backup') && $overview->capabilities->takes('backup:data-schedule', 'verify'), 'A new site\'s backup and the check of each copy (1.30.0).');
 env_assert(!\Larena\Env\Gateway\PanelCapabilities::fromHostDescription(['simai_env' => ['version' => '1.28.0'], 'gate' => ['commands' => ['site:add']]])->takes('site:add', 'backup'), 'An older server is not sent a new site\'s backup.');
 

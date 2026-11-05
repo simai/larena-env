@@ -6,30 +6,28 @@ namespace Larena\Env\Gateway;
 
 use Larena\Env\Contracts\PanelFileGateway;
 use Larena\Env\Contracts\PanelGateway;
-use Larena\Env\Files\FileModes;
 use Throwable;
 
 /**
- * A stand-in for the server's file commands (Panel plan 6.1–6.3) on recorded answers, for tests and the install check
- * only: simai-env has no release with them yet, so no recording exists. It answers fs:* and site:nginx-overlay-* the
- * way the agreed protocol does, on a local folder per site, and lists them in the host description; everything else
- * goes to the recorded answers it wraps. Paths are checked as the gateway checks them: nothing outside a site's folder,
- * no `..`, no link that leaves it.
+ * A stand-in for the server's file commands (simai-env 1.39.0–1.40.0) and a site's nginx directives on recorded answers,
+ * for tests and the install check only: the recordings hold one folder and a few plans, never the bytes of a download or
+ * an upload. It answers file:* and site:nginx-overlay-* the way the gateway does, on a local folder per site, and lists
+ * them in the host description; everything else goes to the recorded answers it wraps. Paths are checked as the gateway
+ * checks them: nothing outside a site's folder, no `..`, no link that leaves it.
  */
 final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
 {
     /** The commands this stand-in answers, added to the host description's own list. */
-    public const array COMMANDS = ['fs:list', 'fs:read', 'fs:trash-list', 'fs:download', 'fs:write', 'fs:upload', 'fs:mkdir', 'fs:rename',
-        'fs:copy', 'fs:delete', 'fs:restore', 'fs:chmod', 'fs:archive', 'fs:extract',
-        'site:nginx-overlay-get', 'site:nginx-overlay-set', 'site:nginx-overlay-clear', 'change:confirm', 'change:status'];
+    public const array COMMANDS = ['file:list', 'file:stat', 'file:read', 'file:download', 'file:write', 'file:upload', 'file:mkdir', 'file:rename',
+        'file:remove', 'file:archive', 'file:extract', 'site:nginx-overlay-get', 'site:nginx-overlay-set', 'site:nginx-overlay-clear', 'change:confirm', 'change:status'];
 
     /** How long an applied change waits for its confirmation before the server would put the previous one back. */
     private const int CHANGE_SECONDS = 120;
 
     private const array DESCRIPTIONS = [
-        'fs:write' => 'Save a file', 'fs:upload' => 'Upload a file', 'fs:mkdir' => 'Make a folder', 'fs:rename' => 'Rename',
-        'fs:copy' => 'Copy', 'fs:delete' => 'Move to the trash', 'fs:restore' => 'Restore from the trash', 'fs:chmod' => 'Change permissions',
-        'fs:archive' => 'Pack into an archive', 'fs:extract' => 'Unpack an archive', 'site:nginx-overlay-set' => 'Apply nginx directives',
+        'file:write' => 'Replace or create a text file of a site', 'file:upload' => 'Put a file into a site', 'file:mkdir' => 'Make a directory',
+        'file:rename' => 'Rename or move', 'file:remove' => 'Remove a file, a link or a directory with its contents',
+        'file:archive' => 'Pack a file or directory into a new archive', 'file:extract' => 'Unpack an archive into a directory', 'site:nginx-overlay-set' => 'Apply nginx directives',
         'site:nginx-overlay-clear' => 'Remove nginx directives', 'change:confirm' => 'Keep the change',
     ];
 
@@ -56,7 +54,7 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
 
             return $command === 'self:describe' ? $this->listed($request, $answer) : $answer;
         }
-        if ($command === 'fs:download') {
+        if ($command === 'file:download') {
             return PanelAnswer::refused($request->requestId, PanelReason::NOT_ALLOWED);
         }
         // A timed change is named by its id alone; the stand-in knows only the nginx directives' changes.
@@ -71,7 +69,10 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
             }
             $this->check($command, $domain, $request);
             if (!$request->confirm) {
-                return $this->ok($request, 'plan', ['command' => $command, 'args' => $request->args, 'target' => $domain,
+                // As the gateway, a plan shows a text's size, never the text.
+                $shown = isset($request->args['content']) ? ['content' => '('.strlen((string) $request->args['content']).' bytes)'] + $request->args : $request->args;
+
+                return $this->ok($request, 'plan', ['command' => $command, 'args' => $shown, 'target' => $domain,
                     'description' => self::DESCRIPTIONS[$command] ?? $command, 'effects' => 'write', 'lock' => $domain, 'applied' => false]);
             }
             $lines = $this->act($command, $domain, $request);
@@ -91,11 +92,14 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
                 throw new FakeRefusal($scope->reason ?? PanelReason::NOT_ALLOWED);
             }
             $path = $this->path($domain, $request->args['path'] ?? '');
-            if (!is_file($path)) {
+            if (!file_exists($path)) {
                 throw new FakeRefusal('not_found');
             }
-            $header = json_encode(['schema' => 'simai-panel-answer/1', 'request_id' => $request->requestId, 'status' => 'ok', 'kind' => 'result',
-                'data' => ['size' => (int) filesize($path), 'sha256' => hash_file('sha256', $path), 'name' => basename($path), 'mime' => 'application/octet-stream']],
+            if (!is_file($path) || is_link($path)) {
+                throw new FakeRefusal('not_a_file');
+            }
+            $header = json_encode(['schema' => 'simai-panel-answer/1', 'request_id' => $request->requestId, 'status' => 'ok', 'kind' => 'download',
+                'data' => ['path' => $request->args['path'], 'size' => (int) filesize($path), 'mtime' => (int) filemtime($path)]],
                 JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES)."\n";
             file_put_contents($into, $header);
             file_put_contents($into, (string) file_get_contents($path), FILE_APPEND);
@@ -123,7 +127,7 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
     /** @return list<string> an owner gets the files, never the nginx directives (the system level's) */
     private function offered(PanelRequest $request): array
     {
-        return $request->actor->owner === null ? self::COMMANDS : array_values(array_filter(self::COMMANDS, static fn (string $command): bool => str_starts_with($command, 'fs:')));
+        return $request->actor->owner === null ? self::COMMANDS : array_values(array_filter(self::COMMANDS, static fn (string $command): bool => str_starts_with($command, 'file:')));
     }
 
     /** An owner works on their own sites only, and never on nginx: as the gateway, through the recorded description. */
@@ -132,7 +136,7 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
         if ($request->actor->owner === null) {
             return $domain === '' ? PanelAnswer::refused($request->requestId, 'unknown_change') : null;
         }
-        if (!str_starts_with($request->command, 'fs:')) {
+        if (!str_starts_with($request->command, 'file:')) {
             return PanelAnswer::refused($request->requestId, 'owner_admin_only');
         }
         $own = $this->inner->ask(PanelRequest::read($request->actor, 'site:describe', ['domain' => $domain]));
@@ -149,9 +153,6 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
      */
     private function read(string $command, string $domain, array $args): array
     {
-        if ($command === 'fs:trash-list') {
-            return ['items' => $this->trashItems($domain)];
-        }
         if ($command === 'site:nginx-overlay-get') {
             $file = $this->root.'/overlay/'.$domain.'.conf';
 
@@ -164,34 +165,49 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
             return ['change_id' => $args['change_id'], 'kind' => 'nginx_overlay', 'domain' => $domain,
                 'state' => ($pending['change_id'] ?? null) === $args['change_id'] ? 'pending' : 'confirmed', 'expires_at' => $pending['expires_at'] ?? null];
         }
-        $path = $this->path($domain, $args['path']);
-        if ($command === 'fs:list') {
+        $relative = $args['path'] ?? '';
+        $path = $this->path($domain, $relative);
+        if ($command === 'file:list') {
             if (!is_dir($path)) {
-                throw new FakeRefusal('not_a_directory');
+                throw new FakeRefusal(file_exists($path) ? 'not_a_directory' : 'not_found');
             }
             $entries = [];
             foreach (array_diff((array) scandir($path), ['.', '..']) as $name) {
-                $full = $path.'/'.$name;
-                $entries[] = ['name' => (string) $name, 'type' => is_link($full) ? 'link' : (is_dir($full) ? 'dir' : 'file'),
-                    'size' => is_file($full) ? (int) filesize($full) : 0, 'mode' => sprintf('%04o', fileperms($full) & 0o777),
-                    'mtime' => gmdate('Y-m-d\TH:i:s\Z', (int) filemtime($full)), 'owner' => 'site'];
+                $entries[] = ['name' => (string) $name] + self::stat($path.'/'.$name);
             }
+            // Directories first, as the gateway lists them.
+            usort($entries, static fn (array $a, array $b): int => [$a['type'] === 'dir' ? 0 : 1, $a['name']] <=> [$b['type'] === 'dir' ? 0 : 1, $b['name']]);
 
-            return ['path' => $args['path'], 'entries' => $entries, 'truncated' => false];
+            return ['schema' => 'simai-files/1', 'path' => $relative === '.' ? '' : $relative, 'entries' => $entries, 'truncated' => false];
         }
-        if (!is_file($path)) {
+        if (!file_exists($path) && !is_link($path)) {
             throw new FakeRefusal('not_found');
         }
-        $limit = min(1_048_576, (int) ($args['max_bytes'] ?? 1_048_576));
-        $bytes = (string) file_get_contents($path, false, null, 0, $limit + 1);
-        $mtime = gmdate('Y-m-d\TH:i:s\Z', (int) filemtime($path));
-        $text = mb_strcut($bytes, 0, $limit, 'UTF-8');
-        if (!mb_check_encoding($text, 'UTF-8') || str_contains($bytes, "\0") || filesize($path) > 1_048_576) {
-            return ['path' => $args['path'], 'size' => (int) filesize($path), 'mtime' => $mtime, 'binary' => true];
+        if ($command === 'file:stat') {
+            return ['schema' => 'simai-file-stat/1', 'path' => $relative, 'name' => basename($relative)] + self::stat($path);
+        }
+        if (!is_file($path) || is_link($path)) {
+            throw new FakeRefusal('not_a_file');
+        }
+        if (filesize($path) > 1_048_576) {
+            throw new FakeRefusal('too_large');
+        }
+        $bytes = (string) file_get_contents($path);
+        if (!mb_check_encoding($bytes, 'UTF-8') || str_contains($bytes, "\0")) {
+            throw new FakeRefusal('not_text');
         }
 
-        return ['path' => $args['path'], 'size' => (int) filesize($path), 'mtime' => $mtime, 'binary' => false,
-            'content' => $text, 'truncated' => strlen($bytes) > $limit];
+        return ['schema' => 'simai-file/1', 'path' => $relative, 'size' => strlen($bytes), 'mtime' => (int) filemtime($path), 'sha256' => hash('sha256', $bytes), 'content' => $bytes];
+    }
+
+    /** @return array{type: string, size: int, mtime: int, mode: string, target?: string} */
+    private static function stat(string $full): array
+    {
+        $type = is_link($full) ? 'link' : (is_dir($full) ? 'dir' : (is_file($full) ? 'file' : 'other'));
+        $stat = ['type' => $type, 'size' => $type === 'link' ? 0 : (int) @filesize($full), 'mtime' => (int) @filemtime($full),
+            'mode' => sprintf('%o', (int) @fileperms($full) & 0o777)];
+
+        return $type === 'link' ? $stat + ['target' => (string) readlink($full)] : $stat;
     }
 
     /** @throws FakeRefusal what the gateway refuses before it plans */
@@ -199,19 +215,42 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
     {
         $args = $request->args;
         match ($command) {
-            'fs:rename', 'fs:copy' => $this->free($this->path($domain, $args['to'])) && $this->existing($this->path($domain, $args['from'])),
-            'fs:mkdir' => $this->free($this->path($domain, $args['path'])),
-            'fs:upload' => ($args['overwrite'] ?? 'no') === 'yes' || $this->free($this->path($domain, $args['path'])),
-            'fs:delete', 'fs:chmod' => $this->existing($this->path($domain, $args['path'])),
-            'fs:archive' => array_map(fn (string $path): bool => $this->existing($this->path($domain, $path)), $args['paths']) !== [],
-            'fs:extract' => $this->existing($this->path($domain, $args['path'])) && $this->path($domain, $args['into']) !== '',
-            'fs:restore' => $this->restorable($domain, $args['id']),
-            'fs:write' => $this->path($domain, $args['path']) !== '',
+            'file:rename' => $this->free($this->path($domain, $args['to'])) && $this->existing($this->path($domain, $args['path'])),
+            'file:mkdir' => $this->free($this->path($domain, $args['path'])),
+            'file:remove' => $this->existing($this->path($domain, $args['path'])) && $this->notSite($args['path']),
+            'file:archive' => $this->existing($this->path($domain, $args['path'])) && $this->free($this->path($domain, $args['to'])),
+            'file:extract' => $this->existing($this->path($domain, $args['path'])) && $this->path($domain, $args['to']) !== '',
+            'file:write', 'file:upload' => $this->expected($this->path($domain, $args['path']), $args['expect-sha256'] ?? 'any'),
             default => true,
         };
-        if ($command === 'fs:chmod' && !FileModes::allowed($args['mode'], is_dir($this->path($domain, $args['path'])))) {
-            throw new FakeRefusal('invalid_argument');
+    }
+
+    /**
+     * What the person expected at the path is still there: nothing (`new`), the text read before (its sha256), or
+     * anything (`any`).
+     *
+     * @throws FakeRefusal
+     */
+    private function expected(string $path, string $expect): bool
+    {
+        if ($expect === 'new') {
+            return $this->free($path);
         }
+        if ($expect !== 'any' && (!is_file($path) || !hash_equals($expect, (string) hash_file('sha256', $path)))) {
+            throw new FakeRefusal(is_file($path) ? 'changed' : 'not_found');
+        }
+
+        return true;
+    }
+
+    /** @throws FakeRefusal the site's folder itself is never removed */
+    private function notSite(string $relative): bool
+    {
+        if (trim($relative, '/.') === '') {
+            throw new FakeRefusal('bad_path');
+        }
+
+        return true;
     }
 
     /**
@@ -223,57 +262,44 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
     {
         $args = $request->args;
         switch ($command) {
-            case 'fs:write':
-            case 'fs:upload':
+            case 'file:write':
+                $target = $this->path($domain, $args['path']);
+                file_put_contents($target, (string) $args['content']);
+
+                return ["Wrote {$args['path']} (".strlen((string) $args['content']).' bytes)'];
+            case 'file:upload':
                 $target = $this->path($domain, $args['path']);
                 $attachment = $request->attachment ?? throw new FakeRefusal('bad_request');
                 if (!hash_equals($attachment->sha256, (string) hash_file('sha256', $attachment->path))) {
                     throw new FakeRefusal('attachment_mismatch');
                 }
-                if (is_file($target)) {
-                    $this->toTrash($domain, $target, $args['path'], $command === 'fs:write' ? '.bak-'.gmdate('YmdHis') : '', true);
-                }
-                @mkdir(dirname($target), 0o775, true);
                 copy($attachment->path, $target);
 
-                return ["Saved {$args['path']} ({$attachment->size} bytes)"];
-            case 'fs:mkdir':
-                mkdir($this->path($domain, $args['path']), 0o775, true);
+                return ["Uploaded {$args['path']} ({$attachment->size} bytes)"];
+            case 'file:mkdir':
+                if (!is_dir(dirname($this->path($domain, $args['path'])))) {
+                    throw new FakeRefusal('not_found');
+                }
+                mkdir($this->path($domain, $args['path']), 0o775);
 
                 return ["Made {$args['path']}"];
-            case 'fs:rename':
-                rename($this->path($domain, $args['from']), $this->path($domain, $args['to']));
+            case 'file:rename':
+                rename($this->path($domain, $args['path']), $this->path($domain, $args['to']));
 
-                return ["Renamed {$args['from']} to {$args['to']}"];
-            case 'fs:copy':
-                self::copyTree($this->path($domain, $args['from']), $this->path($domain, $args['to']));
+                return ["Renamed {$args['path']} to {$args['to']}"];
+            case 'file:remove':
+                self::removeTree($this->path($domain, $args['path']));
 
-                return ["Copied {$args['from']} to {$args['to']}"];
-            case 'fs:delete':
-                $path = $this->path($domain, $args['path']);
-                if (is_dir($path) && ($args['recursive'] ?? 'no') !== 'yes' && array_diff((array) scandir($path), ['.', '..']) !== []) {
-                    throw new FakeRefusal('not_empty');
+                return ["Removed {$args['path']}"];
+            case 'file:archive':
+                return ["Packed {$args['path']} into {$args['to']}", 'packed: 1'];
+            case 'file:extract':
+                if (($args['overwrite'] ?? 'no') !== 'yes' && is_dir($this->path($domain, $args['to'])) && $this->path($domain, $args['to']) !== $this->path($domain, '.')) {
+                    // The stand-in unpacks nothing; a folder that is there already holds files of the same name.
+                    throw new FakeRefusal('exists');
                 }
-                $this->toTrash($domain, $path, $args['path'], '', false);
 
-                return ["Moved {$args['path']} to the trash"];
-            case 'fs:restore':
-                $item = $this->trashDir($domain).'/'.$args['id'];
-                $meta = json_decode((string) file_get_contents($item.'/meta.json'), true);
-                $target = $this->path($domain, (string) $meta['path']);
-                @mkdir(dirname($target), 0o775, true);
-                rename($item.'/item', $target);
-                self::removeTree($item);
-
-                return ["Restored {$meta['path']}"];
-            case 'fs:chmod':
-                chmod($this->path($domain, $args['path']), (int) octdec($args['mode']));
-
-                return ["Set {$args['mode']} on {$args['path']}"];
-            case 'fs:archive':
-                return ['Packed '.implode(', ', $args['paths'])." into {$args['name']}"];
-            case 'fs:extract':
-                return ["Unpacked {$args['path']} into {$args['into']}"];
+                return ["Unpacked {$args['path']} into {$args['to']}", 'files: 0, dirs: 0, skipped: 0'];
             case 'site:nginx-overlay-set':
             case 'site:nginx-overlay-clear':
                 @mkdir($this->root.'/overlay', 0o775, true);
@@ -349,42 +375,6 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
         return true;
     }
 
-    /** @throws FakeRefusal */
-    private function restorable(string $domain, string $id): bool
-    {
-        $meta = $this->trashDir($domain).'/'.$id.'/meta.json';
-        if (preg_match('/\A[A-Za-z0-9][A-Za-z0-9._-]{0,127}\z/D', $id) !== 1 || !is_file($meta)) {
-            throw new FakeRefusal('not_found');
-        }
-        $item = json_decode((string) file_get_contents($meta), true);
-
-        return $this->free($this->path($domain, (string) ($item['path'] ?? '')));
-    }
-
-    private function toTrash(string $domain, string $path, string $relative, string $suffix, bool $copy): void
-    {
-        $id = gmdate('YmdHis').'-'.bin2hex(random_bytes(4));
-        $item = $this->trashDir($domain).'/'.$id;
-        mkdir($item, 0o775, true);
-        $copy ? copy($path, $item.'/item') : rename($path, $item.'/item');
-        file_put_contents($item.'/meta.json', json_encode(['path' => $relative.$suffix, 'deleted_at' => gmdate('Y-m-d\TH:i:s\Z'),
-            'type' => is_dir($item.'/item') ? 'dir' : 'file', 'size' => is_file($item.'/item') ? (int) filesize($item.'/item') : 0], JSON_THROW_ON_ERROR));
-    }
-
-    /** @return list<array<string, mixed>> */
-    private function trashItems(string $domain): array
-    {
-        $items = [];
-        foreach (is_dir($this->trashDir($domain)) ? array_diff((array) scandir($this->trashDir($domain)), ['.', '..']) : [] as $id) {
-            $meta = json_decode((string) @file_get_contents($this->trashDir($domain).'/'.$id.'/meta.json'), true);
-            if (is_array($meta)) {
-                $items[] = ['id' => (string) $id, 'name' => basename((string) ($meta['path'] ?? $id))] + $meta + ['expires_at' => null];
-            }
-        }
-
-        return $items;
-    }
-
     /** @return array{change_id: string, expires_at: string}|null the nginx directives' change applied and not kept yet */
     private function pending(string $domain): ?array
     {
@@ -400,11 +390,6 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
         $file = $this->root.'/overlay/changes/'.$change;
 
         return preg_match('/\A[a-f0-9]{16}\z/D', $change) === 1 && is_file($file) ? trim((string) file_get_contents($file)) : '';
-    }
-
-    private function trashDir(string $domain): string
-    {
-        return $this->root.'/trash/'.$domain;
     }
 
     /** @param array<string, mixed> $data */
@@ -443,19 +428,6 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
     private function jobFile(string $id): string
     {
         return $this->root.'/jobs/'.(preg_match('/\A[a-f0-9]{24}\z/D', $id) === 1 ? $id : 'none').'.json';
-    }
-
-    private static function copyTree(string $from, string $to): void
-    {
-        if (is_file($from)) {
-            copy($from, $to);
-
-            return;
-        }
-        mkdir($to, 0o775, true);
-        foreach (array_diff((array) scandir($from), ['.', '..']) as $name) {
-            self::copyTree($from.'/'.$name, $to.'/'.$name);
-        }
     }
 
     private static function removeTree(string $path): void
