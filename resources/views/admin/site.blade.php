@@ -68,7 +68,7 @@
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.owner') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->owner ?? '—' }}</dd></div>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.profile') }}</dt><dd class="m-0 min-w-0 text-end">{{ __('larena-env::admin.new_site.profiles.'.$site->profile) }}</dd></div>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.php') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->php }}</dd></div>
-                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.ssl') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->ssl }}</dd></div>
+                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.ssl') }}</dt><dd class="m-0 min-w-0 text-end" data-env-https="{{ $site->certificate === null ? 'none' : 'on' }}">{{ $site->certificate === null ? __('larena-env::admin.sites.https_none') : ($site->certificate->daysLeft === null ? __('larena-env::admin.sites.https_on') : __('larena-env::admin.sites.https_yes', ['days' => (string) $site->certificate->daysLeft])) }}</dd></div>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.database') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->databaseEngine ?? '—' }}</dd></div>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.release') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->release ?? '—' }}</dd></div>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-disk><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.disk') }}</dt><dd class="m-0 min-w-0 text-end">{{ \Larena\Env\Server\Bytes::human($site->diskBytes) }}</dd></div>
@@ -86,8 +86,8 @@
                         @foreach ($doctor->problems as $problem)
                             <li class="flex flex-wrap items-cross-center g-1 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-problem="{{ $problem['status'] }}">
                                 <sf-badge appearance="tonal" status="{{ str_contains(strtolower($problem['status']), 'fail') || str_contains(strtolower($problem['status']), 'err') ? 'error' : 'warning' }}" text="{{ __('larena-env::admin.doctor.'.strtolower($problem['status'])) }}"></sf-badge>
-                                <span class="grow min-w-0" style="overflow-wrap: anywhere;">{{ $problem['title'] }}</span>
-                                <span class="text-small color-on-surface-variant">{{ $problem['area'] }}</span>
+                                <span class="grow min-w-0" style="overflow-wrap: anywhere;" data-env-check="{{ $problem['title'] }}">{{ \Larena\Env\Server\SiteDoctor::checkText($problem['title']) }}</span>
+                                <span class="text-small color-on-surface-variant">{{ \Larena\Env\Server\SiteDoctor::areaText($problem['area']) }}</span>
                             </li>
                         @endforeach
                     </ul>
@@ -114,47 +114,7 @@
                     @endif
                 @endif
             </section>
-        @elseif ($tab === 'dns')
-            <section class="larena-panel larena-panel-padded" data-env-dns="{{ $siteDns?->state ?? 'not_connected' }}" aria-labelledby="env-site-dns">
-                <h2 id="env-site-dns">{{ __('larena-env::admin.dns.site_title') }}</h2>
-                @if ($siteDns === null || $siteDns->state === 'not_connected')
-                    <p data-env-dns-connect>{{ __('larena-env::admin.dns.site_not_connected') }}</p>
-                    @if ($wholeServer ?? false)
-                        <p><a href="{{ route('larena.env.admin.dns.connection', [], false) }}">{{ __('larena-env::admin.dns.connect_link') }}</a></p>
-                    @endif
-                @elseif ($siteDns->state === 'zone_missing')
-                    <p data-env-dns-zone-missing>{{ __('larena-env::admin.dns.site_zone_missing', ['domain' => $domain]) }}</p>
-                @elseif ($siteDns->state === 'failed')
-                    <p role="alert">{{ __('larena-env::admin.dns.reasons.'.($siteDns->reason ?? 'unknown'), ['reason' => (string) $siteDns->reason]) }}</p>
-                @else
-                    <p data-env-dns-points="{{ $siteDns->points }}" @if ($siteDns->points === 'elsewhere') role="alert" @endif>{{ __('larena-env::admin.dns.points.'.$siteDns->points, ['domain' => $domain]) }}</p>
-                    <p>{{ __('larena-env::admin.dns.site_zone', ['zone' => $siteDns->zone->name]) }}</p>
-                    @if ($siteDns->records === [])
-                        <p data-env-dns-empty>{{ __('larena-env::admin.dns.site_records_none') }}</p>
-                    @else
-                        <table class="larena-table larena-table-stack" data-env-dns-records>
-                            <thead><tr><th>{{ __('larena-env::admin.dns.type') }}</th><th>{{ __('larena-env::admin.dns.name') }}</th><th>{{ __('larena-env::admin.dns.content') }}</th><th>{{ __('larena-env::admin.dns.ttl') }}</th></tr></thead>
-                            <tbody>
-                            @foreach ($siteDns->records as $record)
-                                <tr data-env-dns-record="{{ $record->type }}"><td data-label="{{ __('larena-env::admin.dns.type') }}">{{ $record->type }}</td><td data-label="{{ __('larena-env::admin.dns.name') }}">{{ $record->name }}</td><td data-label="{{ __('larena-env::admin.dns.content') }}" style="overflow-wrap: anywhere;">{{ $record->content }}@if ($record->proxied) · {{ __('larena-env::admin.dns.proxied') }}@endif</td><td data-label="{{ __('larena-env::admin.dns.ttl') }}">{{ $record->ttl === 1 ? __('larena-env::admin.dns.ttl_auto') : $record->ttl }}</td></tr>
-                            @endforeach
-                            </tbody>
-                        </table>
-                    @endif
-                    @if ($siteDns->points !== 'here' && $siteDns->zone->editable())
-                        <form method="post" action="{{ route('larena.env.admin.site.dns.plan', ['domain' => $domain], false) }}" class="larena-form" data-env-dns-point>
-                            @csrf
-                            <p>{{ __('larena-env::admin.dns.point_explain', ['domain' => $domain]) }}</p>
-                            <div class="larena-form-actions">
-                                <button type="submit" class="larena-button">{{ __('larena-env::admin.dns.point') }}</button>
-                            </div>
-                        </form>
-                    @endif
-                    @if ($wholeServer ?? false)
-                        <p><a href="{{ route('larena.env.admin.dns.zone', ['zone' => $siteDns->zone->id], false) }}">{{ __('larena-env::admin.dns.zone_link', ['zone' => $siteDns->zone->name]) }}</a></p>
-                    @endif
-                @endif
-            </section>
+            @include('larena-env::admin.partials.site-dns')
         @elseif ($tab === 'php')
             <section class="larena-panel larena-panel-padded" data-env-runtime aria-labelledby="env-site-runtime">
                 <h2 id="env-site-runtime">{{ __('larena-env::admin.runtime.title') }}</h2>
@@ -193,6 +153,10 @@
                         @endforeach
                     </ul>
                 </section>
+            @endif
+            {{-- The site's own nginx directives, the system level's, beside PHP and the web server (owner decision 2026-11-05). --}}
+            @if ($wholeServer ?? false)
+                @include('larena-env::admin.partials.nginx')
             @endif
         @elseif ($tab === 'database')
             <section class="larena-panel larena-panel-padded" data-env-database="{{ $site->databaseEngine ?? 'none' }}" aria-labelledby="env-site-database">
@@ -254,8 +218,6 @@
             @include('larena-env::admin.partials.cron')
         @elseif ($tab === 'files')
             @include('larena-env::admin.partials.files')
-        @elseif ($tab === 'nginx')
-            @include('larena-env::admin.partials.nginx')
         @elseif ($tab === 'releases')
             <section class="larena-panel larena-panel-padded" data-env-releases aria-labelledby="env-site-releases">
                 <h2 id="env-site-releases">{{ __('larena-env::admin.releases.title') }}</h2>

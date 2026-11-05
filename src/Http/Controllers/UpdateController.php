@@ -54,7 +54,23 @@ final readonly class UpdateController
             'canUpdate' => $capabilities?->allows('self:update') === true
                 && ($this->authorizer?->authorize($request, 'env.server.operate')->isAllowed() ?? false),
             'notice' => $request->session()->get('larena_env_notice'),
+            // The panel's own build (panel-build.json beside the application): what the server cannot name when the
+            // panel was installed from an archive of its own, rather than «не установлена» for the panel in use.
+            'panelBuild' => self::panelBuild(),
         ]);
+    }
+
+    /** The version of the running panel's build, when it was built by scripts/build-panel-archive.sh. */
+    public static function panelBuild(?string $file = null): ?string
+    {
+        $file ??= function_exists('base_path') ? base_path('panel-build.json') : '';
+        if ($file === '' || !is_file($file)) {
+            return null;
+        }
+        $build = json_decode((string) file_get_contents($file), true);
+        $version = is_array($build) ? ($build['version'] ?? null) : null;
+
+        return is_string($version) && preg_match('/\A[0-9A-Za-z.+-]{1,64}\z/D', $version) === 1 ? $version : null;
     }
 
     public function plan(Request $request): mixed

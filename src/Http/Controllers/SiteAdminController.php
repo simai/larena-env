@@ -32,21 +32,21 @@ use Larena\Env\Warnings\PanelWarnings;
 final readonly class SiteAdminController
 {
     /**
-     * The card's tabs (Panel plan 2.3 and 3): its state and problems, domains and certificate, PHP, its database, its
-     * backups, releases, log, access; its domain's DNS records (stage 7); its own scheduled jobs (5.4); its files and,
-     * for the system level only, its own nginx directives (stage 6).
+     * The card's sections (Panel plan 2.3 and 3), in the order the side navigation shows them: its state and problems,
+     * domains with the certificate and the domain's DNS records (stage 7), files, databases, backups, its own scheduled
+     * jobs (5.4), SFTP access, the log, releases (only where the site is deployed by releases), and under «Дополнительно»
+     * PHP with the web server and, for the system level only, its own nginx directives (stage 6). After the panel's UX
+     * audit (owner decision 2026-11-05) DNS lives in «Домены и HTTPS» and nginx in «PHP и веб-сервер»: an old link to
+     * `?tab=dns` or `?tab=nginx` opens the section that holds it.
      */
-    public const array TABS = ['overview', 'domains', 'dns', 'php', 'database', 'backups', 'cron', 'files', 'releases', 'log', 'access', 'nginx'];
-    /** The card's sections in groups, as the side navigation shows them (owner-approved prototype, 2026-11-02). */
+    public const array TABS = ['overview', 'domains', 'files', 'database', 'backups', 'cron', 'access', 'log', 'releases', 'php'];
+    /** The parts that are shown inside another section, and the section that holds each. */
+    public const array MERGED = ['dns' => 'domains', 'nginx' => 'php'];
+    /** The card's sections in groups, as the side navigation shows them; only «Дополнительно» has a heading. */
     public const array GROUPS = [
-        'site' => ['overview'],
-        'address' => ['domains', 'dns'],
-        'code' => ['php', 'releases', 'files', 'cron', 'nginx', 'access'],
-        'data' => ['database', 'backups'],
-        'observe' => ['log'],
+        'site' => ['overview', 'domains', 'files', 'database', 'backups', 'cron', 'access', 'log', 'releases'],
+        'more' => ['php'],
     ];
-    /** The tabs only the system level has. */
-    private const array SYSTEM_TABS = ['nginx'];
     /** The tabs shown only where the server lists the command they read. */
     private const array LISTED_TABS = ['cron' => 'cron:list'];
     private const array LOG_KINDS = ['access', 'error'];
@@ -67,6 +67,14 @@ final readonly class SiteAdminController
     ) {
     }
 
+    /** The section a `?tab=` names: a part shown inside another section opens that section. */
+    public static function section(mixed $asked): string
+    {
+        $asked = is_string($asked) ? $asked : '';
+
+        return self::MERGED[$asked] ?? $asked;
+    }
+
     /** Whether the person may change the server's sites (env.sites.operate), as the routes that change them require. */
     private function canOperate(Request $request): bool
     {
@@ -81,9 +89,12 @@ final readonly class SiteAdminController
         // What this server's gateway allows, and its PHP versions: the card offers only what will not be refused.
         $overview = $site === null ? null : $this->overviews->read($actor)->overview;
         $capabilities = $overview->capabilities ?? PanelCapabilities::none();
-        $tabs = array_values(array_filter($actor->owner === null ? self::TABS : array_diff(self::TABS, self::SYSTEM_TABS),
-            static fn (string $name): bool => !isset(self::LISTED_TABS[$name]) || $capabilities->allows(self::LISTED_TABS[$name])));
-        $tab = in_array($request->query('tab'), $tabs, true) ? (string) $request->query('tab') : self::TABS[0];
+        $tabs = array_values(array_filter(self::TABS,
+            static fn (string $name): bool => (!isset(self::LISTED_TABS[$name]) || $capabilities->allows(self::LISTED_TABS[$name]))
+                // Releases only where the site is deployed by them: an empty section is not shown.
+                && ($name !== 'releases' || $site?->release !== null || $site?->previousRelease !== null)));
+        $asked = self::section($request->query('tab'));
+        $tab = in_array($asked, $tabs, true) ? $asked : self::TABS[0];
         $kind = in_array($request->query('log'), self::LOG_KINDS, true) ? (string) $request->query('log') : 'access';
         $lines = in_array((int) $request->query('lines'), self::LOG_LINES, true) ? (int) $request->query('lines') : self::LOG_LINES[0];
         $search = mb_substr(trim((string) $request->query('q')), 0, 128);
@@ -100,7 +111,7 @@ final readonly class SiteAdminController
             static fn (SiteOperation $operation): bool => !in_array($operation, SiteOperation::SYSTEM_ONLY, true)));
         $ask = static fn (string $command, string $onTab): bool => $site !== null && $tab === $onTab && $capabilities->allows($command);
         $sftpAccounts = $ask('access:list', 'access') ? $this->extras->sftpAccounts($actor, $domain) : null;
-        $nginx = $ask('site:nginx-custom-show', 'nginx') && $actor->owner === null ? $this->files?->nginxCustom($actor, $domain) : null;
+        $nginx = $ask('site:nginx-custom-show', 'php') && $actor->owner === null ? $this->files?->nginxCustom($actor, $domain) : null;
         // What needs attention on this site (Panel plan 4.4): the server's own alerts where it keeps them, as the sites' list says it.
         $siteWarnings = $overview === null ? null : ($this->warningSource ?? new PanelWarningSource($this->extras))->ofSite($actor, $overview, $domain, PanelWarnings::now());
 
@@ -123,7 +134,7 @@ final readonly class SiteAdminController
             'nginxSupported' => $capabilities->allows('site:nginx-custom-show'),
             'nginxAllows' => ['save' => $capabilities->allows('site:nginx-custom'),
                 'keep' => $capabilities->allows('change:confirm')],
-            'siteDns' => $site !== null && $tab === 'dns' ? $this->dns?->forSite($domain) : null,
+            'siteDns' => $site !== null && $tab === 'domains' ? $this->dns?->forSite($domain) : null,
             // The site's own scheduled jobs (Panel plan 5.4), and the runs of one of them when it is opened.
             'cron' => $site !== null && $tab === 'cron' ? $this->cronTab($request, $actor, $domain, $capabilities) : null,
             'wholeServer' => $actor->owner === null,

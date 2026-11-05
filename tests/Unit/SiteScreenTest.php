@@ -280,12 +280,12 @@ env_assert(!str_contains($spaces(['canBlock' => false]), 'name="action" value="b
 // The DNS tab (Panel plan, stage 7): how to connect when nothing is, where the domain points, the records and the plan.
 $dnsZone = new \Larena\Env\Dns\DnsZone(str_repeat('a', 32), 'demo-php.test', 'active', ['#dns_records:edit']);
 $dnsRecords = [new \Larena\Env\Dns\DnsRecord(str_repeat('1', 32), 'A', 'demo-php.test', '198.51.100.7', 1)];
-$noDns = $screen(['site' => $site, 'tab' => 'dns', 'siteDns' => new \Larena\Env\Dns\SiteDns('not_connected'), 'wholeServer' => true]);
+$noDns = $screen(['site' => $site, 'tab' => 'domains', 'siteDns' => new \Larena\Env\Dns\SiteDns('not_connected'), 'wholeServer' => true]);
 env_assert(str_contains($noDns, 'data-env-dns="not_connected"') && str_contains($noDns, 'data-env-dns-connect') && str_contains($noDns, 'larena.env.admin.dns.connection'), 'Not connected: how to connect.');
-env_assert(!str_contains($screen(['site' => $site, 'tab' => 'dns', 'siteDns' => new \Larena\Env\Dns\SiteDns('not_connected'), 'wholeServer' => false]), 'larena.env.admin.dns.connection'), 'The user level is not sent to the connection.');
-$elsewhere = $screen(['site' => $site, 'tab' => 'dns', 'wholeServer' => false, 'siteDns' => new \Larena\Env\Dns\SiteDns('ok', $dnsZone, $dnsRecords, \Larena\Env\Dns\SiteDns::ELSEWHERE)]);
+env_assert(!str_contains($screen(['site' => $site, 'tab' => 'domains', 'siteDns' => new \Larena\Env\Dns\SiteDns('not_connected'), 'wholeServer' => false]), 'larena.env.admin.dns.connection'), 'The user level is not sent to the connection.');
+$elsewhere = $screen(['site' => $site, 'tab' => 'domains', 'wholeServer' => false, 'siteDns' => new \Larena\Env\Dns\SiteDns('ok', $dnsZone, $dnsRecords, \Larena\Env\Dns\SiteDns::ELSEWHERE)]);
 env_assert(str_contains($elsewhere, 'data-env-dns-points="elsewhere"') && str_contains($elsewhere, 'data-env-dns-record="A"') && str_contains($elsewhere, 'data-env-dns-point'), 'Points elsewhere: the records and «point here».');
-$here = $screen(['site' => $site, 'tab' => 'dns', 'wholeServer' => true, 'siteDns' => new \Larena\Env\Dns\SiteDns('ok', $dnsZone, $dnsRecords, \Larena\Env\Dns\SiteDns::HERE)]);
+$here = $screen(['site' => $site, 'tab' => 'domains', 'wholeServer' => true, 'siteDns' => new \Larena\Env\Dns\SiteDns('ok', $dnsZone, $dnsRecords, \Larena\Env\Dns\SiteDns::HERE)]);
 env_assert(str_contains($here, 'data-env-dns-points="here"') && !str_contains($here, 'data-env-dns-point>') && !str_contains($here, 'data-env-dns-point '), 'Points here: nothing to offer.');
 
 // The files (simai-env 1.39.0–1.40.0): a server without the commands says so with no dead buttons; otherwise a folder or
@@ -304,7 +304,7 @@ $folder = $screen(['site' => $site, 'tab' => 'files', 'files' => ['folder' => ['
     \Larena\Env\Files\FileEntry::fromData(['name' => '<b>x', 'type' => 'file', 'size' => 1]),
 ], 'truncated' => true]] + $filesBase]);
 env_assert(str_contains($folder, 'data-env-file="index.html"') && str_contains($folder, 'data-env-file-type="dir"') && str_contains($folder, 'path=public%2Fassets')
-    && str_contains($folder, 'view=public%2Findex.html') && str_contains($folder, '2026-01-01 00:00 UTC') && str_contains($folder, 'data-env-files-truncated'), 'A folder: its entries, folders open, files open in the editor.');
+    && str_contains($folder, 'view=public%2Findex.html') && str_contains($folder, '01.01.2026 00:00 UTC') && str_contains($folder, 'data-env-files-truncated'), 'A folder: its entries, folders open, files open in the editor.');
 env_assert(str_contains($folder, 'data-env-files-op="mkdir"') && str_contains($folder, 'data-env-files-op="create"') && str_contains($folder, 'data-env-files-op="upload"')
     && str_contains($folder, 'enctype="multipart/form-data"') && substr_count($folder, 'data-env-files-op="remove"') === 5 && substr_count($folder, 'data-env-file-download') === 3
     && substr_count($folder, 'data-env-files-op="extract"') === 1 && str_contains($folder, '→ /etc') && !str_contains($folder, '<b>x'), 'Each entry\'s own actions, unpacking for an archive, a link\'s target, names escaped.');
@@ -318,17 +318,17 @@ env_assert(str_contains($notText, 'data-env-files-problem') && !str_contains($no
 $outside = $screen(['site' => $site, 'tab' => 'files', 'files' => ['problem' => 'That path leads outside the site\'s folder: the server refuses it.'] + $filesBase]);
 env_assert(str_contains($outside, 'data-env-files-problem') && str_contains($outside, 'outside the site'), 'A refusal is said in words.');
 $pendingChange = \Larena\Env\Firewall\TimedChange::fromData(['change_id' => 'c1', 'expires_at' => '2026-01-01T00:02:00Z', 'kind' => 'nginx_custom']);
-$nginx = $screen(['site' => $site, 'tab' => 'nginx', 'nginxSupported' => true, 'nginx' => ['content' => "add_header X-Test 1;\n", 'present' => true, 'included' => true, 'pending' => $pendingChange],
+$nginx = $screen(['site' => $site, 'tab' => 'php', 'wholeServer' => true, 'nginxSupported' => true, 'nginx' => ['content' => "add_header X-Test 1;\n", 'present' => true, 'included' => true, 'pending' => $pendingChange],
     'nginxProblem' => null, 'nginxAllows' => ['save' => true, 'keep' => true]]);
 env_assert(str_contains($nginx, 'data-env-nginx-allowlist') && str_contains($nginx, 'data-env-timed-change="c1"') && str_contains($nginx, 'data-env-timed-keep="c1"')
     && str_contains($nginx, 'name="kind" value="nginx_custom"') && str_contains($nginx, 'name="domain" value="demo-php.test"') && str_contains($nginx, 'data-env-nginx-wait')
     && !str_contains($nginx, 'data-env-nginx-op="nginx-clear"') && str_contains($nginx, ' readonly'),
     'The nginx directives: a change waiting to be kept, kept for this site, nothing new saved meanwhile.');
-$nginxIdle = $screen(['site' => $site, 'tab' => 'nginx', 'nginxSupported' => true, 'nginx' => ['content' => "add_header X-Test 1;\n", 'present' => true, 'included' => false, 'pending' => null],
+$nginxIdle = $screen(['site' => $site, 'tab' => 'php', 'wholeServer' => true, 'nginxSupported' => true, 'nginx' => ['content' => "add_header X-Test 1;\n", 'present' => true, 'included' => false, 'pending' => null],
     'nginxProblem' => null, 'nginxAllows' => ['save' => true, 'keep' => true]]);
 env_assert(str_contains($nginxIdle, 'name="op" value="nginx-save"') && str_contains($nginxIdle, 'data-env-nginx-op="nginx-clear"') && str_contains($nginxIdle, 'data-env-nginx-not-included')
     && !str_contains($nginxIdle, 'data-env-timed-change'), 'Saved and removed by plan; an include the server still adds is said.');
-$noNginx = $screen(['site' => $site, 'tab' => 'nginx', 'nginxSupported' => false, 'nginx' => null, 'nginxProblem' => null, 'nginxAllows' => ['save' => false, 'keep' => false]]);
+$noNginx = $screen(['site' => $site, 'tab' => 'php', 'wholeServer' => true, 'nginxSupported' => false, 'nginx' => null, 'nginxProblem' => null, 'nginxAllows' => ['save' => false, 'keep' => false]]);
 env_assert(str_contains($noNginx, 'data-env-nginx-unsupported') && !str_contains($noNginx, 'data-env-nginx-op'), 'No directives command: said, nothing offered.');
 
 foreach (['site', 'plan', 'job', 'new-site', 'people', 'partials/notes', 'partials/warnings', 'partials/history', 'partials/files', 'partials/nginx', 'dns/connection', 'dns/index', 'dns/zone', 'dns/record-form', 'dns/plan', 'update', 'partials/update-plan', 'services', 'firewall', 'panel-access', 'partials/cron', 'partials/timed-change'] as $view) {

@@ -31,14 +31,14 @@
                             data-env-service="{{ $service->name }}" data-env-service-state="{{ $service->active }}">
                             <div class="grow min-w-0" style="flex-basis: 12rem;">
                                 <div class="flex flex-wrap items-cross-center g-1">
-                                    <span class="mono" style="overflow-wrap: anywhere;">{{ $service->name }}</span>
+                                    <span style="overflow-wrap: anywhere;" title="{{ $service->name }}">{{ \Larena\Env\Server\HostService::label($service->name) }}</span>
                                     <sf-badge status="{{ $service->isActive() ? 'success' : 'error' }}" appearance="tonal" @if (!$service->isActive()) role="alert" @endif
-                                        text="{{ $service->isActive() ? __('larena-env::admin.services.running') : __('larena-env::admin.services.stopped', ['state' => $service->active]) }}"></sf-badge>
+                                        text="{{ $service->isActive() ? __('larena-env::admin.services.running') : __('larena-env::admin.services.stopped') }}"></sf-badge>
                                 </div>
                                 @if ($service->since !== null || ($service->enabled !== null && $service->enabled !== 'enabled'))
                                     <div class="color-on-surface-variant text-small">
                                         @if ($service->since !== null)
-                                            <span data-env-service-since>{{ __('larena-env::admin.services.since', ['since' => $service->since]) }}</span>
+                                            <span data-env-service-since>{{ __('larena-env::admin.services.since', ['since' => \Larena\Env\Server\Moment::human($service->since)]) }}</span>
                                         @endif
                                         @if ($service->enabled !== null && $service->enabled !== 'enabled')
                                             <span data-env-service-disabled>@if ($service->since !== null) · @endif{{ __('larena-env::admin.services.not_at_boot') }}</span>

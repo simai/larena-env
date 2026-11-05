@@ -36,7 +36,7 @@
                     <sf-badge appearance="tonal" status="warning" text="{{ __('larena-env::admin.software.overview.reboot_badge') }}"></sf-badge>
                 @endif
                 @if ($system->indexAgeMinutes() !== null)
-                    <span class="text-small color-on-surface-variant" data-env-system-age="{{ $system->indexAgeMinutes() }}">{{ __('larena-env::admin.software.overview.checked', ['minutes' => (string) $system->indexAgeMinutes()]) }}</span>
+                    <span class="text-small color-on-surface-variant" data-env-system-age="{{ $system->indexAgeMinutes() }}">{{ __('larena-env::admin.software.overview.checked', ['age' => (string) $system->indexAge()]) }}</span>
                 @endif
             </div>
             @include('larena-env::admin.partials.system-updates', ['system' => $system])

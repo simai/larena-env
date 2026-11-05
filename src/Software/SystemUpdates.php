@@ -61,4 +61,25 @@ final readonly class SystemUpdates
     {
         return $this->indexAgeSeconds === null ? null : intdiv($this->indexAgeSeconds, 60);
     }
+
+    /** How long ago the index was read, for «проверено …»: minutes within the hour, then hours, then days. */
+    public function indexAge(): ?string
+    {
+        if ($this->indexAgeSeconds === null) {
+            return null;
+        }
+        $minutes = intdiv($this->indexAgeSeconds, 60);
+        [$unit, $count] = match (true) {
+            $minutes < 60 => ['minutes', $minutes],
+            $minutes < 48 * 60 => ['hours', intdiv($minutes, 60)],
+            default => ['days', intdiv($minutes, 24 * 60)],
+        };
+        if (!function_exists('__')) {
+            return $count.' '.$unit;
+        }
+        $line = 'larena-env::admin.software.overview.age.'.$unit;
+        $text = __($line, ['count' => (string) $count]);
+
+        return $text !== $line ? $text : $count.' '.$unit;
+    }
 }

@@ -210,7 +210,7 @@ _, restore = post("/admin/server/sites/demo-php.test/plan", {"_token": form_toke
 assert "data-env-plan-replaces" in restore, "a restore says what it replaces"
 # simai-env 1.30.0: each scheduled copy is checked, and the server's last check is said.
 assert "data-env-verify-field" in backups and 'data-env-last-verify="ok"' in backups, "the schedule checks each copy, the last check is said"
-assert "2026-01-01 00:00 UTC" in backups, "the card reads its times as a person does"
+assert "01.01.2026 00:00 UTC" in backups, "the card reads its times as a person does"
 # Where the server sends its alerts (simai-env 1.31.0): the channel now, a change by plan, a test.
 status, channel = get("/admin/server/alerts/channel")
 assert status == 200 and 'data-env-alerts-channel="off"' in channel and "data-env-alerts-form" in channel and "data-env-alerts-test" in channel, "the alerts' channel"

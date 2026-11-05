@@ -83,7 +83,7 @@ env_assert(str_contains($columns, '"answers":{"key":"answers","label":"'.$text('
 env_assert($byDomain['demo-owned.test']['owner'] === 'demo' && $byDomain['demo-php.test']['owner'] === '—', 'The owner, or none.');
 env_assert($byDomain['demo-php.test']['certificate'] === $text('sites.certificate_none'), 'Empty values in words.');
 env_assert($byDomain['demo-owned.test']['backups'] !== $text('sites.backups_unscheduled'), 'A site with its daily backup and none yet does not say it has none scheduled.');
-env_assert($byDomain['demo-php.test']['backups'] === $text('sites.backups_last', ['time' => '2026-01-01 00:00 UTC']).' · '.$text('sites.backups_scheduled'), 'Its newest backup is named, and its daily one.');
+env_assert($byDomain['demo-php.test']['backups'] === $text('sites.backups_last', ['time' => '01.01.2026 00:00 UTC']).' · '.$text('sites.backups_scheduled'), 'Its newest backup is named, and its daily one.');
 $soon = new ServerOverview('now', '1', 'ubuntu', '24.04', [], [], [new \Larena\Env\Server\SiteSummary('a.test', 'static', 'none', 'letsencrypt', null, null, null, 9, true)]);
 $soonRow = ServerSitesPage::of($soon, $text)->rows[0];
 env_assert($soonRow['certificate'] === $text('sites.certificate_ends', ['days' => '9']) && $soonRow['backups'] === $text('sites.backups_scheduled'), 'A certificate that ends soon is said so.');
@@ -138,7 +138,7 @@ $warnings = \Larena\Env\Warnings\PanelWarnings::of($overview, $metrics, new Date
 $loaded = $state(['section' => 'overview', 'overview' => $overview, 'metrics' => $metrics, 'warnings' => $warnings]);
 env_assert(str_contains($loaded, 'data-env-metrics') && str_contains($loaded, 'data-env-warning="disk_full"') && str_contains($loaded, '98%')
     && strpos($loaded, 'data-env-warnings') < strpos($loaded, 'data-env-metrics') && str_contains($loaded, 'role="alert"'), 'A disk at 98% is said first, as an error.');
-env_assert(str_contains($loaded, 'data-env-warning-site="demo-php.test"') && str_contains($loaded, $text('warnings.backup_stale', ['domain' => 'demo-php.test', 'time' => '2026-01-01 00:00 UTC'])), 'An old backup is said in words.');
+env_assert(str_contains($loaded, 'data-env-warning-site="demo-php.test"') && str_contains($loaded, $text('warnings.backup_stale', ['domain' => 'demo-php.test', 'time' => '01.01.2026 00:00 UTC'])), 'An old backup is said in words.');
 $listed = $state(['overview' => $overview, 'sitesView' => ['stub' => true], 'warnings' => $warnings]);
 env_assert(strpos($listed, 'data-env-warnings') < strpos($listed, 'stub-dataview'), 'The sites screen says what needs attention above the list.');
 env_assert(str_contains($state(['overview' => $overview, 'sitesView' => ['stub' => true], 'warnings' => []]), 'data-env-warnings-none'), 'Nothing to say is said too.');
@@ -178,7 +178,7 @@ env_assert(!str_contains($ok, 'data-env-update-hint'), 'No update, no hint.');
 // token field that is never filled, and a test; a server without it says so and offers nothing.
 $channel = static fn (array $data): string => $factory->make('larena-env::admin.alerts', $data + ['supported' => true, 'canTest' => true, 'channel' => null, 'notice' => null])->render();
 $telegram = $channel(['channel' => ['kind' => 'telegram', 'target_hint' => 'chat …4567', 'last_sent_at' => '2026-01-01T00:00:00Z', 'last_error' => 'timeout <b>']]);
-env_assert(str_contains($telegram, 'data-env-alerts-channel="telegram"') && str_contains($telegram, 'chat …4567') && str_contains($telegram, '2026-01-01 00:00 UTC')
+env_assert(str_contains($telegram, 'data-env-alerts-channel="telegram"') && str_contains($telegram, 'chat …4567') && str_contains($telegram, '01.01.2026 00:00 UTC')
     && str_contains($telegram, 'timeout &lt;b&gt;') && str_contains($telegram, 'type="password" id="env-alerts-token" name="token"')
     && !preg_match('/name="token"[^>]*value=/', $telegram) && str_contains($telegram, 'data-env-alerts-test'), 'The channel: '.$telegram);
 $off = $channel([]);

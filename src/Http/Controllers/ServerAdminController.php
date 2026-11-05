@@ -68,6 +68,9 @@ final readonly class ServerAdminController
             'section' => $section,
             'canCreate' => $this->authorizer?->authorize($request, 'env.sites.operate')->isAllowed() ?? false,
             'metrics' => $section === 'overview' ? $metrics : null,
+            // The services as «Службы» lists them (service:list), so both screens say the same; else the description's.
+            'services' => $section === 'overview' && $overview?->capabilities?->allows('service:list') === true
+                ? ($this->extras?->services($actor) ?? $overview->services) : ($overview->services ?? []),
             // What needs attention (Panel plan 4.4): the person's own sites, and the disks for the whole server; the
             // server's own alerts where it keeps them (simai-env 1.31.0), acknowledged by plan and confirmation.
             'warnings' => $warnings['warnings'] ?? null,

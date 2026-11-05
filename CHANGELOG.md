@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- A site's sections in plain words (the panel's UX audit, 2026-11-05): DNS joins «Домены и HTTPS» and the nginx
+  directives join «PHP и веб-сервер» (old `?tab=dns` and `?tab=nginx` links open there); «Выпуски» shows only for a
+  site that has releases. The site's checks, their areas, the HTTPS row and the services carry Russian names instead
+  of the server's codes; dates follow the admin's format and timezone; «Список проверен … назад» counts minutes, hours
+  or days; the overview reads the same service list as «Службы»; a panel built locally says «своя сборка» instead of
+  «не установлена».
+
 - Screens answer without waiting for the server again (owner decision 2026-11-05, after the panel's UX audit: a click
   answers within half a second). `CachingPanelGateway` keeps a read of the server's state for
   `larena-env.gateway.cache_seconds` (30, `LARENA_ENV_GATEWAY_CACHE_SECONDS`; 0 turns it off) per person, asks the

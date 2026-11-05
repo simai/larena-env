@@ -28,7 +28,7 @@
                     @if ($update->blocked !== null)
                         <p data-env-update-blocked role="note">{{ __('larena-env::admin.update.blocked.'.$update->blocked) }}</p>
                     @elseif ($update->updateAvailable)
-                        <p data-env-update-summary>{{ __('larena-env::admin.update.summary', ['current' => $update->current ?? '—', 'available' => $update->available ?? '—']) }}</p>
+                        <p data-env-update-summary>{{ ($update->current === null ? __('larena-env::admin.update.summary_new', ['available' => $update->available ?? '—']) : __('larena-env::admin.update.summary', ['current' => $update->current, 'available' => $update->available ?? '—'])) }}</p>
                     @else
                         <p data-env-update-summary class="color-on-surface-variant">{{ __('larena-env::admin.update.up_to_date', ['current' => $update->current ?? '—']) }}</p>
                     @endif

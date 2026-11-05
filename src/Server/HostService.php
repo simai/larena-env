@@ -36,4 +36,17 @@ final readonly class HostService
         return new self($name, $active, is_string($data['enabled'] ?? null) ? $data['enabled'] : null,
             is_string($data['since'] ?? null) && $data['since'] !== '' ? $data['since'] : null, ($data['can_reload'] ?? false) === true);
     }
+
+    /** A service as a person reads it: «Веб-сервер nginx», «PHP 8.3», else its name. */
+    public static function label(string $name): string
+    {
+        $key = preg_match('/\Aphp([5-9]\.[0-9])-fpm\z/D', $name, $php) === 1 ? 'php' : strtolower((string) preg_replace('/[^a-z0-9]+/i', '_', $name));
+        if (!function_exists('__')) {
+            return $name;
+        }
+        $line = 'larena-env::admin.services.names.'.$key;
+        $text = __($line, ['version' => $php[1] ?? '']);
+
+        return $text !== $line ? $text : $name;
+    }
 }

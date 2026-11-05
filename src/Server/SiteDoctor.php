@@ -44,4 +44,27 @@ final readonly class SiteDoctor
 
         return new self($data['status'], $problems, $passed);
     }
+
+    /** A check of the server's, as a person reads it: its title in the person's language where the panel knows it, else as the server wrote it. */
+    public static function checkText(string $title): string
+    {
+        return self::word('checks', strtolower(trim((string) preg_replace('/[^A-Za-z0-9]+/', '_', $title), '_')), $title);
+    }
+
+    /** The part of the site a check looks at, in the person's language. */
+    public static function areaText(string $area): string
+    {
+        return self::word('areas', $area, $area);
+    }
+
+    private static function word(string $group, string $key, string $otherwise): string
+    {
+        if ($key === '' || !function_exists('__')) {
+            return $otherwise;
+        }
+        $line = 'larena-env::admin.doctor.'.$group.'.'.$key;
+        $text = __($line);
+
+        return $text !== $line ? $text : $otherwise;
+    }
 }

@@ -67,11 +67,11 @@
                     <a href="{{ route('larena.env.admin.services', [], false) }}">{{ __('larena-env::admin.status.all_services') }}</a>
                 </div>
                 <ul class="m-0 p-0" style="list-style: none;">
-                    @foreach ($overview->services as $service)
+                    @foreach ($services ?? $overview->services as $service)
                         <li class="flex items-cross-center content-main-between g-2 p-x-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-service="{{ $service->name }}">
-                            <span class="mono truncate">{{ $service->name }}</span>
+                            <span class="truncate" title="{{ $service->name }}">{{ \Larena\Env\Server\HostService::label($service->name) }}</span>
                             <sf-badge status="{{ $service->isActive() ? 'success' : 'error' }}" appearance="tonal"
-                                text="{{ $service->isActive() ? __('larena-env::admin.services.running') : __('larena-env::admin.services.stopped', ['state' => $service->state]) }}"></sf-badge>
+                                text="{{ $service->isActive() ? __('larena-env::admin.services.running') : __('larena-env::admin.services.stopped') }}"></sf-badge>
                         </li>
                     @endforeach
                 </ul>

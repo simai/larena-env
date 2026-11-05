@@ -121,6 +121,7 @@ env_assert($adminNames === [
     'src/Http/Controllers/ServerAdminController.php',
     'src/Navigation/ServerAdminNavigationContributor.php',
     'src/Providers/EnvServiceProvider.php',
+    'src/Server/Moment.php',
     'src/Warnings/EnvAdminAlertSource.php',
 ], 'Only the admin\'s own pieces may name the admin: '.implode(', ', $adminNames));
 
