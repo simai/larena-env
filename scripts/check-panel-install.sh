@@ -317,9 +317,16 @@ _, planned = post("/admin/server/sites/new/plan", {"_token": form_token(wizard),
 assert 'data-env-plan="site:add"' in planned and 'name="backup" value="yes"' in planned and "data-env-plan-then" not in planned, "a new site is planned with its daily backup"
 _, made = post("/admin/server/sites/new/run", {"_token": form_token(planned), "domain": "new.test", "profile": "static", "daily-backup": "yes", "backup": "yes"})
 assert "daily backup is being turned on" not in made, "the daily backup came with the site, nothing is turned on after"
+# DNS lives in «Домены и HTTPS» and nginx in «PHP и веб-сервер» (the panel's UX audit): old links open there;
+# «Выпуски» shows only for a site that has releases.
 for tab in ("overview", "domains", "dns", "php", "database", "backups", "files", "releases", "log", "access", "nginx"):
     status, card = get("/admin/server/sites/demo-php.test?tab=" + tab)
-    assert status == 200 and 'data-env-tab="' + tab + '"' in card, ("tab", tab)
+    shown = {"dns": "domains", "nginx": "php"}.get(tab, tab)
+    if tab == "releases" and 'data-env-tab="releases"' not in card:
+        shown = "overview"
+    assert status == 200 and 'data-env-tab="' + shown + '"' in card, ("tab", tab)
+    if tab in ("domains", "dns"):
+        assert 'data-env-dns="not_connected"' in card, ("the site's DNS with its domains", tab)
     # SFTP is by key only (simai-env 1.30.0): no password field on any tab.
     assert 'type="password"' not in card and 'name="password"' not in card, ("no password", tab)
     # The recorded server lists the file commands (1.39.0) but holds no folder of this site: said in words.
@@ -328,7 +335,7 @@ for tab in ("overview", "domains", "dns", "php", "database", "backups", "files",
     # Apache behind nginx (simai-env 1.42.0): the PHP tab says what serves the site and offers the switch.
     if tab == "php":
         assert 'data-env-web-server="nginx"' in card and 'data-env-operation="apache-on"' in card and 'data-env-operation="apache-off"' not in card, "the web server and the Apache switch"
-    if tab == "nginx":
+    if tab in ("php", "nginx"):
         assert 'data-env-nginx="on"' in card and 'data-env-nginx-op="nginx-save"' in card and "data-env-nginx-op=\"nginx-clear\"" not in card, "the nginx directives: none yet, the form to write them"
     if tab == "access":
         assert 'data-env-operation="sftp-create"' in card and "data-env-sftp-uploads" in card, "a new SFTP access by key, and the note on uploads"
