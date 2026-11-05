@@ -782,6 +782,7 @@ return [
             'stopped' => 'Stopped',
             'update_waiting' => 'Update available',
             'available' => 'Can be installed: :version',
+            'version' => 'Version in the repository: :version',
             'major' => 'Version',
             'major_hint_node' => 'Two digits, e.g. 22. Empty means 22.',
             'major_hint_postgresql' => 'Two digits. Empty means Ubuntu\'s version.',

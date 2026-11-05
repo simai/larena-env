@@ -87,7 +87,7 @@
                                 @if ($component->installed)
                                     {{ $component->version ?? '—' }}@if ($component->update && $component->candidate !== null) → {{ $component->candidate }}@endif
                                 @elseif ($component->candidate !== null)
-                                    {{ __('larena-env::admin.software.overview.available', ['version' => $component->candidate]) }}
+                                    {{ __('larena-env::admin.software.overview.'.($component->installable ? 'available' : 'version'), ['version' => $component->candidate]) }}
                                 @endif
                             </div>
                             @if ($component->name === 'node' && $component->sites !== [])

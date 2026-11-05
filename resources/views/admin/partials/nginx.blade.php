@@ -13,7 +13,7 @@
             <p role="alert" data-env-nginx-not-included>{{ __('larena-env::admin.nginx.not_included') }}</p>
         @endif
         @include('larena-env::admin.partials.timed-change', ['change' => $nginx['pending'], 'canKeep' => $nginxAllows['keep'], 'changeDomain' => $domain])
-        <form method="post" action="{{ route('larena.env.admin.site.nginx.plan', ['domain' => $domain], false) }}" class="larena-form" data-env-nginx-op="nginx-save">
+        <form method="post" action="{{ route('larena.env.admin.site.nginx.plan', ['domain' => $domain], false) }}" class="larena-form m-0" style="padding: 0; box-shadow: none; background: none; border: 0; max-width: none;" data-env-nginx-op="nginx-save">
             @csrf
             <input type="hidden" name="op" value="nginx-save">
             <div class="larena-field">

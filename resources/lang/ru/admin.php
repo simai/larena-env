@@ -782,6 +782,7 @@ return [
             'stopped' => 'Остановлено',
             'update_waiting' => 'Есть обновление',
             'available' => 'Можно установить: :version',
+            'version' => 'Версия в репозитории: :version',
             'major' => 'Версия',
             'major_hint_node' => 'Две цифры, например 22. Пусто — 22.',
             'major_hint_postgresql' => 'Две цифры. Пусто — версия Ubuntu.',
