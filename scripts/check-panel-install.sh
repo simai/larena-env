@@ -160,7 +160,7 @@ for href in hrefs:
 print("menu rows open:", hrefs)
 assert "/admin/server/software" in hrefs and "/admin/server/software/php" in hrefs, "the server's software and PHP rows, listed by the server"
 
-# The breadcrumbs name the page's own place: Users › Spaces and Server › Overview, never the package's «Sites».
+# The breadcrumbs name the page's own place: Users › Site owners and Server › Overview, never the package's «Sites».
 def crumbs(html):
     tag = re.search(r'<sf-breadcrumbs\b[^>]*>', html)
     assert tag, "breadcrumbs are drawn"
@@ -168,7 +168,7 @@ def crumbs(html):
     assert found, "breadcrumbs carry their items"
     return [item.get("label") for item in json.loads(html_lib.unescape(found.group(1)))]
 import html as html_lib
-for path, expected in (("/admin/server/people", ["Users", "Spaces"]), ("/admin/server/overview", ["Server", "Overview"])):
+for path, expected in (("/admin/server/people", ["Users", "Site owners"]), ("/admin/server/overview", ["Server", "Overview"])):
     _, page = get(path)
     labels = crumbs(page)
     assert labels[1:] == expected, (path, labels)
