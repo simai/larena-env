@@ -11,7 +11,7 @@ namespace Larena\Env\Software;
  */
 final readonly class SoftwareComponent
 {
-    public const array NAMES = ['nginx', 'mysql', 'postgresql', 'redis', 'node', 'certbot'];
+    public const array NAMES = ['nginx', 'apache', 'mysql', 'postgresql', 'redis', 'node', 'certbot'];
 
     /** The components software:install adds (redis takes no version). */
     public const array INSTALLABLE = ['node', 'redis', 'postgresql'];

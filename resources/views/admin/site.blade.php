@@ -162,6 +162,9 @@
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.php') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->php }}</dd></div>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.runtime.service') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->service ?? '—' }}</dd></div>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.runtime.workers') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->workers === [] ? '—' : implode(', ', $site->workers) }}</dd></div>
+                    @if ($site->webServer !== null)
+                        <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-web-server="{{ $site->webServer }}"><dt class="color-on-surface-variant">{{ __('larena-env::admin.runtime.web_server') }}</dt><dd class="m-0 min-w-0 text-end">{{ __('larena-env::admin.runtime.web_servers.'.$site->webServer) }}</dd></div>
+                    @endif
                 </dl>
             </section>
             @if ($phpSettings !== null)
@@ -442,6 +445,10 @@
                             <p data-env-restore-note>{{ __('larena-env::admin.backups.restore_note') }}</p>
                         @elseif ($operation === \Larena\Env\Operations\SiteOperation::BackupExtractFiles)
                             <p data-env-restore-note>{{ __('larena-env::admin.backups.extract_note') }}</p>
+                        @elseif ($operation === \Larena\Env\Operations\SiteOperation::ApacheOn)
+                            <p class="m-0" data-env-apache-note>{{ __('larena-env::admin.runtime.apache_on_note') }}</p>
+                        @elseif ($operation === \Larena\Env\Operations\SiteOperation::ApacheOff)
+                            <p class="m-0" data-env-apache-note>{{ __('larena-env::admin.runtime.apache_off_note') }}</p>
                         @endif
                         <div class="larena-form-actions">
                             <button type="submit" class="larena-button">{{ __('larena-env::admin.operations.plan') }}</button>

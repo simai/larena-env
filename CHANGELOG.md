@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- simai-env 1.42.0 (set 18): a PHP site's tab «PHP» shows its web server (nginx, or Apache behind nginx for
+  `.htaccess`) and offers the switch through `site:apache`, planned first and run as a job; the server installs Apache
+  the first time and puts everything back if the site stops answering. Administrator only; «Программы» lists Apache.
+
 - simai-env 1.41.0 (set 17): a site's own nginx directives go through `site:nginx-custom-show` and `site:nginx-custom`,
   which replace the panel's earlier overlay draft. The tab shows the server's allowlist and whether the file is included;
   a save is planned first (the plan names the size only), applied as a timed change and kept with «Оставить» before its

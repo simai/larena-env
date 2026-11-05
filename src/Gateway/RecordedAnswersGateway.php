@@ -51,7 +51,7 @@ final readonly class RecordedAnswersGateway implements PanelGateway
             return $this->replay($request, 'refused.owner-admin-only.php-list.json');
         }
         // And a site's own nginx directives (simai-env 1.41.0).
-        if ($owner !== null && str_starts_with($request->command, 'site:nginx-custom')) {
+        if ($owner !== null && (str_starts_with($request->command, 'site:nginx-custom') || $request->command === 'site:apache')) {
             return $this->replay($request, 'refused.owner-admin-only.site-nginx-custom-show.json');
         }
         // And the server's software and the system's updates (simai-env 1.38.0).

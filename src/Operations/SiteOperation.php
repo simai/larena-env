@@ -37,6 +37,9 @@ enum SiteOperation: string
     case SftpDisable = 'sftp-disable';
     case SftpEnable = 'sftp-enable';
     case SftpRemove = 'sftp-remove';
+    // Apache behind nginx for .htaccess, or nginx alone again (simai-env 1.42.0).
+    case ApacheOn = 'apache-on';
+    case ApacheOff = 'apache-off';
 
     public function command(): string
     {
@@ -62,6 +65,7 @@ enum SiteOperation: string
             self::SftpDisable => 'access:disable',
             self::SftpEnable => 'access:enable',
             self::SftpRemove => 'access:remove',
+            self::ApacheOn, self::ApacheOff => 'site:apache',
         };
     }
 
@@ -70,7 +74,7 @@ enum SiteOperation: string
     {
         return match ($this) {
             self::CertificateIssue, self::CertificateRenew => 'domains',
-            self::PhpVersion, self::PhpSetting, self::PhpSettingRemove, self::ServiceRestart, self::QueueRestart => 'php',
+            self::PhpVersion, self::PhpSetting, self::PhpSettingRemove, self::ServiceRestart, self::QueueRestart, self::ApacheOn, self::ApacheOff => 'php',
             self::DatabaseCreate, self::DatabasePassword, self::DatabaseExport => 'database',
             self::Backup, self::BackupRestoreDatabase, self::BackupExtractFiles, self::BackupVerify, self::BackupSchedule => 'backups',
             self::Rollback => 'releases',
@@ -118,6 +122,9 @@ enum SiteOperation: string
     /** The fields asked only where the server keeps a DNS token for certificates: without one a DNS check fails. */
     public const array DNS_FIELDS = ['challenge', 'wildcard'];
 
+    /** The actions of the system level alone: a site's owner is not offered them (the server refuses them too). */
+    public const array SYSTEM_ONLY = [self::ApacheOn, self::ApacheOff];
+
     /** An SFTP account's own action names the account, not the site: the gateway checks it belongs to the site's owner. */
     public function namesSite(): bool
     {
@@ -164,6 +171,9 @@ enum SiteOperation: string
             // The server keeps the password of a WordPress or Bitrix site in the site's own config: it refuses to change it.
             self::DatabasePassword => $site->databaseEngine !== null && !in_array($site->profile, ['wordpress', 'bitrix'], true),
             self::DatabaseExport => $site->databaseEngine !== null,
+            // Apache serves PHP profiles only; the switch offers the other way from what the server says serves the site.
+            self::ApacheOn => in_array($site->profile, SiteDetails::APACHE_PROFILES, true) && $site->webServer === 'nginx',
+            self::ApacheOff => in_array($site->profile, SiteDetails::APACHE_PROFILES, true) && $site->webServer === 'apache',
             self::BackupRestoreDatabase => $site->backups !== [] && $site->databaseEngine !== null,
             self::BackupExtractFiles, self::BackupVerify => $site->backups !== [],
             default => true,
@@ -186,6 +196,8 @@ enum SiteOperation: string
             self::BackupRestoreDatabase => ['db' => 'yes', 'files' => 'no'],
             self::BackupExtractFiles => ['db' => 'no', 'files' => 'yes'],
             self::DatabaseExport => ['db' => 'yes', 'files' => 'no'],
+            self::ApacheOn => ['enable' => 'yes'],
+            self::ApacheOff => ['enable' => 'no'],
             default => [],
         };
         foreach ($this->fields() as $field) {

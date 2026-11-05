@@ -211,6 +211,8 @@ final class PanelCommands
         // them and the site answers, then undone after two minutes unless change:confirm keeps it. Empty removes them.
         'site:nginx-custom-show' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => '1.41.0', 'kind' => self::READ],
         'site:nginx-custom' => ['args' => ['domain' => self::DOMAIN, 'content' => self::FILE_CONTENT], 'required' => ['domain', 'content'], 'since' => '1.41.0', 'kind' => self::ACTION],
+        // Apache behind nginx for a PHP site that relies on .htaccess (simai-env 1.42.0), the system level's.
+        'site:apache' => ['args' => ['domain' => self::DOMAIN, 'enable' => self::YES_NO], 'required' => ['domain', 'enable'], 'since' => '1.42.0', 'kind' => self::ACTION],
         // A timed change kept by the person who made it (the firewall, the panel's access, nginx directives): without the
         // confirmation in time, the server puts the previous one back by itself.
         'change:confirm' => ['args' => ['change_id' => self::CHANGE_ID], 'required' => ['change_id'], 'since' => '1.35.0', 'kind' => self::ACTION],

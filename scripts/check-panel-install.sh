@@ -323,6 +323,9 @@ for tab in ("overview", "domains", "dns", "php", "database", "backups", "files",
     # The recorded server lists the file commands (1.39.0) but holds no folder of this site: said in words.
     if tab == "files":
         assert 'data-env-files="on"' in card and "data-env-files-problem" in card, "the files tab, a folder the recording lacks said in words"
+    # Apache behind nginx (simai-env 1.42.0): the PHP tab says what serves the site and offers the switch.
+    if tab == "php":
+        assert 'data-env-web-server="nginx"' in card and 'data-env-operation="apache-on"' in card and 'data-env-operation="apache-off"' not in card, "the web server and the Apache switch"
     if tab == "nginx":
         assert 'data-env-nginx="on"' in card and 'data-env-nginx-op="nginx-save"' in card and "data-env-nginx-op=\"nginx-clear\"" not in card, "the nginx directives: none yet, the form to write them"
     if tab == "access":

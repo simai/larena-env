@@ -161,6 +161,8 @@ return [
         'sftp-disable' => 'Выключить доступ',
         'sftp-enable' => 'Включить доступ',
         'sftp-remove' => 'Удалить доступ',
+        'apache-on' => 'Включить Apache для .htaccess',
+        'apache-off' => 'Вернуть только nginx',
     ],
     'plan' => [
         'title' => 'Подтверждение — Larena Panel',
@@ -338,7 +340,7 @@ return [
         'used' => ':used из :total (:percent%)',
         'checked_at' => 'Измерено',
     ],
-    'runtime' => ['title' => 'PHP и службы', 'service' => 'Служба', 'workers' => 'Обработчики очереди', 'settings' => 'Настройки php.ini', 'settings_none' => 'У сайта нет своих настроек.', 'extensions' => 'Расширения PHP :php', 'on' => 'включено', 'off' => 'выключено'],
+    'runtime' => ['title' => 'PHP и службы', 'service' => 'Служба', 'workers' => 'Обработчики очереди', 'settings' => 'Настройки php.ini', 'settings_none' => 'У сайта нет своих настроек.', 'extensions' => 'Расширения PHP :php', 'on' => 'включено', 'off' => 'выключено', 'web_server' => 'Веб-сервер', 'web_servers' => ['nginx' => 'nginx', 'apache' => 'Apache за nginx (.htaccess)'], 'apache_on_note' => 'Для сайтов, которым нужен .htaccess. В первый раз сервер установит Apache; nginx остаётся впереди: HTTPS, доступ и свои директивы работают как раньше. Если сайт после переключения не ответит, сервер всё вернёт.', 'apache_off_note' => 'Сайт снова обслуживает только nginx; правила .htaccess перестанут действовать.'],
     'releases' => ['title' => 'Выпуски', 'in_place' => 'Этот сайт выкладывается не выпусками: его файлы меняются на месте.'],
     'access' => [
         'title' => 'Доступ',
@@ -768,6 +770,7 @@ return [
             'components_title' => 'Программы сервера',
             'components' => [
                 'nginx' => 'Веб-сервер nginx',
+                'apache' => 'Apache (включается у сайта для .htaccess)',
                 'mysql' => 'Сервер баз данных MySQL',
                 'postgresql' => 'PostgreSQL',
                 'redis' => 'Redis',

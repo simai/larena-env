@@ -95,6 +95,9 @@ final readonly class SiteAdminController
         $log = $site === null || $tab !== 'log' ? null : $this->sites->log($actor, $domain, $kind, $lines, $match);
         $doctor = $site === null || $tab !== 'overview' ? null : $this->sites->doctor($actor, $domain);
         $operations = $site === null ? [] : SiteOperation::offeredFor($site, $capabilities);
+        // A site's owner is not offered what the system level alone may do (Apache, simai-env 1.42.0).
+        $operations = $actor->owner === null ? $operations : array_values(array_filter($operations,
+            static fn (SiteOperation $operation): bool => !in_array($operation, SiteOperation::SYSTEM_ONLY, true)));
         $ask = static fn (string $command, string $onTab): bool => $site !== null && $tab === $onTab && $capabilities->allows($command);
         $sftpAccounts = $ask('access:list', 'access') ? $this->extras->sftpAccounts($actor, $domain) : null;
         $nginx = $ask('site:nginx-custom-show', 'nginx') && $actor->owner === null ? $this->files?->nginxCustom($actor, $domain) : null;
@@ -355,7 +358,8 @@ final readonly class SiteAdminController
         $operation = SiteOperation::tryFrom($code);
         $capabilities = $this->overviews->read($actor)->overview->capabilities ?? PanelCapabilities::none();
 
-        return $operation !== null && $capabilities->allows($operation->command()) ? $operation : null;
+        return $operation !== null && $capabilities->allows($operation->command())
+            && ($actor->owner === null || !in_array($operation, SiteOperation::SYSTEM_ONLY, true)) ? $operation : null;
     }
 
     /** A file's reason in words: those of the file commands first (path_outside, exists, ...), then the gateway's. */

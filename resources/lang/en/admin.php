@@ -161,6 +161,8 @@ return [
         'sftp-disable' => 'Turn an access off',
         'sftp-enable' => 'Turn an access on',
         'sftp-remove' => 'Remove an access',
+        'apache-on' => 'Turn on Apache for .htaccess',
+        'apache-off' => 'Back to nginx only',
     ],
     'plan' => [
         'title' => 'Confirm — Larena Panel',
@@ -338,7 +340,7 @@ return [
         'used' => ':used of :total (:percent%)',
         'checked_at' => 'Measured at',
     ],
-    'runtime' => ['title' => 'PHP and services', 'service' => 'Service', 'workers' => 'Queue workers', 'settings' => 'php.ini settings', 'settings_none' => 'This site has no settings of its own.', 'extensions' => 'Extensions of PHP :php', 'on' => 'on', 'off' => 'off'],
+    'runtime' => ['title' => 'PHP and services', 'service' => 'Service', 'workers' => 'Queue workers', 'settings' => 'php.ini settings', 'settings_none' => 'This site has no settings of its own.', 'extensions' => 'Extensions of PHP :php', 'on' => 'on', 'off' => 'off', 'web_server' => 'Web server', 'web_servers' => ['nginx' => 'nginx', 'apache' => 'Apache behind nginx (.htaccess)'], 'apache_on_note' => 'For sites that need .htaccess. The first time, the server installs Apache; nginx stays in front, so HTTPS, access and own directives work as before. If the site stops answering after the switch, the server puts everything back.', 'apache_off_note' => 'Only nginx serves the site again; .htaccess rules stop applying.'],
     'releases' => ['title' => 'Releases', 'in_place' => 'This site is not deployed by releases: its files are changed in place.'],
     'access' => [
         'title' => 'Access',
@@ -768,6 +770,7 @@ return [
             'components_title' => 'Server software',
             'components' => [
                 'nginx' => 'nginx web server',
+                'apache' => 'Apache (turned on per site for .htaccess)',
                 'mysql' => 'MySQL database server',
                 'postgresql' => 'PostgreSQL',
                 'redis' => 'Redis',

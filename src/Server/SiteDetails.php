@@ -12,6 +12,9 @@ use UnexpectedValueException;
  */
 final readonly class SiteDetails
 {
+    /** The profiles Apache can serve: PHP sites (simai-env 1.42.0). */
+    public const array APACHE_PROFILES = ['generic', 'laravel', 'wordpress', 'bitrix'];
+
     private const string SITE_SCHEMA = 'simai-site/1';
 
     /**
@@ -42,6 +45,8 @@ final readonly class SiteDetails
         public ?int $diskBytes = null,
         // simai-env 1.30.0: the server's last check of a copy.
         public ?BackupCheck $lastVerify = null,
+        // simai-env 1.42.0: what serves the site, nginx alone or Apache behind it (null: the server does not say).
+        public ?string $webServer = null,
     ) {
     }
 
@@ -99,6 +104,7 @@ final readonly class SiteDetails
             diskBytes: is_array($data['disk'] ?? null) && is_int($data['disk']['bytes'] ?? null) ? $data['disk']['bytes'] : null,
             lastVerify: is_array($data['last_verify'] ?? null) ? BackupCheck::fromData($data['last_verify'])
                 : (is_array($backups['last_verify'] ?? null) ? BackupCheck::fromData($backups['last_verify']) : null),
+            webServer: in_array($data['web_server'] ?? null, ['nginx', 'apache'], true) ? $data['web_server'] : null,
         );
     }
 }

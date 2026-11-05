@@ -34,7 +34,7 @@ $with = env_boot('with');
 env_assert($with['admin_loadable'] === true, 'The admin must be installed for development.');
 $navigation = $with['navigation'];
 sort($navigation);
-// The recording's server (simai-env 1.41.0) lists its services, its software and PHP, the firewall and who reaches the panel.
+// The recording's server (simai-env 1.42.0) lists its services, its software and PHP, the firewall and who reaches the panel.
 env_assert($navigation === ['env.alerts.channel', 'env.dns', 'env.dns.connection', 'env.firewall', 'env.panel.access', 'env.people', 'env.server',
     'env.server.overview', 'env.services', 'env.software', 'env.software.php', 'env.update'] && $with['navigation_valid'] === array_fill(0, 12, true),
     'With the admin the sites, the overview, the spaces, DNS, the alerts\' channel, the update, the services, the software, PHP, the firewall and who reaches the panel are valid menu entries: '.implode(', ', $navigation));

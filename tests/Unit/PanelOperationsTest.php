@@ -31,8 +31,8 @@ env_assert(PanelCommands::kind('site:remove') === null && PanelCommands::kind('s
 // 23 of the card, a new site and the owners; 1 of a site's nginx directives (1.41.0) and the confirmation of a timed change (stage 6);
 // 3 of the server's alerts (simai-env 1.31.0); the safe update (simai-env 1.32.0); 2 of the services, 4 of a site's scheduled
 // jobs, 4 of the firewall and the panel's access (stage 5); the DNS token for certificates (simai-env 1.36.0); 4 of the server's
-// PHP versions (simai-env 1.37.0); 3 of the server's software (1.38.0); 7 of a site's files (1.39.0–1.40.0).
-env_assert(count(PanelCommands::actions()) === 55, 'The card\'s actions, a new site, the owners, the nginx directives, the alerts, the update, the services, the jobs, the firewall, the DNS token, PHP, the server\'s software and the files.');
+// PHP versions (simai-env 1.37.0); 3 of the server's software (1.38.0); 7 of a site's files (1.39.0–1.40.0); Apache for a PHP site (1.42.0).
+env_assert(count(PanelCommands::actions()) === 56, 'The card\'s actions, a new site, the owners, the nginx directives, the alerts, the update, the services, the jobs, the firewall, the DNS token, PHP, the server\'s software and the files.');
 // The addresses that reach the panel are the one list an argument may be; nothing else takes a list.
 try {
     PanelCommands::check('file:remove', ['domain' => 'demo-php.test', 'path' => ['public']]);
@@ -108,8 +108,22 @@ $capabilities = (new \Larena\Env\Server\ServerOverviewReader($gateway))->read(ne
 env_assert($capabilities instanceof \Larena\Env\Gateway\PanelCapabilities, 'The server says what its gateway has.');
 $offered = array_map(static fn (SiteOperation $operation): string => $operation->value, SiteOperation::offeredFor($site, $capabilities));
 env_assert($offered === ['certificate-issue', 'backup', 'backup-restore-database', 'backup-extract-files', 'backup-verify', 'backup-schedule', 'php-version',
-    'php-setting', 'php-setting-remove', 'database-password', 'database-export', 'sftp-create', 'sftp-add-key', 'sftp-disable', 'sftp-enable', 'sftp-remove'],
-    'Without a certificate, a previous release, workers or a service; with 1.28.0\'s backups, php.ini and database, and 1.30.0\'s SFTP: '.implode(',', $offered));
+    'php-setting', 'php-setting-remove', 'database-password', 'database-export', 'sftp-create', 'sftp-add-key', 'sftp-disable', 'sftp-enable', 'sftp-remove', 'apache-on'],
+    'Without a certificate, a previous release, workers or a service; with 1.28.0\'s backups, php.ini and database, 1.30.0\'s SFTP and 1.42.0\'s Apache: '.implode(',', $offered));
+// Apache behind nginx (simai-env 1.42.0): a PHP site nginx serves is offered Apache, one Apache serves nginx alone again,
+// a site that is not PHP neither; the switch fixes `enable`, and the system level's alone.
+env_assert($site->webServer === 'nginx' && SiteOperation::ApacheOn->arguments('demo-php.test', ['enable' => 'no']) === ['domain' => 'demo-php.test', 'enable' => 'yes']
+    && SiteOperation::ApacheOff->arguments('demo-php.test', []) === ['domain' => 'demo-php.test', 'enable' => 'no'], 'The switch says which way.');
+$onApache = new SiteDetails('a.test', 'laravel', '8.3', 'none', null, null, null, null, [], null, null, null, null, [], false, webServer: 'apache');
+$static = new SiteDetails('s.test', 'static', 'none', 'none', null, null, null, null, [], null, null, null, null, [], false, webServer: 'nginx');
+env_assert(SiteOperation::ApacheOff->suitsSite($onApache) && !SiteOperation::ApacheOn->suitsSite($onApache)
+    && !SiteOperation::ApacheOn->suitsSite($static) && !SiteOperation::ApacheOff->suitsSite($static), 'Apache is for PHP sites, offered the other way from what serves it.');
+env_assert(\Larena\Env\Gateway\PanelCommands::since('site:apache') === '1.42.0' && \Larena\Env\Gateway\PanelCommands::kind('site:apache') === \Larena\Env\Gateway\PanelCommands::ACTION,
+    'From 1.42.0, an action.');
+$ownerApache = $operations->planCommand(new PanelActor($user, 'demo'), 'site:apache', ['domain' => 'demo-owned.test', 'enable' => 'yes']);
+env_assert($ownerApache->plan === null && $ownerApache->reason === 'not_allowed', 'The system level\'s alone: an owner is refused.');
+$apachePlan = $operations->planCommand(new PanelActor($user), 'site:apache', ['domain' => 'demo-php.test', 'enable' => 'yes']);
+env_assert($apachePlan->plan?->command === 'site:apache' && $apachePlan->plan->args['enable'] === 'yes', 'Apache is planned first.');
 env_assert(SiteOperation::offeredFor($site) === [], 'Without knowing the server, nothing is offered.');
 
 // What no simai-env release has yet is offered only when the server lists it among its gateway's commands.
