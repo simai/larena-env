@@ -13,7 +13,7 @@
     <section class="larena-panel" style="margin: 0 0 1rem;" aria-labelledby="env-people" data-env-people>
         <div class="p-2 p-bottom-1">
             <h2 id="env-people" class="m-0 text-2">{{ __('larena-env::admin.people.list') }}</h2>
-            <p class="m-0 m-top-1 color-on-surface-variant">{{ __('larena-env::admin.people.explain') }}</p>
+            <div class="m-0 m-top-1 color-on-surface-variant m-bottom-1">@include('larena-env::admin.partials.explanation', ['text' => __('larena-env::admin.people.explain')])</div>
             @if ($reasonText !== null)
                 <p class="m-0 m-top-1 color-error" role="alert">{{ $reasonText }}</p>
             @endif
@@ -64,7 +64,7 @@
             <div class="p-2 p-bottom-1">
                 <h2 id="env-owners" class="m-0 text-2">{{ __('larena-env::admin.people.navigation') }}</h2>
                 @if ($canBlock ?? false)
-                    <p class="m-0 m-top-1 color-on-surface-variant">{{ __('larena-env::admin.people.block_explain') }}</p>
+                    <div class="m-0 m-top-1 color-on-surface-variant m-bottom-1">@include('larena-env::admin.partials.explanation', ['text' => __('larena-env::admin.people.block_explain')])</div>
                 @endif
             </div>
             <ul class="m-0 p-0" style="list-style: none;">

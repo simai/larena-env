@@ -426,4 +426,12 @@ foreach (['services', 'firewall', 'panel-access', 'software-php', 'software', 'p
     env_assert(!str_contains($source, '{!!') && preg_match('/<style\b|<script\b|@php\b/i', $source) !== 1, "The {$name} view prints nothing raw and holds no script.");
 }
 
+// An explanation shows one line of sense; the rest folds under «Подробнее» (the panel's UX audit, COPY-01).
+[$line, $rest] = \Larena\Env\Admin\Explanation::split('Файлы читаются и меняются от имени пользователя сайта. Ссылки наружу сервер не открывает, а файл больше 1 МБ показывается только для скачивания.');
+env_assert($line === 'Файлы читаются и меняются от имени пользователя сайта.' && str_starts_with((string) $rest, 'Ссылки наружу'), 'A long explanation folds after its first sentence.');
+env_assert(\Larena\Env\Admin\Explanation::split('Короткое пояснение. Второе.') === ['Короткое пояснение. Второе.', null]
+    && \Larena\Env\Admin\Explanation::split(str_repeat('слово ', 30).'конец') [1] === null, 'A short one or one without a sentence stays whole.');
+$folded = $factory->make('larena-env::admin.partials.explanation', ['text' => 'Файлы читаются и меняются от имени пользователя сайта. Ссылки наружу сервер не открывает, а файл больше 1 МБ показывается только для скачивания.'])->render();
+env_assert(str_contains($folded, 'data-env-explanation-more') && str_contains($folded, '<summary'), 'The rest is under a summary: '.$folded);
+
 echo "ServerToolsTest passed.\n";

@@ -11,9 +11,8 @@
     {{-- The server's PHP versions (simai-env 1.37.0), the system level's: one short row each, with its sites, the fixes
          waiting and what may be done to it; a removal only where the server says the version is free. --}}
     <section class="larena-panel" style="margin: 0;" data-env-php="{{ $php === null ? 'unreadable' : 'on' }}" aria-labelledby="env-php">
-        <div class="flex flex-wrap items-cross-center content-main-between g-1 p-2 p-bottom-1">
-            <h2 id="env-php" class="m-0 text-2">{{ __('larena-env::admin.software.php.versions') }}</h2>
-        </div>
+        {{-- The page's own block: its name for screen readers only, the page title already says it (UX audit LAY-02). --}}
+        <h2 id="env-php" class="sr-only">{{ __('larena-env::admin.software.php.versions') }}</h2>
         @if ($php === null)
             <p class="p-x-2 p-bottom-2 m-0" role="alert">{{ $reasonText }}</p>
         @elseif ($php->versions === [])
@@ -68,7 +67,7 @@
                     </li>
                 @endforeach
             </ul>
-            <p class="p-2 m-0 border-top-1 border-top-solid border-outline-variant color-on-surface-variant text-small">{{ __('larena-env::admin.software.php.how_to_move') }}</p>
+            <div class="p-2 m-0 border-top-1 border-top-solid border-outline-variant color-on-surface-variant text-small m-bottom-1">@include('larena-env::admin.partials.explanation', ['text' => __('larena-env::admin.software.php.how_to_move')])</div>
         @endif
     </section>
 
@@ -105,10 +104,10 @@
             @if ($extensions === null)
                 <p class="m-0" role="alert">{{ __('larena-env::admin.software.php.extensions_unreadable') }}</p>
             @else
-                <ul class="m-0 p-0 grid g-x-2 grid-col-1 md:grid-col-2 xl:grid-col-3" style="list-style: none;">
+                <ul class="m-0 p-0 grid g-x-3 grid-col-1 md:grid-col-2" style="list-style: none;">
                     @foreach ($extensions as $extension)
                         <li class="flex items-cross-center content-main-between g-1 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-php-extension="{{ $extension->name }}">
-                            <span class="mono truncate">{{ $extension->name }}</span>
+                            <span class="mono min-w-0" style="overflow-wrap: anywhere;">{{ $extension->name }}</span>
                             <span class="flex items-cross-center g-1">
                                 <sf-badge appearance="tonal" @if ($extension->enabled) status="success" @endif text="{{ $extension->enabled ? __('larena-env::admin.runtime.on') : __('larena-env::admin.runtime.off') }}"></sf-badge>
                                 @if ($allows['extension'])

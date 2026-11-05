@@ -148,10 +148,10 @@
             @if ($phpExtensions !== null)
                 <section class="larena-panel larena-panel-padded" data-env-php-extensions aria-labelledby="env-site-php-extensions">
                     <h2 id="env-site-php-extensions" class="text-2">{{ __('larena-env::admin.runtime.extensions', ['php' => $site->php]) }}</h2>
-                    <ul class="m-0 p-0 grid g-x-2 grid-col-1 md:grid-col-2 xl:grid-col-3" style="list-style: none;">
+                    <ul class="m-0 p-0 grid g-x-3 grid-col-1 md:grid-col-2" style="list-style: none;">
                         @foreach ($phpExtensions as $extension)
                             <li class="flex items-cross-center content-main-between g-1 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-php-extension="{{ $extension->name }}">
-                                <span class="mono truncate">{{ $extension->name }}</span>
+                                <span class="mono min-w-0" style="overflow-wrap: anywhere;">{{ $extension->name }}</span>
                                 <sf-badge appearance="tonal" status="{{ $extension->enabled ? 'success' : 'neutral' }}" text="{{ $extension->enabled ? __('larena-env::admin.runtime.on') : __('larena-env::admin.runtime.off') }}"></sf-badge>
                             </li>
                         @endforeach
@@ -340,7 +340,7 @@
                             @endforeach
                         </ul>
                     @endif
-                    <p data-env-sftp-uploads>{{ __('larena-env::admin.access.uploads') }}</p>
+                    <div data-env-sftp-uploads class="m-bottom-1">@include('larena-env::admin.partials.explanation', ['text' => __('larena-env::admin.access.uploads')])</div>
                 @endif
             </section>
         @endif

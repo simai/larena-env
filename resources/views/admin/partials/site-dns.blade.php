@@ -28,7 +28,7 @@
             @if ($siteDns->points !== 'here' && $siteDns->zone->editable())
                 <form method="post" action="{{ route('larena.env.admin.site.dns.plan', ['domain' => $domain], false) }}" class="larena-form" data-env-dns-point>
                     @csrf
-                    <p>{{ __('larena-env::admin.dns.point_explain', ['domain' => $domain]) }}</p>
+                    <div class="m-bottom-1">@include('larena-env::admin.partials.explanation', ['text' => __('larena-env::admin.dns.point_explain', ['domain' => $domain])])</div>
                     <div class="larena-form-actions">
                         <button type="submit" class="larena-button">{{ __('larena-env::admin.dns.point') }}</button>
                     </div>

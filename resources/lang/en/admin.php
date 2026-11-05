@@ -55,6 +55,7 @@ return [
     ],
     'yes' => 'Yes',
     'no' => 'No',
+    'more' => 'More',
     'site' => [
         'title' => ':domain — Larena Panel',
         'description' => 'What this site runs on, its certificate, its backups and its log.',

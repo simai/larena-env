@@ -63,7 +63,7 @@
                         <label for="env-alerts-token">{{ __('larena-env::admin.alerts.token') }}</label>
                         <input type="password" id="env-alerts-token" name="token" maxlength="100" autocomplete="off">
                     </div>
-                    <p class="color-on-surface-variant text-small">{{ __('larena-env::admin.alerts.token_help') }}</p>
+                    <div class="color-on-surface-variant text-small m-bottom-1">@include('larena-env::admin.partials.explanation', ['text' => __('larena-env::admin.alerts.token_help')])</div>
                     <div class="larena-form-actions"><button type="submit" class="larena-button larena-button-primary">{{ __('larena-env::admin.alerts.plan') }}</button></div>
                 </form>
             </section>

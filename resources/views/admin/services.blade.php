@@ -13,7 +13,7 @@
     <div class="grid g-2">
         <section class="larena-panel" style="margin: 0;" data-env-services="{{ $allows['restart'] || $allows['reload'] ? 'on' : 'read' }}" aria-labelledby="env-services">
             <div class="flex flex-wrap items-cross-center content-main-between g-1 p-2 p-bottom-1">
-                <h2 id="env-services" class="m-0 text-2">{{ __('larena-env::admin.services.list') }}</h2>
+                <h2 id="env-services" class="sr-only">{{ __('larena-env::admin.services.list') }}</h2>
                 @if ($services !== [])
                     <sf-badge data-env-services-summary status="{{ count(array_filter($services, static fn ($service): bool => !$service->isActive())) === 0 ? 'success' : 'error' }}" appearance="tonal"
                         text="{{ count(array_filter($services, static fn ($service): bool => !$service->isActive())) === 0 ? __('larena-env::admin.services.all_running', ['total' => (string) count($services)]) : __('larena-env::admin.services.some_stopped', ['stopped' => (string) count(array_filter($services, static fn ($service): bool => !$service->isActive())), 'total' => (string) count($services)]) }}"></sf-badge>
@@ -71,7 +71,7 @@
                         </li>
                     @endforeach
                 </ul>
-                <p class="p-2 m-0 border-top-1 border-top-solid border-outline-variant color-on-surface-variant text-small">{{ __('larena-env::admin.services.checked_first') }}</p>
+                <div class="p-2 m-0 border-top-1 border-top-solid border-outline-variant color-on-surface-variant text-small m-bottom-1">@include('larena-env::admin.partials.explanation', ['text' => __('larena-env::admin.services.checked_first')])</div>
             @endif
         </section>
 

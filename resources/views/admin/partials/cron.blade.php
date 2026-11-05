@@ -2,7 +2,7 @@
 <section class="larena-panel larena-panel-padded" data-env-cron="{{ $cron['jobs'] === null ? 'unreadable' : 'on' }}" aria-labelledby="env-site-cron">
     <h2 id="env-site-cron" class="text-2">{{ __('larena-env::admin.cron.title') }}</h2>
     <p>{{ __('larena-env::admin.cron.explain') }}</p>
-    <p data-env-cron-hint>{{ __('larena-env::admin.cron.where_and_overlap') }}</p>
+    <div data-env-cron-hint class="m-bottom-1">@include('larena-env::admin.partials.explanation', ['text' => __('larena-env::admin.cron.where_and_overlap')])</div>
     @if ($cron['jobs'] === null)
         <p role="alert">{{ __('larena-env::admin.cron.unreadable') }}</p>
     @elseif ($cron['jobs'] === [])
@@ -91,7 +91,7 @@
             <div class="larena-field">
                 <label for="env-cron-custom">{{ __('larena-env::admin.cron.custom_label') }}</label>
                 <input type="text" id="env-cron-custom" name="custom" autocomplete="off" spellcheck="false" placeholder="30 2 * * *">
-                <p>{{ __('larena-env::admin.cron.custom_hint') }}</p>
+                <div class="m-bottom-1">@include('larena-env::admin.partials.explanation', ['text' => __('larena-env::admin.cron.custom_hint')])</div>
             </div>
             <div class="larena-field">
                 <label for="env-cron-command">{{ __('larena-env::admin.cron.command') }}</label>

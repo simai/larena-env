@@ -55,6 +55,7 @@ return [
     ],
     'yes' => 'Да',
     'no' => 'Нет',
+    'more' => 'Подробнее',
     'site' => [
         'title' => ':domain — Larena Panel',
         'description' => 'На чём работает сайт, его сертификат, копии и журнал.',

@@ -5,7 +5,7 @@
     @if (!$files['supported'])
         <p data-env-files-unsupported>{{ __('larena-env::admin.files.unsupported') }}</p>
     @else
-        <p>{{ __('larena-env::admin.files.explain') }}</p>
+        <div class="m-bottom-1">@include('larena-env::admin.partials.explanation', ['text' => __('larena-env::admin.files.explain')])</div>
         <nav aria-label="{{ __('larena-env::admin.files.path') }}" data-env-files-crumbs class="flex flex-wrap g-1" style="overflow-wrap: anywhere;">
             <a href="{{ $files['base'] }}&amp;path=.">{{ $domain }}</a>
             @foreach ($files['crumbs'] as $crumb)
@@ -41,7 +41,7 @@
                         <textarea id="env-files-content" name="content" rows="18" spellcheck="false" style="font-family: var(--sf-font-mono, monospace); width: 100%; white-space: pre; overflow-x: auto;" @if (!($files['allows']['write'] && $files['text']['savable'])) readonly @endif>{{ $files['text']['content'] }}</textarea>
                     </div>
                     @if (($files['allows']['write'] && $files['text']['savable']))
-                        <p>{{ __('larena-env::admin.files.save_note') }}</p>
+                        <div class="m-bottom-1">@include('larena-env::admin.partials.explanation', ['text' => __('larena-env::admin.files.save_note')])</div>
                         <div class="larena-form-actions"><button type="submit" class="larena-button larena-button-primary">{{ __('larena-env::admin.files.save') }}</button></div>
                     @endif
                 </form>

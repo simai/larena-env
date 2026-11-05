@@ -7,8 +7,8 @@
     @elseif ($nginx === null)
         <p role="alert">{{ $nginxProblem ?? __('larena-env::admin.nginx.unreadable') }}</p>
     @else
-        <p>{{ __('larena-env::admin.nginx.explain') }}</p>
-        <p data-env-nginx-allowlist>{{ __('larena-env::admin.nginx.allowlist') }}</p>
+        <div class="m-bottom-1">@include('larena-env::admin.partials.explanation', ['text' => __('larena-env::admin.nginx.explain')])</div>
+        <div data-env-nginx-allowlist class="m-bottom-1">@include('larena-env::admin.partials.explanation', ['text' => __('larena-env::admin.nginx.allowlist')])</div>
         @if (!$nginx['included'])
             <p role="alert" data-env-nginx-not-included>{{ __('larena-env::admin.nginx.not_included') }}</p>
         @endif
@@ -21,7 +21,7 @@
                 <textarea id="env-nginx-content" name="content" rows="14" spellcheck="false" style="font-family: var(--sf-font-mono, monospace); width: 100%; white-space: pre; overflow-x: auto;" @if (!$nginxAllows['save'] || $nginx['pending'] !== null) readonly @endif>{{ $nginx['content'] }}</textarea>
             </div>
             @if ($nginxAllows['save'] && $nginx['pending'] === null)
-                <p>{{ __('larena-env::admin.nginx.apply_note') }}</p>
+                <div class="m-bottom-1">@include('larena-env::admin.partials.explanation', ['text' => __('larena-env::admin.nginx.apply_note')])</div>
                 <div class="larena-form-actions"><button type="submit" class="larena-button larena-button-primary">{{ __('larena-env::admin.nginx.save') }}</button></div>
             @elseif ($nginx['pending'] !== null)
                 <p data-env-nginx-wait>{{ __('larena-env::admin.nginx.wait') }}</p>

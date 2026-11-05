@@ -11,6 +11,11 @@
 - A site's yes-or-no choices are ticks (the panel's UX audit): «Как решит сервер / Да / Нет» is gone; each box starts
   as the server would do it (the database ticked where the site has one, files and the https redirect ticked) and an
   unticked box sends no. The paragraph repeated above every tab's actions is gone: the button says what happens.
+- Explanations in one line (the panel's UX audit, COPY-01): the long paragraphs about how the server works (files,
+  nginx directives, SFTP uploads, cron, services, PHP versions, site owners, DNS, alerts) show their first sentence,
+  the rest under «Подробнее» (`Admin\Explanation`, `partials/explanation`). A page's only block no longer repeats the
+  page title («Службы сервера», «Версии PHP»: for screen readers only). PHP extension names wrap instead of being cut,
+  in two columns.
 
 - A site's sections in plain words (the panel's UX audit, 2026-11-05): DNS joins «Домены и HTTPS» and the nginx
   directives join «PHP и веб-сервер» (old `?tab=dns` and `?tab=nginx` links open there); «Выпуски» shows only for a
