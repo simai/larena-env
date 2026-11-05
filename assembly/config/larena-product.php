@@ -42,12 +42,16 @@ return [
             'env.software' => 'server',
             'env.software.php' => 'server',
             'env.panel.access' => 'settings',
-            // Sign-in diagnostics under its own name, beside the server's overview.
-            'auth.diagnostics' => 'server',
             'admin.settings_general' => 'settings',
             'admin.site_backgrounds' => 'settings',
         ],
         // The person's own account and its security, in the person's menu at both levels.
         'person_links' => ['auth.security'],
+        // The panel's UX audit (owner decision 2026-11-05): each root is a short list without group headings; the
+        // sign-in diagnostics are a report for developers (its address still opens); the backgrounds belong to the
+        // sign-in page («Страница входа», the general settings page), which links to them and is marked on their page.
+        'headings' => false,
+        'hidden_rows' => ['auth.diagnostics'],
+        'folded_rows' => ['admin.site_backgrounds' => 'admin.settings_general'],
     ],
 ];

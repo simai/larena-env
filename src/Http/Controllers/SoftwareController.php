@@ -15,6 +15,7 @@ use Larena\Env\Http\Support\NoticeRedirect;
 use Larena\Env\Operations\PanelOperations;
 use Larena\Env\Server\ServerOverviewReader;
 use Larena\Env\Server\SiteExtrasReader;
+use Larena\Env\Software\SoftwareScreen;
 
 /**
  * «Программы и обновления» (simai-env 1.38.0, joined with the update by the panel's UX audit): the server's components with their versions, the updates waiting and their
@@ -45,6 +46,9 @@ final readonly class SoftwareController
         $capabilities = $read->overview?->capabilities;
         $software = $capabilities?->allows('software:list') === true ? $this->extras->serverSoftware($actor) : null;
         $canOperate = $this->authorizer?->authorize($request, 'env.server.operate')->isAllowed() ?? false;
+        // PHP is a row of the table, read from the same kept answer as its own screen.
+        $withPhp = $software !== null && $capabilities->allows('php:list') === true;
+        $updates = $this->updates->state($request, $actor, $capabilities);
 
         return $this->views->make('larena-env::admin.software', [
             'source' => $read->source,
@@ -53,7 +57,10 @@ final readonly class SoftwareController
             'reasonText' => $software === null ? $this->reasonText($read->reason ?? ($capabilities?->allows('software:list') === true ? 'unreadable' : 'unsupported')) : null,
             'allows' => array_map(static fn (string $command): bool => $canOperate && $capabilities?->allows($command) === true, self::OPERATIONS),
             'notice' => $request->session()->get('larena_env_notice'),
-        ] + $this->updates->state($request, $actor, $capabilities));
+            'withPhp' => $withPhp,
+            'phpRow' => $withPhp ? SoftwareScreen::php($this->extras->phpVersions($actor)) : null,
+            'updateStates' => SoftwareScreen::updateStates($updates['plans']),
+        ] + $updates);
     }
 
     /** What the asked change would do, with a confirmation that does it and nothing else. */
