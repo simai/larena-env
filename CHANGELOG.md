@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- The programs' search field has a visible border (it was almost invisible on the panel's background).
 - The release build carries the panel's own words (assembly/lang/vendor): `tar --exclude=./vendor` dropped lang/vendor
   too, so «Пользователи панели», «Страница входа» and the sign-in tab title never reached the stand. The build names
   the assembly's top-level entries instead, and stops if the words are missing.

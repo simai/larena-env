@@ -112,7 +112,7 @@
                 @endif
                 <label class="flex items-cross-center g-1 grow" style="margin-inline-start: auto; max-width: 22rem;">
                     <span class="sr-only">{{ __('larena-env::admin.software.overview.search') }}</span>
-                    <input type="search" name="q" value="{{ $query ?? '' }}" maxlength="64" placeholder="{{ __('larena-env::admin.software.overview.search') }}" style="min-height: 2.75rem; width: 100%;" data-env-software-search>
+                    <input type="search" name="q" value="{{ $query ?? '' }}" maxlength="64" placeholder="{{ __('larena-env::admin.software.overview.search') }}" style="min-height: 2.75rem; width: 100%; padding-inline: .75rem; border: 1px solid var(--larena-line); border-radius: .5rem; background: transparent; color: inherit;" data-env-software-search>
                 </label>
                 <button type="submit" class="larena-button" style="min-height: 2.75rem;">{{ __('larena-env::admin.software.overview.find') }}</button>
             </form>
