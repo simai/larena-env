@@ -9,11 +9,11 @@
     @include('larena-env::admin.partials.notes')
 
 
-    {{-- Updates in one short line (the panel's UX audit): the panel, simai-env and the system, each with its state; the
-         details and the buttons open below it, by themselves only when something waits. --}}
+    {{-- Updates in one short line (the panel's UX audit): the panel, simai-env and the system, each with its state as a
+         badge; the details and the buttons open below it on a click, so the programs come first. --}}
     @if (isset($plans) || $system !== null)
         <section class="larena-panel m-bottom-3" style="margin-top: 0;" id="update" data-env-software-updates-summary aria-labelledby="env-software-updates">
-            <details @if (\Larena\Env\Software\SoftwareScreen::updatesWaiting($system, $updateStates ?? [])) open @endif data-env-software-updates-details>
+            <details data-env-software-updates-details>
                 <summary class="flex flex-wrap items-cross-center g-1 p-2" style="cursor: pointer; min-height: 2.75rem;">
                     <h2 id="env-software-updates" class="m-0 text-2" style="margin-inline-end: .5rem;">{{ __('larena-env::admin.software.overview.'.'updates_title') }}</h2>
                     @if (isset($plans) && $supported)
@@ -35,11 +35,11 @@
                     <span class="text-small color-on-surface-variant" style="margin-inline-start: auto;">{{ __('larena-env::admin.software.overview.'.'updates_more') }}</span>
                 </summary>
                 <div class="p-x-2 p-bottom-2">
-                    @isset($plans)
+                    @if (isset($plans) && (!$supported || \Larena\Env\Software\SoftwareScreen::plansToShow($plans) !== []))
                         <div class="m-bottom-2" data-env-software-updates aria-label="{{ __('larena-env::admin.software.overview.'.'panel_title') }}">
-                            @include('larena-env::admin.partials.update-targets')
+                            @include('larena-env::admin.partials.update-targets', ['plans' => $supported ? \Larena\Env\Software\SoftwareScreen::plansToShow($plans) : $plans])
                         </div>
-                    @endisset
+                    @endif
                     @if ($system !== null)
                         {{-- The system's package updates: what waits, how fresh the list is, and the two ways to install it. --}}
                         <section class="larena-panel larena-panel-padded" style="margin: 0;" data-env-system-updates="{{ $system->updates }}" aria-labelledby="env-system-updates">
@@ -166,9 +166,9 @@
                                     </td>
                                     <td data-label="{{ __('larena-env::admin.software.overview.'.'columns.version') }}" class="mono text-small" style="overflow-wrap: anywhere;">
                                         @if ($component->installed)
-                                            {{ $component->version ?? '—' }}@if ($component->update && $component->candidate !== null) → {{ $component->candidate }}@endif
+                                            <span title="{{ $component->version }}{{ $component->update && $component->candidate !== null ? ' → '.$component->candidate : '' }}">{{ \Larena\Env\Software\SoftwareScreen::shortVersion($component->version) }}@if ($component->update && $component->candidate !== null) → {{ \Larena\Env\Software\SoftwareScreen::shortVersion($component->candidate) }}@endif</span>
                                         @elseif ($component->candidate !== null)
-                                            <span class="color-on-surface-variant">{{ __('larena-env::admin.software.overview.'.($component->installable ? 'available' : 'version'), ['version' => $component->candidate]) }}</span>
+                                            <span class="color-on-surface-variant" title="{{ $component->candidate }}">{{ __('larena-env::admin.software.overview.'.($component->installable ? 'available' : 'version'), ['version' => \Larena\Env\Software\SoftwareScreen::shortVersion($component->candidate)]) }}</span>
                                         @else
                                             —
                                         @endif

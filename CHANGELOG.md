@@ -6,8 +6,8 @@
 
 - «Программы и обновления» is one table of the server's programs, grouped by what they do (web servers, databases,
   cache, languages, certificates): each with what it is for, its state, its version and a menu of what may be done to
-  it; PHP is a row that opens its screen. The updates of the panel, simai-env and the system are said in one line and
-  open by themselves only when a security fix, a reboot or an update of the panel waits (the panel's UX audit).
+  it; PHP is a row that opens its screen; versions are said short («1.24.0», the full one on hover). The updates of the
+  panel, simai-env and the system are one line of badges, their details folded under it (the panel's UX audit).
 - The panel's menu is plain lists without group headings; the sign-in diagnostics row is gone (its address still
   opens), the sign-in backgrounds open from «Страница входа» (the general settings, renamed), the panel's users are
   «Пользователи панели» (the admin's product menu options `headings`, `hidden_rows`, `folded_rows`).

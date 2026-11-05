@@ -9,8 +9,7 @@ use Larena\Env\Update\UpdatePlan;
 /**
  * What «Программы и обновления» shows, worked out before the view (the panel's UX audit, after FastPanel's list of
  * programs): the programs as one table grouped by what they do, PHP as a row of it, and the updates of the panel,
- * simai-env and the system said in one short line, opened by themselves only when something waits for the
- * administrator.
+ * simai-env and the system said in one short line of badges, their details folded under it.
  */
 final readonly class SoftwareScreen
 {
@@ -94,12 +93,29 @@ final readonly class SoftwareScreen
     }
 
     /**
-     * Whether the updates open by themselves: a security fix, a reboot or an update of the panel or simai-env waits.
+     * The updates of the panel and simai-env worth a card: one waiting, refused or not read; one already current is
+     * said by its badge alone.
      *
-     * @param array<string, string> $states
+     * @param array<string, UpdatePlan|null> $plans
+     * @return array<string, UpdatePlan|null>
      */
-    public static function updatesWaiting(?SystemUpdates $system, array $states): bool
+    public static function plansToShow(array $plans): array
     {
-        return ($system !== null && ($system->security > 0 || $system->rebootRequired)) || in_array('available', $states, true);
+        return array_filter($plans, static fn (?UpdatePlan $update): bool => $update === null || $update->blocked !== null || $update->updateAvailable);
+    }
+
+    /**
+     * A package's version as people say it: «1.24.0» for «1.24.0-2ubuntu7.19», «7.0.15» for «5:7.0.15-1ubuntu0.24.04.5»
+     * (the full one stays in the cell's title).
+     */
+    public static function shortVersion(?string $version): string
+    {
+        if ($version === null || $version === '') {
+            return '—';
+        }
+        $short = preg_replace('/\A[0-9]+:/', '', $version) ?? $version;
+        $short = preg_split('/[-+~]/', $short)[0] ?? $short;
+
+        return $short !== '' ? $short : $version;
     }
 }

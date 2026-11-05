@@ -415,7 +415,7 @@ env_assert(str_contains($joined, 'data-env-software-updates') && str_contains($j
 env_assert(!str_contains($page, 'data-env-software-updates aria'), 'Without the update\'s state, no empty block.');
 // One table of programs grouped by what they do, PHP as its row, the updates in one line (the panel's UX audit).
 env_assert(str_contains($page, 'data-env-software-table') && substr_count($page, 'data-env-software-group=') === 5 && !str_contains($page, 'data-env-software-php=')
-    && str_contains($page, 'data-env-software-update-badge="system"') && preg_match('/<details\s+open\s+data-env-software-updates-details/', $page) === 1
+    && str_contains($page, 'data-env-software-update-badge="system"') && preg_match('/<details\s+open\s+data-env-software-updates-details/', $page) !== 1
     && str_contains($page, 'data-env-software-op="update-nginx"') === ($software->component('nginx')?->update === true), 'The programs\' table: '.$page);
 $withPhpRow = $softwarePage(['withPhp' => true, 'phpRow' => \Larena\Env\Software\SoftwareScreen::php($extras->phpVersions($admin))]);
 env_assert(preg_match('/data-env-software-php="[1-9]/', $withPhpRow) === 1 && str_contains($withPhpRow, 'data-env-software-php-open')
@@ -423,6 +423,8 @@ env_assert(preg_match('/data-env-software-php="[1-9]/', $withPhpRow) === 1 && st
 $quiet = new \Larena\Env\Software\SystemUpdates(0, 0, [], [], false, [], null);
 env_assert(preg_match('/<details\s+open\s+data-env-software-updates-details/', $softwarePage(['software' => new \Larena\Env\Software\ServerSoftware($software->components, $quiet), 'system' => $quiet])) !== 1,
     'Nothing waits: the updates stay folded.');
+env_assert(\Larena\Env\Software\SoftwareScreen::shortVersion('1.24.0-2ubuntu7.19') === '1.24.0' && \Larena\Env\Software\SoftwareScreen::shortVersion('5:7.0.15-1ubuntu0.24.04.5') === '7.0.15'
+    && \Larena\Env\Software\SoftwareScreen::shortVersion('16+257build1.1') === '16' && \Larena\Env\Software\SoftwareScreen::shortVersion(null) === '—', 'Versions said as people say them.');
 env_assert(\Larena\Env\Software\SoftwareScreen::updateStates(['env' => null]) === ['env' => 'unknown'], 'An update not read is unknown.');
 $readOnlySoftware = $softwarePage(['allows' => ['refresh' => false, 'update' => false, 'install' => false]]);
 env_assert(!str_contains($readOnlySoftware, 'data-env-software-op') && str_contains($readOnlySoftware, 'data-env-system-package="apt"'), 'Without the right, the state only.');
