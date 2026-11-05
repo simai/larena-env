@@ -72,4 +72,19 @@ final readonly class UpdatePlan
             rollback: $text('rollback'),
         );
     }
+
+    /**
+     * The panel's plan beside the build that runs (panel-build.json): when the server cannot name the panel's version,
+     * an «available» one no newer than the running build is no update, never offered as one.
+     */
+    public function beside(?string $running): self
+    {
+        if ($running === null || $this->current !== null || $this->available === null || !$this->updateAvailable
+            || version_compare($this->available, $running, '>')) {
+            return $this;
+        }
+
+        return new self($this->target, $this->current, $this->available, false, $this->blocked, $this->notes, $this->notesUrl,
+            $this->backup, $this->restarts, $this->checks, $this->rollback);
+    }
 }

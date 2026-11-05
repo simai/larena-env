@@ -56,9 +56,11 @@ final readonly class UpdateController
     public function state(Request $request, PanelActor $actor, ?PanelCapabilities $capabilities): array
     {
         $supported = $capabilities?->allows('self:update-plan') === true;
+        $build = self::panelBuild();
         $plans = [];
         foreach (UpdatePlan::TARGETS as $target) {
-            $plans[$target] = $supported ? $this->extras->updatePlan($actor, $target) : null;
+            $plan = $supported ? $this->extras->updatePlan($actor, $target) : null;
+            $plans[$target] = $target === 'panel' ? $plan?->beside($build) : $plan;
         }
 
         return [
@@ -68,7 +70,7 @@ final readonly class UpdateController
                 && ($this->authorizer?->authorize($request, 'env.server.operate')->isAllowed() ?? false),
             // The panel's own build (panel-build.json beside the application): what the server cannot name when the
             // panel was installed from an archive of its own, rather than «не установлена» for the panel in use.
-            'panelBuild' => self::panelBuild(),
+            'panelBuild' => $build,
         ];
     }
 

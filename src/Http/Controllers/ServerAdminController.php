@@ -104,6 +104,7 @@ final readonly class ServerAdminController
         $updates = [];
         foreach (\Larena\Env\Update\UpdatePlan::TARGETS as $target) {
             $plan = $this->extras->updatePlan($actor, $target);
+            $plan = $target === 'panel' ? $plan?->beside(UpdateController::panelBuild()) : $plan;
             if ($plan?->updateAvailable === true) {
                 $updates[] = ['target' => $target, 'available' => $plan->available];
             }

@@ -356,6 +356,10 @@ env_assert(\Larena\Env\Update\UpdatePlan::fromData(['schema' => 'simai-update-pl
     'notes_url' => 'http://example.com/notes'])?->blocked === 'unknown', 'A reason the panel does not know still blocks.');
 $odd = \Larena\Env\Update\UpdatePlan::fromData(['schema' => 'simai-update-plan/1', 'target' => 'env', 'update_available' => true, 'notes_url' => 'http://example.com/notes']);
 env_assert($odd?->notesUrl === null && $odd->updateAvailable, 'The notes\' address is a link only over https.');
+// A panel built here (panel-build.json 0.3.1-dev) is not offered an older 0.3.0 as an update; a newer one still is.
+$panelOffer = static fn (string $available): \Larena\Env\Update\UpdatePlan => \Larena\Env\Update\UpdatePlan::fromData(['schema' => 'simai-update-plan/1', 'target' => 'panel', 'update_available' => true, 'available' => $available]) ?? throw new RuntimeException('plan');
+env_assert(!$panelOffer('0.3.0')->beside('0.3.1-dev')->updateAvailable && $panelOffer('0.4.0')->beside('0.3.1-dev')->updateAvailable
+    && $panelOffer('0.3.0')->beside(null)->updateAvailable, 'An older panel is no update for the build that runs.');
 env_assert(\Larena\Env\Update\UpdatePlan::fromData(['schema' => 'other', 'target' => 'env']) === null
     && \Larena\Env\Update\UpdatePlan::fromData(['schema' => 'simai-update-plan/1', 'target' => 'host']) === null, 'Only an update plan the panel knows.');
 $updating = (new PanelOperations($gateway))->planCommand(new PanelActor($user), 'self:update', ['target' => 'env']);
