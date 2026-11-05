@@ -76,6 +76,25 @@ final readonly class MetricHistory
         return new self($period, $lines, count($points), $points[0][0]->format('Y-m-d H:i:s'), $last->format('Y-m-d H:i:s'));
     }
 
+    /**
+     * The points spread across the whole width: a tile's line uses every measure it has, even when the server has
+     * kept only an hour of them (the panel's UX audit, VIS-01). The history keeps its own time axis.
+     *
+     * @param list<array{0: float, 1: float}> $points
+     * @return list<array{0: float, 1: float}>
+     */
+    public static function stretched(array $points): array
+    {
+        if (count($points) < 2) {
+            return $points;
+        }
+        $xs = array_column($points, 0);
+        $from = min($xs);
+        $width = max($xs) - $from;
+
+        return $width <= 0.0 ? $points : array_map(static fn (array $point): array => [($point[0] - $from) / $width, $point[1]], $points);
+    }
+
     /** The points of a line as an SVG polyline in a box of this size, 0% at the bottom. */
     public static function polyline(array $points, int $width, int $height): string
     {

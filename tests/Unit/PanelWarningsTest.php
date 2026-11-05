@@ -111,6 +111,7 @@ env_assert($day->lines['load'][0][1] === 50.0 && $day->lines['load'][1][1] === 1
 $week = $samples->history('week', $now);
 env_assert($week->count === 4 && count($week->lines['load']) === 3 && $week->lines['load'][0][1] === 25.0, 'The week by the hour: the two of one hour are one point.');
 env_assert(MetricHistory::polyline([[0.0, 0.0], [1.0, 100.0]], 600, 120) === '0.0,120.0 600.0,0.0', 'Drawn bottom up.');
+env_assert(MetricHistory::stretched([[0.5, 10.0], [0.75, 20.0], [1.0, 30.0]]) === [[0.0, 10.0], [0.5, 20.0], [1.0, 30.0]] && MetricHistory::stretched([[1.0, 5.0]]) === [[1.0, 5.0]], 'A tile\'s line spreads its measures across the width.');
 env_assert($samples->history('day', $now->modify('-10 days'))->count === 0, 'An empty period.');
 
 // The check itself, on the recorded server: it measures, and a person of demo's space hears about demo-owned.test only;

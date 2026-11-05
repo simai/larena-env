@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- A site's actions are buttons (the panel's UX audit, LAY-03): «Действия» is a row of them, and each opens its fields
+  in a side panel (the Framework's `sf-modal` at the inline end) with «Показать, что будет сделано»; the tab is no
+  longer a column of long forms. The load tiles show the name whole and the day's line across the tile, spread over
+  the measures the server has (VIS-01).
 - The sites' list fits a laptop (the panel's UX audit, LAY-04): the disk is on the site's own screen, and the owner
   column shows only on a server where some site has an owner. A site's breadcrumbs reach the site and its section,
   «Сайты › demo.test › Файлы», each step a link back (HEAD-02).

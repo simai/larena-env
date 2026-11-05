@@ -129,6 +129,8 @@ $older = \Larena\Env\Gateway\PanelCapabilities::fromHostDescription(['simai_env'
 $backups = $screen(['site' => $site, 'tab' => 'backups', 'tabOperations' => $onTab('backups', $older)]);
 env_assert(str_contains($backups, 'data-env-backup="20261105-093148"') && str_contains($backups, '4.3 KB') && str_contains($backups, 'data-env-operation="backup"'), 'The backups and «Back up now».');
 env_assert(!str_contains($backups, 'data-env-operation="backup-restore-database"'), 'No restore while the server\'s gateway has none.');
+env_assert(str_contains($backups, 'data-sf-modal-open="env-op-backup"') && preg_match('/<sf-modal id="env-op-backup" position="inline-end"[^>]*>\s*<form[^>]*data-env-operation="backup"/', $backups) === 1,
+    'An action is a button that opens its fields in a side panel.');
 $more = \Larena\Env\Gateway\PanelCapabilities::fromHostDescription(['simai_env' => ['version' => '1.27.0'], 'gate' => ['commands' => ['backup:data', 'backup:data-restore', 'backup:data-schedule', 'site:db-rotate', 'site:php-ini-set', 'access:create-project', 'access:disable']]]);
 $restore = $screen(['site' => $site, 'tab' => 'backups', 'tabOperations' => $onTab('backups', $more)]);
 env_assert(str_contains($restore, 'data-env-operation="backup-restore-database"') && str_contains($restore, 'data-env-operation="backup-extract-files"')

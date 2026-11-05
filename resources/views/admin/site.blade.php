@@ -348,13 +348,20 @@
         @if ($tabOperations !== [])
             <section class="larena-panel larena-panel-padded" data-env-operations aria-labelledby="env-site-operations">
                 <h2 id="env-site-operations" class="text-2">{{ __('larena-env::admin.operations.title') }}</h2>
+                {{-- The tab's actions as a row of buttons; each opens its fields in a side panel, and the plan comes next
+                     (the panel's UX audit, LAY-03): the tab is no longer a column of long forms. --}}
+                <div class="flex flex-wrap g-1" data-env-operation-buttons>
+                    @foreach ($tabOperations as $operation)
+                        @continue(!$operation->namesSite() && ($sftpChoices[$operation->value] ?? []) === [])
+                        <button type="button" class="larena-button" data-sf-modal-open="env-op-{{ $operation->value }}" data-env-operation-open="{{ $operation->value }}">{{ __('larena-env::admin.operations.'.$operation->value) }}</button>
+                    @endforeach
+                </div>
                 @foreach ($tabOperations as $operation)
                     @continue(!$operation->namesSite() && ($sftpChoices[$operation->value] ?? []) === [])
-                    {{-- Each action a row of the block: its name at the size of the block's text, its fields, its plan button. --}}
-                    <form method="post" action="{{ route('larena.env.admin.site.plan', ['domain' => $domain], false) }}" class="larena-form m-0 p-y-2 border-top-1 border-top-solid border-outline-variant" style="padding-inline: 0; box-shadow: none; background: none; border-inline: 0; border-bottom: 0; border-radius: 0;" data-env-operation="{{ $operation->value }}">
+                    <sf-modal id="env-op-{{ $operation->value }}" position="inline-end" width="28rem" heading="{{ __('larena-env::admin.operations.'.$operation->value) }}">
+                    <form method="post" action="{{ route('larena.env.admin.site.plan', ['domain' => $domain], false) }}" class="larena-form m-0" style="padding: 0; box-shadow: none; background: none; border: 0; border-radius: 0;" data-env-operation="{{ $operation->value }}">
                         @csrf
                         <input type="hidden" name="operation" value="{{ $operation->value }}">
-                        <h3 class="m-0 m-bottom-1 text-medium">{{ __('larena-env::admin.operations.'.$operation->value) }}</h3>
                         @foreach (($capabilities ?? null) === null ? $operation->fields() : $operation->fieldsOn($capabilities) as $field)
                             @continue(!($dnsCertificates ?? false) && in_array($field, \Larena\Env\Operations\SiteOperation::DNS_FIELDS, true))
                             @if (in_array($field, \Larena\Env\Operations\SiteOperation::SWITCHES, true))
@@ -432,6 +439,7 @@
                             <button type="submit" class="larena-button">{{ __('larena-env::admin.operations.plan') }}</button>
                         </div>
                     </form>
+                    </sf-modal>
                 @endforeach
             </section>
         @endif
