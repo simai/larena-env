@@ -114,6 +114,7 @@ env_assert($doctor !== null && $doctor->status === 'WARN' && $doctor->problems !
 $ok = $screen(['site' => $site, 'doctor' => $doctor, 'tabOperations' => $onTab('overview')]);
 env_assert(str_contains($ok, 'data-env-state="ok"') && str_contains($ok, 'data-env-doctor="WARN"') && str_contains($ok, 'data-env-problem="WARN"'), 'The overview shows the check and its problems.');
 env_assert(str_contains($ok, 'data-env-answers="') && str_contains($ok, 'data-env-disk') && !str_contains($ok, 'data-env-no-backup'), 'Whether it answers and its disk; it has a backup.');
+env_assert(str_contains($screen(['site' => $site]), 'text="PHP 8.3"'), 'A PHP site\'s badge says PHP once.');
 // The backups tab says the failed attempt the bar warns about, not only «no backups yet» (the panel's UX audit).
 $failedBackup = $screen(['site' => $site, 'tab' => 'backups', 'warnings' => [new \Larena\Env\Warnings\PanelWarning('backup_failed', 'warning', 'demo-php.test', ['domain' => 'demo-php.test']),
     new \Larena\Env\Warnings\PanelWarning('backup_failed', 'warning', 'other.test', ['domain' => 'other.test'])]]);

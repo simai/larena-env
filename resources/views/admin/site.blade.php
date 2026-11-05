@@ -10,7 +10,7 @@
     @section('heading-meta')
         <span class="flex flex-wrap items-cross-center g-1" data-env-site-state="{{ \Larena\Env\Admin\SiteState::of($site->answersChecked, $site->answers) }}">
             <sf-badge status="{{ \Larena\Env\Admin\SiteState::status(\Larena\Env\Admin\SiteState::of($site->answersChecked, $site->answers)) }}" appearance="tonal" text="{{ __('larena-env::admin.sites.state.'.\Larena\Env\Admin\SiteState::of($site->answersChecked, $site->answers)) }}"></sf-badge>
-            <sf-badge appearance="outline" text="{{ $site->profile === 'php' && $site->php !== 'none' ? 'PHP '.$site->php : __('larena-env::admin.new_site.profiles.'.$site->profile).($site->php !== 'none' ? ' · PHP '.$site->php : '') }}"></sf-badge>
+            <sf-badge appearance="outline" text="{{ in_array($site->profile, ['php', 'generic'], true) && $site->php !== 'none' ? 'PHP '.$site->php : __('larena-env::admin.new_site.profiles.'.$site->profile).($site->php !== 'none' ? ' · PHP '.$site->php : '') }}"></sf-badge>
             @if ($site->certificate !== null)
                 <sf-badge status="{{ $site->certificate->daysLeft !== null && $site->certificate->daysLeft < \Larena\Env\Warnings\PanelWarnings::CERTIFICATE_DAYS ? 'warning' : 'success' }}" appearance="tonal"
                     text="{{ $site->certificate->daysLeft === null ? 'HTTPS' : __('larena-env::admin.sites.certificate_left', ['days' => (string) $site->certificate->daysLeft]) }}"></sf-badge>
