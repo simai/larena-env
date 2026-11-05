@@ -15,7 +15,7 @@
         <section class="larena-panel m-bottom-3" style="margin-top: 0;" id="update" data-env-software-updates-summary aria-labelledby="env-software-updates">
             <details data-env-software-updates-details>
                 <summary class="flex flex-wrap items-cross-center g-1 p-2" style="cursor: pointer; min-height: 2.75rem;">
-                    <h2 id="env-software-updates" class="m-0 text-2" style="margin-inline-end: .5rem;">{{ __('larena-env::admin.software.overview.'.'updates_title') }}</h2>
+                    <h2 id="env-software-updates" class="m-0 text-2" style="margin-inline-end: .5rem;">{{ __('larena-env::admin.software.overview.updates_title') }}</h2>
                     @if (isset($plans) && $supported)
                         @foreach (array_keys($plans) as $target)
                             <sf-badge appearance="tonal" status="{{ ['unknown' => 'error', 'blocked' => 'warning', 'available' => 'info', 'current' => 'success'][$updateStates[$target] ?? 'unknown'] }}" data-env-software-update-badge="{{ $target }}"
@@ -24,19 +24,19 @@
                     @endif
                     @if ($system !== null)
                         <sf-badge appearance="tonal" @if ($system->updates > 0) status="warning" @else status="success" @endif data-env-software-update-badge="system"
-                            text="{{ __('larena-env::admin.software.overview.'.'system_short') }}: {{ $system->updates > 0 ? mb_strtolower(__('larena-env::admin.software.overview.'.'updates', ['count' => (string) $system->updates])) : mb_strtolower(__('larena-env::admin.software.overview.'.'no_updates_short')) }}"></sf-badge>
+                            text="{{ __('larena-env::admin.software.overview.system_short') }}: {{ $system->updates > 0 ? mb_strtolower(__('larena-env::admin.software.overview.updates', ['count' => (string) $system->updates])) : mb_strtolower(__('larena-env::admin.software.overview.no_updates_short')) }}"></sf-badge>
                         @if ($system->security > 0)
-                            <sf-badge appearance="tonal" status="error" text="{{ __('larena-env::admin.software.overview.'.'security', ['count' => (string) $system->security]) }}"></sf-badge>
+                            <sf-badge appearance="tonal" status="error" text="{{ __('larena-env::admin.software.overview.security', ['count' => (string) $system->security]) }}"></sf-badge>
                         @endif
                         @if ($system->rebootRequired)
-                            <sf-badge appearance="tonal" status="warning" text="{{ __('larena-env::admin.software.overview.'.'reboot_badge') }}"></sf-badge>
+                            <sf-badge appearance="tonal" status="warning" text="{{ __('larena-env::admin.software.overview.reboot_badge') }}"></sf-badge>
                         @endif
                     @endif
-                    <span class="text-small color-on-surface-variant" style="margin-inline-start: auto;">{{ __('larena-env::admin.software.overview.'.'updates_more') }}</span>
+                    <span class="text-small color-on-surface-variant" style="margin-inline-start: auto;">{{ __('larena-env::admin.software.overview.updates_more') }}</span>
                 </summary>
                 <div class="p-x-2 p-bottom-2">
                     @if (isset($plans) && (!$supported || \Larena\Env\Software\SoftwareScreen::plansToShow($plans) !== []))
-                        <div class="m-bottom-2" data-env-software-updates aria-label="{{ __('larena-env::admin.software.overview.'.'panel_title') }}">
+                        <div class="m-bottom-2" data-env-software-updates aria-label="{{ __('larena-env::admin.software.overview.panel_title') }}">
                             @include('larena-env::admin.partials.update-targets', ['plans' => $supported ? \Larena\Env\Software\SoftwareScreen::plansToShow($plans) : $plans])
                         </div>
                     @endif
@@ -44,21 +44,21 @@
                         {{-- The system's package updates: what waits, how fresh the list is, and the two ways to install it. --}}
                         <section class="larena-panel larena-panel-padded" style="margin: 0;" data-env-system-updates="{{ $system->updates }}" aria-labelledby="env-system-updates">
                             <div class="flex flex-wrap items-cross-center content-main-between g-1">
-                                <h3 id="env-system-updates" class="m-0 text-2">{{ __('larena-env::admin.software.overview.'.'system_title') }}</h3>
+                                <h3 id="env-system-updates" class="m-0 text-2">{{ __('larena-env::admin.software.overview.system_title') }}</h3>
                                 @if ($allows['refresh'])
                                     <form method="post" action="{{ route('larena.env.admin.software.plan', [], false) }}" class="m-0" data-env-software-op="refresh">
                                         @csrf
                                         <input type="hidden" name="op" value="refresh">
-                                        <button type="submit" class="larena-button" style="min-height: 2.75rem;">{{ __('larena-env::admin.software.overview.'.'refresh') }}</button>
+                                        <button type="submit" class="larena-button" style="min-height: 2.75rem;">{{ __('larena-env::admin.software.overview.refresh') }}</button>
                                     </form>
                                 @endif
                             </div>
                             <div class="flex flex-wrap items-cross-center g-1 m-y-1">
                                 @if ($system->security > 0)
-                                    <span class="sr-only" data-env-system-security-count="{{ $system->security }}">{{ __('larena-env::admin.software.overview.'.'security', ['count' => (string) $system->security]) }}</span>
+                                    <span class="sr-only" data-env-system-security-count="{{ $system->security }}">{{ __('larena-env::admin.software.overview.security', ['count' => (string) $system->security]) }}</span>
                                 @endif
                                 @if ($system->indexAgeMinutes() !== null)
-                                    <span class="text-small color-on-surface-variant" data-env-system-age="{{ $system->indexAgeMinutes() }}">{{ __('larena-env::admin.software.overview.'.'checked', ['age' => (string) $system->indexAge()]) }}</span>
+                                    <span class="text-small color-on-surface-variant" data-env-system-age="{{ $system->indexAgeMinutes() }}">{{ __('larena-env::admin.software.overview.checked', ['age' => (string) $system->indexAge()]) }}</span>
                                 @endif
                             </div>
                             @include('larena-env::admin.partials.system-updates', ['system' => $system])
@@ -69,17 +69,17 @@
                                             @csrf
                                             <input type="hidden" name="op" value="update">
                                             <input type="hidden" name="security_only" value="yes">
-                                            <button type="submit" class="larena-button larena-button-primary" style="min-height: 2.75rem;">{{ __('larena-env::admin.software.overview.'.'install_security') }}</button>
+                                            <button type="submit" class="larena-button larena-button-primary" style="min-height: 2.75rem;">{{ __('larena-env::admin.software.overview.install_security') }}</button>
                                         </form>
                                     @endif
                                     <form method="post" action="{{ route('larena.env.admin.software.plan', [], false) }}" class="m-0" data-env-software-op="update-all">
                                         @csrf
                                         <input type="hidden" name="op" value="update">
                                         <input type="hidden" name="security_only" value="no">
-                                        <button type="submit" class="larena-button{{ $system->security > 0 ? '' : ' larena-button-primary' }}" style="min-height: 2.75rem;">{{ __('larena-env::admin.software.overview.'.'install_all') }}</button>
+                                        <button type="submit" class="larena-button{{ $system->security > 0 ? '' : ' larena-button-primary' }}" style="min-height: 2.75rem;">{{ __('larena-env::admin.software.overview.install_all') }}</button>
                                     </form>
                                 </div>
-                                <p class="m-top-1 m-bottom-0 text-small color-on-surface-variant">{{ __('larena-env::admin.software.overview.'.'update_note') }}</p>
+                                <p class="m-top-1 m-bottom-0 text-small color-on-surface-variant">{{ __('larena-env::admin.software.overview.update_note') }}</p>
                             @endif
                         </section>
                     @endif
@@ -97,21 +97,21 @@
              what it is for, its state, its version, and a menu of what may be done to it. PHP is a row here too and
              opens its own screen. --}}
         <section class="larena-panel" style="margin: 0;" data-env-software="on" aria-labelledby="env-software-components">
-            <h2 id="env-software-components" class="sr-only">{{ __('larena-env::admin.software.overview.'.'components_title') }}</h2>
+            <h2 id="env-software-components" class="sr-only">{{ __('larena-env::admin.software.overview.components_title') }}</h2>
             <div class="larena-table-scroll">
                 <table class="larena-table larena-table-stack" data-env-software-table>
                     <thead>
                         <tr>
-                            <th scope="col">{{ __('larena-env::admin.software.overview.'.'columns.name') }}</th>
-                            <th scope="col" style="white-space: nowrap;">{{ __('larena-env::admin.software.overview.'.'columns.state') }}</th>
-                            <th scope="col" style="white-space: nowrap;">{{ __('larena-env::admin.software.overview.'.'columns.version') }}</th>
-                            <th scope="col"><span class="larena-visually-hidden">{{ __('larena-env::admin.software.overview.'.'columns.actions') }}</span></th>
+                            <th scope="col">{{ __('larena-env::admin.software.overview.columns.name') }}</th>
+                            <th scope="col" style="white-space: nowrap;">{{ __('larena-env::admin.software.overview.columns.state') }}</th>
+                            <th scope="col" style="white-space: nowrap;">{{ __('larena-env::admin.software.overview.columns.version') }}</th>
+                            <th scope="col"><span class="larena-visually-hidden">{{ __('larena-env::admin.software.overview.columns.actions') }}</span></th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (\Larena\Env\Software\SoftwareScreen::groups($software, $withPhp ?? false) as $group)
                             <tr data-env-software-group="{{ $group['key'] }}">
-                                <th scope="colgroup" colspan="4">{{ __('larena-env::admin.software.overview.groups.'.$group['key']) }}</th>
+                                <th scope="colgroup" colspan="4" style="width: 100%;">{{ __('larena-env::admin.software.overview.groups.'.$group['key']) }}</th>
                             </tr>
                             @if ($group['php'])
                                 <tr data-env-software-php="{{ ($phpRow ?? null) === null ? 'unknown' : $phpRow['count'] }}">
@@ -134,7 +134,7 @@
                                             @endif
                                         </div>
                                     </td>
-                                    <td data-label="{{ __('larena-env::admin.software.overview.columns.version') }}" class="mono text-small">{{ ($phpRow ?? null) === null || $phpRow['count'] === 0 ? '—' : $phpRow['versions'] }}</td>
+                                    <td data-label="{{ __('larena-env::admin.software.overview.columns.version') }}" class="mono text-small" style="min-width: 7rem;">{{ ($phpRow ?? null) === null || $phpRow['count'] === 0 ? '—' : $phpRow['versions'] }}</td>
                                     <td data-label="{{ __('larena-env::admin.software.overview.columns.actions') }}">
                                         <a class="flex items-cross-center" style="min-height: 2.75rem; white-space: nowrap;" href="{{ route('larena.env.admin.software.php', [], false) }}" data-env-software-php-open>{{ __('larena-env::admin.software.overview.php_open') }}</a>
                                     </td>
@@ -142,57 +142,57 @@
                             @endif
                             @foreach ($group['components'] as $component)
                                 <tr data-env-software-component="{{ $component->name }}" data-env-software-state="{{ $component->installed ? 'installed' : 'absent' }}">
-                                    <td data-label="{{ __('larena-env::admin.software.overview.'.'columns.name') }}" style="min-width: 12rem;">
+                                    <td data-label="{{ __('larena-env::admin.software.overview.columns.name') }}" style="min-width: 12rem;">
                                         <span>{{ __('larena-env::admin.software.overview.components.'.$component->name) }}</span>
-                                        <div class="text-small color-on-surface-variant">{{ __('larena-env::admin.software.overview.'.'purpose.'.$component->name) }}</div>
+                                        <div class="text-small color-on-surface-variant">{{ __('larena-env::admin.software.overview.purpose.'.$component->name) }}</div>
                                         @if ($component->name === 'node' && $component->sites !== [])
                                             <div class="text-small color-on-surface-variant" style="overflow-wrap: anywhere;">{{ __('larena-env::admin.software.php.sites', ['sites' => implode(', ', $component->sites)]) }}</div>
                                         @endif
                                     </td>
-                                    <td data-label="{{ __('larena-env::admin.software.overview.'.'columns.state') }}">
+                                    <td data-label="{{ __('larena-env::admin.software.overview.columns.state') }}">
                                         <div class="flex flex-wrap items-cross-center g-1">
                                             @if (!$component->installed)
-                                                <sf-badge appearance="tonal" text="{{ __('larena-env::admin.software.overview.'.'not_installed') }}" data-env-software-absent></sf-badge>
+                                                <sf-badge appearance="tonal" text="{{ __('larena-env::admin.software.overview.not_installed') }}" data-env-software-absent></sf-badge>
                                             @elseif ($component->service !== null)
                                                 <sf-badge appearance="tonal" status="{{ $component->active === true ? 'success' : 'error' }}" @if ($component->active !== true) role="alert" @endif
-                                                    text="{{ $component->active === true ? __('larena-env::admin.software.overview.'.'running') : __('larena-env::admin.software.overview.'.'stopped') }}"></sf-badge>
+                                                    text="{{ $component->active === true ? __('larena-env::admin.software.overview.running') : __('larena-env::admin.software.overview.stopped') }}"></sf-badge>
                                             @else
-                                                <sf-badge appearance="tonal" status="success" text="{{ __('larena-env::admin.software.overview.'.'installed') }}"></sf-badge>
+                                                <sf-badge appearance="tonal" status="success" text="{{ __('larena-env::admin.software.overview.installed') }}"></sf-badge>
                                             @endif
                                             @if ($component->update)
-                                                <sf-badge appearance="tonal" status="warning" text="{{ __('larena-env::admin.software.overview.'.'update_waiting') }}" data-env-software-update></sf-badge>
+                                                <sf-badge appearance="tonal" status="warning" text="{{ __('larena-env::admin.software.overview.update_waiting') }}" data-env-software-update></sf-badge>
                                             @endif
                                         </div>
                                     </td>
-                                    <td data-label="{{ __('larena-env::admin.software.overview.'.'columns.version') }}" class="mono text-small" style="overflow-wrap: anywhere;">
+                                    <td data-label="{{ __('larena-env::admin.software.overview.columns.version') }}" class="text-small" style="min-width: 7rem;">
                                         @if ($component->installed)
-                                            <span title="{{ $component->version }}{{ $component->update && $component->candidate !== null ? ' → '.$component->candidate : '' }}">{{ \Larena\Env\Software\SoftwareScreen::shortVersion($component->version) }}@if ($component->update && $component->candidate !== null) → {{ \Larena\Env\Software\SoftwareScreen::shortVersion($component->candidate) }}@endif</span>
+                                            <span class="mono" style="white-space: nowrap;" title="{{ $component->version }}{{ $component->update && $component->candidate !== null ? ' → '.$component->candidate : '' }}">{{ \Larena\Env\Software\SoftwareScreen::shortVersion($component->version) }}@if ($component->update && $component->candidate !== null) → {{ \Larena\Env\Software\SoftwareScreen::shortVersion($component->candidate) }}@endif</span>
                                         @elseif ($component->candidate !== null)
                                             <span class="color-on-surface-variant" title="{{ $component->candidate }}">{{ __('larena-env::admin.software.overview.'.($component->installable ? 'available' : 'version'), ['version' => \Larena\Env\Software\SoftwareScreen::shortVersion($component->candidate)]) }}</span>
                                         @else
                                             —
                                         @endif
                                     </td>
-                                    <td data-label="{{ __('larena-env::admin.software.overview.'.'columns.actions') }}">
+                                    <td @if (($allows['install'] && $component->installable) || ($allows['update'] && $component->update)) data-label="{{ __('larena-env::admin.software.overview.columns.actions') }}" @endif>
                                         @if (($allows['install'] && $component->installable) || ($allows['update'] && $component->update))
-                                            <details data-env-software-actions="{{ $component->name }}">
+                                            <details data-env-software-actions="{{ $component->name }}" style="position: relative;">
                                                 <summary class="flex items-cross-center" style="min-height: 2.75rem; cursor: pointer; white-space: nowrap;"
-                                                    aria-label="{{ __('larena-env::admin.software.overview.'.'actions_of', ['name' => __('larena-env::admin.software.overview.components.'.$component->name)]) }}">{{ __('larena-env::admin.software.overview.'.'columns.actions') }}</summary>
-                                                <div class="flex flex-column g-1 p-y-1" style="min-width: min(18rem, 80vw);">
+                                                    aria-label="{{ __('larena-env::admin.software.overview.actions_of', ['name' => __('larena-env::admin.software.overview.components.'.$component->name)]) }}">{{ __('larena-env::admin.software.overview.columns.actions') }}</summary>
+                                                <div class="flex flex-column g-1 p-2" style="position: absolute; inset-inline-end: 0; top: 100%; z-index: 20; width: min(20rem, 80vw); background: var(--sf-surface-container-high, var(--sf-surface)); border: 1px solid var(--larena-line); border-radius: .75rem; box-shadow: 0 .5rem 1.5rem rgb(0 0 0 / .25);">
                                                     @if ($allows['install'] && $component->installable)
                                                         <form method="post" action="{{ route('larena.env.admin.software.plan', [], false) }}" class="flex flex-wrap items-cross-end g-1 m-0" data-env-software-op="install-{{ $component->name }}">
                                                             @csrf
                                                             <input type="hidden" name="op" value="install">
                                                             <input type="hidden" name="name" value="{{ $component->name }}">
                                                             @if ($component->name !== 'redis')
-                                                                <label class="flex flex-column text-small">{{ __('larena-env::admin.software.overview.'.'major') }}
+                                                                <label class="flex flex-column text-small">{{ __('larena-env::admin.software.overview.major') }}
                                                                     <input type="text" name="version" inputmode="numeric" pattern="[0-9]{2}" maxlength="2" size="3" style="min-height: 2.75rem; width: 4rem;"
                                                                         placeholder="{{ $component->name === 'node' ? '22' : '' }}" aria-describedby="env-software-major-{{ $component->name }}">
                                                                 </label>
                                                             @endif
-                                                            <button type="submit" class="larena-button larena-button-primary" style="min-height: 2.75rem;">{{ __('larena-env::admin.software.overview.'.'install') }}</button>
+                                                            <button type="submit" class="larena-button larena-button-primary" style="min-height: 2.75rem;">{{ __('larena-env::admin.software.overview.install') }}</button>
                                                             @if ($component->name !== 'redis')
-                                                                <span id="env-software-major-{{ $component->name }}" class="text-small color-on-surface-variant" style="flex-basis: 100%;">{{ __('larena-env::admin.software.overview.'.'major_hint_'.$component->name) }}</span>
+                                                                <span id="env-software-major-{{ $component->name }}" class="text-small color-on-surface-variant" style="flex-basis: 100%;">{{ __('larena-env::admin.software.overview.major_hint_'.$component->name) }}</span>
                                                             @endif
                                                         </form>
                                                     @endif
@@ -201,7 +201,7 @@
                                                             @csrf
                                                             <input type="hidden" name="op" value="update">
                                                             <input type="hidden" name="security_only" value="no">
-                                                            <button type="submit" class="larena-button" style="min-height: 2.75rem;">{{ __('larena-env::admin.software.overview.'.'update_with_system') }}</button>
+                                                            <button type="submit" class="larena-button" style="min-height: 2.75rem;">{{ __('larena-env::admin.software.overview.update_with_system') }}</button>
                                                         </form>
                                                     @endif
                                                 </div>
