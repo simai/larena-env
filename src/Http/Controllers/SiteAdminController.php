@@ -114,6 +114,8 @@ final readonly class SiteAdminController
         // What needs attention on this site (Panel plan 4.4): the server's own alerts where it keeps them, as the sites' list says it.
         $siteWarnings = $overview === null ? null : ($this->warningSource ?? new PanelWarningSource($this->extras))->ofSite($actor, $overview, $domain, PanelWarnings::now());
 
+        $this->breadcrumbs($request, $domain, $tab);
+
         return $this->views->make('larena-env::admin.site', [
             'domain' => $domain,
             'tab' => $tab,
@@ -355,6 +357,23 @@ final readonly class SiteAdminController
         return $input;
     }
 
+
+    /**
+     * The breadcrumbs reach the open site and its section, each step a link back (the panel's UX audit, HEAD-02):
+     * «Сайты › demo.test › Файлы». The admin draws them where it is installed.
+     */
+    private function breadcrumbs(Request $request, string $domain, string $tab): void
+    {
+        if (!defined(\Larena\Admin\View\AdminShellViewComposer::class.'::BREADCRUMB_TAIL')) {
+            return;
+        }
+        $site = ['label' => $domain, 'href' => route('larena.env.admin.site', ['domain' => $domain], false)];
+        $request->attributes->set(\Larena\Admin\View\AdminShellViewComposer::BREADCRUMB_TAIL, [
+            'parent_href' => route('larena.env.admin.index', [], false),
+            'items' => $tab === self::TABS[0] ? [$site]
+                : [$site, ['label' => (string) $this->translator->get('larena-env::admin.site.tabs.'.$tab)]],
+        ]);
+    }
 
     private function back(Request $request, string $domain, string $reason, string $tab = 'overview'): RedirectResponse
     {

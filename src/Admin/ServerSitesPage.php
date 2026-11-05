@@ -11,10 +11,11 @@ use Larena\Env\Server\SiteSummary;
 /** The sites as the admin's shared data view, with rows in place: the page holds them already. A row opens the site's own screen. */
 final class ServerSitesPage
 {
-    // What a person checks first (Panel plan 2.1): whether it works, what it runs, its certificate, its backups, whose the
-    // site is and the disk it takes (the last two from simai-env 1.27.0). The state and the kind are choices: a coloured
-    // mark in the cell and a filter of the list (owner-approved prototype, 2026-11-02).
-    private const array COLUMNS = ['domain', 'answers', 'profile', 'certificate', 'backups', 'owner', 'disk'];
+    // What a person checks first (Panel plan 2.1): whether it works, what it runs, its certificate, its backups and whose
+    // the site is. The state and the kind are choices: a coloured mark in the cell and a filter of the list
+    // (owner-approved prototype, 2026-11-02). The list fits a laptop without scrolling sideways (the panel's UX audit,
+    // LAY-04): the disk is on the site's own screen, and the owner shows only on a server where some site has one.
+    private const array COLUMNS = ['domain', 'answers', 'profile', 'certificate', 'backups', 'owner'];
 
     /** The kinds a site can be, as the new-site screen names them. */
     private const array PROFILES = ['generic', 'laravel', 'wordpress', 'bitrix', 'static', 'proxy', 'node', 'redirect'];
@@ -35,7 +36,7 @@ final class ServerSitesPage
                     array_keys(SiteState::COLORS), SiteState::COLORS)],
                 'profile' => ['type' => 'choice', 'options' => array_map(static fn (string $profile): array => ['value' => $profile, 'label' => $text('new_site.profiles.'.$profile)], self::PROFILES)],
                 default => [],
-            }, self::COLUMNS),
+            }, self::columns($overview)),
             total: count($overview->sites),
             pageId: 'page.admin.env-server',
             rows: array_map(static fn (SiteSummary $site): array => self::row($site, $text), $overview->sites),
@@ -44,6 +45,18 @@ final class ServerSitesPage
             countLabel: $text('sites.count'),
             tableViewLabel: $text('sites.table_view'),
         );
+    }
+
+    /** @return list<string> */
+    private static function columns(ServerOverview $overview): array
+    {
+        foreach ($overview->sites as $site) {
+            if ($site->owner !== null) {
+                return self::COLUMNS;
+            }
+        }
+
+        return array_values(array_diff(self::COLUMNS, ['owner']));
     }
 
     /**
@@ -64,7 +77,6 @@ final class ServerSitesPage
                 ? $text('sites.backups_last', ['time' => \Larena\Env\Server\Moment::human($site->lastBackup)]).($site->backupSchedule ? ' · '.$text('sites.backups_scheduled') : '')
                 : $text($site->backupSchedule ? 'sites.backups_scheduled' : 'sites.backups_unscheduled'),
             'answers' => SiteState::of($site->answersChecked, $site->answers),
-            'disk' => \Larena\Env\Server\Bytes::human($site->diskBytes),
         ];
     }
 }

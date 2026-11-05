@@ -74,8 +74,8 @@ env_assert(count($overview->withoutSites(['DEMO-php.test'])->sites) === 3 && cou
 env_assert($page->instanceId === 'env-server-sites' && $page->selectable === false && $page->rowWrites === [], 'The list writes nothing.');
 env_assert($page->rowLinks === ['view' => '/admin/server/sites/__ID__'], 'A row opens the site\'s own screen.');
 $byDomain = array_column($page->rows, null, 'id');
-env_assert(array_column($page->columns, 'key') === ['domain', 'answers', 'profile', 'certificate', 'backups', 'owner', 'disk'], 'Whether it works, what it runs, its certificate, its backups, whose and its disk.');
-env_assert($byDomain['demo-owned.test']['answers'] === 'works' && $byDomain['demo-owned.test']['disk'] === '1.0 MB', 'It works and takes 1 MB.');
+env_assert(array_column($page->columns, 'key') === ['domain', 'answers', 'profile', 'certificate', 'backups', 'owner'], 'Whether it works, what it runs, its certificate, its backups and whose.');
+env_assert($byDomain['demo-owned.test']['answers'] === 'works' && !isset($byDomain['demo-owned.test']['disk']), 'It works; the disk is on its own screen.');
 $columns = (string) json_encode(array_column($page->columns, null, 'key'), JSON_UNESCAPED_UNICODE);
 env_assert(str_contains($columns, '"answers":{"key":"answers","label":"'.$text('sites.answers').'","type":"choice","options":[{"value":"works"')
     && str_contains($columns, '{"value":"down","label":"'.$text('sites.state.down').'","color":"danger"}')
@@ -86,6 +86,7 @@ env_assert($byDomain['demo-owned.test']['backups'] !== $text('sites.backups_unsc
 env_assert($byDomain['demo-php.test']['backups'] === $text('sites.backups_last', ['time' => '01.01.2026 00:00 UTC']).' · '.$text('sites.backups_scheduled'), 'Its newest backup is named, and its daily one.');
 $soon = new ServerOverview('now', '1', 'ubuntu', '24.04', [], [], [new \Larena\Env\Server\SiteSummary('a.test', 'static', 'none', 'letsencrypt', null, null, null, 9, true)]);
 $soonRow = ServerSitesPage::of($soon, $text)->rows[0];
+env_assert(!in_array('owner', array_column(ServerSitesPage::of($soon, $text)->columns, 'key'), true), 'No owner column where no site has one.');
 env_assert($soonRow['certificate'] === $text('sites.certificate_ends', ['days' => '9']) && $soonRow['backups'] === $text('sites.backups_scheduled'), 'A certificate that ends soon is said so.');
 
 // The admin's real presenter draws the list, as the controller asks it to.

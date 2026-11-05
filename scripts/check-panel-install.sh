@@ -172,6 +172,11 @@ for path, expected in (("/admin/server/people", ["Users", "Site owners"]), ("/ad
     _, page = get(path)
     labels = crumbs(page)
     assert labels[1:] == expected, (path, labels)
+# A site's page reaches the site and its section (the panel's UX audit, HEAD-02).
+_, page = get("/admin/server/sites/demo-php.test?tab=files")
+assert crumbs(page)[-2:] == ["demo-php.test", "Files"], crumbs(page)
+_, page = get("/admin/server/sites/demo-php.test")
+assert crumbs(page)[-1] == "demo-php.test", crumbs(page)
 print("breadcrumbs:", "ok")
 
 # Peace of mind (Panel plan, stage 4): the check tells the administrator; the sites say what needs attention, the

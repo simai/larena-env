@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- The sites' list fits a laptop (the panel's UX audit, LAY-04): the disk is on the site's own screen, and the owner
+  column shows only on a server where some site has an owner. A site's breadcrumbs reach the site and its section,
+  «Сайты › demo.test › Файлы», each step a link back (HEAD-02).
 - «Программы» and «Обновление» are one place, «Программы и обновления» (the panel's UX audit): simai-env's and the
   panel's updates head it, then the system's updates and the server's software. `/admin/server/update` opens it with
   the last notice kept; a plan's «cancel» and the overview's hint lead there; the menu has no separate «Обновление».
