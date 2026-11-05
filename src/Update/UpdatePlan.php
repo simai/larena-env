@@ -98,6 +98,14 @@ final readonly class UpdatePlan
             $this->backup, $this->restarts, $this->checks, $this->rollback, $this->backupKind, $this->backupPath, $this->restartItems);
     }
 
+    /** Whether the published version is older than the one that runs (or, for a panel built here, than its build). */
+    public function availableIsOlder(?string $panelBuild): bool
+    {
+        $running = $this->current ?? ($this->target === 'panel' ? $panelBuild : null);
+
+        return $running !== null && $this->available !== null && version_compare($this->available, $running, '<');
+    }
+
     /**
      * The restarts as codes; none when any item is one this panel does not know (the texts are said instead).
      *

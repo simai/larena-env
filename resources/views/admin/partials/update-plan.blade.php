@@ -2,8 +2,8 @@
 <div data-env-update-facts="{{ $update->target }}">
     <dl class="m-0" style="display: block;" data-env-facts>
         <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-update-current><dt class="color-on-surface-variant">{{ __('larena-env::admin.update.current') }}</dt><dd class="m-0 min-w-0 text-end">{{ $update->current ?? ($update->target === 'panel' && ($panelBuild ?? null) !== null ? __('larena-env::admin.update.own_build', ['version' => $panelBuild]) : __('larena-env::admin.update.none')) }}</dd></div>
-        {{-- An older build than the panel already runs is no offer: the row is left out. --}}
-        @unless ($update->target === 'panel' && $update->current === null && ($panelBuild ?? null) !== null && $update->available !== null && version_compare($update->available, $panelBuild, '<='))
+        {{-- An older version than the one that runs (or, for a panel built here, its build) is no offer: the row is left out. --}}
+        @unless ($update->availableIsOlder($panelBuild ?? null))
         <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-update-available><dt class="color-on-surface-variant">{{ __('larena-env::admin.update.available') }}</dt><dd class="m-0 min-w-0 text-end">{{ $update->available ?? '—' }}</dd></div>
         @endunless
         @if ($update->backup !== null || $update->backupKind !== null)
