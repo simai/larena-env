@@ -369,6 +369,8 @@ env_assert(str_contains($codedFacts, htmlspecialchars($text('update.backup_kinds
 $panelOffer = static fn (string $available): \Larena\Env\Update\UpdatePlan => \Larena\Env\Update\UpdatePlan::fromData(['schema' => 'simai-update-plan/1', 'target' => 'panel', 'update_available' => true, 'available' => $available]) ?? throw new RuntimeException('plan');
 env_assert(!$panelOffer('0.3.0')->beside('0.3.1-dev')->updateAvailable && $panelOffer('0.4.0')->beside('0.3.1-dev')->updateAvailable
     && $panelOffer('0.3.0')->beside(null)->updateAvailable, 'An older panel is no update for the build that runs.');
+$older = static fn (string $available): string => $factory->make('larena-env::admin.partials.update-plan', ['update' => $panelOffer($available), 'panelBuild' => '0.3.1-dev'])->render();
+env_assert(!str_contains($older('0.3.0'), 'data-env-update-available') && str_contains($older('0.4.0'), 'data-env-update-available'), 'An older panel build is not shown as available.');
 env_assert(\Larena\Env\Update\UpdatePlan::fromData(['schema' => 'other', 'target' => 'env']) === null
     && \Larena\Env\Update\UpdatePlan::fromData(['schema' => 'simai-update-plan/1', 'target' => 'host']) === null, 'Only an update plan the panel knows.');
 $updating = (new PanelOperations($gateway))->planCommand(new PanelActor($user), 'self:update', ['target' => 'env']);
