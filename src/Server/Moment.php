@@ -47,4 +47,12 @@ final class Moment
 
         return $time->setTimezone(new DateTimeZone('UTC'))->format('d.m.Y H:i').' UTC';
     }
+
+    /** The same, shorter where a column is narrow: this year's date without its year, «05.11 03:30 UTC». */
+    public static function short(?string $value, ?int $year = null): string
+    {
+        $year ??= (int) gmdate('Y');
+
+        return (string) preg_replace('/\b(\d{2}\.\d{2})\.'.$year.'\b/', '$1', self::human($value));
+    }
 }

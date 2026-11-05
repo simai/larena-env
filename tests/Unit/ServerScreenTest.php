@@ -83,7 +83,8 @@ env_assert(str_contains($columns, '"answers":{"key":"answers","label":"'.$text('
 env_assert($byDomain['demo-owned.test']['owner'] === 'demo' && $byDomain['demo-php.test']['owner'] === '—', 'The owner, or none.');
 env_assert($byDomain['demo-php.test']['certificate'] === $text('sites.certificate_none'), 'Empty values in words.');
 env_assert($byDomain['demo-owned.test']['backups'] !== $text('sites.backups_unscheduled'), 'A site with its daily backup and none yet does not say it has none scheduled.');
-env_assert($byDomain['demo-php.test']['backups'] === $text('sites.backups_last', ['time' => '01.01.2026 00:00 UTC']).' · '.$text('sites.backups_scheduled'), 'Its newest backup is named, and its daily one.');
+env_assert($byDomain['demo-php.test']['backups'] === \Larena\Env\Server\Moment::short('2026-01-01T00:00:00Z').' · '.$text('sites.backups_scheduled'), 'Its newest backup is named, and its daily one.');
+env_assert(\Larena\Env\Server\Moment::short('2026-01-01T00:00:00Z', 2026) === '01.01 00:00 UTC' && \Larena\Env\Server\Moment::short('2025-01-01T00:00:00Z', 2026) === '01.01.2025 00:00 UTC', 'A backup this year without its year.');
 $soon = new ServerOverview('now', '1', 'ubuntu', '24.04', [], [], [new \Larena\Env\Server\SiteSummary('a.test', 'static', 'none', 'letsencrypt', null, null, null, 9, true)]);
 $soonRow = ServerSitesPage::of($soon, $text)->rows[0];
 env_assert(!in_array('owner', array_column(ServerSitesPage::of($soon, $text)->columns, 'key'), true), 'No owner column where no site has one.');

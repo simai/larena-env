@@ -74,7 +74,7 @@ final class ServerSitesPage
                 ? $text($site->certificateDaysLeft <= 14 ? 'sites.certificate_ends' : 'sites.certificate_left', ['days' => (string) $site->certificateDaysLeft])
                 : ($site->ssl === 'none' ? $text('sites.certificate_none') : $site->ssl),
             'backups' => $site->lastBackup !== null
-                ? $text('sites.backups_last', ['time' => \Larena\Env\Server\Moment::human($site->lastBackup)]).($site->backupSchedule ? ' · '.$text('sites.backups_scheduled') : '')
+                ? \Larena\Env\Server\Moment::short($site->lastBackup).($site->backupSchedule ? ' · '.$text('sites.backups_scheduled') : '')
                 : $text($site->backupSchedule ? 'sites.backups_scheduled' : 'sites.backups_unscheduled'),
             'answers' => SiteState::of($site->answersChecked, $site->answers),
         ];
