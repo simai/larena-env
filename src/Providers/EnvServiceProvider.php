@@ -125,6 +125,23 @@ final class EnvServiceProvider extends ServiceProvider
                     },
                 ));
             }
+            // The panel's warnings in the admin's alert bar on every admin page (owner decision 2026-11-05), where the admin has one.
+            if (class_exists(\Larena\Admin\Alerts\AdminAlerts::class)) {
+                $app = $this->app;
+                $this->callAfterResolving(\Larena\Admin\Alerts\AdminAlerts::class, static function (\Larena\Admin\Alerts\AdminAlerts $alerts) use ($app, $config): void {
+                    $cache = $app->bound('cache') ? $app->make('cache')->store() : null;
+                    $host = parse_url((string) $config->get('app.url'), PHP_URL_HOST);
+                    $alerts->register('larena/env', new \Larena\Env\Warnings\EnvAdminAlertSource(
+                        $app->make(PanelActorResolver::class),
+                        $app->make(ServerOverviewReader::class),
+                        $app->make(\Larena\Env\Server\SiteExtrasReader::class),
+                        $app->make(\Illuminate\Contracts\Translation\Translator::class),
+                        $app->bound(\Larena\Access\Runtime\AccessOperationAuthorizer::class) ? $app->make(\Larena\Access\Runtime\AccessOperationAuthorizer::class) : null,
+                        $cache === null ? null : static fn (string $key, int $ttl, \Closure $read): array => $cache->remember($key, $ttl, $read),
+                        is_string($host) ? [$host] : [],
+                    ));
+                });
+            }
             if ((bool) $config->get('larena-env.admin.enabled', true)) {
                 $this->app->make('router')
                     ->middleware((array) $config->get('larena-env.admin.middleware', []))

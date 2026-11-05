@@ -46,7 +46,7 @@ env_assert(array_intersect(['env.services', 'env.firewall', 'env.panel.access'],
     && !in_array('env.services', $rows(static fn (string $command): bool => $command === 'firewall:status'), true), 'Each row only where the server lists its command.');
 $names = array_keys($with['routes']);
 sort($names);
-env_assert($names === ['larena.env.admin.alerts.ack.plan', 'larena.env.admin.alerts.ack.run', 'larena.env.admin.alerts.channel',
+env_assert($names === ['larena.env.admin.alerts.ack.open', 'larena.env.admin.alerts.ack.plan', 'larena.env.admin.alerts.ack.run', 'larena.env.admin.alerts.channel',
     'larena.env.admin.alerts.channel.plan', 'larena.env.admin.alerts.channel.run', 'larena.env.admin.alerts.test.plan', 'larena.env.admin.alerts.test.run',
     'larena.env.admin.change.keep', 'larena.env.admin.dns', 'larena.env.admin.dns.certificates.plan', 'larena.env.admin.dns.certificates.run', 'larena.env.admin.dns.connection', 'larena.env.admin.dns.connection.addresses',
     'larena.env.admin.dns.connection.disconnect', 'larena.env.admin.dns.connection.save', 'larena.env.admin.dns.run', 'larena.env.admin.dns.zone',
@@ -94,7 +94,7 @@ foreach ($with['routes'] as $name => $route) {
     $serverToolChanges = $serverTools && (str_ends_with($name, '.plan') || str_ends_with($name, '.run') || $name === 'larena.env.admin.change.keep');
     // Changing a site is a right of its own: a new site, a site's action and stopping a job ask for it.
     $changes = !$people && !$dns && !$nginx && !$channel && !$update && !$serverTools && (str_ends_with($name, '.plan') || str_ends_with($name, '.run') || str_ends_with($name, '.cancel')
-        || in_array($name, ['larena.env.admin.sites.new', 'larena.env.admin.sites.port', 'larena.env.admin.sites.plan.draft'], true));
+        || in_array($name, ['larena.env.admin.sites.new', 'larena.env.admin.sites.port', 'larena.env.admin.sites.plan.draft', 'larena.env.admin.alerts.ack.open'], true));
     env_assert(in_array('access:env.sites.operate', $route['middleware'], true) === $changes, "{$name} asks for the wrong right.");
     // The server's overview and the people's spaces are the system level's; giving a space or acting for someone changes the server.
     $reads = in_array($name, ['larena.env.admin.overview', 'larena.env.admin.people', 'larena.env.admin.people.stop', 'larena.env.admin.alerts.channel',
@@ -121,6 +121,7 @@ env_assert($adminNames === [
     'src/Http/Controllers/ServerAdminController.php',
     'src/Navigation/ServerAdminNavigationContributor.php',
     'src/Providers/EnvServiceProvider.php',
+    'src/Warnings/EnvAdminAlertSource.php',
 ], 'Only the admin\'s own pieces may name the admin: '.implode(', ', $adminNames));
 
 $composer = json_decode((string) file_get_contents($root.'/composer.json'), true, 512, JSON_THROW_ON_ERROR);

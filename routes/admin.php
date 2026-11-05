@@ -92,6 +92,8 @@ $router->middleware(['access:env.server.operate'])->group(static function ($rout
 });
 $router->middleware(['access:env.sites.operate'])->group(static function ($router): void {
     $router->post('/alerts/ack/plan', [AlertsController::class, 'ackPlan'])->name('larena.env.admin.alerts.ack.plan');
+    // The same plan opened from the admin's alert bar, a link (owner decision 2026-11-05): it only shows what would be done.
+    $router->get('/alerts/ack/plan', [AlertsController::class, 'ackPlan'])->name('larena.env.admin.alerts.ack.open');
     $router->post('/alerts/ack/run', [AlertsController::class, 'ackRun'])->name('larena.env.admin.alerts.ack.run');
 });
 $router->get('/sites/{domain}', [SiteAdminController::class, 'show'])->where('domain', $domain)->name('larena.env.admin.site');

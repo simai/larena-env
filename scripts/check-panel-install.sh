@@ -186,6 +186,8 @@ assert "data-env-warnings-from-server" in listed and 'data-env-warning="backup_f
 assert 'data-env-alert-ack="9147a2749fff"' in listed and 'data-env-alert-state="open"' in listed, "an open alert can be acknowledged"
 _, acknowledge = post("/admin/server/alerts/ack/plan", {"_token": form_token(listed), "id": "9147a2749fff", "back": "/admin/server"})
 assert 'data-env-plan="self:alerts-ack"' in acknowledge and 'name="id" value="9147a2749fff"' in acknowledge, "acknowledging an alert is planned"
+_, opened = get("/admin/server/alerts/ack/plan?id=9147a2749fff&back=%2Fadmin%2Fserver")
+assert 'data-env-plan="self:alerts-ack"' in opened and 'name="id" value="9147a2749fff"' in opened, "the alert bar's link opens the same plan"
 _, overview = get("/admin/server/overview")
 assert "data-env-history-from-server" in overview and 'data-env-history-chart="day"' in overview and "data-env-warnings=" in overview, "the overview draws the server's own history"
 _, card = get("/admin/server/sites/demo-owned.test")

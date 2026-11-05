@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- The panel's warnings join the admin's alert bar on every admin page (owner decision 2026-11-05) through
+  `EnvAdminAlertSource`: the server's open alerts (or the panel's own reading) for the person's level, errors as
+  danger, each linking to where it is dealt with; an acknowledged alert stays out. The server is asked at most once
+  a minute per person. «Отметить, что видели» opens the existing plan by a link (`GET /admin/server/alerts/ack/plan`).
+
 - simai-env 1.42.0 (set 18): a PHP site's tab «PHP» shows its web server (nginx, or Apache behind nginx for
   `.htaccess`) and offers the switch through `site:apache`, planned first and run as a job; the server installs Apache
   the first time and puts everything back if the site stops answering. Administrator only; «Программы» lists Apache.

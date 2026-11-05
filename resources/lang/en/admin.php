@@ -264,6 +264,8 @@ return [
         'severity' => ['error' => 'Urgent', 'warning' => 'Attention'],
         'none' => 'Nothing needs attention.',
         'go' => 'Open',
+        'bar_site' => 'Site :site',
+        'bar_server' => 'Server',
         'disk_full' => 'The disk :mount is :percent% full, :free left. Free space before the sites stop.',
         'swap_full' => 'Swap is :percent% used: the server is short of memory and its sites slow down. See what takes it, or give the server more memory.',
         'certificate_ending' => 'The certificate of :domain ends in :days days.',
