@@ -456,8 +456,9 @@ print("user level menu roots:", own_roots)
 assert "sites" in own_roots and "users" not in own_roots and "server" not in own_roots and "journal" not in own_roots, own_roots
 status, _ = get("/admin/notifications")
 assert status == 200, ("the person's notification centre opens", status)
-assert 'data-env-warning-site="demo-php.test"' not in sites and 'data-env-warning="disk_full"' not in sites, "the person is warned about their own sites only"
-assert 'data-env-alert="9147a2749fff"' in sites and len(re.findall(r'data-env-alert="', sites)) == 1, "the person sees their own site's alert, and only that"
+# The person's alert bar: their own site's alert, and only that (no other site's, no disk of the whole server).
+own_ids = re.findall(r'"id":"(env:[^"]+)"', markup.unescape(sites))
+assert own_ids == ["env:alert:9147a2749fff"], ("the person sees their own site's alert, and only that", own_ids)
 _, acknowledge = post("/admin/server/alerts/ack/plan", {"_token": form_token(sites), "id": "9147a2749fff", "back": "/admin/server"})
 assert 'data-env-plan="self:alerts-ack"' in acknowledge, "the person acknowledges their own site's alert"
 try:
