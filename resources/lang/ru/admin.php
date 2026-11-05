@@ -749,6 +749,8 @@ return [
         'available' => 'Доступна',
         'none' => 'не установлена',
         'backup' => 'Копия перед обновлением',
+        'backup_kinds' => ['env_scripts' => 'Скрипты simai-env', 'panel_data' => 'Данные панели'],
+        'restart_kinds' => ['php_fpm_pool' => 'PHP сайта :target', 'queue_workers' => 'Фоновые задачи :target', 'service' => 'Служба :target'],
         'restarts' => 'Что перезапустится',
         'no_restarts' => 'ничего',
         'checks' => 'Сайты, которые проверят до и после',

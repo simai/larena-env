@@ -16,6 +16,9 @@
   the rest under «Подробнее» (`Admin\Explanation`, `partials/explanation`). A page's only block no longer repeats the
   page title («Службы сервера», «Версии PHP»: for screen readers only). PHP extension names wrap instead of being cut,
   in two columns.
+- simai-env 1.42.1: an update's plan names its backup and restarts as codes (`backup_item`, `restart_items`); the panel
+  says them in its own words («Данные панели (…)», «PHP сайта panel.localhost, Фоновые задачи …») and keeps the server's
+  text for older versions or an unknown code.
 
 - A site's sections in plain words (the panel's UX audit, 2026-11-05): DNS joins «Домены и HTTPS» and the nginx
   directives join «PHP и веб-сервер» (old `?tab=dns` and `?tab=nginx` links open there); «Выпуски» shows only for a

@@ -356,6 +356,15 @@ env_assert(\Larena\Env\Update\UpdatePlan::fromData(['schema' => 'simai-update-pl
     'notes_url' => 'http://example.com/notes'])?->blocked === 'unknown', 'A reason the panel does not know still blocks.');
 $odd = \Larena\Env\Update\UpdatePlan::fromData(['schema' => 'simai-update-plan/1', 'target' => 'env', 'update_available' => true, 'notes_url' => 'http://example.com/notes']);
 env_assert($odd?->notesUrl === null && $odd->updateAvailable, 'The notes\' address is a link only over https.');
+// simai-env 1.42.1 names the backup and the restarts as codes: said in the panel's words; an unknown code falls back to the text.
+$coded = \Larena\Env\Update\UpdatePlan::fromData(['schema' => 'simai-update-plan/1', 'target' => 'panel', 'update_available' => true, 'available' => '0.4.0',
+    'backup' => 'panel data (backup data)', 'backup_item' => ['kind' => 'panel_data', 'path' => '/var/backups/panel'], 'restarts' => ['PHP-FPM pool and queue workers of panel.test'],
+    'restart_items' => [['kind' => 'php_fpm_pool', 'target' => 'panel.test'], ['kind' => 'queue_workers', 'target' => 'panel.test']]]);
+env_assert($coded?->backupKind === 'panel_data' && $coded->backupPath === '/var/backups/panel' && count($coded->restartItems) === 2
+    && \Larena\Env\Update\UpdatePlan::fromData(['schema' => 'simai-update-plan/1', 'target' => 'env', 'restart_items' => [['kind' => 'reboot', 'target' => 'x']]])?->restartItems === [], 'The codes, and an unknown one dropped.');
+$codedFacts = $factory->make('larena-env::admin.partials.update-plan', ['update' => $coded])->render();
+env_assert(str_contains($codedFacts, htmlspecialchars($text('update.backup_kinds.panel_data').' (/var/backups/panel)', ENT_QUOTES)) && !str_contains($codedFacts, 'panel data (backup data)')
+    && !str_contains($codedFacts, 'PHP-FPM pool'), 'The backup and the restarts in the panel\'s words: '.$codedFacts);
 // A panel built here (panel-build.json 0.3.1-dev) is not offered an older 0.3.0 as an update; a newer one still is.
 $panelOffer = static fn (string $available): \Larena\Env\Update\UpdatePlan => \Larena\Env\Update\UpdatePlan::fromData(['schema' => 'simai-update-plan/1', 'target' => 'panel', 'update_available' => true, 'available' => $available]) ?? throw new RuntimeException('plan');
 env_assert(!$panelOffer('0.3.0')->beside('0.3.1-dev')->updateAvailable && $panelOffer('0.4.0')->beside('0.3.1-dev')->updateAvailable

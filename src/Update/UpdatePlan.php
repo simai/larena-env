@@ -14,6 +14,8 @@ final readonly class UpdatePlan
     public const string SCHEMA = 'simai-update-plan/1';
     public const array TARGETS = ['env', 'panel'];
     public const array BLOCKED = ['not_installed', 'placeholder', 'remote_unavailable'];
+    public const array BACKUP_KINDS = ['env_scripts', 'panel_data'];
+    public const array RESTART_KINDS = ['php_fpm_pool', 'queue_workers', 'service'];
 
     /**
      * @param 'env'|'panel' $target
@@ -33,6 +35,11 @@ final readonly class UpdatePlan
         public array $restarts,
         public array $checks,
         public ?string $rollback,
+        // simai-env 1.42.1: the same facts as codes, said in the panel's words; the texts stay for older servers.
+        public ?string $backupKind = null,
+        public ?string $backupPath = null,
+        /** @var list<array{kind: string, target: string}> */
+        public array $restartItems = [],
     ) {
     }
 
@@ -70,6 +77,9 @@ final readonly class UpdatePlan
             restarts: $strings('restarts'),
             checks: $strings('checks'),
             rollback: $text('rollback'),
+            backupKind: is_array($data['backup_item'] ?? null) && in_array($data['backup_item']['kind'] ?? null, self::BACKUP_KINDS, true) ? $data['backup_item']['kind'] : null,
+            backupPath: is_array($data['backup_item'] ?? null) && is_string($data['backup_item']['path'] ?? null) && $data['backup_item']['path'] !== '' ? $data['backup_item']['path'] : null,
+            restartItems: self::restartItems($data['restart_items'] ?? null),
         );
     }
 
@@ -85,6 +95,27 @@ final readonly class UpdatePlan
         }
 
         return new self($this->target, $this->current, $this->available, false, $this->blocked, $this->notes, $this->notesUrl,
-            $this->backup, $this->restarts, $this->checks, $this->rollback);
+            $this->backup, $this->restarts, $this->checks, $this->rollback, $this->backupKind, $this->backupPath, $this->restartItems);
+    }
+
+    /**
+     * The restarts as codes; none when any item is one this panel does not know (the texts are said instead).
+     *
+     * @return list<array{kind: string, target: string}>
+     */
+    private static function restartItems(mixed $items): array
+    {
+        if (!is_array($items)) {
+            return [];
+        }
+        $known = [];
+        foreach ($items as $item) {
+            if (!is_array($item) || !in_array($item['kind'] ?? null, self::RESTART_KINDS, true) || !is_string($item['target'] ?? null) || $item['target'] === '') {
+                return [];
+            }
+            $known[] = ['kind' => $item['kind'], 'target' => $item['target']];
+        }
+
+        return $known;
     }
 }

@@ -749,6 +749,8 @@ return [
         'available' => 'Available',
         'none' => 'not installed',
         'backup' => 'Copy taken first',
+        'backup_kinds' => ['env_scripts' => 'simai-env scripts', 'panel_data' => 'The panel\'s data'],
+        'restart_kinds' => ['php_fpm_pool' => 'PHP of :target', 'queue_workers' => 'Background jobs of :target', 'service' => 'Service :target'],
         'restarts' => 'What restarts',
         'no_restarts' => 'nothing',
         'checks' => 'Sites checked before and after',
