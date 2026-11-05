@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "628c4b3abbb7cf8209784e33b408fe6b",
+    "content-hash": "56a054cb29ea2070f2869fe1c9bba618",
     "packages": [
         {
             "name": "brick/math",
@@ -1573,12 +1573,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:simai/larena-admin.git",
-                "reference": "b30fb81a60f65e8114949d27dd2b3033d9698016"
+                "reference": "27f33cb7f33bb0d6e2b798faf74c0654b9155c05"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-admin/zipball/b30fb81a60f65e8114949d27dd2b3033d9698016",
-                "reference": "b30fb81a60f65e8114949d27dd2b3033d9698016",
+                "url": "https://api.github.com/repos/simai/larena-admin/zipball/27f33cb7f33bb0d6e2b798faf74c0654b9155c05",
+                "reference": "27f33cb7f33bb0d6e2b798faf74c0654b9155c05",
                 "shasum": ""
             },
             "require": {
@@ -1650,6 +1650,7 @@
             "scripts": {
                 "test": [
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/AdminAlertsTest.php",
+                    "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/AdminPageTitleTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/AdminObjectMenusTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/AdminAuthDiagnosticsSurfaceTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/AdminSearchTest.php",
@@ -1796,7 +1797,7 @@
                 }
             ],
             "description": "Larena Admin: Object-based, permission-aware administration platform for package contributions, screens, actions and diagnostics.",
-            "time": "2026-11-05T17:46:39+00:00"
+            "time": "2026-11-05T19:25:42+00:00"
         },
         {
             "name": "larena/audit",
@@ -2389,7 +2390,10 @@
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/DnsTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/FilesTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/ServerToolsTest.php",
-                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/NewSitePortTest.php"
+                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/NewSitePortTest.php",
+                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/EnvAlertSourceTest.php",
+                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/SiteObjectMenuTest.php",
+                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/CachingGatewayTest.php"
                 ],
                 "test:unit": [
                     "@test"
@@ -2902,12 +2906,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/simai/larena-ui.git",
-                "reference": "57e4af354907780a88ca60169ff30a103d7f3c61"
+                "reference": "35617b56140c6d04251233d67fbde6c09e092f72"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-ui/zipball/57e4af354907780a88ca60169ff30a103d7f3c61",
-                "reference": "57e4af354907780a88ca60169ff30a103d7f3c61",
+                "url": "https://api.github.com/repos/simai/larena-ui/zipball/35617b56140c6d04251233d67fbde6c09e092f72",
+                "reference": "35617b56140c6d04251233d67fbde6c09e092f72",
                 "shasum": ""
             },
             "require": {
@@ -3047,10 +3051,10 @@
             ],
             "description": "Larena UI: Universal UI/frontend package for Larena smart components, backend-first rendering, hydration, design packs, UI asset graph, component registry, playground and frontend behavior contracts.",
             "support": {
-                "source": "https://github.com/simai/larena-ui/tree/larena-df23a325418a",
+                "source": "https://github.com/simai/larena-ui/tree/main",
                 "issues": "https://github.com/simai/larena-ui/issues"
             },
-            "time": "2026-11-05T17:13:09+00:00"
+            "time": "2026-11-05T18:38:40+00:00"
         },
         {
             "name": "league/commonmark",

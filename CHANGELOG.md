@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- The panel assembly takes Root a3c85ee1's pins: admin 27f33cb7 (tab title, menu options) and ui 35617b56 (sf-admin-menu 1.7.1).
+
 - «Программы и обновления» is one table of the server's programs, grouped by what they do (web servers, databases,
   cache, languages, certificates): each with what it is for, its state, its version and a menu of what may be done to
   it; PHP is a row that opens its screen. The updates of the panel, simai-env and the system are said in one line and
