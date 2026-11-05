@@ -96,9 +96,9 @@
         {{-- The programs as one table, grouped by what they do (the panel's UX audit, after FastPanel's list): the name and
              what it is for, its state, its version, and a menu of what may be done to it. PHP is a row here too and
              opens its own screen. --}}
-        <section class="larena-panel" style="margin: 0;" data-env-software="on" aria-labelledby="env-software-components">
+        <section class="larena-panel" style="margin: 0; overflow: visible;" data-env-software="on" aria-labelledby="env-software-components">
             <h2 id="env-software-components" class="sr-only">{{ __('larena-env::admin.software.overview.components_title') }}</h2>
-            <div class="larena-table-scroll">
+            {{-- No scroll box: the table fits (a phone stacks it) and a row's menu opens over the rows below. --}}
                 <table class="larena-table larena-table-stack" data-env-software-table>
                     <thead>
                         <tr>
@@ -178,7 +178,7 @@
                                             <details data-env-software-actions="{{ $component->name }}" style="position: relative;">
                                                 <summary class="flex items-cross-center" style="min-height: 2.75rem; cursor: pointer; white-space: nowrap;"
                                                     aria-label="{{ __('larena-env::admin.software.overview.actions_of', ['name' => __('larena-env::admin.software.overview.components.'.$component->name)]) }}">{{ __('larena-env::admin.software.overview.columns.actions') }}</summary>
-                                                <div class="flex flex-column g-1 p-2" style="position: absolute; inset-inline-end: 0; top: 100%; z-index: 20; width: min(20rem, 80vw); background: var(--sf-surface-container-high, var(--sf-surface)); border: 1px solid var(--larena-line); border-radius: .75rem; box-shadow: 0 .5rem 1.5rem rgb(0 0 0 / .25);">
+                                                <div class="flex flex-column g-1 p-2" style="position: absolute; inset-inline-end: 0; top: 100%; z-index: 20; width: min(20rem, 80vw); background: var(--larena-panel); border: 1px solid var(--larena-line); border-radius: .75rem; box-shadow: 0 .5rem 1.5rem rgb(0 0 0 / .25);">
                                                     @if ($allows['install'] && $component->installable)
                                                         <form method="post" action="{{ route('larena.env.admin.software.plan', [], false) }}" class="flex flex-wrap items-cross-end g-1 m-0" data-env-software-op="install-{{ $component->name }}">
                                                             @csrf
@@ -213,7 +213,6 @@
                         @endforeach
                     </tbody>
                 </table>
-            </div>
         </section>
     @endif
 @endsection
