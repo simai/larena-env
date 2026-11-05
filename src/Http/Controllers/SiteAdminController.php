@@ -67,6 +67,19 @@ final readonly class SiteAdminController
     }
 
     /** The section a `?tab=` names: a part shown inside another section opens that section. */
+    /**
+     * The sections this site shows: those the server can read, and releases only where the site is deployed by them (an
+     * empty section is not shown).
+     *
+     * @return list<string>
+     */
+    public static function sectionsOf(?\Larena\Env\Server\SiteDetails $site, PanelCapabilities $capabilities): array
+    {
+        return array_values(array_filter(self::TABS,
+            static fn (string $name): bool => (!isset(self::LISTED_TABS[$name]) || $capabilities->allows(self::LISTED_TABS[$name]))
+                && ($name !== 'releases' || $site?->release !== null || $site?->previousRelease !== null)));
+    }
+
     public static function section(mixed $asked): string
     {
         $asked = is_string($asked) ? $asked : '';
@@ -88,10 +101,7 @@ final readonly class SiteAdminController
         // What this server's gateway allows, and its PHP versions: the card offers only what will not be refused.
         $overview = $site === null ? null : $this->overviews->read($actor)->overview;
         $capabilities = $overview->capabilities ?? PanelCapabilities::none();
-        $tabs = array_values(array_filter(self::TABS,
-            static fn (string $name): bool => (!isset(self::LISTED_TABS[$name]) || $capabilities->allows(self::LISTED_TABS[$name]))
-                // Releases only where the site is deployed by them: an empty section is not shown.
-                && ($name !== 'releases' || $site?->release !== null || $site?->previousRelease !== null)));
+        $tabs = self::sectionsOf($site, $capabilities);
         $asked = self::section($request->query('tab'));
         $tab = in_array($asked, $tabs, true) ? $asked : self::TABS[0];
         $kind = in_array($request->query('log'), self::LOG_KINDS, true) ? (string) $request->query('log') : 'access';
@@ -111,8 +121,8 @@ final readonly class SiteAdminController
         $ask = static fn (string $command, string $onTab): bool => $site !== null && $tab === $onTab && $capabilities->allows($command);
         $sftpAccounts = $ask('access:list', 'access') ? $this->extras->sftpAccounts($actor, $domain) : null;
         $nginx = $ask('site:nginx-custom-show', 'php') && $actor->owner === null ? $this->files?->nginxCustom($actor, $domain) : null;
-        // What needs attention on this site (Panel plan 4.4): the server's own alerts where it keeps them, as the sites' list says it.
-        $siteWarnings = $overview === null ? null : ($this->warningSource ?? new PanelWarningSource($this->extras))->ofSite($actor, $overview, $domain, PanelWarnings::now());
+        // A failed or missing backup said where backups are; the rest of what needs attention is in the admin's alert bar.
+        $siteWarnings = $overview === null || $tab !== 'backups' ? null : ($this->warningSource ?? new PanelWarningSource($this->extras))->ofSite($actor, $overview, $domain, PanelWarnings::now());
 
         $this->breadcrumbs($request, $domain, $tab);
 
@@ -144,8 +154,6 @@ final readonly class SiteAdminController
                 array_map(static fn (SiteOperation $operation): array => $operation->accountChoices($sftpAccounts ?? []), $operations)),
             // What needs attention on this site (Panel plan 4.4), as the sites' list says it.
             'warnings' => $siteWarnings['warnings'] ?? null,
-            'fromServer' => $siteWarnings['fromServer'] ?? false,
-            'warningsBack' => $request->getRequestUri(),
             'canAcknowledge' => $capabilities->allows('self:alerts-ack') && $this->canOperate($request),
             'capabilities' => $capabilities,
             // Whether a certificate may be checked through DNS: the server keeps a Cloudflare token (simai-env 1.36.0).

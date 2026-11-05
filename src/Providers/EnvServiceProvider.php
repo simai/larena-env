@@ -148,6 +148,20 @@ final class EnvServiceProvider extends ServiceProvider
                     ));
                 });
             }
+            // A site's sections in the menu's second column (port 1.1.0 `context`), where the admin draws one.
+            if (class_exists(\Larena\Admin\Navigation\AdminObjectMenus::class)) {
+                $app = $this->app;
+                $this->callAfterResolving(\Larena\Admin\Navigation\AdminObjectMenus::class, static function (\Larena\Admin\Navigation\AdminObjectMenus $menus) use ($app): void {
+                    $menus->register('larena/env', new \Larena\Env\Admin\SiteObjectMenu(
+                        $app->make(PanelActorResolver::class),
+                        $app->make(\Larena\Env\Server\SiteDetailsReader::class),
+                        $app->make(ServerOverviewReader::class),
+                        new \Larena\Env\Warnings\PanelWarningSource($app->make(\Larena\Env\Server\SiteExtrasReader::class)),
+                        $app->make(\Illuminate\Contracts\Translation\Translator::class),
+                        static fn (string $name, array $parameters): string => route($name, $parameters, false),
+                    ));
+                });
+            }
             if ((bool) $config->get('larena-env.admin.enabled', true)) {
                 $this->app->make('router')
                     ->middleware((array) $config->get('larena-env.admin.middleware', []))

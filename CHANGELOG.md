@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- At most two menus (the panel's UX audit, NAV-01): a site's sections are its menu in the menu's second column
+  (`SiteObjectMenu`, the admin's navigation port 1.1.0 `context`): the site's name, what it runs and whether it works,
+  «← Все сайты», its sections with a mark where something needs attention, the open one marked. The site's page has no
+  tabs of its own. What needs attention is in the admin's alert bar on every page (owner decision 2026-11-05): the
+  overview, the sites and a site's page draw no «Требует внимания» block, and the screens no longer ask the server for
+  it; a failed backup is still said on the site's backups.
 - A plan speaks the panel's words (the panel's UX audit, COPY-02): «Что будет сделано» names the site and each value
   as the form named it, yes and no in words; the server's description, command, effects and lock are under «Подробнее».
 - A site's actions are buttons (the panel's UX audit, LAY-03): «Действия» is a row of them, and each opens its fields

@@ -23,7 +23,6 @@
     @elseif ($section === 'overview')
         {{-- State first, details after (owner-approved prototype, 2026-11-02): what needs a person, a waiting update, the
              measures as tiles, then the server and its services, then the load over time. --}}
-        @include('larena-env::admin.partials.warnings')
         @if (($updates ?? []) !== [])
             <section class="larena-panel flex flex-wrap items-cross-center g-2 p-2 m-bottom-2" data-env-update-hint role="note" aria-labelledby="env-update-hint">
                 <sf-badge status="info" appearance="tonal" text="{{ __('larena-env::admin.update.hint_title') }}" id="env-update-hint"></sf-badge>
@@ -79,7 +78,6 @@
         </div>
         @include('larena-env::admin.partials.history')
     @else
-        @include('larena-env::admin.partials.warnings')
         @include('larena-admin::dataview.page', ['dataview' => $sitesView, 'sectionId' => 'env-server-sites', 'owner' => 'larena/env',
             'ariaLabel' => __('larena-env::admin.sites.title'), 'queryUrl' => route('larena.env.admin.index', [], false),
             'matchedCount' => count($overview->sites), 'source' => 'env_server_overview'])

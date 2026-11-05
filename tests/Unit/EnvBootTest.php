@@ -118,6 +118,7 @@ sort($adminNames);
 env_assert($adminNames === [
     'src/Admin/NewSitePropertyViewPort.php',
     'src/Admin/ServerSitesPage.php',
+    'src/Admin/SiteObjectMenu.php',
     'src/Http/Controllers/ServerAdminController.php',
     'src/Http/Controllers/SiteAdminController.php',
     'src/Navigation/ServerAdminNavigationContributor.php',

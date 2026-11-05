@@ -34,32 +34,9 @@
             <p><a href="{{ route('larena.env.admin.index', [], false) }}">{{ __('larena-env::admin.site.back') }}</a></p>
         </section>
     @else
-        @include('larena-env::admin.partials.warnings', ['linkSites' => false])
-        {{-- The card as an entity page: its sections in groups on the side, a strip above the content on a phone. A section
-             with something to attend to carries a mark. Utilities until the Framework's section navigation ships. --}}
-        <div class="grid g-2 grid-col-1 lg:grid-col-4" style="align-items: start;">
-            <nav class="larena-panel p-1 min-w-0 lg:sticky" style="top: 1rem;" aria-label="{{ __('larena-env::admin.site.tabs_label') }}" data-env-tabs>
-                <div class="flex flex-wrap lg:flex-col g-1">
-                    @foreach (\Larena\Env\Admin\SiteCardSections::of($tabs, $warnings ?? null) as $navGroup)
-                        @if ($navGroup['group'] !== 'site')
-                            <span class="hidden lg:block p-x-1 p-top-1 text-1/2 color-on-surface-variant" data-env-tab-group="{{ $navGroup['group'] }}">{{ __('larena-env::admin.site.groups.'.$navGroup['group']) }}</span>
-                        @endif
-                        @foreach ($navGroup['items'] as $item)
-                            <a href="{{ route('larena.env.admin.site', ['domain' => $domain], false) }}?tab={{ $item['name'] }}" data-env-tab="{{ $item['name'] }}" @if ($item['name'] === $tab) aria-current="page" @endif
-                                class="flex items-cross-center content-main-between g-1 p-x-1 radius-1 wrap-none {{ $item['name'] === $tab ? 'bg-primary-container color-on-primary-container' : 'color-on-surface' }}"
-                                style="min-height: 2.5rem; text-decoration: none; flex: 0 0 auto;">
-                                <span>{{ __('larena-env::admin.site.tabs.'.$item['name']) }}</span>
-                                @if ($item['attention'] !== null)
-                                    <span class="{{ $item['attention'] === 'error' ? 'bg-error' : 'bg-warning' }}" style="width: .5rem; height: .5rem; border-radius: 50%; flex: none;" data-env-tab-attention="{{ $item['attention'] }}"
-                                        role="img" aria-label="{{ __('larena-env::admin.warnings.severity.'.$item['attention']) }}"></span>
-                                @endif
-                            </a>
-                        @endforeach
-                    @endforeach
-                </div>
-            </nav>
-            {{-- The admin spaces panels that follow each other; a gap here would add to it. --}}
-            <div class="lg:col-span-3 min-w-0">
+        {{-- The site's sections are its menu in the menu's second column (owner decision 2026-11-05: never more than two
+             menus); what needs attention is in the admin's alert bar. The page carries only the open section. --}}
+        <div class="min-w-0" data-env-section="{{ $tab }}" data-env-sections="{{ implode(' ', $tabs) }}">
         @if ($tab === 'overview')
             <section class="larena-panel larena-panel-padded" data-env-state="ok" aria-labelledby="env-site-facts">
                 <h2 id="env-site-facts" class="text-2">{{ __('larena-env::admin.site.facts') }}</h2>
@@ -443,7 +420,6 @@
                 @endforeach
             </section>
         @endif
-            </div>
         </div>
     @endif
 @endsection

@@ -119,10 +119,10 @@ env_assert(str_contains($screen(['site' => $site]), 'text="PHP 8.3"'), 'A PHP si
 $failedBackup = $screen(['site' => $site, 'tab' => 'backups', 'warnings' => [new \Larena\Env\Warnings\PanelWarning('backup_failed', 'warning', 'demo-php.test', ['domain' => 'demo-php.test']),
     new \Larena\Env\Warnings\PanelWarning('backup_failed', 'warning', 'other.test', ['domain' => 'other.test'])]]);
 env_assert(substr_count($failedBackup, 'data-env-backup-warning="backup_failed"') === 1, 'The backups tab says its own site\'s failed backup: '.$failedBackup);
-$warned = $screen(['site' => $site, 'warnings' => [new \Larena\Env\Warnings\PanelWarning('backup_stale', 'warning', 'demo-php.test', ['domain' => 'demo-php.test', 'time' => '2026-01-01'])]]);
-env_assert(str_contains($warned, 'data-env-warning="backup_stale"') && str_contains($warned, 'href="?tab=backups"')
-    && strpos($warned, 'data-env-warnings') < strpos($warned, 'data-env-tabs'), 'The card says what needs attention above its tabs, with the tab to deal with it.');
-env_assert(substr_count($ok, 'data-env-tab=') === count(\Larena\Env\Http\Controllers\SiteAdminController::TABS) && preg_match('/data-env-tab="overview"\s+aria-current="page"/', $ok) === 1, 'Every tab, the current one marked.');
+// The site's sections are its menu in the menu's second column (owner decision 2026-11-05): the page has no tabs of its
+// own, only the open section, and what needs attention is in the admin's alert bar.
+env_assert(!str_contains($ok, 'data-env-tabs') && !str_contains($ok, 'data-env-tab=') && !str_contains($ok, 'data-env-warnings')
+    && str_contains($ok, 'data-env-section="overview"') && str_contains($ok, 'data-env-sections="overview '), 'No in-page tabs, the open section marked.');
 
 // Backups have their tab: the list, «Back up now», and restoring and checking only where the server has them.
 $older = \Larena\Env\Gateway\PanelCapabilities::fromHostDescription(['simai_env' => ['version' => '1.27.0']]);
@@ -210,7 +210,7 @@ env_assert(str_contains($backups, 'name="_token"') && substr_count($backups, '<f
 
 $refused = $screen(['refused' => true, 'reasonText' => 'Another owner.']);
 env_assert(str_contains($refused, 'data-env-state="refused"') && str_contains($refused, 'Another owner.') && !str_contains($refused, 'data-env-operations')
-    && !str_contains($refused, 'data-env-tabs'), 'A refusal shows its reason and offers nothing.');
+    && !str_contains($refused, 'data-env-section='), 'A refusal shows its reason and offers nothing.');
 
 // Acting for a person: every screen says so and offers to stop.
 $acting = $screen(['site' => $site, 'acting' => ['label' => 'Anna', 'owner' => 'demo']]);
@@ -341,7 +341,7 @@ env_assert(str_contains($nginxIdle, 'name="op" value="nginx-save"') && str_conta
 $noNginx = $screen(['site' => $site, 'tab' => 'php', 'wholeServer' => true, 'nginxSupported' => false, 'nginx' => null, 'nginxProblem' => null, 'nginxAllows' => ['save' => false, 'keep' => false]]);
 env_assert(str_contains($noNginx, 'data-env-nginx-unsupported') && !str_contains($noNginx, 'data-env-nginx-op'), 'No directives command: said, nothing offered.');
 
-foreach (['site', 'plan', 'job', 'new-site', 'people', 'partials/notes', 'partials/warnings', 'partials/history', 'partials/files', 'partials/nginx', 'dns/connection', 'dns/index', 'dns/zone', 'dns/record-form', 'dns/plan', 'update', 'partials/update-plan', 'services', 'firewall', 'panel-access', 'partials/cron', 'partials/timed-change'] as $view) {
+foreach (['site', 'plan', 'job', 'new-site', 'people', 'partials/notes', 'partials/history', 'partials/files', 'partials/nginx', 'dns/connection', 'dns/index', 'dns/zone', 'dns/record-form', 'dns/plan', 'update', 'partials/update-plan', 'services', 'firewall', 'panel-access', 'partials/cron', 'partials/timed-change'] as $view) {
     $source = (string) file_get_contents(dirname(__DIR__, 2).'/resources/views/admin/'.$view.'.blade.php');
     env_assert(!str_contains($source, '{!!') && preg_match('/<style\b|<script\b|@php\b/i', $source) !== 1, "The {$view} view prints nothing raw and holds no script.");
 }

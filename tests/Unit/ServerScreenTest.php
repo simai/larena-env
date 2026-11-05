@@ -135,29 +135,12 @@ $metrics = \Larena\Env\Server\ServerMetrics::fromData(['cpu' => ['cores' => 8, '
     'disk' => [['mount' => '/', 'total_bytes' => 100_000_000_000, 'used_bytes' => 98_000_000_000], ['mount' => 'bad']], 'checked_at' => '2026-11-01T10:00:00Z']);
 env_assert($metrics->cores === 8 && $metrics->load === [0.5, 0.4, 0.3] && count($metrics->disks) === 1, 'The load reads, a malformed disk is left out.');
 $warnings = \Larena\Env\Warnings\PanelWarnings::of($overview, $metrics, new DateTimeImmutable('2026-11-01T12:00:00Z'));
+$kinds = array_map(static fn ($warning): string => $warning->kind.':'.($warning->domain ?? ''), $warnings);
+env_assert(in_array('disk_full:', $kinds, true) && $warnings[0]->kind === 'disk_full' && $warnings[0]->severity === 'error' && in_array('backup_stale:demo-php.test', $kinds, true), 'A disk at 98% is said first, as an error; an old backup is said too.');
+// What needs attention is in the admin's alert bar on every page (owner decision 2026-11-05): the screens draw no block of it.
 $loaded = $state(['section' => 'overview', 'overview' => $overview, 'metrics' => $metrics, 'warnings' => $warnings]);
-env_assert(str_contains($loaded, 'data-env-metrics') && str_contains($loaded, 'data-env-warning="disk_full"') && str_contains($loaded, '98%')
-    && strpos($loaded, 'data-env-warnings') < strpos($loaded, 'data-env-metrics') && str_contains($loaded, 'role="alert"'), 'A disk at 98% is said first, as an error.');
-env_assert(str_contains($loaded, 'data-env-warning-site="demo-php.test"') && str_contains($loaded, $text('warnings.backup_stale', ['domain' => 'demo-php.test', 'time' => '01.01.2026 00:00 UTC'])), 'An old backup is said in words.');
-$listed = $state(['overview' => $overview, 'sitesView' => ['stub' => true], 'warnings' => $warnings]);
-env_assert(strpos($listed, 'data-env-warnings') < strpos($listed, 'stub-dataview'), 'The sites screen says what needs attention above the list.');
-env_assert(str_contains($state(['overview' => $overview, 'sitesView' => ['stub' => true], 'warnings' => []]), 'data-env-warnings-none'), 'Nothing to say is said too.');
-env_assert(!str_contains($ok, 'data-env-warnings'), 'Warnings not read, none drawn.');
-// The server's own alerts (simai-env 1.31.0): said where they come from; an open one is acknowledged by plan, an
-// acknowledged one says by whom; without the right, no form.
-$alerts = \Larena\Env\Alerts\ServerAlerts::fromData(['alerts' => [
-    ['id' => 'a1', 'kind' => 'backup_failed', 'severity' => 'warning', 'domain' => 'demo-php.test', 'message' => 'failed', 'state' => 'open'],
-    ['id' => 'a2', 'kind' => 'cert_expiring', 'severity' => 'critical', 'domain' => 'demo-php.test', 'message' => '2 days', 'state' => 'acked',
-        'acked_by' => 'admin@stand.test', 'acked_at' => '2026-01-01T00:00:00Z'],
-]]);
-$fromServer = \Larena\Env\Warnings\PanelWarnings::fromAlerts($alerts, ['demo-php.test'], true);
-$alerted = $state(['overview' => $overview, 'sitesView' => ['stub' => true], 'warnings' => $fromServer, 'fromServer' => true, 'canAcknowledge' => true,
-    'warningsBack' => '/admin/server']);
-env_assert(str_contains($alerted, 'data-env-warnings-from-server') && str_contains($alerted, 'data-env-alert-ack="a1"') && !str_contains($alerted, 'data-env-alert-ack="a2"')
-    && str_contains($alerted, 'data-env-alert-acked') && str_contains($alerted, 'admin@stand.test') && str_contains($alerted, 'name="back" value="/admin/server"')
-    && strpos($alerted, 'data-env-alert="a2"') < strpos($alerted, 'data-env-alert="a1"'), 'The server\'s alerts, the critical first: '.$alerted);
-env_assert(!str_contains($state(['overview' => $overview, 'sitesView' => ['stub' => true], 'warnings' => $fromServer, 'fromServer' => true]), 'data-env-alert-ack="'),
-    'Without the right to change sites, nothing to acknowledge.');
+env_assert(str_contains($loaded, 'data-env-metrics') && str_contains($loaded, '98%') && !str_contains($loaded, 'data-env-warnings')
+    && !str_contains($state(['overview' => $overview, 'sitesView' => ['stub' => true], 'warnings' => $warnings]), 'data-env-warnings'), 'The overview and the sites draw no warnings block.');
 
 // The load history (Panel plan 4.6): a line per measure, a legend in words, nothing drawn without measurements.
 $history = ['day' => new \Larena\Env\History\MetricHistory('day', ['load' => [[0.1, 20.0], [0.9, 60.0]], 'disk:/' => [[0.5, 40.0]]], 2, '2026-11-01 01:00:00', '2026-11-01 11:00:00'),
@@ -204,8 +187,7 @@ env_assert(\Larena\Env\Warnings\PanelWarnings::swap($swapped)?->kind === 'swap_f
     && \Larena\Env\Warnings\PanelWarnings::swap(\Larena\Env\Server\ServerMetrics::fromData(['swap' => ['total_bytes' => 1_000, 'used_bytes' => 790]])) === null
     && \Larena\Env\Warnings\PanelWarnings::swap(null) === null, 'Swap: a warning from 80%, an error from 95%, nothing below or unknown.');
 $swapDrawn = $state(['section' => 'overview', 'overview' => $overview, 'metrics' => $swapped, 'warnings' => $swapWarnings]);
-env_assert(str_contains($swapDrawn, 'data-env-metric="swap" data-env-metric-tone="warning"') && str_contains($swapDrawn, 'data-env-warning="swap_full"'), 'Swap is a tile and a warning.');
-env_assert(!str_contains($state(['section' => 'overview', 'overview' => $overview, 'warnings' => []]), 'larena-panel m-bottom-2" data-env-warnings'), 'Nothing to say is one line, not a card.');
+env_assert(str_contains($swapDrawn, 'data-env-metric="swap" data-env-metric-tone="warning"'), 'Swap is a tile, its warning in the alert bar.');
 env_assert(!str_contains($live, 'data-env-source'), 'A live server has no such notice.');
 
 $refused = $state(['refused' => true, 'reason' => 'owner_scope', 'reasonText' => 'Another owner.']);

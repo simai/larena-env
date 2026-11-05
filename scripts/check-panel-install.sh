@@ -118,7 +118,7 @@ $app->make(Larena\Access\Runtime\RoleAssignmentService::class)->assign('user:adm
 PHP
 export PANEL_APP="$APP"
 python3 - "http://127.0.0.1:${PORT}" "$TOKEN" "$WORK" "$STAFF_PASSWORD" "$APP" <<'PY' >>"$LOG" 2>&1 || failed "sign-in and menu"
-import http.cookiejar, json, re, secrets, sys, urllib.error, urllib.parse, urllib.request
+import html as markup, http.cookiejar, json, re, secrets, sys, urllib.error, urllib.parse, urllib.request
 base, token = sys.argv[1], sys.argv[2]
 jar = http.cookiejar.CookieJar()
 web = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
@@ -187,18 +187,27 @@ check = subprocess.run(["php", "artisan", "larena:env-check"], cwd=sys.argv[5], 
 print("check:", check.strip())
 assert "from the server: yes" in check and "measured: no" in check and "notifications: 0" not in check, check
 _, listed = get("/admin/server")
-assert "data-env-warnings-from-server" in listed and 'data-env-warning="backup_failed"' in listed and 'data-env-warning-site="demo-owned.test"' in listed, "the sites say the server's alerts"
-assert 'data-env-alert-ack="9147a2749fff"' in listed and 'data-env-alert-state="open"' in listed, "an open alert can be acknowledged"
-_, acknowledge = post("/admin/server/alerts/ack/plan", {"_token": form_token(listed), "id": "9147a2749fff", "back": "/admin/server"})
+# What needs attention is the admin's alert bar on every page (owner decision 2026-11-05), not a block of the screens.
+assert 'id="larena-admin-alerts"' in listed and "env:alert:9147a2749fff" in listed and "data-env-warnings" not in listed, "the alert bar says the server's alerts"
+assert "/admin/server/alerts/ack/plan?id=9147a2749fff" in markup.unescape(listed), "an open alert can be acknowledged from the bar"
+_, channel_page = get("/admin/server/alerts/channel")
+_, acknowledge = post("/admin/server/alerts/ack/plan", {"_token": form_token(channel_page), "id": "9147a2749fff", "back": "/admin/server"})
 assert 'data-env-plan="self:alerts-ack"' in acknowledge and 'name="id" value="9147a2749fff"' in acknowledge, "acknowledging an alert is planned"
 _, opened = get("/admin/server/alerts/ack/plan?id=9147a2749fff&back=%2Fadmin%2Fserver")
 assert 'data-env-plan="self:alerts-ack"' in opened and 'name="id" value="9147a2749fff"' in opened, "the alert bar's link opens the same plan"
 _, overview = get("/admin/server/overview")
-assert "data-env-history-from-server" in overview and 'data-env-history-chart="day"' in overview and "data-env-warnings=" in overview, "the overview draws the server's own history"
-_, card = get("/admin/server/sites/demo-owned.test")
-assert 'data-env-alert="9147a2749fff"' in card, "the card says its own"
+assert "data-env-history-from-server" in overview and 'data-env-history-chart="day"' in overview and "data-env-warnings=" not in overview, "the overview draws the server's own history"
+# A site's sections are its menu in the menu's second column (port 1.1.0 `context`): the page has no tabs of its own.
 _, card = get("/admin/server/sites/demo-php.test")
-assert "data-env-tabs" in card and "data-env-alert=" not in card, "another site's card has no alert of it"
+assert "data-env-tabs" not in card and 'data-env-section="overview"' in card, "the card has no in-page tabs"
+site_csrf = re.search(r'<meta name="csrf-token" content="([^"]+)"', card).group(1)
+request = urllib.request.Request(base + "/admin/navigation/menu", method="POST",
+    data=json.dumps({"intent": "navigation.load", "payload": {"reason": "connected", "site": None, "page": "/admin/server/sites/demo-php.test?tab=backups"}}).encode(),
+    headers={"Content-Type": "application/json", "Accept": "application/json", "X-CSRF-TOKEN": site_csrf})
+with web.open(request) as answer:
+    menu = json.loads(answer.read().decode())
+context = menu.get("navigation", menu).get("context") or menu.get("context") or {}
+assert context.get("title") == "demo-php.test" and context.get("current") == "site.backups" and (context.get("back") or {}).get("href") == "/admin/server", ("the site's menu", context)
 request = urllib.request.Request(base + "/admin/navigation/menu", method="POST",
     data=json.dumps({"intent": "navigation.load", "payload": {"reason": "connected", "site": None}, "page": "/admin/server"}).encode(),
     headers={"Content-Type": "application/json", "Accept": "application/json", "X-CSRF-TOKEN": csrf})
@@ -327,9 +336,9 @@ assert "daily backup is being turned on" not in made, "the daily backup came wit
 for tab in ("overview", "domains", "dns", "php", "database", "backups", "files", "releases", "log", "access", "nginx"):
     status, card = get("/admin/server/sites/demo-php.test?tab=" + tab)
     shown = {"dns": "domains", "nginx": "php"}.get(tab, tab)
-    if tab == "releases" and 'data-env-tab="releases"' not in card:
+    if tab == "releases" and "releases" not in re.search(r'data-env-sections="([^"]*)"', card).group(1).split():
         shown = "overview"
-    assert status == 200 and 'data-env-tab="' + shown + '"' in card, ("tab", tab)
+    assert status == 200 and 'data-env-section="' + shown + '"' in card, ("tab", tab)
     if tab in ("domains", "dns"):
         assert 'data-env-dns="not_connected"' in card, ("the site's DNS with its domains", tab)
     # SFTP is by key only (simai-env 1.30.0): no password field on any tab.
@@ -468,7 +477,7 @@ assert status == 200 and 'data-env-files="on"' in own_files and 'data-env-file="
 _, others = get("/admin/server/sites/demo-php.test?tab=files")
 assert 'data-env-files="on"' not in others, "another owner's files are not shown"
 _, own_nginx = get("/admin/server/sites/demo-owned.test?tab=nginx")
-assert 'data-env-tab="nginx"' not in own_nginx and "data-env-nginx" not in own_nginx, "the nginx directives are the system level's"
+assert 'data-env-section="php"' in own_nginx and "data-env-nginx" not in own_nginx, "the nginx directives are the system level's"
 try:
     status, _ = post("/admin/server/sites/demo-owned.test/nginx/plan", {"_token": form_token(own_files), "op": "nginx-clear"})
 except urllib.error.HTTPError as error:
@@ -479,7 +488,7 @@ assert status == 200 and 'data-env-dns="not_connected"' in own_dns and "/admin/s
 # A site's own scheduled jobs (simai-env 1.34.0, set 10): the person's own site's job, its runs, a new one by plan; not
 # another owner's site.
 status, own_cron = get("/admin/server/sites/demo-owned.test?tab=cron")
-assert status == 200 and 'data-env-tab="cron"' in own_cron and 'data-env-cron-job="a1b2c3d4"' in own_cron and "php artisan app:sync --quiet" in own_cron, "the person's own site's job"
+assert status == 200 and 'data-env-section="cron"' in own_cron and 'data-env-cron-job="a1b2c3d4"' in own_cron and "php artisan app:sync --quiet" in own_cron, "the person's own site's job"
 assert 'data-env-cron-last="ok"' in own_cron and "data-env-cron-hint" in own_cron and 'data-env-cron-op="disable"' in own_cron, "its last run, where it runs, turning it off"
 _, own_runs = get("/admin/server/sites/demo-owned.test?tab=cron&runs=a1b2c3d4")
 assert 'data-env-cron-runs="a1b2c3d4"' in own_runs and "Synced 12 records." in own_runs, "its run's output"

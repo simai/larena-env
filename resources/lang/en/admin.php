@@ -63,6 +63,7 @@ return [
         'facts' => 'The site',
         'previous_release' => 'Previous release',
         'back' => 'Back to the server',
+        'all_sites' => 'All sites',
         'tabs_label' => 'The site\'s sections',
         'open' => 'Open the site',
         'no_https' => 'No HTTPS',

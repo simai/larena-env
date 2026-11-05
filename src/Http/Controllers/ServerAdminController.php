@@ -12,7 +12,6 @@ use Larena\Admin\Runtime\AdminDataviewPagePresenter;
 use Larena\Env\Admin\ServerSitesPage;
 use Larena\Env\History\MetricSamples;
 use Larena\Env\Server\ServerOverviewReader;
-use Larena\Env\Warnings\PanelWarningSource;
 use Larena\Env\Warnings\PanelWarnings;
 
 /**
@@ -30,7 +29,6 @@ final readonly class ServerAdminController
         private ?\Larena\Access\Runtime\AccessOperationAuthorizer $authorizer = null,
         private ?\Larena\Env\Server\SiteExtrasReader $extras = null,
         private ?MetricSamples $samples = null,
-        private ?PanelWarningSource $warningSource = null,
     ) {
     }
 
@@ -56,28 +54,19 @@ final readonly class ServerAdminController
 
         // The server's load now (Panel plan 3.3), when the server's gateway reports it: the whole server's, so only the
         // system level reads it, and it also tells whether a disk is running out.
-        $metrics = $actor->owner === null && $overview?->capabilities?->allows('self:metrics') === true ? $this->extras?->metrics($actor) : null;
+        $metrics = $section === 'overview' && $actor->owner === null && $overview?->capabilities?->allows('self:metrics') === true ? $this->extras?->metrics($actor) : null;
         $now = PanelWarnings::now();
-        $warnings = $overview === null ? null
-            : ($this->warningSource ?? ($this->extras === null ? null : new PanelWarningSource($this->extras)))?->of($actor, $overview, $metrics, $now)
-                ?? ['warnings' => PanelWarnings::of($overview, $metrics, $now), 'fromServer' => false];
 
         $history = $section === 'overview' && $actor->owner === null ? $this->history($actor, $overview, $now) : null;
 
         return $this->views->make('larena-env::admin.index', [
             'section' => $section,
             'canCreate' => $this->authorizer?->authorize($request, 'env.sites.operate')->isAllowed() ?? false,
-            'metrics' => $section === 'overview' ? $metrics : null,
+            'metrics' => $metrics,
             // The services as «Службы» lists them (service:list), so both screens say the same; else the description's.
             'services' => $section === 'overview' && $overview?->capabilities?->allows('service:list') === true
                 ? ($this->extras?->services($actor) ?? $overview->services) : ($overview->services ?? []),
-            // What needs attention (Panel plan 4.4): the person's own sites, and the disks for the whole server; the
-            // server's own alerts where it keeps them (simai-env 1.31.0), acknowledged by plan and confirmation.
-            'warnings' => $warnings['warnings'] ?? null,
-            'fromServer' => $warnings['fromServer'] ?? false,
-            'warningsBack' => $request->getRequestUri(),
-            'canAcknowledge' => $overview?->capabilities?->allows('self:alerts-ack') === true
-                && ($this->authorizer?->authorize($request, 'env.sites.operate')->isAllowed() ?? false),
+            // What needs attention is in the admin's alert bar on every page (owner decision 2026-11-05), not a block here.
             // The load over time (Panel plan 4.6): the server's own history where it keeps one, else the panel's samples.
             'history' => $history,
             // A safe update waiting (simai-env 1.32.0): only a hint here, the update screen says what it changes.

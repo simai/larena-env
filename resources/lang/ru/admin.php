@@ -63,6 +63,7 @@ return [
         'facts' => 'Сайт',
         'previous_release' => 'Предыдущий выпуск',
         'back' => 'К серверу',
+        'all_sites' => 'Все сайты',
         'tabs_label' => 'Разделы сайта',
         'open' => 'Открыть сайт',
         'no_https' => 'Без HTTPS',
