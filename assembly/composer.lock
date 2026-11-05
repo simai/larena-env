@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "56a054cb29ea2070f2869fe1c9bba618",
+    "content-hash": "f6123ee0603ca25c41ddf6923cdabf46",
     "packages": [
         {
             "name": "brick/math",
@@ -1573,12 +1573,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:simai/larena-admin.git",
-                "reference": "27f33cb7f33bb0d6e2b798faf74c0654b9155c05"
+                "reference": "a95ca5cd4d91621f7d060cd78b9ac882e0d7f76d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-admin/zipball/27f33cb7f33bb0d6e2b798faf74c0654b9155c05",
-                "reference": "27f33cb7f33bb0d6e2b798faf74c0654b9155c05",
+                "url": "https://api.github.com/repos/simai/larena-admin/zipball/a95ca5cd4d91621f7d060cd78b9ac882e0d7f76d",
+                "reference": "a95ca5cd4d91621f7d060cd78b9ac882e0d7f76d",
                 "shasum": ""
             },
             "require": {
@@ -1797,7 +1797,7 @@
                 }
             ],
             "description": "Larena Admin: Object-based, permission-aware administration platform for package contributions, screens, actions and diagnostics.",
-            "time": "2026-11-05T19:25:42+00:00"
+            "time": "2026-11-05T23:09:06+00:00"
         },
         {
             "name": "larena/audit",
@@ -2906,12 +2906,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/simai/larena-ui.git",
-                "reference": "35617b56140c6d04251233d67fbde6c09e092f72"
+                "reference": "1ef460b6bcaff1f53fb804adbe1f7347c93fdcde"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-ui/zipball/35617b56140c6d04251233d67fbde6c09e092f72",
-                "reference": "35617b56140c6d04251233d67fbde6c09e092f72",
+                "url": "https://api.github.com/repos/simai/larena-ui/zipball/1ef460b6bcaff1f53fb804adbe1f7347c93fdcde",
+                "reference": "1ef460b6bcaff1f53fb804adbe1f7347c93fdcde",
                 "shasum": ""
             },
             "require": {
@@ -3054,7 +3054,7 @@
                 "source": "https://github.com/simai/larena-ui/tree/main",
                 "issues": "https://github.com/simai/larena-ui/issues"
             },
-            "time": "2026-11-05T18:38:40+00:00"
+            "time": "2026-11-05T22:25:32+00:00"
         },
         {
             "name": "league/commonmark",

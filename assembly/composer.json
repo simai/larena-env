@@ -22,7 +22,7 @@
         "ext-tokenizer": "*",
         "laravel/framework": "^13.8",
         "larena/access": "dev-main#c894876aed69c242c134ad5da19bcbbb1805ab3c",
-        "larena/admin": "dev-main#27f33cb7f33bb0d6e2b798faf74c0654b9155c05",
+        "larena/admin": "dev-main#a95ca5cd4d91621f7d060cd78b9ac882e0d7f76d",
         "larena/audit": "dev-main#b68f08cd534d8a874291a258bd58a582d6fa2476",
         "larena/auth": "dev-main#6d3876554a76b80634f3a58fd1a4365e54493d6a",
         "larena/core": "dev-main#6bdd0607b2c42dc9b63191e77c7ccafcf8e3dad0",
@@ -32,7 +32,7 @@
         "larena/notification": "dev-main#70e9ac626686ab9028de85b3bc3fd8a788872d28",
         "larena/property": "dev-main#0315524951d7f0adc8f532f664e6873185ae38f3",
         "larena/setting": "dev-main#6ef989a5d6aba5a06dff9389ea6b0b6bcf44296f",
-        "larena/ui": "dev-main#35617b56140c6d04251233d67fbde6c09e092f72"
+        "larena/ui": "dev-main#1ef460b6bcaff1f53fb804adbe1f7347c93fdcde"
     },
     "repositories": [
         {"type": "path", "url": "../env-source", "options": {"symlink": false, "reference": "none", "versions": {"larena/env": "dev-main"}}},
