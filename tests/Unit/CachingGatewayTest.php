@@ -86,6 +86,24 @@ $refused->ask(PanelRequest::read($admin, 'firewall:status'));
 $server->refuse = false;
 env_assert($refused->ask(PanelRequest::read($admin, 'firewall:status'))->status === PanelAnswerStatus::Ok, 'A refusal is not kept.');
 
+// The slow reads (the programs, PHP, the update's plan) are kept longer than the rest, and an action still forgets them.
+$slowStore = new class () extends ArrayStore {
+    /** @var array<string, int> */
+    public array $seconds = [];
+
+    public function put($key, $value, $seconds)
+    {
+        $this->seconds[$key] = $seconds;
+
+        return parent::put($key, $value, $seconds);
+    }
+};
+$slow = new CachingPanelGateway($server, new Repository($slowStore), 30, 600);
+$slow->ask(PanelRequest::read($admin, 'software:list'));
+$slow->ask(PanelRequest::read($admin, 'self:alerts'));
+env_assert(in_array(600, $slowStore->seconds, true) && in_array(30, $slowStore->seconds, true),
+    'The programs are kept for ten minutes, the alerts for half a minute.');
+
 // A cache that holds something else is passed by.
 $odd = new Repository(new ArrayStore());
 $probe = new CachingPanelGateway($server, $odd, 30);

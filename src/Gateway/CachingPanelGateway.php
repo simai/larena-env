@@ -14,7 +14,8 @@ use Throwable;
  * second). Every screen of the panel asks the server again, and each ask starts simai-env, so moving between the tabs
  * of a site waited seconds for the same answers. Here a read of the server's state is answered from the cache for
  * `ttl` seconds per person (an owner sees other answers than the admin); the same read twice in one page is asked
- * once. Anything that may change the server, a confirmed action or a look at a job, makes every kept answer stale, so
+ * once; the slow reads that change only through an action (the programs, PHP, the update's plan) are kept for
+ * `slowTtl` seconds. Anything that may change the server, a confirmed action or a look at a job, makes every kept answer stale, so
  * the screen after an action reads the server again. Logs, files' contents, job runs and the progress of a change are
  * never kept. A cache that fails is passed by: the server is asked as before.
  */
@@ -28,6 +29,12 @@ final class CachingPanelGateway implements PanelGateway, PanelFileGateway
         'ssl:dns-status', 'file:list',
     ];
 
+    /**
+     * The reads that are slow on the server (seconds: they ask the package manager or the update source) and change only
+     * through an action, which makes them stale at once: kept for `slowTtl` seconds instead of `ttl`.
+     */
+    public const array SLOW = ['software:list', 'php:list', 'php:extensions', 'self:update-plan', 'self:profiles', 'self:commands'];
+
     private const string GENERATION = 'larena-env:gateway:generation';
 
     /** @var array<string, PanelAnswer> the answers this request already has */
@@ -37,6 +44,7 @@ final class CachingPanelGateway implements PanelGateway, PanelFileGateway
         private readonly PanelGateway $inner,
         private readonly Repository $cache,
         private readonly int $ttl = 30,
+        private readonly int $slowTtl = 600,
     ) {
     }
 
@@ -62,7 +70,7 @@ final class CachingPanelGateway implements PanelGateway, PanelFileGateway
         // A refusal or a failure is said again on the next screen, never kept.
         if ($answer->status === PanelAnswerStatus::Ok) {
             $this->asked[$key] = $answer;
-            $this->write($key, $answer);
+            $this->write($key, $answer, in_array($request->command, self::SLOW, true) ? max($this->ttl, $this->slowTtl) : $this->ttl);
         }
 
         return $answer;
@@ -135,10 +143,10 @@ final class CachingPanelGateway implements PanelGateway, PanelFileGateway
         return $answer instanceof PanelAnswer ? $answer : null;
     }
 
-    private function write(string $key, PanelAnswer $answer): void
+    private function write(string $key, PanelAnswer $answer, int $ttl): void
     {
         try {
-            $this->cache->put($key, serialize($answer), $this->ttl);
+            $this->cache->put($key, serialize($answer), $ttl);
         } catch (Throwable) {
             // Not kept: the next screen asks the server.
         }

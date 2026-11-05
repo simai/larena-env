@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Speed (the panel's UX audit, 0.5 s a click): the reads that take seconds on the server and change only through an
+  action — software:list, php:list, php:extensions, self:update-plan, self:profiles, self:commands — are kept for 10
+  minutes (`slow_cache_seconds`, LARENA_ENV_GATEWAY_SLOW_CACHE_SECONDS) instead of 30 seconds; an action or a job still
+  makes them stale at once. On the stand they take 2.2–2.6 s each, so «Программы» opened after a pause took 6 s.
+- The panel's sign-in page is «Вход — Larena Panel» in the tab, the one format of every page.
+
 - «Программы» reads simai-env 1.43.0's catalogue (recorded answers set 20, simai-env 1.43.1): 17 programs in their
   groups (web servers, security, databases, cache, languages, tools), each with what it is for in the panel's words,
   «Нужна simai-env» on the ones the server keeps, and a row menu: «Установить» (Node.js and PostgreSQL with a major

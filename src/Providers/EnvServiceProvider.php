@@ -54,7 +54,7 @@ final class EnvServiceProvider extends ServiceProvider
             $ttl = (int) $config->get('larena-env.gateway.cache_seconds', 30);
 
             return $ttl > 0 && $app->bound('cache')
-                ? new \Larena\Env\Gateway\CachingPanelGateway($gateway, $app->make('cache')->store(), $ttl)
+                ? new \Larena\Env\Gateway\CachingPanelGateway($gateway, $app->make('cache')->store(), $ttl, (int) $config->get('larena-env.gateway.slow_cache_seconds', 600))
                 : $gateway;
         });
         $this->app->bind(ServerOverviewReader::class, static fn (Application $app): ServerOverviewReader => new ServerOverviewReader($app->make(PanelGateway::class)));
