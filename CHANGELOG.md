@@ -8,8 +8,9 @@
   in a side panel (the Framework's `sf-modal` at the inline end) with «Показать, что будет сделано»; the tab is no
   longer a column of long forms. The load tiles show the name whole and the day's line across the tile, spread over
   the measures the server has (VIS-01).
-- The sites' list fits a laptop (the panel's UX audit, LAY-04): the disk is on the site's own screen, and the owner
-  column shows only on a server where some site has an owner; «Копии» reads «05.11 03:30 UTC · ежедневно». A site's breadcrumbs reach the site and its section,
+- The sites' list fits a laptop (the panel's UX audit, LAY-04): five columns, «Домен, Состояние, Вид сайта, HTTPS,
+  Копии»; whose the site is and its disk are on the site's own screen, the kinds are short («Переадресация») and a
+  backup is its time («05.11 03:30 UTC»). A site's breadcrumbs reach the site and its section,
   «Сайты › demo.test › Файлы», each step a link back (HEAD-02).
 - «Программы» and «Обновление» are one place, «Программы и обновления» (the panel's UX audit): simai-env's and the
   panel's updates head it, then the system's updates and the server's software. `/admin/server/update` opens it with
