@@ -39,13 +39,12 @@ final readonly class SiteAdminController
      * audit (owner decision 2026-11-05) DNS lives in «Домены и HTTPS» and nginx in «PHP и веб-сервер»: an old link to
      * `?tab=dns` or `?tab=nginx` opens the section that holds it.
      */
-    public const array TABS = ['overview', 'domains', 'files', 'database', 'backups', 'cron', 'access', 'log', 'releases', 'php'];
+    public const array TABS = ['overview', 'domains', 'php', 'files', 'database', 'backups', 'cron', 'access', 'log', 'releases'];
     /** The parts that are shown inside another section, and the section that holds each. */
     public const array MERGED = ['dns' => 'domains', 'nginx' => 'php'];
-    /** The card's sections in groups, as the side navigation shows them; only «Дополнительно» has a heading. */
+    /** The card's sections as the side navigation shows them: one list, no group of one (the panel's UX audit). */
     public const array GROUPS = [
-        'site' => ['overview', 'domains', 'files', 'database', 'backups', 'cron', 'access', 'log', 'releases'],
-        'more' => ['php'],
+        'site' => ['overview', 'domains', 'php', 'files', 'database', 'backups', 'cron', 'access', 'log', 'releases'],
     ];
     /** The tabs shown only where the server lists the command they read. */
     private const array LISTED_TABS = ['cron' => 'cron:list'];

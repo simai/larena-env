@@ -10,7 +10,7 @@
     @section('heading-meta')
         <span class="flex flex-wrap items-cross-center g-1" data-env-site-state="{{ \Larena\Env\Admin\SiteState::of($site->answersChecked, $site->answers) }}">
             <sf-badge status="{{ \Larena\Env\Admin\SiteState::status(\Larena\Env\Admin\SiteState::of($site->answersChecked, $site->answers)) }}" appearance="tonal" text="{{ __('larena-env::admin.sites.state.'.\Larena\Env\Admin\SiteState::of($site->answersChecked, $site->answers)) }}"></sf-badge>
-            <sf-badge appearance="outline" text="{{ __('larena-env::admin.new_site.profiles.'.$site->profile) }}{{ $site->php !== 'none' ? ' · PHP '.$site->php : '' }}"></sf-badge>
+            <sf-badge appearance="outline" text="{{ $site->profile === 'php' && $site->php !== 'none' ? 'PHP '.$site->php : __('larena-env::admin.new_site.profiles.'.$site->profile).($site->php !== 'none' ? ' · PHP '.$site->php : '') }}"></sf-badge>
             @if ($site->certificate !== null)
                 <sf-badge status="{{ $site->certificate->daysLeft !== null && $site->certificate->daysLeft < \Larena\Env\Warnings\PanelWarnings::CERTIFICATE_DAYS ? 'warning' : 'success' }}" appearance="tonal"
                     text="{{ $site->certificate->daysLeft === null ? 'HTTPS' : __('larena-env::admin.sites.certificate_left', ['days' => (string) $site->certificate->daysLeft]) }}"></sf-badge>
@@ -69,8 +69,12 @@
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.profile') }}</dt><dd class="m-0 min-w-0 text-end">{{ __('larena-env::admin.new_site.profiles.'.$site->profile) }}</dd></div>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.php') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->php }}</dd></div>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.ssl') }}</dt><dd class="m-0 min-w-0 text-end" data-env-https="{{ $site->certificate === null ? 'none' : 'on' }}">{{ $site->certificate === null ? __('larena-env::admin.sites.https_none') : ($site->certificate->daysLeft === null ? __('larena-env::admin.sites.https_on') : __('larena-env::admin.sites.https_yes', ['days' => (string) $site->certificate->daysLeft])) }}</dd></div>
+                    @if ($site->databaseEngine !== null)
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.database') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->databaseEngine ?? '—' }}</dd></div>
+                    @endif
+                    @if ($site->release !== null)
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.release') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->release ?? '—' }}</dd></div>
+                    @endif
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-disk><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.disk') }}</dt><dd class="m-0 min-w-0 text-end">{{ \Larena\Env\Server\Bytes::human($site->diskBytes) }}</dd></div>
                 </dl>
             </section>
@@ -198,6 +202,9 @@
                         {{ __('larena-env::admin.backups.'.($site->lastVerify->restoreTest ? 'restore_tested' : 'restore_not_tested')) }}
                     </p>
                 @endif
+                @foreach (array_filter($warnings ?? [], static fn ($warning): bool => in_array($warning->kind, ['backup_failed', 'backup_missing'], true) && $warning->domain === $domain) as $backupWarning)
+                    <p role="alert" data-env-backup-warning="{{ $backupWarning->kind }}">{{ __('larena-env::admin.warnings.'.$backupWarning->kind, $backupWarning->replace) }}</p>
+                @endforeach
                 @if ($site->backups === [])
                     <p>{{ __('larena-env::admin.backups.none') }}</p>
                 @else

@@ -64,7 +64,6 @@ return [
         'tabs_label' => 'The site\'s sections',
         'open' => 'Open the site',
         'no_https' => 'No HTTPS',
-        'groups' => ['more' => 'More'],
         'tabs' => ['overview' => 'Overview', 'domains' => 'Domains and HTTPS', 'files' => 'Files', 'database' => 'Databases', 'backups' => 'Backups', 'cron' => 'Scheduler', 'access' => 'SFTP access', 'log' => 'Log', 'releases' => 'Releases', 'php' => 'PHP and web server'],
     ],
     'certificate' => [
@@ -1003,4 +1002,5 @@ return [
         'weekdays' => ['0' => 'Sunday', '1' => 'Monday', '2' => 'Tuesday', '3' => 'Wednesday', '4' => 'Thursday', '5' => 'Friday', '6' => 'Saturday'],
         'operations' => ['add' => 'Add a job', 'remove' => 'Remove', 'enable' => 'Turn on', 'disable' => 'Turn off'],
     ],
+    'bytes' => ['decimal' => '.', 'B' => 'B', 'KB' => 'KB', 'MB' => 'MB', 'GB' => 'GB', 'TB' => 'TB'],
 ];

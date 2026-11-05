@@ -25,7 +25,21 @@ final class Bytes
             $unit++;
         }
 
-        return ($unit === 0 ? (string) $bytes : number_format($size, $size < 10 ? 1 : 0, '.', '')).' '.self::UNITS[$unit];
+        $number = $unit === 0 ? (string) $bytes : number_format($size, $size < 10 ? 1 : 0, self::word('decimal', '.'), '');
+
+        return $number.' '.self::word(self::UNITS[$unit], self::UNITS[$unit]);
+    }
+
+    /** A unit or the decimal mark in the admin's language: «2,5 КБ» in Russian. */
+    private static function word(string $key, string $otherwise): string
+    {
+        if (!function_exists('__')) {
+            return $otherwise;
+        }
+        $line = 'larena-env::admin.bytes.'.$key;
+        $text = __($line);
+
+        return $text !== $line ? $text : $otherwise;
     }
 
     /** How full, in whole percent. */

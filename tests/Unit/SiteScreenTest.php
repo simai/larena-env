@@ -114,6 +114,10 @@ env_assert($doctor !== null && $doctor->status === 'WARN' && $doctor->problems !
 $ok = $screen(['site' => $site, 'doctor' => $doctor, 'tabOperations' => $onTab('overview')]);
 env_assert(str_contains($ok, 'data-env-state="ok"') && str_contains($ok, 'data-env-doctor="WARN"') && str_contains($ok, 'data-env-problem="WARN"'), 'The overview shows the check and its problems.');
 env_assert(str_contains($ok, 'data-env-answers="') && str_contains($ok, 'data-env-disk') && !str_contains($ok, 'data-env-no-backup'), 'Whether it answers and its disk; it has a backup.');
+// The backups tab says the failed attempt the bar warns about, not only «no backups yet» (the panel's UX audit).
+$failedBackup = $screen(['site' => $site, 'tab' => 'backups', 'warnings' => [new \Larena\Env\Warnings\PanelWarning('backup_failed', 'warning', 'demo-php.test', ['domain' => 'demo-php.test']),
+    new \Larena\Env\Warnings\PanelWarning('backup_failed', 'warning', 'other.test', ['domain' => 'other.test'])]]);
+env_assert(substr_count($failedBackup, 'data-env-backup-warning="backup_failed"') === 1, 'The backups tab says its own site\'s failed backup: '.$failedBackup);
 $warned = $screen(['site' => $site, 'warnings' => [new \Larena\Env\Warnings\PanelWarning('backup_stale', 'warning', 'demo-php.test', ['domain' => 'demo-php.test', 'time' => '2026-01-01'])]]);
 env_assert(str_contains($warned, 'data-env-warning="backup_stale"') && str_contains($warned, 'href="?tab=backups"')
     && strpos($warned, 'data-env-warnings') < strpos($warned, 'data-env-tabs'), 'The card says what needs attention above its tabs, with the tab to deal with it.');
