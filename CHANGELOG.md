@@ -10,6 +10,8 @@
   «не установлена». The site's sections are one list with PHP next to the domains (no group of one); the badge says
   «PHP 8.3» once; empty «База данных» and «Выпуск» rows are left out; sizes read «2,5 КБ» in Russian; the backups tab
   says the failed or missing backup the warning speaks of.
+  The menu says what each place is: «Владельцы сайтов» (was «Пространства»), «DNS-зоны» and «Подключение DNS» (both
+  were «DNS»), «Куда слать оповещения» (was «Оповещения», easy to take for the notifications).
 
 - Screens answer without waiting for the server again (owner decision 2026-11-05, after the panel's UX audit: a click
   answers within half a second). `CachingPanelGateway` keeps a read of the server's state for
