@@ -174,7 +174,6 @@ return [
         'target' => 'Target',
         'effects' => 'Effects',
         'lock' => 'Holds',
-        'arguments' => 'Arguments',
         'confirm' => 'Run it',
         'cancel' => 'Do not run it',
         'replaces' => 'What is replaced',

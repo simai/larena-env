@@ -223,6 +223,9 @@ $planned = $factory->make('larena-env::admin.plan', ['heading' => 'Back up now',
     'source' => 'recorded', 'plan' => $plan, 'runUrl' => '/admin/server/sites/demo-owned.test/run', 'cancelUrl' => '/admin/server/sites/demo-owned.test',
     'hidden' => ['operation' => 'backup', 'db' => 'no']])->render();
 env_assert(str_contains($planned, 'data-env-plan="backup:data"') && str_contains($planned, 'data-env-plan-argument="db"'), 'The plan is shown in full.');
+env_assert(\Larena\Env\Admin\PlanValues::of(['domain' => 'a.test', 'db' => 'yes', 'php' => '8.3'], 'a.test') === [
+    ['name' => 'db', 'label' => 'Include the database', 'value' => 'Yes'], ['name' => 'php', 'label' => 'PHP version', 'value' => '8.3'],
+] && str_contains($planned, 'data-env-plan-server'), 'The plan\'s values in the panel\'s words, the server\'s terms under «more».');
 env_assert(str_contains($planned, 'data-env-confirm="backup:data"') && str_contains($planned, 'name="db" value="no"')
     && str_contains($planned, 'name="operation" value="backup"'), 'The confirmation carries the same values.');
 env_assert(str_contains($planned, 'data-env-source="recorded"'), 'Recorded answers are marked as recorded.');

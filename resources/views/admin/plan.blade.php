@@ -10,7 +10,6 @@
 
     <section class="larena-panel larena-panel-padded" data-env-plan="{{ $plan->command }}" aria-labelledby="env-plan">
         <h2 id="env-plan" class="text-2">{{ __('larena-env::admin.plan.heading') }}</h2>
-        <p>{{ $plan->description }}</p>
         @if (($replaces ?? null) !== null)
             <h3 class="m-top-2 m-bottom-1 text-medium">{{ __('larena-env::admin.plan.replaces') }}</h3>
             <p data-env-plan-replaces role="note">{{ $replaces }}</p>
@@ -25,20 +24,23 @@
         @foreach ($then ?? [] as $after)
             <p data-env-plan-then>{{ $after }}</p>
         @endforeach
+        {{-- What and with which values, in the panel's words; the server's own terms under «Подробнее» (the panel's UX
+             audit, COPY-02). --}}
         <dl class="m-0" style="display: block;" data-env-facts>
-            <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.plan.command') }}</dt><dd class="m-0 min-w-0 text-end">{{ $plan->command }}</dd></div>
             <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.plan.target') }}</dt><dd class="m-0 min-w-0 text-end">{{ $plan->target ?? $target }}</dd></div>
-            <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.plan.effects') }}</dt><dd class="m-0 min-w-0 text-end">{{ $plan->effects }}</dd></div>
-            <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.plan.lock') }}</dt><dd class="m-0 min-w-0 text-end">{{ $plan->lock ?? '—' }}</dd></div>
+            @foreach (\Larena\Env\Admin\PlanValues::of($plan->args, $plan->target ?? $target) as $row)
+                <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-plan-argument="{{ $row['name'] }}"><dt class="color-on-surface-variant">{{ $row['label'] }}</dt><dd class="m-0 min-w-0 text-end" style="overflow-wrap: anywhere;">{{ $row['value'] }}</dd></div>
+            @endforeach
         </dl>
-        @if ($plan->args !== [])
-            <h3 class="m-top-2 m-bottom-1 text-medium">{{ __('larena-env::admin.plan.arguments') }}</h3>
+        <details class="m-y-2" data-env-plan-server>
+            <summary>{{ __('larena-env::admin.more') }}</summary>
+            <p>{{ $plan->description }}</p>
             <dl class="m-0" style="display: block;" data-env-facts>
-                @foreach ($plan->args as $name => $value)
-                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-plan-argument="{{ $name }}"><dt class="color-on-surface-variant">{{ $name }}</dt><dd class="m-0 min-w-0 text-end">{{ $value }}</dd></div>
-                @endforeach
+                <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.plan.command') }}</dt><dd class="m-0 min-w-0 text-end mono">{{ $plan->command }}</dd></div>
+                <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.plan.effects') }}</dt><dd class="m-0 min-w-0 text-end">{{ $plan->effects }}</dd></div>
+                <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.plan.lock') }}</dt><dd class="m-0 min-w-0 text-end">{{ $plan->lock ?? '—' }}</dd></div>
             </dl>
-        @endif
+        </details>
         <form method="post" action="{{ $runUrl }}" data-env-confirm="{{ $plan->command }}">
             @csrf
             @foreach ($hidden as $field => $value)

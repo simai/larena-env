@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- A plan speaks the panel's words (the panel's UX audit, COPY-02): «Что будет сделано» names the site and each value
+  as the form named it, yes and no in words; the server's description, command, effects and lock are under «Подробнее».
 - A site's actions are buttons (the panel's UX audit, LAY-03): «Действия» is a row of them, and each opens its fields
   in a side panel (the Framework's `sf-modal` at the inline end) with «Показать, что будет сделано»; the tab is no
   longer a column of long forms. The load tiles show the name whole and the day's line across the tile, spread over
