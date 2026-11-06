@@ -57,6 +57,12 @@ final class PanelCommands
     private const string ALERT_TARGET = '/\A(?:https:\/\/[!-~]{1,500}|-?[0-9]{1,20}|@[A-Za-z0-9_]{5,32})\z/D';
     private const string BOT_TOKEN = '/\A[0-9]{5,12}:[A-Za-z0-9_-]{30,64}\z/D';
     private const string PERIOD = '/\A(?:day|week|month)\z/D';
+    // The server's security (simai-env 1.45.0–1.47.0): what security:fix puts right, the protection levels, and the
+    // requests one address may send a second (2–1000) and at once (10–10000).
+    private const string SECURITY_FIX = '/\A(?:auto_updates|fail2ban|ssh_password|antivirus)\z/D';
+    private const string SECURITY_LEVEL = '/\A(?:basic|enhanced|strict)\z/D';
+    private const string WEB_RATE = '/\A(?:[2-9]|[1-9][0-9]{1,2}|1000)\z/D';
+    private const string WEB_BURST = '/\A(?:[1-9][0-9]{1,3}|10000)\z/D';
     // Certificates through Cloudflare DNS (simai-env 1.36.0): the API token is stored on the server once, sent as text
     // that reaches the command as a file and is shown as (stored) everywhere; the challenge http or dns.
     private const string DNS_PROVIDER = '/\A(?:cloudflare)\z/D';
@@ -236,6 +242,19 @@ final class PanelCommands
         'software:install' => ['args' => ['name' => self::SOFTWARE_NAME, 'version' => self::MAJOR], 'required' => ['name'], 'since' => '1.38.0', 'kind' => self::ACTION],
         // A program taken away, its configuration and data kept; refused while sites need it (simai-env 1.43.0).
         'software:remove' => ['args' => ['name' => self::SOFTWARE_NAME], 'required' => ['name'], 'since' => '1.43.0', 'kind' => self::ACTION],
+        // The server's security (simai-env 1.45.0–1.47.0): its checks and score, putting a problem right, the sites' files
+        // checked for malicious code and moved into quarantine, the protection level and the limit on requests.
+        'security:status' => ['args' => [], 'required' => [], 'since' => '1.45.0', 'kind' => self::READ],
+        'security:scan' => ['args' => [], 'required' => [], 'since' => '1.45.0', 'kind' => self::ACTION],
+        'security:fix' => ['args' => ['check' => self::SECURITY_FIX], 'required' => ['check'], 'since' => '1.45.0', 'kind' => self::ACTION],
+        'self:firewall-ensure' => ['args' => [], 'required' => [], 'since' => '1.45.0', 'kind' => self::ACTION],
+        'security:files' => ['args' => [], 'required' => [], 'since' => '1.46.0', 'kind' => self::READ],
+        'security:files-scan' => ['args' => ['domain' => self::DOMAIN], 'required' => [], 'since' => '1.46.0', 'kind' => self::ACTION],
+        'security:quarantine' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH], 'required' => ['domain', 'path'], 'since' => '1.46.0', 'kind' => self::ACTION],
+        'security:quarantine-list' => ['args' => [], 'required' => [], 'since' => '1.46.0', 'kind' => self::READ],
+        'security:quarantine-restore' => ['args' => ['id' => self::CHANGE_ID], 'required' => ['id'], 'since' => '1.46.0', 'kind' => self::ACTION],
+        'security:level' => ['args' => ['set' => self::SECURITY_LEVEL], 'required' => ['set'], 'since' => '1.47.0', 'kind' => self::ACTION],
+        'security:web-protect' => ['args' => ['enabled' => self::YES_NO, 'rate' => self::WEB_RATE, 'burst' => self::WEB_BURST], 'required' => ['enabled'], 'since' => '1.47.0', 'kind' => self::ACTION],
         'job:status' => ['args' => ['job_id' => self::JOB_ID], 'required' => ['job_id'], 'since' => '1.21.0', 'kind' => self::JOB],
         'job:log' => ['args' => ['job_id' => self::JOB_ID, 'after' => self::CURSOR], 'required' => ['job_id'], 'since' => '1.21.0', 'kind' => self::JOB],
         'job:cancel' => ['args' => ['job_id' => self::JOB_ID], 'required' => ['job_id'], 'since' => '1.21.0', 'kind' => self::JOB],

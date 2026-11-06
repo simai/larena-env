@@ -6,6 +6,7 @@ use Larena\Env\Http\Controllers\AlertsController;
 use Larena\Env\Http\Controllers\DnsCertificatesController;
 use Larena\Env\Http\Controllers\DnsController;
 use Larena\Env\Http\Controllers\FirewallController;
+use Larena\Env\Http\Controllers\SecurityController;
 use Larena\Env\Http\Controllers\NewSiteController;
 use Larena\Env\Http\Controllers\PeopleController;
 use Larena\Env\Http\Controllers\ServerAdminController;
@@ -68,6 +69,8 @@ $router->middleware(['access:env.server.operate'])->group(static function ($rout
 $router->middleware(['access:env.server.read'])->group(static function ($router): void {
     $router->get('/services', [ServicesController::class, 'index'])->name('larena.env.admin.services');
     $router->get('/firewall', [FirewallController::class, 'index'])->name('larena.env.admin.firewall');
+    // The server's security (simai-env 1.45.0–1.47.0): its score, problems and fixes, the level, the files and the quarantine.
+    $router->get('/security', [SecurityController::class, 'index'])->name('larena.env.admin.security');
     $router->get('/panel-access', [FirewallController::class, 'access'])->name('larena.env.admin.panel.access');
     // The server's PHP versions (simai-env 1.37.0).
     // The server's software and the system's updates (simai-env 1.38.0).
@@ -82,6 +85,8 @@ $router->middleware(['access:env.server.operate'])->group(static function ($rout
     $router->post('/software/php/plan', [SoftwarePhpController::class, 'plan'])->name('larena.env.admin.software.php.plan');
     $router->post('/software/php/run', [SoftwarePhpController::class, 'run'])->name('larena.env.admin.software.php.run');
     $router->post('/firewall/plan', [FirewallController::class, 'plan'])->name('larena.env.admin.firewall.plan');
+    $router->post('/security/plan', [SecurityController::class, 'plan'])->name('larena.env.admin.security.plan');
+    $router->post('/security/run', [SecurityController::class, 'run'])->name('larena.env.admin.security.run');
     $router->post('/firewall/run', [FirewallController::class, 'run'])->name('larena.env.admin.firewall.run');
     // Keeping a timed change in time, from the panel over the new rules (change:confirm).
     $router->post('/changes/keep', [FirewallController::class, 'keep'])->name('larena.env.admin.change.keep');

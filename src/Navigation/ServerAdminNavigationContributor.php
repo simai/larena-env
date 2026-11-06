@@ -199,6 +199,25 @@ final class ServerAdminNavigationContributor implements AdminNavigationContribut
             activeRoutePattern: 'larena.env.admin.firewall*',
             icon: 'shield',
         ), new AdminNavigationDescriptor(
+            // The server's security: score, problems with their fixes, the level, the files (simai-env 1.45.0–1.47.0).
+            id: 'env.security',
+            ownerPackage: $this->ownerPackage(),
+            label: 'Security',
+            routeName: 'larena.env.admin.security',
+            routeUri: '/admin/server/security',
+            category: 'operations',
+            state: 'operator_slice',
+            accessScope: 'env.server.read',
+            auditEvent: 'env.security.viewed',
+            statusCap: 'env_panel_skeleton',
+            order: 10,
+            group: 'operations',
+            knownLimitations: ['not_production_ready'],
+            surface: 'product',
+            labelKey: 'larena-env::admin.security.navigation',
+            activeRoutePattern: 'larena.env.admin.security*',
+            icon: 'verified_user',
+        ), new AdminNavigationDescriptor(
             // Who reaches the panel, among the panel's settings (Panel plan 5.3).
             id: 'env.panel.access',
             ownerPackage: $this->ownerPackage(),
@@ -237,7 +256,7 @@ final class ServerAdminNavigationContributor implements AdminNavigationContribut
             icon: 'dns',
         )];
         // Each row of a screen a newer simai-env brings, by the command it needs (Panel plan stage 5).
-        $needs = ['env.services' => 'service:list', 'env.software' => 'software:list', 'env.software.php' => 'php:list', 'env.firewall' => 'firewall:status', 'env.panel.access' => 'panel:access'];
+        $needs = ['env.services' => 'service:list', 'env.software' => 'software:list', 'env.software.php' => 'php:list', 'env.firewall' => 'firewall:status', 'env.security' => 'security:status', 'env.panel.access' => 'panel:access'];
 
         return array_values(array_filter($rows, fn (AdminNavigationDescriptor $row): bool => !isset($needs[$row->id])
             || ($this->listed !== null && ($this->listed)($needs[$row->id]))));

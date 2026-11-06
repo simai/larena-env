@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- «Сервер › Безопасность» (simai-env 1.45.0–1.47.0): the server's protection score and grade, what to fix first in the
+  order the server recommends with «Исправить» where the server can put it right itself (the fix is taken from the
+  server's answer by the check's id on both steps, never from the form) and «Как исправить» otherwise, the checks that
+  are fine folded, the protection level as three cards (Базовый / Усиленный, recommended / Строгий), the sites'
+  vulnerable packages, and the sites' files with suspicious ones moved into quarantine and put back. Every check is said
+  in the panel's words by its kind. The recorded answers are simai-env's set 25.
 - «Отметить, что видели» in the alert bar is one click: the bar posts it, the panel acknowledges the alert at once and
   waits for the server to record it, and the page comes back without the item (before, it opened a plan page and the
   alert stayed until a second confirmation, owner 2026-11-06).

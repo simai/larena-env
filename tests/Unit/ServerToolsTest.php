@@ -394,7 +394,7 @@ $software = $extras->serverSoftware($admin);
 env_assert($software !== null && array_map(static fn ($component): string => $component->name, $software->components) === ['nginx', 'apache', 'certbot', 'fail2ban', 'mysql', 'postgresql', 'redis', 'memcached', 'php', 'node', 'composer', 'git', 'imagemagick', 'jpegoptim', 'optipng', 'ffmpeg', 'supervisor']
     && $software->component('nginx')?->active === true && !$software->component('nginx')->installable && $software->component('redis')?->installable === true
     && $software->system->updates === 5 && $software->system->security === 4 && count($software->system->packages) === 5 && !$software->system->rebootRequired
-    && $software->system->indexAgeMinutes() === 63, 'The server\'s software (simai-software/1).');
+    && $software->system->indexAgeMinutes() === 185, 'The server\'s software (simai-software/1).');
 // simai-env 1.43.0's catalogue: each row's group, what it is for, and what the server would do to it or why not.
 $certbot = $software->component('certbot');
 $mysql = $software->component('mysql');
@@ -421,7 +421,7 @@ $page = $softwarePage([]);
 env_assert(str_contains($page, 'data-env-system-updates="5"') && str_contains($page, 'data-env-system-security-count="4"') && substr_count($page, 'data-env-system-security ') + substr_count($page, 'data-env-system-security>') === 4
     && str_contains($page, 'data-env-software-op="update-security"') && str_contains($page, 'data-env-software-op="update-all"') && str_contains($page, 'data-env-software-op="refresh"')
     && str_contains($page, 'data-env-software-op="install-redis"') && str_contains($page, 'data-env-software-op="install-node"') && !str_contains($page, 'data-env-software-op="install-nginx"')
-    && str_contains($page, 'List checked 1 h ago') && substr_count($page, 'data-env-software-component=') === 16, 'The components and the system\'s updates: '.$page);
+    && str_contains($page, 'List checked 3 h ago') && substr_count($page, 'data-env-software-component=') === 16, 'The components and the system\'s updates: '.$page);
 // simai-env's and the panel's updates head the same screen (the panel's UX audit): one place for software and updates.
 $joined = $softwarePage(['supported' => false, 'plans' => ['env' => null, 'panel' => null], 'canUpdate' => false, 'panelBuild' => null]);
 env_assert(str_contains($joined, 'data-env-software-updates') && str_contains($joined, 'data-env-update="unsupported"')
@@ -469,5 +469,64 @@ env_assert(\Larena\Env\Admin\Explanation::split('Короткое пояснен
     && \Larena\Env\Admin\Explanation::split(str_repeat('слово ', 30).'конец') [1] === null, 'A short one or one without a sentence stays whole.');
 $folded = $factory->make('larena-env::admin.partials.explanation', ['text' => 'Файлы читаются и меняются от имени пользователя сайта. Ссылки наружу сервер не открывает, а файл больше 1 МБ показывается только для скачивания.'])->render();
 env_assert(str_contains($folded, 'data-env-explanation-more') && str_contains($folded, '<summary'), 'The rest is under a summary: '.$folded);
+
+// The server's security (simai-env 1.45.0–1.47.0, set 25): read, each change planned and confirmed, the administrator's alone.
+foreach (['security:status' => '1.45.0', 'security:scan' => '1.45.0', 'security:fix' => '1.45.0', 'self:firewall-ensure' => '1.45.0', 'security:files' => '1.46.0',
+    'security:quarantine' => '1.46.0', 'security:quarantine-restore' => '1.46.0', 'security:level' => '1.47.0', 'security:web-protect' => '1.47.0'] as $command => $since) {
+    env_assert(PanelCommands::since($command) === $since, "{$command} from simai-env {$since}.");
+}
+foreach ([['security:fix', ['check' => 'fail2ban']], ['security:level', ['set' => 'enhanced']], ['security:web-protect', ['enabled' => 'yes', 'rate' => '30', 'burst' => '300']],
+    ['security:quarantine', ['domain' => 'demo-php.test', 'path' => 'public/shell.php']], ['security:quarantine-restore', ['id' => '3f2a9c1d4e5b']]] as [$command, $args]) {
+    env_assert($refusedWith(static fn () => PanelCommands::check($command, $args, true)) === null, "Accepted: {$command} ".json_encode($args));
+}
+foreach ([['security:fix', ['check' => 'everything']], ['security:level', ['set' => 'paranoid']], ['security:web-protect', ['enabled' => 'yes', 'rate' => '1']],
+    ['security:quarantine', ['domain' => 'demo-php.test', 'path' => '../etc/passwd']], ['security:quarantine', ['domain' => 'demo-php.test', 'path' => '/etc/passwd']]] as [$command, $args]) {
+    env_assert($refusedWith(static fn () => PanelCommands::check($command, $args, true)) === 'invalid_argument', "Refused: {$command} ".json_encode($args));
+}
+$security = $extras->security($admin);
+env_assert($security !== null && $security->score === 45 && $security->grade === 'risk' && $security->summary === ['risk' => 1, 'warn' => 12, 'ok' => 4, 'unknown' => 1]
+    && $security->checks[0]->id === 'security_updates' && $security->checks[0]->status === 'risk' && count($security->problems()) === 13 && count($security->rest()) === 5
+    && $security->check('fail2ban')?->fixCommand === 'security:fix' && $security->check('fail2ban')->fixArgs === ['check' => 'fail2ban'] && $security->level === null,
+    'The recorded security (simai-security/1): score, grade, problems first.');
+env_assert(\Larena\Env\Security\SecurityStatus::fromData(['schema' => 'simai-security/2', 'checks' => []]) === null, 'Another schema is not read.');
+$scan = $extras->fileScan($admin);
+env_assert($scan !== null && $scan->checkedAt === null && $scan->foundCount() === 0 && $extras->quarantine($admin)?->files === [], 'Nothing checked or kept yet (set 25).');
+$found = \Larena\Env\Security\FileScan::fromData(['schema' => 'simai-file-scan/1', 'checked_at' => '2026-11-06T03:00:00Z', 'engines' => ['simai', 'clamav'],
+    'sites' => ['demo-php.test' => ['scanned' => 120, 'found' => [['path' => 'public/up.php', 'signature' => 'php.eval-base64', 'engine' => 'simai', 'size' => 512]], 'error' => null]]]);
+$kept = \Larena\Env\Security\Quarantine::fromData(['schema' => 'simai-quarantine/1', 'files' => [['id' => 'q1', 'domain' => 'demo-php.test', 'path' => 'public/old.php', 'state' => 'quarantined', 'quarantined_at' => '2026-11-06T03:10:00Z'],
+    ['id' => 'q2', 'domain' => 'demo-php.test', 'path' => 'public/ok.php', 'state' => 'restored', 'restored_at' => '2026-11-06T04:00:00Z']]]);
+env_assert($found?->foundCount() === 1 && $kept !== null && count($kept->kept()) === 1, 'A suspicious file and the quarantine.');
+$translator = new class ($lines) implements \Illuminate\Contracts\Translation\Translator {
+    /** @param array<string, mixed> $lines */
+    public function __construct(private array $lines) {}
+    public function get($key, array $replace = [], $locale = null): mixed
+    {
+        $value = data_get($this->lines, substr($key, strlen('larena-env::admin.')));
+
+        return is_string($value) ? $value : $key;
+    }
+    public function choice($key, $number, array $replace = [], $locale = null): string { return (string) $this->get($key, $replace); }
+    public function getLocale(): string { return 'en'; }
+    public function setLocale($locale): void {}
+};
+$securityController = new \Larena\Env\Http\Controllers\SecurityController($operations, new ServerOverviewReader($gateway), $extras, $factory, $translator);
+$words = $securityController->words($security);
+env_assert($words['security_updates']['title'] === 'Security updates' && $words['fail2ban']['line'] === 'Nobody blocks password guessing.'
+    && $words['file_scan']['line'] === 'The sites\' files were not checked yet.' && $words['https:demo-php.test']['how'] !== '', 'Each check in the panel\'s words.');
+$securityPage = static fn (array $data): string => $factory->make('larena-env::admin.security', $data + ['source' => 'recorded', 'supported' => true, 'status' => $security,
+    'words' => $words, 'engines' => ['simai-env signatures', 'ClamAV antivirus'], 'fixes' => ['security_updates' => true, 'fail2ban' => true, 'https:demo-php.test' => false],
+    'allows' => ['fix' => true, 'scan' => true, 'level' => true, 'files-scan' => true, 'quarantine' => true, 'restore' => true],
+    'levels' => \Larena\Env\Security\SecurityStatus::LEVELS, 'files' => $found, 'quarantine' => $kept, 'filesSupported' => true, 'notice' => null])->render();
+$page = $securityPage([]);
+env_assert(str_contains($page, 'data-env-security="risk"') && str_contains($page, 'data-env-security-score="45"') && str_contains($page, 'data-env-security-problems="13"')
+    && str_contains($page, 'data-env-security-fix="security_updates"') && str_contains($page, 'data-env-security-fix="fail2ban"') && !str_contains($page, 'data-env-security-fix="https:demo-php.test"')
+    && str_contains($page, 'data-env-security-open="https:demo-php.test"') && str_contains($page, 'data-env-security-level-card="enhanced"') && substr_count($page, 'data-env-security-op="level-') === 3
+    && str_contains($page, 'data-env-security-found="demo-php.test/public/up.php"') && str_contains($page, 'data-env-security-quarantine="1"') && substr_count($page, 'data-env-security-op="restore"') === 1
+    && str_contains($page, 'Nobody blocks password guessing.') && !str_contains($page, 'nobody blocks password guessing'), 'The security page: '.$page);
+$readOnlySecurity = $securityPage(['fixes' => [], 'allows' => ['fix' => false, 'scan' => false, 'level' => false, 'files-scan' => false, 'quarantine' => false, 'restore' => false]]);
+env_assert(!str_contains($readOnlySecurity, 'data-env-security-fix=') && !str_contains($readOnlySecurity, 'data-env-security-op=') && str_contains($readOnlySecurity, 'data-env-security-how'),
+    'Without the right to change the server: what to do, no buttons.');
+env_assert(str_contains($securityPage(['supported' => false, 'status' => null]), 'data-env-security="unsupported"') && str_contains($securityPage(['status' => null]), 'data-env-security="unreadable"'),
+    'An older server or no answer says so.');
 
 echo "ServerToolsTest passed.\n";

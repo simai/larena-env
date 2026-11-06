@@ -161,6 +161,30 @@ final readonly class SiteExtrasReader
         return $data === null ? null : \Larena\Env\Firewall\FirewallStatus::fromData($data);
     }
 
+    /** The server's security checks and score (simai-env 1.45.0). */
+    public function security(PanelActor $actor): ?\Larena\Env\Security\SecurityStatus
+    {
+        $data = $this->data($actor, 'security:status', []);
+
+        return $data === null ? null : \Larena\Env\Security\SecurityStatus::fromData($data);
+    }
+
+    /** The last check of the sites' files for malicious code (simai-env 1.46.0). */
+    public function fileScan(PanelActor $actor): ?\Larena\Env\Security\FileScan
+    {
+        $data = $this->data($actor, 'security:files', []);
+
+        return $data === null ? null : \Larena\Env\Security\FileScan::fromData($data);
+    }
+
+    /** The files moved into quarantine (simai-env 1.46.0). */
+    public function quarantine(PanelActor $actor): ?\Larena\Env\Security\Quarantine
+    {
+        $data = $this->data($actor, 'security:quarantine-list', []);
+
+        return $data === null ? null : \Larena\Env\Security\Quarantine::fromData($data);
+    }
+
     /** Whether the server keeps a Cloudflare token for certificates through DNS (simai-env 1.36.0). */
     public function dnsCertificates(PanelActor $actor): ?\Larena\Env\Certificates\DnsCertificates
     {

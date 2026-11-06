@@ -36,6 +36,8 @@ return [
             'env.alerts.channel' => 'settings',
             // The services and the firewall beside the server, who reaches the panel among its settings (Panel plan 5.1–5.3).
             'env.services' => 'server',
+            // The server's security (simai-env 1.45.0): score, problems with their fixes, level, files.
+            'env.security' => 'server',
             'env.firewall' => 'server',
             // The server's software with simai-env's, the panel's and the system's updates (one place since the
             // panel's UX audit), and its PHP versions (simai-env 1.32.0–1.38.0).

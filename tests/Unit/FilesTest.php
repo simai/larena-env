@@ -127,7 +127,7 @@ env_assert((new SudoGateway(new SudoGatewayTarget(), new RecordingProcessExecuto
 $recorded = new SiteFiles(new RecordedAnswersGateway(env_recorded_path()));
 $own = $recorded->folder($owner, 'demo-owned.test', '.');
 env_assert(is_array($own) && $own['entries'][0]->name === 'public' && $own['entries'][0]->isDir() && $own['entries'][0]->mode === '775'
-    && $own['entries'][0]->mtime === gmdate('Y-m-d\TH:i:s\Z', 1793909228), 'The recorded folder (simai-files/1).');
+    && $own['entries'][0]->mtime === gmdate('Y-m-d\TH:i:s\Z', 1793926628), 'The recorded folder (simai-files/1).');
 env_assert($recorded->folder($owner, 'demo-php.test', '.') === 'owner_scope', 'Another owner\'s site is refused.');
 
 // The stand-in on recorded answers: it lists the file commands and works inside a site's folder only.
