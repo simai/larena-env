@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- The overview's charts read simai-env 1.50.0: the processor's busy share in percent, «Сеть» in and out in Mbit/s or
+  kbit/s with the interface and the link (its speed the whole where the server knows it), «Диск: чтение и запись» in MB/s
+  or KB/s with the disk's kind and device; two lines with a legend and both values on hover. An hour reads the server's
+  1-minute points and six hours its 5-minute ones; an older server, or one with no hour yet, gives its day's last points.
 - The server overview's load history is one chart per measure (owner 2026-11-06, after a hosting provider's
   dashboard): «Статистика за» an hour, 6 hours, a day, a week or a month, and a scale from zero to the whole or by the
   values; the processor in percent with its cores, the memory and each disk in gigabytes with the whole, a scale in units

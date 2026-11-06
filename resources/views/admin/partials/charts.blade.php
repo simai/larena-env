@@ -1,4 +1,4 @@
-{{-- The load history as one chart per measure (owner 2026-11-06, after a hosting provider's dashboard): the period and
+{{-- The load history as one chart per measure (the network and the disk's reading and writing with two lines and a legend) (owner 2026-11-06, after a hosting provider's dashboard): the period and
      the scale chosen above, each chart with its whole in the title, its scale in its own units on the left and the time
      along the bottom; every point names its time and value on hover. Drawn by the panel until the Framework's chart set
      reaches Larena (ui-chart, sf-chart-line). --}}
@@ -31,6 +31,13 @@
                         <span class="grow"></span>
                         <span class="color-on-surface-variant">{{ __('larena-env::admin.history.now') }} <strong style="color: var(--sf-on-surface);">{{ $chart['last'] }}</strong></span>
                     </figcaption>
+                    @if (count($chart['series']) > 1)
+                        <div class="flex flex-wrap g-2 m-t-1 text-0" data-env-chart-legend>
+                            @foreach ($chart['series'] as $index => $line)
+                                <span class="flex items-cross-center g-1" data-env-chart-series="{{ $line['key'] }}"><span aria-hidden="true" style="inline-size: .75rem; block-size: .2rem; border-radius: .1rem; background: {{ $index === 0 ? 'var(--sf-primary)' : 'var(--sf-warning, var(--sf-secondary))' }};"></span>{{ $line['name'] }}</span>
+                            @endforeach
+                        </div>
+                    @endif
                     <div style="display: grid; grid-template-columns: auto 1fr; column-gap: .5rem; margin-top: .75rem;">
                         <div class="color-on-surface-variant text-0" style="display: flex; flex-direction: column; justify-content: space-between; text-align: end; block-size: 10rem; white-space: nowrap;" data-env-chart-ticks>
                             @foreach ($chart['ticks'] as $tick)<span style="line-height: 1;">{{ $tick }}</span>@endforeach
@@ -42,10 +49,14 @@
                                 <line x1="0" x2="{{ \Larena\Env\History\HistoryCharts::WIDTH }}" y1="{{ \Larena\Env\History\HistoryCharts::HEIGHT * $step / 4 }}" y2="{{ \Larena\Env\History\HistoryCharts::HEIGHT * $step / 4 }}"
                                       stroke="currentColor" stroke-opacity="{{ $step === 4 ? '0.35' : '0.12' }}" stroke-width="1" vector-effect="non-scaling-stroke" style="color: var(--sf-on-surface);" />
                             @endforeach
-                            <polygon points="{{ $chart['area'] }}" fill="currentColor" fill-opacity="0.15" />
-                            <polyline points="{{ $chart['line'] }}" fill="none" stroke="currentColor" stroke-width="1.75" vector-effect="non-scaling-stroke" stroke-linejoin="round" />
-                            @foreach ($chart['points'] as $point)
-                                <rect x="{{ max(0, $point['x'] - 3) }}" y="0" width="6" height="{{ \Larena\Env\History\HistoryCharts::HEIGHT }}" fill="transparent"><title>{{ $point['label'] }}</title></rect>
+                            @foreach ($chart['series'] as $index => $line)
+                                <g data-env-chart-line="{{ $line['key'] }}" @if ($index > 0) style="color: var(--sf-warning, var(--sf-secondary));" @endif>
+                                    <polygon points="{{ $line['area'] }}" fill="currentColor" fill-opacity="{{ count($chart['series']) > 1 ? '0.08' : '0.15' }}" />
+                                    <polyline points="{{ $line['line'] }}" fill="none" stroke="currentColor" stroke-width="1.75" vector-effect="non-scaling-stroke" stroke-linejoin="round" />
+                                </g>
+                            @endforeach
+                            @foreach ($chart['hovers'] as $hover)
+                                <rect x="{{ max(0, $hover['x'] - 3) }}" y="0" width="6" height="{{ \Larena\Env\History\HistoryCharts::HEIGHT }}" fill="transparent"><title>{{ $hover['label'] }}</title></rect>
                             @endforeach
                         </svg>
                         <span></span>

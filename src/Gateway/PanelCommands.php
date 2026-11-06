@@ -56,7 +56,8 @@ final class PanelCommands
     private const string ALERT_CHANNEL = '/\A(?:webhook|telegram|off)\z/D';
     private const string ALERT_TARGET = '/\A(?:https:\/\/[!-~]{1,500}|-?[0-9]{1,20}|@[A-Za-z0-9_]{5,32})\z/D';
     private const string BOT_TOKEN = '/\A[0-9]{5,12}:[A-Za-z0-9_-]{30,64}\z/D';
-    private const string PERIOD = '/\A(?:day|week|month)\z/D';
+    // The history's periods: an hour and six hours since simai-env 1.50.0, an older server refuses them.
+    private const string PERIOD = '/\A(?:hour|6h|day|week|month)\z/D';
     // The server's security (simai-env 1.45.0–1.47.0): what security:fix puts right, the protection levels, and the
     // requests one address may send a second (2–1000) and at once (10–10000).
     private const string SECURITY_FIX = '/\A(?:auto_updates|fail2ban|ssh_password|antivirus)\z/D';

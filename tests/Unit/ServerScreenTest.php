@@ -170,6 +170,28 @@ env_assert($hour->count === 2 && array_column($hour->charts, 'key') === ['load',
 $auto = \Larena\Env\History\HistoryCharts::fromServer('day', 'auto', $day, $words);
 env_assert($auto->count === 3 && $auto->charts[0]['ticks'][0] === '100 %' && $auto->charts[2]['ticks'][0] === '20 '.$text('history.gb')
     && \Larena\Env\History\HistoryCharts::period('year') === 'day' && \Larena\Env\History\HistoryCharts::scale('x') === 'fixed', 'The scale by the values: '.json_encode($auto->charts[2]['ticks']));
+// simai-env 1.50.0: the processor's busy share, the network in and out and the disk's reading and writing a second, with
+// the link and the disk named in the header; the first point's rates are null (fixture set 26).
+$rates = ['schema' => 'simai-metrics-history/1', 'period' => 'hour', 'step_seconds' => 60,
+    'host' => ['net_interface' => 'eth0', 'net_link_bits_per_s' => 200_000_000, 'disk_device' => 'nvme0n1', 'disk_kind' => 'nvme'], 'points' => [
+    ['at' => '2026-11-01T11:59:00Z', 'load1' => 3.0, 'cpu_cores' => 4, 'cpu_percent' => null, 'net_rx_bytes_per_s' => null, 'net_tx_bytes_per_s' => null,
+        'disk_read_bytes_per_s' => null, 'disk_write_bytes_per_s' => null],
+    ['at' => '2026-11-01T12:00:00Z', 'load1' => 3.0, 'cpu_cores' => 4, 'cpu_percent' => 12.5, 'net_rx_bytes_per_s' => 125000, 'net_tx_bytes_per_s' => 2500000,
+        'disk_read_bytes_per_s' => 4096, 'disk_write_bytes_per_s' => 1048576],
+]];
+$fast = \Larena\Env\History\HistoryCharts::fromServer('hour', 'fixed', $rates, $words);
+$byKey = array_column($fast->charts, null, 'key');
+env_assert(array_keys($byKey) === ['load', 'network', 'io'] && $byKey['load']['last'] === '13 %' && count($byKey['load']['hovers']) === 1
+    && $byKey['network']['ticks'][0] === '200 '.$text('history.mbit') && $byKey['network']['capacity'] === 'eth0 '.$text('history.link', ['speed' => '200 '.$text('history.mbit')])
+    && array_column($byKey['network']['series'], 'key') === ['in', 'out'] && $byKey['network']['last'] === $text('history.in').' 1,0 '.$text('history.mbit').' · '.$text('history.out').' 20 '.$text('history.mbit')
+    && $byKey['io']['unit'] === $text('history.mbs') && $byKey['io']['capacity'] === 'NVMe nvme0n1' && $byKey['io']['ticks'][0] === '2,0 '.$text('history.mbs')
+    && str_contains($byKey['io']['hovers'][0]['label'], $text('history.read').' < 0,1 '.$text('history.mbs')),
+    'The rates of 1.50.0: '.json_encode($fast->charts, JSON_UNESCAPED_UNICODE));
+$ratesPage = $state(['section' => 'overview', 'overview' => $overview, 'history' => $history, 'charts' => $fast]);
+env_assert(substr_count($ratesPage, 'data-env-chart-legend') === 2 && str_contains($ratesPage, 'data-env-chart-line="out"') && str_contains($ratesPage, 'data-env-chart-series="write"'),
+    'Two lines and a legend: '.$ratesPage);
+env_assert(\Larena\Env\History\HistoryCharts::hasPoints($rates) && !\Larena\Env\History\HistoryCharts::hasPoints(['points' => []]) && !\Larena\Env\History\HistoryCharts::hasPoints(null),
+    'Whether the server kept points.');
 $chartsPage = $state(['section' => 'overview', 'overview' => $overview, 'history' => $history, 'charts' => $hour]);
 env_assert(str_contains($chartsPage, 'data-env-charts="hour"') && substr_count($chartsPage, 'data-env-chart="') === 3 && substr_count($chartsPage, 'data-env-charts-period=') === 5
     && preg_match('/data-env-charts-period="hour"\s+aria-current="true"/', $chartsPage) === 1 && str_contains($chartsPage, '<title>01.11 12:00 UTC · 75 %</title>')

@@ -62,7 +62,12 @@ final readonly class ServerAdminController
         $charts = null;
         if ($section === 'overview' && $actor->owner === null && $overview?->capabilities?->allows('self:metrics-history') === true && $this->extras !== null) {
             $period = \Larena\Env\History\HistoryCharts::period($request->query('period'));
-            $data = $this->extras->metricsHistoryData($actor, \Larena\Env\History\HistoryCharts::PERIODS[$period][1]);
+            [, $source, $before] = \Larena\Env\History\HistoryCharts::PERIODS[$period];
+            $data = $this->extras->metricsHistoryData($actor, $source);
+            // A server before 1.50.0 keeps no hour of its own, and a fresh one has none yet: its day's last points then.
+            if ($source !== $before && !\Larena\Env\History\HistoryCharts::hasPoints($data)) {
+                $data = $this->extras->metricsHistoryData($actor, $before);
+            }
             $charts = $data === null ? null : \Larena\Env\History\HistoryCharts::fromServer($period, \Larena\Env\History\HistoryCharts::scale($request->query('scale')), $data,
                 static fn (string $key, array $replace = []): string => $text($key, $replace));
         }
