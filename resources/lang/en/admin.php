@@ -1237,6 +1237,16 @@ return [
         'operations' => ['rule-add' => 'Add a firewall rule', 'rule-remove' => 'Remove a firewall rule', 'block' => 'Keep an address out',
             'unblock' => 'Let an address in again', 'access' => 'Change who reaches the panel'],
     ],
+    'actions' => [
+        'title' => 'Recommended actions',
+        'summary' => 'Do now: :now · advised: :todo · done: :done',
+        'done_list' => 'Done (:count)',
+        'states' => ['now' => 'Do now', 'todo' => 'Not done', 'done' => 'Done'],
+        'fix' => 'Fix',
+        'open' => 'Open',
+        'update' => 'Update',
+        'update_line' => 'See what changes and confirm the update.',
+    ],
     'setup' => [
         'title' => 'Server setup',
         'steps' => 'Setup steps',
@@ -1245,8 +1255,6 @@ return [
         'next' => 'Next',
         'skip' => 'Skip',
         'later' => 'Set up later',
-        'left' => 'Left to set up',
-        'hide' => 'Do not show again',
         'state' => ['done' => 'Done', 'skipped' => 'Put off', 'todo' => 'Not done'],
         'step' => [
             'login' => ['name' => 'Password and sign-in', 'why' => 'Check the administrator\'s password and turn on sign-in with an app code: a stolen password then does not open the panel.', 'open' => 'Open sign-in security'],

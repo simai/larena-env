@@ -2,11 +2,14 @@
 
 ## Unreleased
 
+- After signing in, whoever may read the server lands on its overview, the panel's dashboard; an owner of sites on the
+  sites (owner 2026-11-06). The overview starts with «Рекомендуемые действия»: one list of what to do now (the server's
+  high and critical security problems), what is advised (the other problems, a waiting update, the setup's steps not
+  done) and what is done (folded), each with one click — a fix planned and confirmed, or the screen where it is done.
 - «Настройка сервера» after the administrator's first sign-in, offered once: six steps one at a time (password and
   sign-in code, the panel's address, alerts, the protection level with «Усиленный» advised, backups with an S3
   storage, updates), each done on its own screen or put off. A step the server already shows done (a domain with a
-  certificate, a channel, the enhanced or strict level, a storage) passes by itself. What is left stays on the
-  overview as «Что ещё настроить» until done or hidden.
+  certificate, a channel, the enhanced or strict level, a storage) passes by itself.
 - «Доступ к панели» starts with «Адрес панели» (simai-env 1.51.0, panel:address/domain/port/ip-access): the address to
   open the panel at; the address by IP with its self-signed certificate's SHA-256 fingerprint; a domain attached with
   the hint which A record to add first (Let's Encrypt, nothing changes when no certificate comes) or detached; the port

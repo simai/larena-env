@@ -58,13 +58,6 @@ final readonly class ServerSetupController
             : route('larena.env.admin.setup', ['step' => $next], false));
     }
 
-    public function hide(Request $request): RedirectResponse
-    {
-        $this->setup->hide(PanelWarnings::now());
-
-        return new RedirectResponse(route('larena.env.admin.overview', [], false));
-    }
-
     /** @return array<string, string> */
     public function states(PanelActor $actor): array
     {

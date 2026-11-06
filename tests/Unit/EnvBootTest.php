@@ -54,7 +54,7 @@ env_assert($names === ['larena.env.admin.alerts.ack.open', 'larena.env.admin.ale
     'larena.env.admin.index', 'larena.env.admin.job', 'larena.env.admin.job.cancel', 'larena.env.admin.overview',
     'larena.env.admin.panel.access', 'larena.env.admin.panel.address.plan', 'larena.env.admin.panel.address.run', 'larena.env.admin.people', 'larena.env.admin.people.act', 'larena.env.admin.people.assign', 'larena.env.admin.people.owners.plan',
     'larena.env.admin.people.owners.run', 'larena.env.admin.people.stop', 'larena.env.admin.security', 'larena.env.admin.security.plan', 'larena.env.admin.security.run', 'larena.env.admin.services', 'larena.env.admin.services.plan', 'larena.env.admin.services.run',
-    'larena.env.admin.setup', 'larena.env.admin.setup.hide', 'larena.env.admin.setup.mark',
+    'larena.env.admin.setup', 'larena.env.admin.setup.mark',
     'larena.env.admin.site', 'larena.env.admin.site.cron.plan', 'larena.env.admin.site.cron.run', 'larena.env.admin.site.dns.plan', 'larena.env.admin.site.dns.run',
     'larena.env.admin.site.files.download', 'larena.env.admin.site.files.plan', 'larena.env.admin.site.files.run', 'larena.env.admin.site.nginx.plan',
     'larena.env.admin.site.nginx.run', 'larena.env.admin.site.plan',

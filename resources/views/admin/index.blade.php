@@ -23,22 +23,29 @@
     @elseif ($section === 'overview')
         {{-- State first, details after (owner-approved prototype, 2026-11-02): what needs a person, a waiting update, the
              measures as tiles, then the server and its services, then the load over time. --}}
-        @if (($setupLeft ?? []) !== [])
-            {{-- What is left of the server's first setup (ENV 2026-11-06), until done or hidden. --}}
-            <section class="larena-panel larena-panel-padded m-bottom-2" data-env-setup-left aria-labelledby="env-setup-left">
-                <div class="flex flex-wrap items-cross-center g-2">
-                    <h2 id="env-setup-left" class="m-0 text-2 grow">{{ __('larena-env::admin.setup.left') }}</h2>
-                    <form method="post" action="{{ route('larena.env.admin.setup.hide', [], false) }}" class="m-0">
-                        @csrf
-                        <button type="submit" class="larena-button" style="min-height: 2.75rem;" data-env-setup-hide>{{ __('larena-env::admin.setup.hide') }}</button>
-                    </form>
-                </div>
+        @if (($actions ?? []) !== [])
+            {{-- «Рекомендуемые действия» (owner 2026-11-06): what to do now first, then what is advised, the done ones folded;
+                 each with its one click, which goes through the usual plan and confirmation. --}}
+            <section class="larena-panel larena-panel-padded m-bottom-2" data-env-actions aria-labelledby="env-actions">
+                <h2 id="env-actions" class="m-0 text-2">{{ __('larena-env::admin.actions.title') }}</h2>
+                <p class="m-0 color-on-surface-variant">{{ __('larena-env::admin.actions.summary', ['now' => (string) $actionCounts['now'], 'todo' => (string) $actionCounts['todo'], 'done' => (string) $actionCounts['done']]) }}</p>
                 <ul class="m-0 m-t-1 p-0" style="list-style: none;">
-                    @foreach ($setupLeft as $key)
-                        <li class="p-y-1" data-env-setup-left-step="{{ $key }}"><a href="{{ route('larena.env.admin.setup', ['step' => $key], false) }}" class="flex g-1 items-cross-center" style="min-height: 2.75rem;">
-                            <sf-icon icon="radio_button_unchecked" aria-hidden="true"></sf-icon>{{ __('larena-env::admin.setup.step.'.$key.'.name') }}</a></li>
+                    @foreach ($actions as $item)
+                        @continue($item['state'] === 'done')
+                        @include('larena-env::admin.partials.recommended-action', ['item' => $item])
                     @endforeach
                 </ul>
+                @if ($actionCounts['done'] > 0)
+                    <details class="m-t-1" data-env-actions-done>
+                        <summary style="cursor: pointer; min-height: 2.75rem; display: flex; align-items: center;">{{ __('larena-env::admin.actions.done_list', ['count' => (string) $actionCounts['done']]) }}</summary>
+                        <ul class="m-0 p-0" style="list-style: none;">
+                            @foreach ($actions as $item)
+                                @continue($item['state'] !== 'done')
+                                @include('larena-env::admin.partials.recommended-action', ['item' => $item])
+                            @endforeach
+                        </ul>
+                    </details>
+                @endif
             </section>
         @endif
         @if (($updates ?? []) !== [])

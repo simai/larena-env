@@ -138,9 +138,28 @@ $warnings = \Larena\Env\Warnings\PanelWarnings::of($overview, $metrics, new Date
 $kinds = array_map(static fn ($warning): string => $warning->kind.':'.($warning->domain ?? ''), $warnings);
 env_assert(in_array('disk_full:', $kinds, true) && $warnings[0]->kind === 'disk_full' && $warnings[0]->severity === 'error' && in_array('backup_stale:demo-php.test', $kinds, true), 'A disk at 98% is said first, as an error; an old backup is said too.');
 // What needs attention is in the admin's alert bar on every page (owner decision 2026-11-05): the screens draw no block of it.
-$left = $state(['section' => 'overview', 'overview' => $overview, 'setupLeft' => ['alerts', 'backups']]);
-env_assert(str_contains($left, 'data-env-setup-left') && str_contains($left, 'data-env-setup-left-step="alerts"') && str_contains($left, 'data-env-setup-hide')
-    && !str_contains($ok, 'data-env-setup-left'), 'What is left of the setup stands on the overview until done or hidden.');
+// «Рекомендуемые действия»: the server's checks first by severity, one click each, the setup steps a check covers not twice.
+$checks = \Larena\Env\Security\SecurityStatus::fromData(['schema' => 'simai-security/1', 'score' => 74, 'checks' => [
+    ['id' => 'ssh_password', 'check' => 'ssh_password', 'area' => 'ssh', 'status' => 'risk', 'severity' => 'high', 'fix' => ['command' => 'security:fix', 'args' => ['check' => 'ssh_password']]],
+    ['id' => 'antivirus', 'check' => 'antivirus', 'area' => 'files', 'status' => 'warn', 'severity' => 'medium'],
+    ['id' => 'backup_storage', 'check' => 'backup_storage', 'area' => 'backup', 'status' => 'warn', 'severity' => 'medium'],
+    ['id' => 'firewall', 'check' => 'firewall', 'area' => 'network', 'status' => 'ok', 'severity' => 'high'],
+]]);
+$words = static fn (string $key, array $replace = []): string => $key.($replace === [] ? '' : ':'.implode(',', $replace));
+$list = \Larena\Env\Admin\RecommendedActions::of($checks, [], ['ssh_password' => true], '/admin/server/security', '/admin/server/security/plan',
+    static fn (string $domain): string => '/admin/server/sites/'.$domain,
+    ['login' => 'done', 'address' => 'todo', 'alerts' => 'skipped', 'protection' => 'todo', 'backups' => 'todo', 'updates' => 'todo'],
+    ['login' => null, 'address' => '/a', 'alerts' => '/b', 'protection' => '/c', 'backups' => '/d', 'updates' => '/e'],
+    [['target' => 'env', 'available' => '1.52.0']], '/admin/server/software#update', $words);
+$keys = array_column($list, 'key');
+env_assert($checks !== null && $keys[0] === 'security:ssh_password' && $list[0]['state'] === 'now' && $list[0]['action']['kind'] === 'form'
+    && $list[0]['action']['fields'] === ['op' => 'fix', 'check' => 'ssh_password'] && in_array('update:env', $keys, true) && !in_array('setup:backups', $keys, true)
+    && in_array('setup:alerts', $keys, true) && end($list)['state'] === 'done' && \Larena\Env\Admin\RecommendedActions::count($list, 'done') === 2
+    && $list[array_search('security:antivirus', $keys, true)]['action']['url'] === '/admin/server/security#env-security-check-antivirus', 'The recommended actions: '.json_encode($keys));
+$counts = ['now' => 1, 'todo' => \Larena\Env\Admin\RecommendedActions::count($list, 'todo'), 'done' => 2];
+$left = $state(['section' => 'overview', 'overview' => $overview, 'actions' => $list, 'actionCounts' => $counts]);
+env_assert(str_contains($left, 'data-env-actions') && str_contains($left, 'data-env-action="security:ssh_password"') && str_contains($left, 'data-env-action-state="now"')
+    && str_contains($left, 'name="check" value="ssh_password"') && str_contains($left, 'data-env-actions-done') && !str_contains($ok, 'data-env-actions'), 'The block on the overview: '.$left);
 $loaded = $state(['section' => 'overview', 'overview' => $overview, 'metrics' => $metrics, 'warnings' => $warnings]);
 env_assert(str_contains($loaded, 'data-env-metrics') && str_contains($loaded, '98%') && !str_contains($loaded, 'data-env-warnings')
     && !str_contains($state(['overview' => $overview, 'sitesView' => ['stub' => true], 'warnings' => $warnings]), 'data-env-warnings'), 'The overview and the sites draw no warnings block.');

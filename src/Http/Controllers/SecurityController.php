@@ -285,7 +285,7 @@ final readonly class SecurityController
     }
 
     /** @param array<string, string>|null $args */
-    private function fixable(?string $command, ?array $args, PanelCapabilities $capabilities): bool
+    public function fixable(?string $command, ?array $args, PanelCapabilities $capabilities): bool
     {
         if ($command === null || !in_array($command, self::FIX_COMMANDS, true) || !$capabilities->allows($command)) {
             return false;

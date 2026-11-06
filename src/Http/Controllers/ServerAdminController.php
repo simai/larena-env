@@ -9,6 +9,7 @@ use Illuminate\Contracts\View\Factory;
 use Illuminate\Http\Request;
 use Larena\Admin\Assets\AdminProductAssetManifest;
 use Larena\Admin\Runtime\AdminDataviewPagePresenter;
+use Larena\Env\Admin\RecommendedActions;
 use Larena\Env\Admin\ServerSitesPage;
 use Larena\Env\History\MetricSamples;
 use Larena\Env\Server\ServerOverviewReader;
@@ -28,6 +29,7 @@ final readonly class ServerAdminController
         private \Illuminate\Contracts\Config\Repository $config,
         // The container leaves an optional unbound class out, so the setup's steps are asked for outright.
         private ServerSetupController $setupSteps,
+        private SecurityController $security,
         private ?\Larena\Access\Runtime\AccessOperationAuthorizer $authorizer = null,
         private ?\Larena\Env\Server\SiteExtrasReader $extras = null,
         private ?MetricSamples $samples = null,
@@ -37,17 +39,19 @@ final readonly class ServerAdminController
 
     public function index(Request $request): mixed
     {
-        // The first sign-in of the server's administrator goes through the server's setup once (ENV 2026-11-06).
-        if ($this->canSetUp($request) && $this->setup?->offerOnce(PanelWarnings::now()) === true) {
-            return new \Illuminate\Http\RedirectResponse(route('larena.env.admin.setup', [], false));
-        }
-
-        return $this->page($request, 'sites');
+        return $this->offerSetup($request) ?? $this->page($request, 'sites');
     }
 
     public function overview(Request $request): mixed
     {
-        return $this->page($request, 'overview');
+        return $this->offerSetup($request) ?? $this->page($request, 'overview');
+    }
+
+    /** The first sign-in of the server's administrator goes through the server's setup once (ENV 2026-11-06). */
+    private function offerSetup(Request $request): ?\Illuminate\Http\RedirectResponse
+    {
+        return $this->canSetUp($request) && $this->setup?->offerOnce(PanelWarnings::now()) === true
+            ? new \Illuminate\Http\RedirectResponse(route('larena.env.admin.setup', [], false)) : null;
     }
 
     private function page(Request $request, string $section): mixed
@@ -80,6 +84,9 @@ final readonly class ServerAdminController
                 static fn (string $key, array $replace = []): string => $text($key, $replace));
         }
 
+        $updates = $section === 'overview' && $actor->owner === null ? $this->updates($actor, $overview) : [];
+        $actions = $section === 'overview' ? $this->actions($request, $actor, $overview, $updates, $text) : [];
+
         return $this->views->make('larena-env::admin.index', [
             'section' => $section,
             'canCreate' => $this->authorizer?->authorize($request, 'env.sites.operate')->isAllowed() ?? false,
@@ -92,9 +99,12 @@ final readonly class ServerAdminController
             'history' => $history,
             'charts' => $charts,
             // What is left of the server's setup, until done or hidden.
-            'setupLeft' => $section === 'overview' ? $this->setupLeft($request, $actor) : [],
+            // «Рекомендуемые действия»: what to do now, what is advised, what is done (owner 2026-11-06).
+            'actions' => $actions,
+            'actionCounts' => ['now' => RecommendedActions::count($actions, RecommendedActions::NOW), 'todo' => RecommendedActions::count($actions, RecommendedActions::TODO),
+                'done' => RecommendedActions::count($actions, RecommendedActions::DONE)],
             // A safe update waiting (simai-env 1.32.0): only a hint here, the update screen says what it changes.
-            'updates' => $section === 'overview' && $actor->owner === null ? $this->updates($actor, $overview) : [],
+            'updates' => $updates,
             'historyFromServer' => $overview?->capabilities?->allows('self:metrics-history') === true,
             'source' => $result->source,
             'overview' => $overview,
@@ -114,14 +124,30 @@ final readonly class ServerAdminController
             && ($this->authorizer?->authorize($request, 'env.server.operate')->isAllowed() ?? false);
     }
 
-    /** @return list<string> the setup's steps not done yet, in order */
-    private function setupLeft(Request $request, \Larena\Env\Gateway\PanelActor $actor): array
+    /**
+     * @param list<array{target: string, available: ?string}> $updates
+     * @param callable(string, array<string, string>=): string $text
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function actions(Request $request, \Larena\Env\Gateway\PanelActor $actor, ?\Larena\Env\Server\ServerOverview $overview, array $updates, callable $text): array
     {
-        if (!$this->canSetUp($request) || $this->setup?->hidden() !== false) {
+        if ($actor->owner !== null || $this->extras === null || $this->authorizer === null || !$this->authorizer->authorize($request, 'env.server.read')->isAllowed()) {
             return [];
         }
+        $capabilities = $overview->capabilities ?? \Larena\Env\Gateway\PanelCapabilities::none();
+        $canOperate = $this->authorizer->authorize($request, 'env.server.operate')->isAllowed();
+        $security = $capabilities->allows('security:status') ? $this->extras->security($actor) : null;
+        $fixes = [];
+        foreach ($security?->problems() ?? [] as $check) {
+            $fixes[$check->id] = $canOperate && $this->security->fixable($check->fixCommand, $check->fixArgs, $capabilities);
+        }
 
-        return array_keys(array_filter($this->setupSteps->states($actor), static fn (string $state): bool => $state !== \Larena\Env\Setup\ServerSetup::DONE));
+        return RecommendedActions::of($security, $security === null ? [] : $this->security->words($security), $fixes,
+            route('larena.env.admin.security', [], false), route('larena.env.admin.security.plan', [], false),
+            static fn (string $domain): string => route('larena.env.admin.site', ['domain' => $domain], false),
+            $canOperate ? $this->setupSteps->states($actor) : [], $canOperate ? $this->setupSteps->links() : [],
+            $updates, route('larena.env.admin.software', [], false).'#update', $text);
     }
 
     /** @return list<array{target: string, available: ?string}> the targets the server has an update for */

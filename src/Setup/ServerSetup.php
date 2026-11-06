@@ -10,7 +10,7 @@ use Illuminate\Database\ConnectionInterface;
 
 /**
  * The server's first setup (ENV task 2026-11-06): after the first sign-in the administrator goes through six steps,
- * each of them can be put off; what is left stays on the overview as «Что ещё настроить» until done or hidden.
+ * each of them can be put off; what is left stays among the overview's recommended actions.
  * A step the server already shows as done needs no mark.
  */
 final readonly class ServerSetup
@@ -31,7 +31,6 @@ final readonly class ServerSetup
     public const string SKIPPED = 'skipped';
     public const string TODO = 'todo';
     private const string OFFERED = '_offered';
-    private const string HIDDEN = '_hidden';
 
     public function __construct(private ConnectionInterface $connection)
     {
@@ -68,16 +67,6 @@ final readonly class ServerSetup
         $this->put(self::OFFERED, 'yes', $now);
 
         return true;
-    }
-
-    public function hide(DateTimeImmutable $now): void
-    {
-        $this->put(self::HIDDEN, 'yes', $now);
-    }
-
-    public function hidden(): bool
-    {
-        return $this->connection->table(self::TABLE)->where('step', self::HIDDEN)->exists();
     }
 
     /**

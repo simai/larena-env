@@ -96,7 +96,6 @@ $router->middleware(['access:env.server.operate'])->group(static function ($rout
     // The server's first setup after the first sign-in, one step at a time, each put off if wanted (ENV 2026-11-06).
     $router->get('/setup/{step?}', [ServerSetupController::class, 'show'])->where('step', '[a-z]{1,16}')->name('larena.env.admin.setup');
     $router->post('/setup/mark', [ServerSetupController::class, 'mark'])->name('larena.env.admin.setup.mark');
-    $router->post('/setup/hide', [ServerSetupController::class, 'hide'])->name('larena.env.admin.setup.hide');
     // Where the panel answers (simai-env 1.51.0): a domain, the port, the address by IP.
     $router->post('/panel-access/address/plan', [PanelAddressController::class, 'plan'])->name('larena.env.admin.panel.address.plan');
     $router->post('/panel-access/address/run', [PanelAddressController::class, 'run'])->name('larena.env.admin.panel.address.run');

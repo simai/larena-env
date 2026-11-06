@@ -55,7 +55,7 @@
             @else
                 <ul class="m-0 p-0" style="list-style: none;">
                     @foreach ($status->problems() as $check)
-                        <li class="flex flex-wrap items-cross-center g-2 p-y-2 border-top-1 border-top-solid border-outline-variant" data-env-security-check="{{ $check->id }}" data-env-security-status="{{ $check->status }}">
+                        <li id="env-security-check-{{ $check->id }}" class="flex flex-wrap items-cross-center g-2 p-y-2 border-top-1 border-top-solid border-outline-variant" data-env-security-check="{{ $check->id }}" data-env-security-status="{{ $check->status }}">
                             <sf-badge appearance="tonal" status="{{ $check->status === 'risk' ? 'error' : 'warning' }}" text="{{ __('larena-env::admin.security.statuses.'.$check->status) }}"></sf-badge>
                             <div class="grow min-w-0" style="flex-basis: 16rem;">
                                 <div style="font-weight: 600; overflow-wrap: anywhere;">

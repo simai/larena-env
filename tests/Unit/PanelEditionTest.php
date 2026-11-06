@@ -153,8 +153,28 @@ env_assert($guard->handle($request('/admin/setup', 'GET', 'larena.auth.admin.set
 env_assert($guard->handle($request('/admin/setup', 'POST', 'larena.auth.admin.setup.store'), $next)->getStatusCode() === 403 && $passed === 1, 'So does its form.');
 
 // The entry: a wrong link opens nothing, the right one opens this session, and the token is not in the session.
-$entry = new PanelEntryController($setup, $coordinator, $translator);
+// Who may read the server lands on its overview, the panel's dashboard (owner 2026-11-06); the rest on the sites.
+$readers = new class implements \Illuminate\Contracts\Config\Repository {
+    /** @var array<string, mixed> */
+    private array $items = ['larena-access.operations' => ['env.server.read' => ['target' => 'server:host', 'required_grants' => ['read'],
+        'test_grants' => ['test:system' => ['host' => ['read']], 'test:anna' => ['host' => []]]]]];
+
+    public function has($key): bool { return array_key_exists($key, $this->items); }
+    public function get($key, $default = null): mixed { return $this->items[$key] ?? $default; }
+    public function all(): array { return $this->items; }
+    public function set($key, $value = null): void { $this->items[$key] = $value; }
+    public function prepend($key, $value): void {}
+    public function push($key, $value): void {}
+};
+$entry = new PanelEntryController($setup, $coordinator, $translator, new \Larena\Access\Runtime\AccessOperationAuthorizer($readers, 'testing'));
 env_assert($entry($request('/'))->headers->get('Location') === '/admin/server', 'The address leads to the screen.');
+$as = static function (Request $request, string $actor): Request {
+    $request->attributes->set('larena_access_actor', $actor);
+
+    return $request;
+};
+env_assert($entry($as($request('/'), 'test:system'))->headers->get('Location') === '/admin/server/overview'
+    && $entry($as($request('/'), 'test:anna'))->headers->get('Location') === '/admin/server', 'The administrator lands on the overview, an owner on the sites.');
 env_assert($entry($request('/?setup=wrong'))->getStatusCode() === 403 && !$session->has(SetupLink::SESSION_KEY), 'A wrong link opens nothing.');
 $opened = $entry($request('/?setup='.$token));
 env_assert($opened instanceof RedirectResponse && $opened->headers->get('Location') === '/admin/setup', 'The right link leads to the first run.');
