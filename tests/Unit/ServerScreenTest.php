@@ -187,6 +187,13 @@ env_assert(array_keys($byKey) === ['load', 'network', 'io'] && $byKey['load']['l
     && $byKey['io']['unit'] === $text('history.mbs') && $byKey['io']['capacity'] === 'NVMe nvme0n1' && $byKey['io']['ticks'][0] === '2,0 '.$text('history.mbs')
     && str_contains($byKey['io']['hovers'][0]['label'], $text('history.read').' < 0,1 '.$text('history.mbs')),
     'The rates of 1.50.0: '.json_encode($fast->charts, JSON_UNESCAPED_UNICODE));
+// On its own scale a quiet network is drawn in kilobits, whatever the link; the ticks keep the decimals their step needs.
+$quiet = $rates;
+$quiet['points'][1]['net_rx_bytes_per_s'] = 1500;
+$quiet['points'][1]['net_tx_bytes_per_s'] = 2000;
+$quietNet = array_column(\Larena\Env\History\HistoryCharts::fromServer('hour', 'auto', $quiet, $words)->charts, null, 'key')['network'];
+env_assert($quietNet['unit'] === $text('history.kbit') && $quietNet['ticks'] === array_map(static fn (string $tick): string => $tick.' '.$text('history.kbit'), ['20', '15', '10', '5', '0']),
+    'A quiet network in kilobits: '.json_encode($quietNet['ticks'], JSON_UNESCAPED_UNICODE));
 $ratesPage = $state(['section' => 'overview', 'overview' => $overview, 'history' => $history, 'charts' => $fast]);
 env_assert(substr_count($ratesPage, 'data-env-chart-legend') === 2 && str_contains($ratesPage, 'data-env-chart-line="out"') && str_contains($ratesPage, 'data-env-chart-series="write"'),
     'Two lines and a legend: '.$ratesPage);

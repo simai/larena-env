@@ -141,7 +141,7 @@ final readonly class HistoryCharts
             [$unit, $divisor, $fixedTop, $title, $capacity] = match (true) {
                 $key === 'load' => ['%', 1.0, 100.0, $text('history.load', []),
                     $whole['load'] === null ? null : $text('history.cores', ['count' => (string) (int) $whole['load']])],
-                $key === 'network' => self::network($highest, $host, $text),
+                $key === 'network' => self::network($highest, $scale === 'fixed', $host, $text),
                 $key === 'io' => self::io($highest, $host, $text),
                 default => [$text('history.gb', []), 1.0, $whole[$key] ?? 1.0,
                     $key === 'memory' ? $text('history.memory', []) : $text('history.disk', ['mount' => substr($key, 5)]),
@@ -182,8 +182,9 @@ final readonly class HistoryCharts
                 'title' => $title,
                 'capacity' => $capacity,
                 'unit' => $unit,
-                // Five steps from the top down to 0, in the chart's units.
-                'ticks' => array_map(static fn (int $step): string => $format($top * (4 - $step) / 4), range(0, 4)),
+                // Five steps from the top down to 0, in the chart's units, with as many decimals as the step needs.
+                'ticks' => array_map(static fn (int $step): string => $unit === '%' ? $format($top * (4 - $step) / 4)
+                    : self::number($top * (4 - $step) / 4, $step === 4 ? 0 : max(0, min(2, (int) -floor(log10($top / 4))))).' '.$unit, range(0, 4)),
                 'times' => self::times($start, $span, $period),
                 'series' => array_map(static fn (array $one): array => array_diff_key($one, ['now' => true]), $drawn),
                 'hovers' => array_map(static fn (int $at, array $hover): array => ['x' => $hover['x'], 'label' => gmdate('d.m H:i', $at).' UTC · '.implode(' · ', $hover['parts'])],
@@ -201,10 +202,11 @@ final readonly class HistoryCharts
      * @param array<array-key, mixed> $host
      * @return array{string, float, ?float, string, ?string}
      */
-    private static function network(float $highest, array $host, callable $text): array
+    private static function network(float $highest, bool $fixed, array $host, callable $text): array
     {
         $link = is_int($host['net_link_bits_per_s'] ?? null) && $host['net_link_bits_per_s'] > 0 ? (float) $host['net_link_bits_per_s'] : null;
-        $mega = max($highest, $link ?? 0.0) >= 1_000_000;
+        // The unit follows what is drawn: the link on the fixed scale, the values on theirs.
+        $mega = max($highest, $fixed ? ($link ?? 0.0) : 0.0) >= 1_000_000;
         $unit = $text($mega ? 'history.mbit' : 'history.kbit', []);
         $divisor = $mega ? 1_000_000.0 : 1_000.0;
         $interface = is_string($host['net_interface'] ?? null) && preg_match('/\A[A-Za-z0-9._@-]{1,32}\z/D', $host['net_interface']) === 1 ? $host['net_interface'] : null;
