@@ -131,6 +131,99 @@
             </div>
         </section>
 
+        @if ($geoSupported)
+            {{-- Country blocking (simai-env 1.48.0): the mode, the countries, the ports and the addresses never dropped in one
+                 form, planned and confirmed; allowing only a list or all ports is undone by the server unless kept in time. --}}
+            <section class="larena-panel larena-panel-padded" data-env-security-geo="{{ $geo?->mode ?? 'unreadable' }}" aria-labelledby="env-security-geo">
+                <h2 id="env-security-geo" class="text-2">{{ __('larena-env::admin.security.geo.title') }}</h2>
+                <p class="color-on-surface-variant">{{ __('larena-env::admin.security.geo.note') }}</p>
+                @if ($geo === null)
+                    <p role="alert">{{ __('larena-env::admin.security.geo.unreadable') }}</p>
+                @else
+                    <p class="m-0" data-env-security-geo-now>
+                        <strong>{{ __('larena-env::admin.security.geo.now') }}:</strong>
+                        {{ __('larena-env::admin.security.geo.modes.'.$geo->mode) }}@if ($geo->mode !== 'off') · {{ __('larena-env::admin.security.geo.port_choices.'.$geo->ports) }}@endif
+                    </p>
+                    @if ($geo->mode !== 'off')
+                        <p class="m-0" data-env-security-geo-countries>
+                            @foreach ($geo->countries as $code)<span style="white-space: nowrap;">{{ \Larena\Env\Security\GeoStatus::flag($code) }} {{ $countries[$code] ?? $code }}</span>@if (!$loop->last), @endif @endforeach
+                        </p>
+                        <p class="m-0 color-on-surface-variant">
+                            @if (!$geo->active){{ __('larena-env::admin.security.geo.inactive') }}@elseif ($geo->dropped !== null){{ __('larena-env::admin.security.geo.dropped', ['count' => number_format($geo->dropped, 0, ',', ' ')]) }}@endif
+                        </p>
+                    @endif
+                    @if ($allows['geo'])
+                        <form method="post" action="{{ route('larena.env.admin.security.plan', [], false) }}" class="m-0 m-t-3" data-env-security-op="geo">
+                            @csrf
+                            <input type="hidden" name="op" value="geo">
+                            <fieldset class="m-0 p-0" style="border: 0;">
+                                <legend style="font-weight: 600;">{{ __('larena-env::admin.security.geo.mode') }}</legend>
+                                @foreach (\Larena\Env\Security\GeoStatus::MODES as $mode)
+                                    <label class="flex items-cross-center g-1" style="min-height: 2.75rem;"><input type="radio" name="mode" value="{{ $mode }}" @checked($geo->mode === $mode)> {{ __('larena-env::admin.security.geo.modes.'.$mode) }}</label>
+                                @endforeach
+                            </fieldset>
+                            <details class="m-t-2" data-env-security-geo-pick @if ($geo->countries === []) open @endif>
+                                <summary style="cursor: pointer; min-height: 2.75rem; display: flex; align-items: center;">
+                                    {{ __('larena-env::admin.security.geo.countries_pick') }} · {{ __('larena-env::admin.security.geo.countries_chosen', ['count' => (string) count($geo->countries)]) }}
+                                </summary>
+                                <div style="max-block-size: 18rem; overflow: auto; display: grid; gap: .125rem .75rem; grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); padding: .5rem 0;">
+                                    @foreach ($countries as $code => $name)
+                                        <label class="flex items-cross-center g-1" style="min-height: 2.25rem;" data-env-security-geo-country="{{ $code }}">
+                                            <input type="checkbox" name="countries[]" value="{{ $code }}" @checked(in_array($code, $geo->countries, true))>
+                                            <span>{{ \Larena\Env\Security\GeoStatus::flag($code) }} {{ $name }}</span>
+                                        </label>
+                                    @endforeach
+                                </div>
+                            </details>
+                            <fieldset class="m-0 m-t-2 p-0" style="border: 0;">
+                                <legend style="font-weight: 600;">{{ __('larena-env::admin.security.geo.ports') }}</legend>
+                                @foreach (\Larena\Env\Security\GeoStatus::PORTS as $ports)
+                                    <label class="flex items-cross-center g-1" style="min-height: 2.75rem;"><input type="radio" name="ports" value="{{ $ports }}" @checked($geo->ports === $ports)> {{ __('larena-env::admin.security.geo.port_choices.'.$ports) }}</label>
+                                @endforeach
+                            </fieldset>
+                            <label class="m-t-2" style="display: block;">
+                                <span style="font-weight: 600; display: block;">{{ __('larena-env::admin.security.geo.keep') }}</span>
+                                <input type="text" name="keep" class="larena-input" style="inline-size: 100%; max-inline-size: 32rem; min-height: 2.75rem;" value="{{ $myAddress }}" inputmode="text" autocomplete="off" data-env-security-geo-keep>
+                                <span class="color-on-surface-variant" style="display: block;">{{ __('larena-env::admin.security.geo.keep_hint') }}</span>
+                            </label>
+                            <p class="color-on-surface-variant m-t-2">{{ __('larena-env::admin.security.geo.timed') }}</p>
+                            <button type="submit" class="larena-button larena-button-primary" style="min-height: 2.75rem;">{{ __('larena-env::admin.security.geo.apply') }}</button>
+                        </form>
+                    @endif
+                    <div class="flex flex-wrap items-cross-center g-2 m-t-3">
+                        <span class="grow color-on-surface-variant" data-env-security-geo-database>
+                            {{ $geo->databasePresent ? __('larena-env::admin.security.geo.database', ['date' => $geo->databaseDate ?? '—']) : __('larena-env::admin.security.geo.database_none') }}
+                        </span>
+                        @if ($allows['geo-update'] && $geo->databasePresent)
+                            <form method="post" action="{{ route('larena.env.admin.security.plan', [], false) }}" class="m-0" data-env-security-op="geo-update">
+                                @csrf
+                                <input type="hidden" name="op" value="geo-update">
+                                <button type="submit" class="larena-button" style="min-height: 2.75rem;">{{ __('larena-env::admin.security.geo.update') }}</button>
+                            </form>
+                        @endif
+                    </div>
+                    @if ($lookupSupported)
+                        <form method="get" action="{{ route('larena.env.admin.security', [], false) }}#env-security-geo" class="flex flex-wrap items-cross-end g-2 m-t-3" data-env-security-geo-lookup>
+                            <label class="grow" style="flex-basis: 12rem;">
+                                <span style="font-weight: 600; display: block;">{{ __('larena-env::admin.security.geo.lookup') }}</span>
+                                <input type="text" name="ip" class="larena-input" style="inline-size: 100%; min-height: 2.75rem;" value="{{ $lookup['ip'] ?? '' }}" placeholder="{{ __('larena-env::admin.security.geo.lookup_field') }}" autocomplete="off">
+                            </label>
+                            <button type="submit" class="larena-button" style="min-height: 2.75rem;">{{ __('larena-env::admin.security.geo.lookup_go') }}</button>
+                        </form>
+                        @if ($lookup !== null)
+                            <p class="m-t-1" role="status" data-env-security-geo-answer="{{ $lookup['country'] ?? '' }}">
+                                @if (!$lookup['valid']){{ __('larena-env::admin.security.geo.lookup_invalid', ['ip' => $lookup['ip']]) }}
+                                @elseif ($lookup['country'] === null){{ __('larena-env::admin.security.geo.lookup_unknown', ['ip' => $lookup['ip']]) }}
+                                @else{{ __('larena-env::admin.security.geo.lookup_found', ['ip' => $lookup['ip'], 'country' => \Larena\Env\Security\GeoStatus::flag($lookup['country']).' '.($countries[$lookup['country']] ?? $lookup['country'])]) }}@endif
+                            </p>
+                        @endif
+                    @endif
+                    {{-- The country database's licence (CC BY 4.0) asks for this line wherever its data is shown. --}}
+                    <p class="m-0 m-t-2 color-on-surface-variant text-0" data-env-security-geo-attribution>{{ $geo->attribution }}</p>
+                @endif
+            </section>
+        @endif
+
         <section class="larena-panel larena-panel-padded" data-env-security-vulnerabilities="{{ count($status->vulnerabilities) }}" aria-labelledby="env-security-vulnerabilities">
             <h2 id="env-security-vulnerabilities" class="text-2">{{ __('larena-env::admin.security.vulnerabilities') }}</h2>
             @if ($status->vulnerabilities === [])

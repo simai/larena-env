@@ -63,6 +63,13 @@ final class PanelCommands
     private const string SECURITY_LEVEL = '/\A(?:basic|enhanced|strict)\z/D';
     private const string WEB_RATE = '/\A(?:[2-9]|[1-9][0-9]{1,2}|1000)\z/D';
     private const string WEB_BURST = '/\A(?:[1-9][0-9]{1,3}|10000)\z/D';
+    // Country blocking (simai-env 1.48.0): off, deny or allow only a list of up to 100 ISO 3166 codes, on the web ports
+    // or all of them, and up to 20 addresses or networks never dropped; the server checks each address again.
+    private const string GEO_MODE = '/\A(?:off|deny|allow)\z/D';
+    private const string GEO_COUNTRIES = '/\A[A-Z]{2}(?:,[A-Z]{2}){0,99}\z/D';
+    private const string GEO_PORTS = '/\A(?:web|all)\z/D';
+    private const string GEO_KEEP = '/\A[0-9A-Fa-f:.\/]{2,49}(?:,[0-9A-Fa-f:.\/]{2,49}){0,19}\z/D';
+    private const string IP = '/\A(?:[0-9]{1,3}(?:\.[0-9]{1,3}){3}|[0-9A-Fa-f]{0,4}(?::[0-9A-Fa-f]{0,4}){2,7})\z/D';
     // Certificates through Cloudflare DNS (simai-env 1.36.0): the API token is stored on the server once, sent as text
     // that reaches the command as a file and is shown as (stored) everywhere; the challenge http or dns.
     private const string DNS_PROVIDER = '/\A(?:cloudflare)\z/D';
@@ -254,6 +261,11 @@ final class PanelCommands
         'security:quarantine-list' => ['args' => [], 'required' => [], 'since' => '1.46.0', 'kind' => self::READ],
         'security:quarantine-restore' => ['args' => ['id' => self::CHANGE_ID], 'required' => ['id'], 'since' => '1.46.0', 'kind' => self::ACTION],
         'security:level' => ['args' => ['set' => self::SECURITY_LEVEL], 'required' => ['set'], 'since' => '1.47.0', 'kind' => self::ACTION],
+        'security:geo' => ['args' => ['mode' => self::GEO_MODE, 'countries' => self::GEO_COUNTRIES, 'ports' => self::GEO_PORTS, 'keep' => self::GEO_KEEP],
+            'required' => ['mode'], 'since' => '1.48.0', 'kind' => self::ACTION],
+        'security:geo-status' => ['args' => [], 'required' => [], 'since' => '1.48.0', 'kind' => self::READ],
+        'security:geo-update' => ['args' => [], 'required' => [], 'since' => '1.48.0', 'kind' => self::ACTION],
+        'security:geo-lookup' => ['args' => ['ip' => self::IP], 'required' => ['ip'], 'since' => '1.48.0', 'kind' => self::READ],
         'security:web-protect' => ['args' => ['enabled' => self::YES_NO, 'rate' => self::WEB_RATE, 'burst' => self::WEB_BURST], 'required' => ['enabled'], 'since' => '1.47.0', 'kind' => self::ACTION],
         'job:status' => ['args' => ['job_id' => self::JOB_ID], 'required' => ['job_id'], 'since' => '1.21.0', 'kind' => self::JOB],
         'job:log' => ['args' => ['job_id' => self::JOB_ID, 'after' => self::CURSOR], 'required' => ['job_id'], 'since' => '1.21.0', 'kind' => self::JOB],

@@ -177,6 +177,23 @@ final readonly class SiteExtrasReader
         return $data === null ? null : \Larena\Env\Security\FileScan::fromData($data);
     }
 
+    /** Country blocking and its database (simai-env 1.48.0). */
+    public function geo(PanelActor $actor): ?\Larena\Env\Security\GeoStatus
+    {
+        $data = $this->data($actor, 'security:geo-status', []);
+
+        return $data === null ? null : \Larena\Env\Security\GeoStatus::fromData($data);
+    }
+
+    /** The country of an address by the server's database (simai-geo-lookup/1), or null when it cannot say. */
+    public function geoLookup(PanelActor $actor, string $ip): ?string
+    {
+        $data = $this->data($actor, 'security:geo-lookup', ['ip' => $ip]);
+        $country = is_array($data) && ($data['schema'] ?? null) === 'simai-geo-lookup/1' ? ($data['country'] ?? null) : null;
+
+        return is_string($country) && preg_match('/\A[A-Z]{2}\z/D', strtoupper($country)) === 1 ? strtoupper($country) : null;
+    }
+
     /** The files moved into quarantine (simai-env 1.46.0). */
     public function quarantine(PanelActor $actor): ?\Larena\Env\Security\Quarantine
     {

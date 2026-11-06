@@ -16,6 +16,7 @@ use Larena\Env\Gateway\PanelRefused;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\NoticeRedirect;
 use Larena\Env\Operations\PanelOperations;
+use Larena\Env\Security\GeoStatus;
 use Larena\Env\Security\SecurityStatus;
 use Larena\Env\Server\ServerOverviewReader;
 use Larena\Env\Server\SiteExtrasReader;
@@ -34,7 +35,8 @@ final readonly class SecurityController
         'security:scan', 'security:files-scan', 'security:web-protect'];
     /** The changes of this screen besides a check's fix. */
     public const array OPERATIONS = ['scan' => 'security:scan', 'level' => 'security:level', 'files-scan' => 'security:files-scan',
-        'quarantine' => 'security:quarantine', 'restore' => 'security:quarantine-restore'];
+        'quarantine' => 'security:quarantine', 'restore' => 'security:quarantine-restore',
+        'geo' => 'security:geo', 'geo-update' => 'security:geo-update'];
     /** The requests one address may send a second and at once when the limit is turned on here (the server's defaults). */
     public const array WEB_PROTECT = ['enabled' => 'yes'];
 
@@ -66,6 +68,24 @@ final readonly class SecurityController
         }
 
         $files = $capabilities->allows('security:files') ? $this->extras->fileScan($actor) : null;
+        // Country blocking (simai-env 1.48.0) and «Откуда этот адрес?» answered on the same page.
+        $geo = $capabilities->allows('security:geo-status') ? $this->extras->geo($actor) : null;
+        $lookup = null;
+        $ip = trim((string) $request->query('ip', ''));
+        if ($ip !== '' && $capabilities->allows('security:geo-lookup')) {
+            try {
+                PanelCommands::check('security:geo-lookup', ['ip' => $ip], true);
+                $lookup = ['ip' => $ip, 'country' => $this->extras->geoLookup($actor, $ip), 'valid' => true];
+            } catch (PanelRefused) {
+                $lookup = ['ip' => mb_substr($ip, 0, 64), 'country' => null, 'valid' => false];
+            }
+        }
+        $locale = (string) $this->translator->getLocale();
+        $countries = [];
+        foreach (GeoStatus::COUNTRIES as $code) {
+            $countries[$code] = GeoStatus::name($code, $locale);
+        }
+        asort($countries, SORT_LOCALE_STRING);
 
         return $this->views->make('larena-env::admin.security', [
             'source' => $read->source,
@@ -79,6 +99,12 @@ final readonly class SecurityController
             'files' => $files,
             'quarantine' => $capabilities->allows('security:quarantine-list') ? $this->extras->quarantine($actor) : null,
             'filesSupported' => $capabilities->allows('security:files'),
+            'geo' => $geo,
+            'geoSupported' => $capabilities->allows('security:geo-status'),
+            'lookup' => $lookup,
+            'lookupSupported' => $capabilities->allows('security:geo-lookup'),
+            'countries' => $countries,
+            'myAddress' => (string) $request->ip(),
             'notice' => $request->session()->get('larena_env_notice'),
         ]);
     }
@@ -157,8 +183,12 @@ final readonly class SecurityController
             'files-scan' => $request->filled('domain') ? ['domain' => strtolower((string) $request->input('domain'))] : [],
             'quarantine' => ['domain' => strtolower((string) $request->input('domain')), 'path' => (string) $request->input('path')],
             'restore' => ['id' => (string) $request->input('id')],
+            'geo' => self::geoArgs($request),
             default => [],
         };
+        if ($op === 'geo' && $args === null) {
+            return 'geo_countries_needed';
+        }
         try {
             PanelCommands::check($command, $args, true);
         } catch (PanelRefused $refused) {
@@ -166,6 +196,34 @@ final readonly class SecurityController
         }
 
         return [$command, $args, ['op' => $op] + $args];
+    }
+
+    /**
+     * Country blocking's arguments from the form: the mode, and for deny or allow the chosen countries (ticked, or typed
+     * as codes), the ports and the addresses never dropped; null when a list is asked for without a country.
+     *
+     * @return array<string, string>|null
+     */
+    private static function geoArgs(Request $request): ?array
+    {
+        $mode = in_array($request->input('mode'), GeoStatus::MODES, true) ? (string) $request->input('mode') : 'off';
+        if ($mode === 'off') {
+            return ['mode' => 'off'];
+        }
+        $picked = $request->input('countries');
+        $codes = array_values(array_filter(GeoStatus::codes(is_array($picked) || is_string($picked) ? $picked : []),
+            static fn (string $code): bool => in_array($code, GeoStatus::COUNTRIES, true)));
+        if ($codes === []) {
+            return null;
+        }
+        $args = ['mode' => $mode, 'countries' => implode(',', array_slice($codes, 0, 100)),
+            'ports' => $request->input('ports') === 'all' ? 'all' : 'web'];
+        $keep = preg_replace('/[\s,;]+/', ',', trim((string) $request->input('keep', '')));
+        if (is_string($keep) && trim($keep, ',') !== '') {
+            $args['keep'] = trim($keep, ',');
+        }
+
+        return $args;
     }
 
     /**

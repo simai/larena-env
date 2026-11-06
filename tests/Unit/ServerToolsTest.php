@@ -515,18 +515,55 @@ env_assert($words['security_updates']['title'] === 'Security updates' && $words[
     && $words['file_scan']['line'] === 'The sites\' files were not checked yet.' && $words['https:demo-php.test']['how'] !== '', 'Each check in the panel\'s words.');
 $securityPage = static fn (array $data): string => $factory->make('larena-env::admin.security', $data + ['source' => 'recorded', 'supported' => true, 'status' => $security,
     'words' => $words, 'engines' => ['simai-env signatures', 'ClamAV antivirus'], 'fixes' => ['security_updates' => true, 'fail2ban' => true, 'https:demo-php.test' => false],
-    'allows' => ['fix' => true, 'scan' => true, 'level' => true, 'files-scan' => true, 'quarantine' => true, 'restore' => true],
-    'levels' => \Larena\Env\Security\SecurityStatus::LEVELS, 'files' => $found, 'quarantine' => $kept, 'filesSupported' => true, 'notice' => null])->render();
+    'allows' => ['fix' => true, 'scan' => true, 'level' => true, 'files-scan' => true, 'quarantine' => true, 'restore' => true, 'geo' => true, 'geo-update' => true],
+    'levels' => \Larena\Env\Security\SecurityStatus::LEVELS, 'files' => $found, 'quarantine' => $kept, 'filesSupported' => true, 'notice' => null,
+    'geo' => null, 'geoSupported' => false, 'lookup' => null, 'lookupSupported' => false, 'countries' => [], 'myAddress' => '203.0.113.7'])->render();
 $page = $securityPage([]);
 env_assert(str_contains($page, 'data-env-security="risk"') && str_contains($page, 'data-env-security-score="45"') && str_contains($page, 'data-env-security-problems="13"')
     && str_contains($page, 'data-env-security-fix="security_updates"') && str_contains($page, 'data-env-security-fix="fail2ban"') && !str_contains($page, 'data-env-security-fix="https:demo-php.test"')
     && str_contains($page, 'data-env-security-open="https:demo-php.test"') && str_contains($page, 'data-env-security-level-card="enhanced"') && substr_count($page, 'data-env-security-op="level-') === 3
     && str_contains($page, 'data-env-security-found="demo-php.test/public/up.php"') && str_contains($page, 'data-env-security-quarantine="1"') && substr_count($page, 'data-env-security-op="restore"') === 1
     && str_contains($page, 'Nobody blocks password guessing.') && !str_contains($page, 'nobody blocks password guessing'), 'The security page: '.$page);
-$readOnlySecurity = $securityPage(['fixes' => [], 'allows' => ['fix' => false, 'scan' => false, 'level' => false, 'files-scan' => false, 'quarantine' => false, 'restore' => false]]);
+$readOnlySecurity = $securityPage(['fixes' => [], 'allows' => ['fix' => false, 'scan' => false, 'level' => false, 'files-scan' => false, 'quarantine' => false, 'restore' => false, 'geo' => false, 'geo-update' => false]]);
 env_assert(!str_contains($readOnlySecurity, 'data-env-security-fix=') && !str_contains($readOnlySecurity, 'data-env-security-op=') && str_contains($readOnlySecurity, 'data-env-security-how'),
     'Without the right to change the server: what to do, no buttons.');
 env_assert(str_contains($securityPage(['supported' => false, 'status' => null]), 'data-env-security="unsupported"') && str_contains($securityPage(['status' => null]), 'data-env-security="unreadable"'),
     'An older server or no answer says so.');
+
+// Country blocking (simai-env 1.48.0): the recorded server has it off and no database yet; the block shows the form with
+// every country to tick, the visitor's own address among those never dropped, and the database licence's line.
+$geo = $extras->geo($admin);
+env_assert($geo instanceof \Larena\Env\Security\GeoStatus && $geo->mode === 'off' && $geo->countries === [] && !$geo->databasePresent
+    && $geo->attribution === 'IP to country data by DB-IP (https://db-ip.com), CC BY 4.0', 'The recorded country blocking.');
+env_assert(\Larena\Env\Security\GeoStatus::codes('ru, kz,RU,xyz') === ['RU', 'KZ'] && \Larena\Env\Security\GeoStatus::flag('RU') === "\u{1F1F7}\u{1F1FA}",
+    'Country codes and flags.');
+$countryNames = array_combine(\Larena\Env\Security\GeoStatus::COUNTRIES, \Larena\Env\Security\GeoStatus::COUNTRIES);
+$geoPage = $securityPage(['geo' => $geo, 'geoSupported' => true, 'lookupSupported' => true, 'countries' => $countryNames,
+    'lookup' => ['ip' => '8.8.8.8', 'country' => 'US', 'valid' => true]]);
+env_assert(str_contains($geoPage, 'data-env-security-geo="off"') && substr_count($geoPage, 'name="countries[]"') === 249 && str_contains($geoPage, 'data-env-security-op="geo"')
+    && str_contains($geoPage, 'value="203.0.113.7" inputmode') && str_contains($geoPage, 'data-env-security-geo-attribution>IP to country data by DB-IP')
+    && str_contains($geoPage, 'data-env-security-geo-answer="US"') && !str_contains($geoPage, 'data-env-security-op="geo-update"'), 'The countries block: '.$geoPage);
+$on = \Larena\Env\Security\GeoStatus::fromData(['schema' => 'simai-geo/1', 'mode' => 'deny', 'countries' => ['CN', 'KP'], 'ports' => 'web', 'active' => true,
+    'dropped_packets' => 1520, 'database' => ['present' => true, 'date' => '2026-11'], 'attribution' => '']);
+$onPage = $securityPage(['geo' => $on, 'geoSupported' => true, 'countries' => $countryNames]);
+env_assert($on->attribution === \Larena\Env\Security\GeoStatus::ATTRIBUTION && str_contains($onPage, 'data-env-security-geo="deny"') && str_contains($onPage, 'value="CN" checked')
+    && str_contains($onPage, 'data-env-security-op="geo-update"') && str_contains($onPage, '1 520'), 'Blocking on: its countries ticked, the count, the update: '.$onPage);
+env_assert(!str_contains($securityPage(['geo' => $on, 'geoSupported' => true, 'countries' => $countryNames, 'allows' => ['fix' => false, 'scan' => false, 'level' => false,
+    'files-scan' => false, 'quarantine' => false, 'restore' => false, 'geo' => false, 'geo-update' => false]]), 'name="countries[]"'), 'Without the right, no form.');
+// The form's arguments: the ticked countries joined, off alone, a list asked for without a country refused.
+$geoArgs = new \ReflectionMethod(\Larena\Env\Http\Controllers\SecurityController::class, 'geoArgs');
+$asked = static fn (array $input): ?array => $geoArgs->invoke(null, \Illuminate\Http\Request::create('/', 'POST', $input));
+env_assert($asked(['mode' => 'deny', 'countries' => ['cn', 'KP', 'ZZ'], 'ports' => 'all', 'keep' => "203.0.113.7\n198.51.100.0/24"])
+        === ['mode' => 'deny', 'countries' => 'CN,KP', 'ports' => 'all', 'keep' => '203.0.113.7,198.51.100.0/24']
+    && $asked(['mode' => 'off', 'countries' => ['CN']]) === ['mode' => 'off'] && $asked(['mode' => 'allow', 'countries' => []]) === null
+    && $asked(['mode' => 'allow', 'countries' => 'RU,KZ']) === ['mode' => 'allow', 'countries' => 'RU,KZ', 'ports' => 'web'], 'The country blocking form\'s arguments.');
+\Larena\Env\Gateway\PanelCommands::check('security:geo', ['mode' => 'deny', 'countries' => 'CN,KP', 'ports' => 'web', 'keep' => '203.0.113.7'], true);
+$refusedGeo = false;
+try {
+    \Larena\Env\Gateway\PanelCommands::check('security:geo', ['mode' => 'deny', 'countries' => 'RUS'], true);
+} catch (\Larena\Env\Gateway\PanelRefused) {
+    $refusedGeo = true;
+}
+env_assert($refusedGeo, 'A country code that is none is refused before the server.');
 
 echo "ServerToolsTest passed.\n";

@@ -26,7 +26,7 @@ final class CachingPanelGateway implements PanelGateway, PanelFileGateway
         'self:describe', 'self:commands', 'self:metrics', 'self:alerts', 'self:metrics-history', 'self:update-plan', 'self:profiles',
         'site:describe', 'site:doctor', 'site:php-ini-list', 'site:nginx-custom-show',
         'php:list', 'php:extensions', 'software:list', 'service:list', 'firewall:status', 'access:list', 'db:list', 'cron:list',
-        'ssl:dns-status', 'file:list', 'security:status', 'security:files', 'security:quarantine-list',
+        'ssl:dns-status', 'file:list', 'security:status', 'security:files', 'security:quarantine-list', 'security:geo-status',
     ];
 
     /**

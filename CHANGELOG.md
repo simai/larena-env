@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- «Безопасность» has «Страны» (simai-env 1.48.0): off, block the chosen countries or allow only them, on the sites'
+  ports or all of them, with every country to tick (flag and name), the person's own address and up to 20 others never
+  dropped, the dropped count, updating the country database and «Откуда этот адрес?»; allowing only a list or all ports
+  is undone by the server unless kept on the job's page. The DB-IP licence line is shown under the block.
 - «Безопасность» shows in the server's menu (its command was not among those the menu reads, so the row stayed hidden
   and the page took «Сайты» for its place), and its reads are kept like the other screens' until an action.
 - «Отметить, что видели» resets the alert list the panel keeps for a minute, so the acknowledged alert leaves the bar

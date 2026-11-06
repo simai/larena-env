@@ -35,7 +35,7 @@ final readonly class FirewallController
     /** How long an address stays blocked: an hour, a day, a week, or until it is unblocked. */
     public const array BLOCK_TTLS = ['3600', '86400', '604800', ''];
     /** Which page each kind of timed change is kept from. */
-    public const array CHANGE_PAGES = ['firewall' => 'larena.env.admin.firewall', 'panel_access' => 'larena.env.admin.panel.access'];
+    public const array CHANGE_PAGES = ['firewall' => 'larena.env.admin.firewall', 'panel_access' => 'larena.env.admin.panel.access', 'geo' => 'larena.env.admin.security'];
 
     public function __construct(
         private PanelOperations $operations,
