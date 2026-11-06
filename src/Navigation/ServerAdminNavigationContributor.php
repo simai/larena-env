@@ -9,6 +9,9 @@ use Larena\Admin\Navigation\AdminNavigationDescriptor;
 
 final class ServerAdminNavigationContributor implements AdminNavigationContributor
 {
+    /** Each row of a screen a newer simai-env brings, by the command it needs; ListedCommands reads each of them. */
+    public const array NEEDS = ['env.services' => 'service:list', 'env.software' => 'software:list', 'env.software.php' => 'php:list', 'env.firewall' => 'firewall:status', 'env.security' => 'security:status', 'env.panel.access' => 'panel:access'];
+
     /**
      * The rows of screens that only a newer simai-env can use show only where the server lists their commands; without
      * a way to ask, they do not show.
@@ -256,7 +259,7 @@ final class ServerAdminNavigationContributor implements AdminNavigationContribut
             icon: 'dns',
         )];
         // Each row of a screen a newer simai-env brings, by the command it needs (Panel plan stage 5).
-        $needs = ['env.services' => 'service:list', 'env.software' => 'software:list', 'env.software.php' => 'php:list', 'env.firewall' => 'firewall:status', 'env.security' => 'security:status', 'env.panel.access' => 'panel:access'];
+        $needs = self::NEEDS;
 
         return array_values(array_filter($rows, fn (AdminNavigationDescriptor $row): bool => !isset($needs[$row->id])
             || ($this->listed !== null && ($this->listed)($needs[$row->id]))));

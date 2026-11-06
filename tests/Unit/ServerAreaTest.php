@@ -65,4 +65,8 @@ env_assert($registrar->ensure() === 'archived' && $scopes->created === 1, 'An ar
 $declaration = ServerArea::firstRunDeclaration();
 env_assert($declaration['root_scope'] === 'organization:server' && !in_array('site', $declaration['steps'], true), 'The assembly\'s first run has no site step and the server as its root.');
 
+// A row hidden until the server lists its command is read by ListedCommands, or it never shows (the security row, 2026-11-06).
+env_assert(array_diff(Larena\Env\Navigation\ServerAdminNavigationContributor::NEEDS, Larena\Env\Navigation\ListedCommands::COMMANDS) === [],
+    'Every row\'s command is read: '.implode(', ', array_diff(Larena\Env\Navigation\ServerAdminNavigationContributor::NEEDS, Larena\Env\Navigation\ListedCommands::COMMANDS)));
+
 echo "ServerAreaTest passed.\n";

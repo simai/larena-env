@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- «Безопасность» shows in the server's menu (its command was not among those the menu reads, so the row stayed hidden
+  and the page took «Сайты» for its place), and its reads are kept like the other screens' until an action.
 - «Отметить, что видели» resets the alert list the panel keeps for a minute, so the acknowledged alert leaves the bar
   on the next page instead of staying up to a minute (seen on the stand 2026-11-06).
 
