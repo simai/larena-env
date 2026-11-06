@@ -39,6 +39,8 @@ return [
             // The server's security (simai-env 1.45.0): score, problems with their fixes, level, files.
             'env.security' => 'server',
             'env.firewall' => 'server',
+            // Storages for the sites' backups away from the server (simai-env 1.44.0).
+            'env.storages' => 'server',
             // The server's software with simai-env's, the panel's and the system's updates (one place since the
             // panel's UX audit), and its PHP versions (simai-env 1.32.0–1.38.0).
             'env.software' => 'server',

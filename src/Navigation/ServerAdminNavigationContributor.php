@@ -10,7 +10,7 @@ use Larena\Admin\Navigation\AdminNavigationDescriptor;
 final class ServerAdminNavigationContributor implements AdminNavigationContributor
 {
     /** Each row of a screen a newer simai-env brings, by the command it needs; ListedCommands reads each of them. */
-    public const array NEEDS = ['env.services' => 'service:list', 'env.software' => 'software:list', 'env.software.php' => 'php:list', 'env.firewall' => 'firewall:status', 'env.security' => 'security:status', 'env.panel.access' => 'panel:access'];
+    public const array NEEDS = ['env.services' => 'service:list', 'env.software' => 'software:list', 'env.software.php' => 'php:list', 'env.firewall' => 'firewall:status', 'env.security' => 'security:status', 'env.storages' => 'backup:storage-list', 'env.panel.access' => 'panel:access'];
 
     /**
      * The rows of screens that only a newer simai-env can use show only where the server lists their commands; without
@@ -220,6 +220,25 @@ final class ServerAdminNavigationContributor implements AdminNavigationContribut
             labelKey: 'larena-env::admin.security.navigation',
             activeRoutePattern: 'larena.env.admin.security*',
             icon: 'verified_user',
+        ), new AdminNavigationDescriptor(
+            // Storages for the sites' backups away from the server and their copies (simai-env 1.44.0).
+            id: 'env.storages',
+            ownerPackage: $this->ownerPackage(),
+            label: 'Backup storages',
+            routeName: 'larena.env.admin.storages',
+            routeUri: '/admin/server/backups',
+            category: 'operations',
+            state: 'operator_slice',
+            accessScope: 'env.server.read',
+            auditEvent: 'env.storages.viewed',
+            statusCap: 'env_panel_skeleton',
+            order: 12,
+            group: 'operations',
+            knownLimitations: ['not_production_ready'],
+            surface: 'product',
+            labelKey: 'larena-env::admin.storages.navigation',
+            activeRoutePattern: 'larena.env.admin.storages*',
+            icon: 'cloud_upload',
         ), new AdminNavigationDescriptor(
             // Who reaches the panel, among the panel's settings (Panel plan 5.3).
             id: 'env.panel.access',

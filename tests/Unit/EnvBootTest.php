@@ -36,8 +36,8 @@ $navigation = $with['navigation'];
 sort($navigation);
 // The recording's server lists its services, its software and PHP, the firewall, the security and who reaches the panel.
 env_assert($navigation === ['env.alerts.channel', 'env.dns', 'env.dns.connection', 'env.firewall', 'env.panel.access', 'env.people', 'env.security', 'env.server',
-    'env.server.overview', 'env.services', 'env.software', 'env.software.php'] && $with['navigation_valid'] === array_fill(0, 12, true),
-    'With the admin the sites, the overview, the spaces, DNS, the alerts\' channel, the update, the services, the software, PHP, the firewall, the security and who reaches the panel are valid menu entries: '.implode(', ', $navigation));
+    'env.server.overview', 'env.services', 'env.software', 'env.software.php', 'env.storages'] && $with['navigation_valid'] === array_fill(0, 13, true),
+    'With the admin the sites, the overview, the spaces, DNS, the alerts\' channel, the update, the services, the software, PHP, the firewall, the security, the backup storages and who reaches the panel are valid menu entries: '.implode(', ', $navigation));
 $rows = static fn (?\Closure $listed): array => array_map(static fn ($row): string => $row->id,
     (new \Larena\Env\Navigation\ServerAdminNavigationContributor($listed))->navigationDescriptors());
 env_assert(array_intersect(['env.services', 'env.firewall', 'env.panel.access'], $rows(null)) === []
@@ -60,6 +60,7 @@ env_assert($names === ['larena.env.admin.alerts.ack.open', 'larena.env.admin.ale
     'larena.env.admin.site.run', 'larena.env.admin.sites.new', 'larena.env.admin.sites.plan', 'larena.env.admin.sites.plan.draft', 'larena.env.admin.sites.port',
     'larena.env.admin.sites.run', 'larena.env.admin.software', 'larena.env.admin.software.php', 'larena.env.admin.software.php.plan', 'larena.env.admin.software.php.run',
     'larena.env.admin.software.plan', 'larena.env.admin.software.run',
+    'larena.env.admin.storages', 'larena.env.admin.storages.plan', 'larena.env.admin.storages.run',
     'larena.env.admin.update', 'larena.env.admin.update.plan', 'larena.env.admin.update.run'],
     'The screens of the panel: '.implode(', ', $names));
 env_assert($with['routes']['larena.env.admin.index']['uri'] === 'admin/server', 'The sites keep their address.');
@@ -88,6 +89,7 @@ foreach ($with['routes'] as $name => $route) {
     // timed change is a change of the server too, and so is giving the server the DNS token for certificates (1.36.0).
     // A site's own scheduled jobs are a site's (5.4).
     $serverTools = str_starts_with($name, 'larena.env.admin.services') || str_starts_with($name, 'larena.env.admin.firewall') || str_starts_with($name, 'larena.env.admin.security')
+        || str_starts_with($name, 'larena.env.admin.storages')
         || $name === 'larena.env.admin.panel.access' || $name === 'larena.env.admin.change.keep' || str_starts_with($name, 'larena.env.admin.dns.certificates')
         // And the server's software and PHP versions (simai-env 1.37.0–1.38.0).
         || $name === 'larena.env.admin.software' || str_starts_with($name, 'larena.env.admin.software.');
@@ -99,7 +101,7 @@ foreach ($with['routes'] as $name => $route) {
     // The server's overview and the people's spaces are the system level's; giving a space or acting for someone changes the server.
     $reads = in_array($name, ['larena.env.admin.overview', 'larena.env.admin.people', 'larena.env.admin.people.stop', 'larena.env.admin.alerts.channel',
         'larena.env.admin.update', 'larena.env.admin.services', 'larena.env.admin.firewall', 'larena.env.admin.security', 'larena.env.admin.panel.access',
-        'larena.env.admin.software', 'larena.env.admin.software.php'], true);
+        'larena.env.admin.software', 'larena.env.admin.software.php', 'larena.env.admin.storages'], true);
     env_assert(in_array('access:env.server.read', $route['middleware'], true) === $reads, "{$name} asks for the wrong level.");
     env_assert(in_array('access:env.server.operate', $route['middleware'], true) === (($people && !$reads) || $nginx || $channelChanges || $updateChanges || $serverToolChanges), "{$name} must ask for the server's right.");
 }

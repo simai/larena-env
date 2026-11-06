@@ -149,7 +149,7 @@ print("menu roots:", roots)
 assert roots == ["sites", "journal", "users", "server", "settings"], roots
 children = {item["key"]: [row["key"] for row in item.get("children", []) if row.get("kind") == "page"] for item in items}
 # The services came with simai-env 1.33.0, the firewall and who reaches the panel with 1.35.0.
-assert sorted(children["server"]) == ["env.dns", "env.firewall", "env.security", "env.server.overview", "env.services", "env.software", "env.software.php"], children
+assert sorted(children["server"]) == ["env.dns", "env.firewall", "env.security", "env.server.overview", "env.services", "env.software", "env.software.php", "env.storages"], children
 assert sorted(children["users"]) == ["auth.users", "env.people"], children
 assert sorted(children["settings"]) == ["admin.settings_general", "env.alerts.channel", "env.dns.connection", "env.panel.access"], children
 # Plain lists (the panel's UX audit): no group headings in any root.

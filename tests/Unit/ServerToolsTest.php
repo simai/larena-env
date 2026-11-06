@@ -600,4 +600,37 @@ try {
 }
 env_assert($refusedGeo, 'A country code that is none is refused before the server.');
 
+
+
+// Storages for backups away from the server (simai-env 1.44.0): the list with each storage's bucket, days and last test,
+// the copies of the open one with «Забрать на сервер», the add form; the keys never come back into the page.
+$storages = [\Larena\Env\Backup\BackupStorage::fromData(['name' => 'yandex', 'type' => 's3', 'bucket' => 'acme-backups', 'endpoint' => 'https://storage.yandexcloud.net',
+    'region' => 'ru-central1', 'prefix' => 'srv1', 'keep' => 30, 'default' => true, 'access_key_hint' => 'YCAJ…x1', 'last_test' => ['at' => '2026-11-06T10:00:00Z', 'ok' => true, 'error' => null]]),
+    \Larena\Env\Backup\BackupStorage::fromData(['name' => 'r2', 'bucket' => 'b', 'keep' => 7, 'last_test' => ['at' => '2026-11-06T10:00:00Z', 'ok' => false, 'error' => 'AccessDenied']])];
+env_assert(\Larena\Env\Backup\BackupStorage::fromData(['name' => 'Bad Name']) === null && $storages[0]?->default === true && $storages[1]?->lastTest['ok'] === false, 'Storages from the server.');
+$copies = \Larena\Env\Backup\BackupStorage::copies(['copies' => [['domain' => 'demo-php.test', 'backup' => '20261105-020000', 'created_at' => '2026-11-05T02:00:00Z'],
+    ['domain' => 'demo-php.test', 'backup' => '20261106-020000', 'created_at' => '2026-11-06T02:00:00Z'], ['domain' => 'x', 'backup' => '../etc']]]);
+env_assert(array_column($copies, 'backup') === ['20261106-020000', '20261105-020000'], 'Copies newest first, a bad one dropped.');
+$storagePage = static fn (array $data): string => $factory->make('larena-env::admin.backup-storages', $data + ['source' => 'recorded', 'supported' => true, 'storages' => $storages,
+    'open' => null, 'copies' => null, 'allows' => ['add' => true, 'test' => true, 'remove' => true, 'fetch' => true], 'providers' => array_keys(\Larena\Env\Backup\BackupStorage::PROVIDERS),
+    'notice' => null])->render();
+$listed = $storagePage(['open' => $storages[0], 'copies' => $copies]);
+env_assert(str_contains($listed, 'data-env-storages="2"') && str_contains($listed, 'data-env-storage-test="ok"') && str_contains($listed, 'data-env-storage-test="failed"')
+    && str_contains($listed, 'AccessDenied') && str_contains($listed, 'data-env-storage-copies="2"') && substr_count($listed, 'data-env-storage-op="fetch"') === 2
+    && str_contains($listed, 'name="secret_key"') && str_contains($listed, 'acme-backups/srv1') && !str_contains($listed, 'name="default" value="1" checked'), 'The storages page: '.$listed);
+env_assert(str_contains($storagePage(['storages' => []]), 'name="default" value="1" checked') && str_contains($storagePage(['supported' => false]), 'data-env-storages="unsupported"')
+    && !str_contains($storagePage(['allows' => ['add' => false, 'test' => false, 'remove' => false, 'fetch' => false]]), 'data-env-storage-op='), 'First storage takes new copies; older server; read only.');
+$storageArgs = new \ReflectionMethod(\Larena\Env\Http\Controllers\BackupStorageController::class, 'addArgs');
+$added = $storageArgs->invoke(null, \Illuminate\Http\Request::create('/', 'POST', ['provider' => 'yandex', 'bucket' => 'Acme-Backups ', 'prefix' => '/srv1/', 'keep' => '400',
+    'default' => '1', 'access_key' => 'YCAJEexample1', 'secret_key' => 'YCsecretexample123']), 'yandex');
+env_assert($added === ['name' => 'yandex', 'bucket' => 'acme-backups', 'endpoint' => 'https://storage.yandexcloud.net', 'region' => 'ru-central1', 'prefix' => 'srv1', 'keep' => '90',
+    'default' => 'yes', 'access-key' => 'YCAJEexample1', 'secret-key' => 'YCsecretexample123'], 'A storage from the form: '.json_encode($added));
+\Larena\Env\Gateway\PanelCommands::check('backup:storage-add', $added, true);
+\Larena\Env\Gateway\PanelCommands::check('backup:storage-fetch', ['name' => 'yandex', 'domain' => 'demo-php.test', 'backup' => '20261106-020000'], true);
+
+$offsite = new \ReflectionMethod(\Larena\Env\Server\SiteDetails::class, 'offsite');
+env_assert($offsite->invoke(null, ['at' => '2026-11-06T02:05:00Z', 'ok' => false, 'storage' => 'yandex', 'backup' => '20261106-020000', 'error' => 'timeout'])
+    === ['at' => '2026-11-06T02:05:00Z', 'ok' => false, 'storage' => 'yandex', 'backup' => '20261106-020000', 'error' => 'timeout'] && $offsite->invoke(null, null) === null,
+    'A site\'s last copy away from the server.');
+
 echo "ServerToolsTest passed.\n";

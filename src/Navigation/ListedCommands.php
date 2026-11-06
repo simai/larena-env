@@ -19,7 +19,7 @@ use Throwable;
 final class ListedCommands
 {
     /** The commands the menu asks about. */
-    public const array COMMANDS = ['service:list', 'software:list', 'php:list', 'firewall:status', 'security:status', 'panel:access'];
+    public const array COMMANDS = ['service:list', 'software:list', 'php:list', 'firewall:status', 'security:status', 'backup:storage-list', 'panel:access'];
     private const string KEY = 'larena-env.listed-commands';
     private const int SECONDS = 300;
     private const int UNANSWERED_SECONDS = 60;

@@ -60,6 +60,14 @@ final class PanelCommands
     // A key's fingerprint as ssh-keygen prints it (simai-env 1.49.0, MCP keys).
     private const string FINGERPRINT = '/\A(?:SHA256:[A-Za-z0-9+\/]{8,64})\z/D';
     private const string YES = '/\A(?:yes)\z/D';
+    // A storage for backups away from the server (simai-env 1.44.0): its name, the S3 bucket, region, folder and keys.
+    private const string STORAGE = '/\A[a-z0-9][a-z0-9-]{0,31}\z/D';
+    private const string BUCKET = '/\A[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]\z/D';
+    private const string REGION = '/\A[a-z0-9-]{1,32}\z/D';
+    private const string PREFIX = '/\A(?!.*\.\.)[A-Za-z0-9._-][A-Za-z0-9._\/-]{0,127}\z/D';
+    private const string S3_KEY = '/\A[A-Za-z0-9\/+=._-]{8,256}\z/D';
+    private const string KEEP_DAYS = '/\A(?:[1-9]|[1-8][0-9]|90)\z/D';
+    private const string STAMP = '/\A[0-9]{8}-[0-9]{6}\z/D';
     private const string PERIOD = '/\A(?:hour|6h|day|week|month)\z/D';
     // The server's security (simai-env 1.45.0–1.47.0): what security:fix puts right, the protection levels, and the
     // requests one address may send a second (2–1000) and at once (10–10000).
@@ -272,6 +280,16 @@ final class PanelCommands
         'security:geo-lookup' => ['args' => ['ip' => self::IP], 'required' => ['ip'], 'since' => '1.48.0', 'kind' => self::READ],
         // Access for AI assistants over MCP (simai-env 1.49.0), administrators only: a key for the whole server or for
         // one owner's sites, removed by its fingerprint or with all of an owner's.
+        // Backups away from the server (simai-env 1.44.0), administrators only: S3 storages, their copies and fetching one back.
+        'backup:storage-list' => ['args' => [], 'required' => [], 'since' => '1.44.0', 'kind' => self::READ],
+        'backup:storage-add' => ['args' => ['name' => self::STORAGE, 'bucket' => self::BUCKET, 'endpoint' => self::ORIGIN, 'region' => self::REGION,
+            'prefix' => self::PREFIX, 'keep' => self::KEEP_DAYS, 'default' => self::YES_NO, 'access-key' => self::S3_KEY, 'secret-key' => self::S3_KEY],
+            'required' => ['name', 'bucket', 'access-key', 'secret-key'], 'since' => '1.44.0', 'kind' => self::ACTION],
+        'backup:storage-test' => ['args' => ['name' => self::STORAGE], 'required' => ['name'], 'since' => '1.44.0', 'kind' => self::ACTION],
+        'backup:storage-remove' => ['args' => ['name' => self::STORAGE], 'required' => ['name'], 'since' => '1.44.0', 'kind' => self::ACTION],
+        'backup:storage-copies' => ['args' => ['name' => self::STORAGE, 'domain' => self::DOMAIN], 'required' => ['name'], 'since' => '1.44.0', 'kind' => self::READ],
+        'backup:storage-fetch' => ['args' => ['name' => self::STORAGE, 'domain' => self::DOMAIN, 'backup' => self::STAMP], 'required' => ['name', 'domain', 'backup'],
+            'since' => '1.44.0', 'kind' => self::ACTION],
         'mcp:status' => ['args' => [], 'required' => [], 'since' => '1.49.0', 'kind' => self::READ],
         'mcp:enable' => ['args' => [], 'required' => [], 'since' => '1.49.0', 'kind' => self::ACTION],
         'mcp:disable' => ['args' => [], 'required' => [], 'since' => '1.49.0', 'kind' => self::ACTION],

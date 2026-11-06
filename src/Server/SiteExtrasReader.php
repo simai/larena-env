@@ -195,6 +195,20 @@ final readonly class SiteExtrasReader
         return $data === null ? null : \Larena\Env\Security\GeoStatus::fromData($data);
     }
 
+    /** @return list<\Larena\Env\Backup\BackupStorage>|null the storages for backups away from the server (simai-env 1.44.0) */
+    public function backupStorages(PanelActor $actor): ?array
+    {
+        return $this->list($actor, 'backup:storage-list', [], 'storages', \Larena\Env\Backup\BackupStorage::fromData(...));
+    }
+
+    /** @return list<array{domain: string, backup: string, created_at: ?string}>|null the copies kept in a storage, newest first */
+    public function backupCopies(PanelActor $actor, string $storage, ?string $domain = null): ?array
+    {
+        $data = $this->data($actor, 'backup:storage-copies', ['name' => $storage] + ($domain === null ? [] : ['domain' => $domain]));
+
+        return $data === null ? null : \Larena\Env\Backup\BackupStorage::copies($data);
+    }
+
     /** Access for AI assistants over MCP (simai-mcp-status/1, simai-env 1.49.0), the administrator's. */
     public function mcp(PanelActor $actor): ?\Larena\Env\Security\McpStatus
     {

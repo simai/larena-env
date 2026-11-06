@@ -47,6 +47,9 @@ final readonly class SiteDetails
         public ?BackupCheck $lastVerify = null,
         // simai-env 1.42.0: what serves the site, nginx alone or Apache behind it (null: the server does not say).
         public ?string $webServer = null,
+        // simai-env 1.44.0: the last copy sent to the storage away from the server.
+        /** @var array{at: ?string, ok: bool, storage: ?string, backup: ?string, error: ?string}|null */
+        public ?array $lastOffsite = null,
     ) {
     }
 
@@ -105,6 +108,18 @@ final readonly class SiteDetails
             lastVerify: is_array($data['last_verify'] ?? null) ? BackupCheck::fromData($data['last_verify'])
                 : (is_array($backups['last_verify'] ?? null) ? BackupCheck::fromData($backups['last_verify']) : null),
             webServer: in_array($data['web_server'] ?? null, ['nginx', 'apache'], true) ? $data['web_server'] : null,
+            lastOffsite: self::offsite(is_array($data['last_offsite'] ?? null) ? $data['last_offsite'] : ($backups['last_offsite'] ?? null)),
         );
+    }
+
+    /** @return array{at: ?string, ok: bool, storage: ?string, backup: ?string, error: ?string}|null */
+    private static function offsite(mixed $data): ?array
+    {
+        if (!is_array($data)) {
+            return null;
+        }
+        $text = static fn (string $key): ?string => is_string($data[$key] ?? null) && $data[$key] !== '' ? $data[$key] : null;
+
+        return ['at' => $text('at'), 'ok' => ($data['ok'] ?? false) === true, 'storage' => $text('storage'), 'backup' => $text('backup'), 'error' => $text('error')];
     }
 }
