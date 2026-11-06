@@ -58,6 +58,14 @@ final readonly class ServerAdminController
         $now = PanelWarnings::now();
 
         $history = $section === 'overview' && $actor->owner === null ? $this->history($actor, $overview, $now) : null;
+        // One chart per measure for the period chosen above them (owner 2026-11-06), where the server keeps its history.
+        $charts = null;
+        if ($section === 'overview' && $actor->owner === null && $overview?->capabilities?->allows('self:metrics-history') === true && $this->extras !== null) {
+            $period = \Larena\Env\History\HistoryCharts::period($request->query('period'));
+            $data = $this->extras->metricsHistoryData($actor, \Larena\Env\History\HistoryCharts::PERIODS[$period][1]);
+            $charts = $data === null ? null : \Larena\Env\History\HistoryCharts::fromServer($period, \Larena\Env\History\HistoryCharts::scale($request->query('scale')), $data,
+                static fn (string $key, array $replace = []): string => $text($key, $replace));
+        }
 
         return $this->views->make('larena-env::admin.index', [
             'section' => $section,
@@ -69,6 +77,7 @@ final readonly class ServerAdminController
             // What needs attention is in the admin's alert bar on every page (owner decision 2026-11-05), not a block here.
             // The load over time (Panel plan 4.6): the server's own history where it keeps one, else the panel's samples.
             'history' => $history,
+            'charts' => $charts,
             // A safe update waiting (simai-env 1.32.0): only a hint here, the update screen says what it changes.
             'updates' => $section === 'overview' && $actor->owner === null ? $this->updates($actor, $overview) : [],
             'historyFromServer' => $overview?->capabilities?->allows('self:metrics-history') === true,
@@ -107,7 +116,7 @@ final readonly class ServerAdminController
     {
         if ($overview?->capabilities?->allows('self:metrics-history') === true && $this->extras !== null) {
             $periods = [];
-            foreach (['day', 'week', 'month'] as $period) {
+            foreach (['day'] as $period) {
                 $history = $this->extras->metricsHistory($actor, $period);
                 if ($history !== null) {
                     $periods[$period] = $history;

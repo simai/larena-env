@@ -79,9 +79,19 @@ final readonly class SiteExtrasReader
      */
     public function metricsHistory(PanelActor $actor, string $period): ?MetricHistory
     {
-        $data = $this->data($actor, 'self:metrics-history', ['period' => $period]);
+        $data = $this->metricsHistoryData($actor, $period);
 
         return $data === null ? null : MetricHistory::fromServer($period, $data);
+    }
+
+    /**
+     * The server's own load history as it answered (simai-metrics-history/1), for the charts that read each measure.
+     *
+     * @return array<array-key, mixed>|null
+     */
+    public function metricsHistoryData(PanelActor $actor, string $period): ?array
+    {
+        return $this->data($actor, 'self:metrics-history', ['period' => $period]);
     }
 
     /**

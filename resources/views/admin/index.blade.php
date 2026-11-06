@@ -76,7 +76,11 @@
                 </ul>
             </section>
         </div>
-        @include('larena-env::admin.partials.history')
+        @if (($charts ?? null) !== null)
+            @include('larena-env::admin.partials.charts')
+        @else
+            @include('larena-env::admin.partials.history')
+        @endif
     @else
         @include('larena-admin::dataview.page', ['dataview' => $sitesView, 'sectionId' => 'env-server-sites', 'owner' => 'larena/env',
             'ariaLabel' => __('larena-env::admin.sites.title'), 'queryUrl' => route('larena.env.admin.index', [], false),

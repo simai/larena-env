@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- The server overview's load history is one chart per measure (owner 2026-11-06, after a hosting provider's
+  dashboard): «Статистика за» an hour, 6 hours, a day, a week or a month, and a scale from zero to the whole or by the
+  values; the processor in percent with its cores, the memory and each disk in gigabytes with the whole, a scale in units
+  on the left, the times (UTC) along the bottom, each point's time and value on hover. The page reads only the chosen
+  period (and the day for the tiles), not three.
 - «Безопасность» has «Страны» (simai-env 1.48.0): off, block the chosen countries or allow only them, on the sites'
   ports or all of them, with every country to tick (flag and name), the person's own address and up to 20 others never
   dropped, the dropped count, updating the country database and «Откуда этот адрес?»; allowing only a list or all ports

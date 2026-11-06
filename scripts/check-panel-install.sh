@@ -198,7 +198,9 @@ assert 'data-env-plan="self:alerts-ack"' in acknowledge and 'name="id" value="91
 _, opened = get("/admin/server/alerts/ack/plan?id=9147a2749fff&back=%2Fadmin%2Fserver")
 assert 'data-env-plan="self:alerts-ack"' in opened and 'name="id" value="9147a2749fff"' in opened, "the alert bar's link opens the same plan"
 _, overview = get("/admin/server/overview")
-assert "data-env-history-from-server" in overview and 'data-env-history-chart="day"' in overview and "data-env-warnings=" not in overview, "the overview draws the server's own history"
+assert "data-env-history-from-server" in overview and 'data-env-charts="day"' in overview and 'data-env-chart="load"' in overview and "data-env-warnings=" not in overview, "the overview draws the server's own history"
+_, hour = get("/admin/server/overview?period=hour&scale=auto")
+assert 'data-env-charts="hour"' in hour and 'data-env-charts-scale="auto"' in hour, "the overview's period and scale are chosen"
 # A site's sections are its menu in the menu's second column (port 1.1.0 `context`): the page has no tabs of its own.
 _, card = get("/admin/server/sites/demo-php.test")
 assert "data-env-tabs" not in card and 'data-env-section="overview"' in card, "the card has no in-page tabs"

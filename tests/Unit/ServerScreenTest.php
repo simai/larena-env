@@ -151,6 +151,30 @@ env_assert(str_contains($drawn, 'data-env-history-chart="day"') && str_contains(
 env_assert(!str_contains($drawn, 'data-env-history-from-server') && str_contains($state(['section' => 'overview', 'overview' => $overview, 'history' => $history,
     'historyFromServer' => true]), 'data-env-history-from-server'), 'The server\'s own history says so.');
 
+// One chart per measure for the chosen period (owner 2026-11-06): the processor in percent of its cores, the memory and the
+// disk in gigabytes of the whole, a scale in units and the times along the bottom; an hour is the day's last points.
+$day = ['schema' => 'simai-metrics-history/1', 'period' => 'day', 'step_seconds' => 300, 'points' => [
+    ['at' => '2026-11-01T10:00:00Z', 'load1' => 1.0, 'cpu_cores' => 4, 'memory_used_bytes' => 2 * 1_073_741_824, 'memory_total_bytes' => 8 * 1_073_741_824,
+        'disk' => [['mount' => '/', 'used_bytes' => 10 * 1_073_741_824, 'total_bytes' => 40 * 1_073_741_824]]],
+    ['at' => '2026-11-01T11:30:00Z', 'load1' => 2.0, 'cpu_cores' => 4, 'memory_used_bytes' => 3 * 1_073_741_824, 'memory_total_bytes' => 8 * 1_073_741_824,
+        'disk' => [['mount' => '/', 'used_bytes' => 11 * 1_073_741_824, 'total_bytes' => 40 * 1_073_741_824]]],
+    ['at' => '2026-11-01T12:00:00Z', 'load1' => 3.0, 'cpu_cores' => 4, 'memory_used_bytes' => 4 * 1_073_741_824, 'memory_total_bytes' => 8 * 1_073_741_824,
+        'disk' => [['mount' => '/', 'used_bytes' => 12 * 1_073_741_824, 'total_bytes' => 40 * 1_073_741_824]]],
+]];
+$words = static fn (string $key, array $replace = []): string => $text($key, $replace);
+$hour = \Larena\Env\History\HistoryCharts::fromServer('hour', 'fixed', $day, $words);
+env_assert($hour->count === 2 && array_column($hour->charts, 'key') === ['load', 'memory', 'disk:/'] && $hour->charts[0]['ticks'] === ['100 %', '75 %', '50 %', '25 %', '0 %']
+    && $hour->charts[1]['capacity'] === '8,0 '.$text('history.gb') && $hour->charts[1]['last'] === '4,0 '.$text('history.gb') && $hour->charts[0]['last'] === '75 %'
+    && $hour->charts[0]['times'][0] === '11:00' && $hour->charts[0]['times'][5] === '12:00' && $hour->charts[2]['ticks'][0] === '40 '.$text('history.gb'),
+    'The hour\'s charts: '.json_encode($hour->charts, JSON_UNESCAPED_UNICODE));
+$auto = \Larena\Env\History\HistoryCharts::fromServer('day', 'auto', $day, $words);
+env_assert($auto->count === 3 && $auto->charts[0]['ticks'][0] === '100 %' && $auto->charts[2]['ticks'][0] === '20 '.$text('history.gb')
+    && \Larena\Env\History\HistoryCharts::period('year') === 'day' && \Larena\Env\History\HistoryCharts::scale('x') === 'fixed', 'The scale by the values: '.json_encode($auto->charts[2]['ticks']));
+$chartsPage = $state(['section' => 'overview', 'overview' => $overview, 'history' => $history, 'charts' => $hour]);
+env_assert(str_contains($chartsPage, 'data-env-charts="hour"') && substr_count($chartsPage, 'data-env-chart="') === 3 && substr_count($chartsPage, 'data-env-charts-period=') === 5
+    && preg_match('/data-env-charts-period="hour"\s+aria-current="true"/', $chartsPage) === 1 && str_contains($chartsPage, '<title>01.11 12:00 UTC · 75 %</title>')
+    && !str_contains($chartsPage, 'data-env-history-chart='), 'The charts replace the old history: '.$chartsPage);
+
 // A safe update waiting (simai-env 1.32.0): the overview says so in a line and links to the update screen.
 $hinted = $state(['section' => 'overview', 'overview' => $overview, 'updates' => [['target' => 'env', 'available' => '9.9.0']]]);
 env_assert(str_contains($hinted, 'data-env-update-hint') && str_contains($hinted, 'data-env-update-hint-target="env"') && str_contains($hinted, '9.9.0')
