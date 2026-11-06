@@ -26,11 +26,12 @@ final readonly class ServerAdminController
         private Translator $translator,
         private AdminDataviewPagePresenter $dataviews,
         private \Illuminate\Contracts\Config\Repository $config,
+        // The container leaves an optional unbound class out, so the setup's steps are asked for outright.
+        private ServerSetupController $setupSteps,
         private ?\Larena\Access\Runtime\AccessOperationAuthorizer $authorizer = null,
         private ?\Larena\Env\Server\SiteExtrasReader $extras = null,
         private ?MetricSamples $samples = null,
         private ?\Larena\Env\Setup\ServerSetup $setup = null,
-        private ?ServerSetupController $setupSteps = null,
     ) {
     }
 
@@ -92,7 +93,6 @@ final readonly class ServerAdminController
             'charts' => $charts,
             // What is left of the server's setup, until done or hidden.
             'setupLeft' => $section === 'overview' ? $this->setupLeft($request, $actor) : [],
-            'setupLinks' => $this->setupSteps?->links() ?? [],
             // A safe update waiting (simai-env 1.32.0): only a hint here, the update screen says what it changes.
             'updates' => $section === 'overview' && $actor->owner === null ? $this->updates($actor, $overview) : [],
             'historyFromServer' => $overview?->capabilities?->allows('self:metrics-history') === true,
@@ -110,14 +110,14 @@ final readonly class ServerAdminController
 
     private function canSetUp(Request $request): bool
     {
-        return $this->setup !== null && $this->setupSteps !== null && \Larena\Env\Http\Middleware\ResolvePanelActor::of($request)->owner === null
+        return $this->setup !== null && \Larena\Env\Http\Middleware\ResolvePanelActor::of($request)->owner === null
             && ($this->authorizer?->authorize($request, 'env.server.operate')->isAllowed() ?? false);
     }
 
     /** @return list<string> the setup's steps not done yet, in order */
     private function setupLeft(Request $request, \Larena\Env\Gateway\PanelActor $actor): array
     {
-        if (!$this->canSetUp($request) || $this->setup?->hidden() !== false || $this->setupSteps === null) {
+        if (!$this->canSetUp($request) || $this->setup?->hidden() !== false) {
             return [];
         }
 
