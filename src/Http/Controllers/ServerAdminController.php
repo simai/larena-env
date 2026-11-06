@@ -33,26 +33,21 @@ final readonly class ServerAdminController
         private ?\Larena\Access\Runtime\AccessOperationAuthorizer $authorizer = null,
         private ?\Larena\Env\Server\SiteExtrasReader $extras = null,
         private ?MetricSamples $samples = null,
-        private ?\Larena\Env\Setup\ServerSetup $setup = null,
     ) {
     }
 
     public function index(Request $request): mixed
     {
-        return $this->offerSetup($request) ?? $this->page($request, 'sites');
+        return $this->page($request, 'sites');
     }
 
     public function overview(Request $request): mixed
     {
-        return $this->offerSetup($request) ?? $this->page($request, 'overview');
+        return $this->page($request, 'overview');
     }
 
-    /** The first sign-in of the server's administrator goes through the server's setup once (ENV 2026-11-06). */
-    private function offerSetup(Request $request): ?\Illuminate\Http\RedirectResponse
-    {
-        return $this->canSetUp($request) && $this->setup?->offerOnce(PanelWarnings::now()) === true
-            ? new \Illuminate\Http\RedirectResponse(route('larena.env.admin.setup', [], false)) : null;
-    }
+    // The server's setup is not opened on its own (owner 2026-11-06): its steps wait among the overview's recommended
+    // actions until the setup is made of the Framework's wizard.
 
     private function page(Request $request, string $section): mixed
     {
@@ -116,12 +111,6 @@ final readonly class ServerAdminController
                 AdminProductAssetManifest::dataviewActivation(),
             ),
         ]);
-    }
-
-    private function canSetUp(Request $request): bool
-    {
-        return $this->setup !== null && \Larena\Env\Http\Middleware\ResolvePanelActor::of($request)->owner === null
-            && ($this->authorizer?->authorize($request, 'env.server.operate')->isAllowed() ?? false);
     }
 
     /**

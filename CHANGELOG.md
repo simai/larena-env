@@ -6,7 +6,8 @@
   sites (owner 2026-11-06). The overview starts with «Рекомендуемые действия»: one list of what to do now (the server's
   high and critical security problems), what is advised (the other problems, a waiting update, the setup's steps not
   done) and what is done (folded), each with one click — a fix planned and confirmed, or the screen where it is done.
-- «Настройка сервера» after the administrator's first sign-in, offered once: six steps one at a time (password and
+- «Настройка сервера» (/admin/server/setup), not opened on its own for now (owner 2026-11-06: it waits for the
+  Framework's wizard); its steps not done are among the overview's recommended actions: six steps one at a time (password and
   sign-in code, the panel's address, alerts, the protection level with «Усиленный» advised, backups with an S3
   storage, updates), each done on its own screen or put off. A step the server already shows done (a domain with a
   certificate, a channel, the enhanced or strict level, a storage) passes by itself.
