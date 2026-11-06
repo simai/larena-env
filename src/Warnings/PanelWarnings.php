@@ -45,6 +45,8 @@ final class PanelWarnings
     public const string PANEL_DOWN = 'panel_down';
     public const string BACKUP_MISSING = 'backup_missing';
     public const string BACKUP_FAILED = 'backup_failed';
+    // simai-env 1.44.0: a backup made but its copy not sent to the storage away from the server.
+    public const string BACKUP_OFFSITE_FAILED = 'backup_offsite_failed';
     public const string SERVER_ALERT = 'server_alert';
     // An alert that cleared, told once in people's notifications.
     public const string RESOLVED = 'resolved';
@@ -53,7 +55,7 @@ final class PanelWarnings
     public const array KINDS = [self::DISK_FULL, self::SWAP_FULL, self::CERTIFICATE_ENDING, self::CERTIFICATE_EXPIRED, self::CERTIFICATE_MISSING,
         self::SITE_DOWN, self::SITE_ERROR, self::BACKUP_NONE, self::BACKUP_STALE, self::BACKUP_UNSCHEDULED,
         self::BACKUP_CHECK_FAILED, self::CERTIFICATE_RENEW_FAILED, self::DISK_ALERT, self::CERTIFICATE_ALERT, self::SITE_UNAVAILABLE,
-        self::PANEL_DOWN, self::BACKUP_MISSING, self::BACKUP_FAILED, self::SERVER_ALERT, self::RESOLVED];
+        self::PANEL_DOWN, self::BACKUP_MISSING, self::BACKUP_FAILED, self::BACKUP_OFFSITE_FAILED, self::SERVER_ALERT, self::RESOLVED];
 
     /** The server's alert kinds (simai-alerts/1) and the panel's words for each; an unknown kind keeps the server's message. */
     private const array ALERT_KINDS = [
@@ -64,6 +66,7 @@ final class PanelWarnings
         'panel_down' => self::PANEL_DOWN,
         'backup_missing' => self::BACKUP_MISSING,
         'backup_failed' => self::BACKUP_FAILED,
+        'backup_offsite_failed' => self::BACKUP_OFFSITE_FAILED,
         'backup_check_failed' => self::BACKUP_CHECK_FAILED,
     ];
 

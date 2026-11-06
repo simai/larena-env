@@ -7,7 +7,8 @@
   last test, with «Проверить» and «Отключить»; the copies in one with «Забрать на сервер»; a storage to connect with the
   service chosen from a list (Yandex, Selectel, VK Cloud, AWS, R2, B2, MinIO or another S3) filling its address and
   region. The keys go only to the server: between the plan and its confirmation they wait encrypted in the session,
-  never in the page. A site's backups say where its last copy went away from the server, or why it failed.
+  never in the page. A site's backups say where its last copy went away from the server, or why it failed; the
+  server's alert backup_offsite_failed has the panel's words and leads to the site's backups.
 - «Безопасность» has «Доступ для ИИ-ассистентов» (simai-env 1.49.0, mcp:*): on or off, the keys with whom each works for
   (the whole server or one owner's sites) and their fingerprints, removing a key, adding a pasted public key for an
   owner or the administrator, and the ready lines to connect Claude Code, Codex or any client by JSON; every change is

@@ -273,4 +273,9 @@ foreach (PanelWarnings::KINDS as $kind) {
 }
 env_assert($sources->name('env:warning:backup_none') === 'env:warning:backup_none', 'Without a translator the source stays its key.');
 
+// simai-env 1.44.0: a copy not sent away from the server has the panel's words and leads to the site's backups.
+$offsiteAlert = \Larena\Env\Alerts\ServerAlert::fromData(['id' => 'o1', 'kind' => 'backup_offsite_failed', 'severity' => 'warning', 'domain' => 'demo-php.test',
+    'message' => 'upload failed', 'state' => 'open']);
+$offsite = $offsiteAlert === null ? null : \Larena\Env\Warnings\PanelWarnings::fromAlert($offsiteAlert);
+env_assert($offsite?->kind === 'backup_offsite_failed', 'The offsite alert has the panel\'s words: '.json_encode($offsite));
 echo "PanelWarningsTest passed.\n";

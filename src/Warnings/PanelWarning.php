@@ -55,7 +55,7 @@ final readonly class PanelWarning
             PanelWarnings::CERTIFICATE_ENDING, PanelWarnings::CERTIFICATE_EXPIRED, PanelWarnings::CERTIFICATE_MISSING,
             PanelWarnings::CERTIFICATE_RENEW_FAILED, PanelWarnings::CERTIFICATE_ALERT => 'domains',
             PanelWarnings::BACKUP_NONE, PanelWarnings::BACKUP_STALE, PanelWarnings::BACKUP_UNSCHEDULED, PanelWarnings::BACKUP_CHECK_FAILED,
-            PanelWarnings::BACKUP_MISSING, PanelWarnings::BACKUP_FAILED => 'backups',
+            PanelWarnings::BACKUP_MISSING, PanelWarnings::BACKUP_FAILED, PanelWarnings::BACKUP_OFFSITE_FAILED => 'backups',
             default => 'overview',
         };
     }

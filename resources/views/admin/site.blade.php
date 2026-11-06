@@ -187,7 +187,7 @@
                         <a href="{{ route('larena.env.admin.storages', $site->lastOffsite['storage'] === null ? [] : ['storage' => $site->lastOffsite['storage']], false) }}">{{ __('larena-env::admin.backups.offsite_open') }}</a>
                     </p>
                 @endif
-                @foreach (array_filter($warnings ?? [], static fn ($warning): bool => in_array($warning->kind, ['backup_failed', 'backup_missing'], true) && $warning->domain === $domain) as $backupWarning)
+                @foreach (array_filter($warnings ?? [], static fn ($warning): bool => in_array($warning->kind, ['backup_failed', 'backup_missing', 'backup_offsite_failed'], true) && $warning->domain === $domain) as $backupWarning)
                     <p role="alert" data-env-backup-warning="{{ $backupWarning->kind }}">{{ __('larena-env::admin.warnings.'.$backupWarning->kind, $backupWarning->replace) }}</p>
                 @endforeach
                 @if ($site->backups === [])
