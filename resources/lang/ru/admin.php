@@ -307,6 +307,9 @@ return [
         'severity' => ['error' => 'Срочно', 'warning' => 'Внимание'],
         'none' => 'Всё в порядке.',
         'go' => 'Открыть',
+        'update_env' => 'Доступна новая версия окружения simai-env: :version (сейчас :current).',
+        'update_panel' => 'Доступна новая версия панели: :version (сейчас :current).',
+        'update_go' => 'Обновить',
         'bar_site' => 'Сайт :site',
         'bar_server' => 'Сервер',
         'disk_full' => 'Диск :mount заполнен на :percent%, свободно :free. Освободите место, пока сайты не остановились.',
@@ -331,7 +334,7 @@ return [
         'server_alert' => 'Сервер сообщает: :message',
         'resolved' => 'Решено: :message',
         'acked' => 'Отмечено: :by, :time. Предупреждение уйдёт само, когда причина исчезнет.',
-        'ack' => 'Отметить, что видели…',
+        'ack' => 'Отметить, что видели',
         'from_server' => 'Сервер проверяет себя сам каждые 5 минут, даже когда панель закрыта.',
     ],
     // What a person's notifications call the panel's warnings (the source env:warning:<kind>).

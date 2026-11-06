@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- «Отметить, что видели» in the alert bar is one click: the bar posts it, the panel acknowledges the alert at once and
+  waits for the server to record it, and the page comes back without the item (before, it opened a plan page and the
+  alert stayed until a second confirmation, owner 2026-11-06).
+- The bar offers a new version of simai-env or of the panel by itself, to the one who may change the server, with
+  «Обновить» (the server's kept self:update-plan; named by its version, so a newer one shows again after closing).
 - The programs' search field has a visible border (it was almost invisible on the panel's background).
 - The release build carries the panel's own words (assembly/lang/vendor): `tar --exclude=./vendor` dropped lang/vendor
   too, so «Пользователи панели», «Страница входа» and the sign-in tab title never reached the stand. The build names

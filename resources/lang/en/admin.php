@@ -307,6 +307,9 @@ return [
         'severity' => ['error' => 'Urgent', 'warning' => 'Attention'],
         'none' => 'Nothing needs attention.',
         'go' => 'Open',
+        'update_env' => 'A new version of simai-env is available: :version (now :current).',
+        'update_panel' => 'A new version of the panel is available: :version (now :current).',
+        'update_go' => 'Update',
         'bar_site' => 'Site :site',
         'bar_server' => 'Server',
         'disk_full' => 'The disk :mount is :percent% full, :free left. Free space before the sites stop.',
@@ -331,7 +334,7 @@ return [
         'server_alert' => 'The server says: :message',
         'resolved' => 'Resolved: :message',
         'acked' => 'Seen by :by, :time. The warning goes away by itself once its cause is gone.',
-        'ack' => 'Mark as seen…',
+        'ack' => 'Mark as seen',
         'from_server' => 'The server checks itself every 5 minutes, even while the panel is closed.',
     ],
     // What a person's notifications call the panel's warnings (the source env:warning:<kind>).

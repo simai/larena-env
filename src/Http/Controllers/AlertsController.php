@@ -7,10 +7,12 @@ namespace Larena\Env\Http\Controllers;
 use Illuminate\Contracts\Encryption\StringEncrypter;
 use Illuminate\Contracts\Translation\Translator;
 use Illuminate\Contracts\View\Factory;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\NoticeRedirect;
+use Larena\Env\Operations\JobState;
 use Larena\Env\Operations\PanelOperations;
 use Larena\Env\Server\ServerOverviewReader;
 use Larena\Env\Server\SiteExtrasReader;
@@ -27,6 +29,8 @@ final readonly class AlertsController
 {
     private const string TOKENS = 'larena_env_alert_tokens';
     private const int TOKEN_SECONDS = 900;
+    /** How long one click waits for the server to record an acknowledgement: 20 × 0.25 s. */
+    private const int ACK_WAIT_TRIES = 20;
 
     public function __construct(
         private PanelOperations $operations,
@@ -44,6 +48,10 @@ final readonly class AlertsController
         $back = self::back($request);
         if ($id === null) {
             return $this->notice($request, $back, 'invalid_argument');
+        }
+        // The alert bar's «Отметить, что видели» is one click (owner 2026-11-06): the click is the confirmation.
+        if ($request->isMethod('POST') && $request->expectsJson()) {
+            return $this->ackNow($request, $id);
         }
         $result = $this->operations->planCommand(ResolvePanelActor::of($request), 'self:alerts-ack', ['id' => $id]);
         if ($result->plan === null) {
@@ -74,6 +82,28 @@ final readonly class AlertsController
         return $started->jobId === null
             ? $this->notice($request, $back, $started->reason ?? 'answer_shape_invalid')
             : new RedirectResponse(route('larena.env.admin.job', ['job' => $started->jobId], false));
+    }
+
+    /**
+     * Acknowledge an alert at once and wait for the server to record it (a second or so), so the page the bar reloads
+     * no longer has it; anything else answers acknowledged: false and the bar opens the plan page that says why.
+     */
+    private function ackNow(Request $request, string $id): JsonResponse
+    {
+        $actor = ResolvePanelActor::of($request);
+        $started = $this->operations->startCommand($actor, 'self:alerts-ack', ['id' => $id]);
+        if ($started->jobId === null) {
+            return new JsonResponse(['acknowledged' => false, 'reason' => $started->reason]);
+        }
+        for ($try = 0; $try < self::ACK_WAIT_TRIES; $try++) {
+            $state = $this->operations->view($actor, $started->jobId)->status?->state;
+            if ($state !== null && $state->isOver()) {
+                return new JsonResponse(['acknowledged' => $state === JobState::Succeeded, 'job' => $started->jobId]);
+            }
+            usleep(250_000);
+        }
+
+        return new JsonResponse(['acknowledged' => false, 'job' => $started->jobId]);
     }
 
     /** «Настройки панели › Оповещения»: where the server sends its alerts now, and the form to change it. */

@@ -26,6 +26,7 @@ function route(string $name, array $parameters = [], bool $absolute = true): str
         'larena.env.admin.site' => '/admin/server/sites/'.$parameters['domain'],
         'larena.env.admin.overview' => '/admin/server/overview',
         'larena.env.admin.alerts.ack.open' => '/admin/server/alerts/ack/plan',
+        'larena.env.admin.update' => '/admin/server/update',
         default => throw new RuntimeException($name),
     };
 }
@@ -103,5 +104,38 @@ env_assert(EnvAdminAlertSource::id(new PanelWarning('backup_failed', 'warning', 
     && EnvAdminAlertSource::id(new PanelWarning('disk_alert', 'error', null, alertId: 'disk-root')) === 'env:alert:disk-root'
     && preg_match(AdminAlert::ID, EnvAdminAlertSource::id(new PanelWarning('swap_full', 'error', null, subject: 'Swap Space'))) === 1, 'Ids fit the bar.');
 env_assert(AdminAlertLevel::Danger->rank() === 0, 'The admin\'s levels.');
+
+// A new version (owner 2026-11-06): to the one who may change the server, the bar offers it by itself, named by the
+// version so a newer one shows again; nobody else sees it.
+$config = new class implements Illuminate\Contracts\Config\Repository {
+    /** @var array<string, mixed> */
+    private array $items = ['larena-access.operations' => [
+        'env.server.operate' => ['target' => 'server:host', 'required_grants' => ['operate'], 'test_grants' => ['test:system' => ['host' => ['operate']], 'test:staff' => ['host' => []]]],
+        'env.sites.operate' => ['target' => 'server:host', 'required_grants' => ['operate'], 'test_grants' => ['test:system' => ['host' => ['operate']], 'test:staff' => ['host' => []]]],
+    ]];
+
+    public function has($key): bool { return array_key_exists($key, $this->items); }
+    public function get($key, $default = null): mixed { return $this->items[$key] ?? $default; }
+    public function all(): array { return $this->items; }
+    public function set($key, $value = null): void { $this->items[$key] = $value; }
+    public function prepend($key, $value): void {}
+    public function push($key, $value): void {}
+};
+$operator = new EnvAdminAlertSource($resolver, new ServerOverviewReader($gateway), new SiteExtrasReader($gateway), $translator,
+    new Larena\Access\Runtime\AccessOperationAuthorizer($config, 'testing'), null, ['panel.localhost']);
+$person = static function (string $subject, PanelActor $actor) use ($as): Request {
+    $request = $as($actor);
+    $request->attributes->set('larena_access_actor', $subject);
+
+    return $request;
+};
+$updates = array_values(array_filter($operator->alerts($person('test:system', new PanelActor('admin@example.com'))), static fn (AdminAlert $alert): bool => str_starts_with($alert->id, 'env:update:')));
+env_assert(count($updates) === 1 && $updates[0]->id === 'env:update:env:9.9.0' && $updates[0]->level === AdminAlertLevel::Info
+    && str_contains($updates[0]->text, '9.9.0') && $updates[0]->action?->href === '/admin/server/update', 'The recorded simai-env update is offered; the panel not installed by the server is not: '.json_encode(array_map(static fn ($a) => $a->id, $updates)));
+env_assert(array_filter($operator->alerts($person('test:staff', new PanelActor('staff@example.com'))), static fn (AdminAlert $alert): bool => str_starts_with($alert->id, 'env:update:')) === [],
+    'Without the right to change the server, no update is offered.');
+// Acknowledging is one click: the label promises no further step.
+env_assert(array_filter($operator->alerts($person('test:system', new PanelActor('admin@example.com'))), static fn (AdminAlert $alert): bool => $alert->acknowledge !== null && str_ends_with($alert->acknowledge->label, '…')) === [],
+    'No «…» on a one-click acknowledgement.');
 
 echo "EnvAlertSourceTest passed.\n";

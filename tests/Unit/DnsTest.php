@@ -268,4 +268,23 @@ env_assert($connection->token() === null && $dns->connection() === null, 'The to
 env_assert(str_ends_with($certificates->plan($asked('store'))->getTargetUrl(), '#env-dns-certificates') && $certificates->plan($asked('remove')) instanceof Illuminate\View\View,
     'Without a connection nothing is given; the server\'s copy can still be taken back.');
 
+// The alert bar's «Отметить, что видели» is one click (owner 2026-11-06): a JSON post acknowledges at once and answers
+// when the server has recorded it; the plain post and the link still show the plan.
+$recorded = new Larena\Env\Gateway\RecordedAnswersGateway(env_recorded_path());
+$alertsController = new Larena\Env\Http\Controllers\AlertsController(new Larena\Env\Operations\PanelOperations($recorded),
+    new Larena\Env\Server\ServerOverviewReader($recorded), new Larena\Env\Server\SiteExtrasReader($recorded), $views, $translator, $encrypter);
+$ack = static function (string $method, bool $json): Illuminate\Http\Request {
+    $request = Illuminate\Http\Request::create('/admin/server/alerts/ack/plan?id=3591eb397633&back=%2Fadmin%2Fserver', $method);
+    if ($json) {
+        $request->headers->set('Accept', 'application/json');
+    }
+    $request->attributes->set(Larena\Env\Http\Middleware\ResolvePanelActor::ATTRIBUTE, new Larena\Env\Gateway\PanelActor('admin@stand.test'));
+
+    return $request;
+};
+$oneClick = $alertsController->ackPlan($ack('POST', true));
+env_assert($oneClick instanceof Illuminate\Http\JsonResponse && $oneClick->getData(true)['acknowledged'] === true, 'One click acknowledges: '.json_encode($oneClick instanceof Illuminate\Http\JsonResponse ? $oneClick->getData(true) : null));
+env_assert($alertsController->ackPlan($ack('GET', true)) instanceof Illuminate\View\View && $alertsController->ackPlan($ack('POST', false)) instanceof Illuminate\View\View,
+    'The link and the plain form still show the plan.');
+
 echo "DnsTest passed\n";

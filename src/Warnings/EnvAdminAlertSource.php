@@ -15,10 +15,12 @@ use Larena\Admin\Alerts\AdminAlertLevel;
 use Larena\Admin\Contracts\AdminAlertSource;
 use Larena\Env\Gateway\PanelActor;
 use Larena\Env\Gateway\PanelRefused;
+use Larena\Env\Http\Controllers\UpdateController;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\PanelActorResolver;
 use Larena\Env\Server\ServerOverviewReader;
 use Larena\Env\Server\SiteExtrasReader;
+use Larena\Env\Update\UpdatePlan;
 
 /**
  * The panel's warnings in the admin's alert bar (owner decision 2026-11-05), on every admin page: the server's own
@@ -68,6 +70,42 @@ final readonly class EnvAdminAlertSource implements AdminAlertSource
                 continue;
             }
             $alerts[] = $this->alert($warning, $canAcknowledge, $back);
+        }
+        // A new version of simai-env or of the panel (owner 2026-11-06): the panel looks by itself and offers it; the
+        // answer is the server's kept one (self:update-plan, ten minutes), so the bar asks nothing new on each page.
+        if ($actor->owner === null && ($this->authorizer?->authorize($request, 'env.server.operate')->isAllowed() ?? false)) {
+            foreach ($this->updates($actor) as $alert) {
+                $alerts[] = $alert;
+            }
+        }
+
+        return $alerts;
+    }
+
+    /** @return list<AdminAlert> one info item per update waiting, named by its version so a newer one shows again */
+    private function updates(PanelActor $actor): array
+    {
+        $text = fn (string $key, array $replace = []): string => (string) $this->translator->get('larena-env::admin.'.$key, $replace);
+        $alerts = [];
+        foreach (UpdatePlan::TARGETS as $target) {
+            try {
+                $plan = $this->extras->updatePlan($actor, $target);
+            } catch (\Throwable) {
+                $plan = null;
+            }
+            if ($target === 'panel') {
+                $plan = $plan?->beside(UpdateController::panelBuild());
+            }
+            if ($plan === null || !$plan->updateAvailable || $plan->blocked !== null || $plan->available === null) {
+                continue;
+            }
+            $alerts[] = new AdminAlert(
+                id: substr('env:update:'.$target.':'.strtolower((string) preg_replace('/[^A-Za-z0-9._-]+/', '-', $plan->available)), 0, 191),
+                level: AdminAlertLevel::Info,
+                text: $text('warnings.update_'.$target, ['version' => $plan->available, 'current' => $plan->current ?? '—']),
+                source: $text('warnings.bar_server'),
+                action: new AdminAlertAction($text('warnings.update_go'), route('larena.env.admin.update', [], false)),
+            );
         }
 
         return $alerts;
