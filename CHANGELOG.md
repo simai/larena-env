@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- «Доступ к панели» starts with «Адрес панели» (simai-env 1.51.0, panel:address/domain/port/ip-access): the address to
+  open the panel at; the address by IP with its self-signed certificate's SHA-256 fingerprint; a domain attached with
+  the hint which A record to add first (Let's Encrypt, nothing changes when no certificate comes) or detached; the port
+  moved; the address by IP turned off once the domain has its certificate. A new port or address opens a page that
+  leads to the new address, where the change is kept within 5 minutes or the server puts the old one back.
 - «Сервер › Хранилища копий» (simai-env 1.44.0, backup:storage-*): S3 storages for the sites' backups away from the
   server, each with its bucket and folder, the days copies stay, whether new backups go to it, its key's hint and its
   last test, with «Проверить» and «Отключить»; the copies in one with «Забрать на сервер»; a storage to connect with the

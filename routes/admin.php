@@ -7,6 +7,7 @@ use Larena\Env\Http\Controllers\DnsCertificatesController;
 use Larena\Env\Http\Controllers\DnsController;
 use Larena\Env\Http\Controllers\FirewallController;
 use Larena\Env\Http\Controllers\BackupStorageController;
+use Larena\Env\Http\Controllers\PanelAddressController;
 use Larena\Env\Http\Controllers\SecurityController;
 use Larena\Env\Http\Controllers\NewSiteController;
 use Larena\Env\Http\Controllers\PeopleController;
@@ -91,6 +92,9 @@ $router->middleware(['access:env.server.operate'])->group(static function ($rout
     $router->post('/security/plan', [SecurityController::class, 'plan'])->name('larena.env.admin.security.plan');
     $router->post('/security/run', [SecurityController::class, 'run'])->name('larena.env.admin.security.run');
     $router->post('/backups/plan', [BackupStorageController::class, 'plan'])->name('larena.env.admin.storages.plan');
+    // Where the panel answers (simai-env 1.51.0): a domain, the port, the address by IP.
+    $router->post('/panel-access/address/plan', [PanelAddressController::class, 'plan'])->name('larena.env.admin.panel.address.plan');
+    $router->post('/panel-access/address/run', [PanelAddressController::class, 'run'])->name('larena.env.admin.panel.address.run');
     $router->post('/backups/run', [BackupStorageController::class, 'run'])->name('larena.env.admin.storages.run');
     $router->post('/firewall/run', [FirewallController::class, 'run'])->name('larena.env.admin.firewall.run');
     // Keeping a timed change in time, from the panel over the new rules (change:confirm).

@@ -280,6 +280,12 @@ final class PanelCommands
         'security:geo-lookup' => ['args' => ['ip' => self::IP], 'required' => ['ip'], 'since' => '1.48.0', 'kind' => self::READ],
         // Access for AI assistants over MCP (simai-env 1.49.0), administrators only: a key for the whole server or for
         // one owner's sites, removed by its fingerprint or with all of an owner's.
+        // Where the panel answers (simai-env 1.51.0), administrators only: its port and its address by IP are timed changes
+        // kept from the new address (change:confirm), a domain gets Let's Encrypt or nothing is left of it.
+        'panel:address' => ['args' => [], 'required' => [], 'since' => '1.51.0', 'kind' => self::READ],
+        'panel:port' => ['args' => ['port' => self::PORT], 'required' => ['port'], 'since' => '1.51.0', 'kind' => self::ACTION],
+        'panel:ip-access' => ['args' => ['enabled' => self::YES_NO], 'required' => ['enabled'], 'since' => '1.51.0', 'kind' => self::ACTION],
+        'panel:domain' => ['args' => ['domain' => self::DOMAIN, 'email' => self::EMAIL, 'remove' => self::YES_NO], 'required' => [], 'since' => '1.51.0', 'kind' => self::ACTION],
         // Backups away from the server (simai-env 1.44.0), administrators only: S3 storages, their copies and fetching one back.
         'backup:storage-list' => ['args' => [], 'required' => [], 'since' => '1.44.0', 'kind' => self::READ],
         'backup:storage-add' => ['args' => ['name' => self::STORAGE, 'bucket' => self::BUCKET, 'endpoint' => self::ORIGIN, 'region' => self::REGION,

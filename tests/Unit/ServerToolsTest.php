@@ -307,6 +307,28 @@ $outside = $panelPage([]);
 env_assert(str_contains($outside, 'data-env-panel-access="list"') && str_contains($outside, 'data-env-panel-access-outside') && str_contains($outside, 'data-env-timed-keep=')
     && str_contains($outside, 'data-env-panel-access-everyone') && str_contains($outside, '192.0.2.10'), 'Your address is not in the list: said before anything changes: '.$outside);
 
+// Where the panel answers (simai-env 1.51.0): by IP with its own certificate, a domain attached later, the port moved.
+$byIp = \Larena\Env\Panel\PanelAddress::fromData(['schema' => 'simai-panel-address/1', 'ip' => '203.0.113.5', 'addresses' => ['203.0.113.5'], 'port' => 8500,
+    'ip_access' => true, 'ip_url' => 'https://203.0.113.5:8500', 'ip_certificate' => ['kind' => 'self-signed', 'sha256' => 'AB:CD:EF', 'expires' => '2036-11-06'],
+    'domain' => null, 'domain_ssl' => false, 'domain_url' => null, 'url' => 'https://203.0.113.5:8500']);
+env_assert($byIp !== null && $byIp->ipUrlOnPort(9443) === 'https://203.0.113.5:9443' && $byIp->domain === null
+    && \Larena\Env\Panel\PanelAddress::fromData(['schema' => 'other']) === null
+    && \Larena\Env\Panel\PanelAddress::fromData(['schema' => 'simai-panel-address/1', 'url' => 'javascript:alert(1)'])?->url === null, 'The panel address read, a stray link refused.');
+$allAddress = ['domain' => true, 'domain-remove' => true, 'port' => true, 'ip-access' => true];
+$ipPage = $panelPage(['panelAddress' => $byIp, 'addressAllows' => $allAddress]);
+env_assert(str_contains($ipPage, 'data-env-panel-address="ip"') && str_contains($ipPage, 'AB:CD:EF') && str_contains($ipPage, '203.0.113.5')
+    && str_contains($ipPage, 'data-env-panel-address-op="domain"') && str_contains($ipPage, 'data-env-panel-address-op="port"')
+    && !str_contains($ipPage, 'data-env-panel-address-op="ip-access"'), 'By IP only: attach a domain, move the port, the address by IP cannot be turned off: '.$ipPage);
+$withDomain = \Larena\Env\Panel\PanelAddress::fromData(['schema' => 'simai-panel-address/1', 'ip' => '203.0.113.5', 'port' => 8500, 'ip_access' => true,
+    'ip_url' => 'https://203.0.113.5:8500', 'domain' => 'panel.example.com', 'domain_ssl' => true, 'domain_url' => 'https://panel.example.com', 'url' => 'https://panel.example.com']);
+$domainPage = $panelPage(['panelAddress' => $withDomain, 'addressAllows' => $allAddress]);
+env_assert(str_contains($domainPage, 'data-env-panel-address="domain"') && str_contains($domainPage, 'data-env-panel-address-op="domain-remove"')
+    && str_contains($domainPage, 'data-env-panel-address-op="ip-access"') && !str_contains($domainPage, 'data-env-panel-address-op="domain"'), 'A domain with a certificate: detach it or turn the address by IP off: '.$domainPage);
+$readOnly = $panelPage(['panelAddress' => $byIp, 'addressAllows' => array_map(static fn (): bool => false, $allAddress)]);
+env_assert(str_contains($readOnly, 'data-env-panel-address-url') && !str_contains($readOnly, 'data-env-panel-address-op='), 'Without the right only the address is shown.');
+$moving = $factory->make('larena-env::admin.panel-address-moving', ['op' => 'port', 'port' => 9443, 'next' => 'https://203.0.113.5:9443/admin/server/jobs/x', 'nextBase' => 'https://203.0.113.5:9443'])->render();
+env_assert(str_contains($moving, 'data-env-panel-address-moving="port"') && str_contains($moving, '9443') && str_contains($moving, 'data-env-panel-address-next'), 'The way to the new address: '.$moving);
+
 $cronTab = static fn (array $cron): string => $factory->make('larena-env::admin.partials.cron', ['domain' => 'demo-php.test', 'cron' => $cron + ['jobs' => null,
     'opened' => null, 'runs' => null, 'allows' => ['add' => true, 'remove' => true, 'enable' => true, 'disable' => true, 'runs' => true],
     'presets' => CronSchedule::PRESETS, 'when' => []]])->render();
@@ -457,7 +479,7 @@ $rebootPage = $softwarePage(['software' => new \Larena\Env\Software\ServerSoftwa
 env_assert(str_contains($rebootPage, 'data-env-system-reboot') && str_contains($rebootPage, 'linux-image-6.8') && str_contains($rebootPage, 'data-env-system-kept-back')
     && !str_contains($rebootPage, 'data-env-software-op="update-all"'), 'A pending reboot and kept-back packages said in words, nothing to install: '.$rebootPage);
 
-foreach (['services', 'firewall', 'panel-access', 'software-php', 'software', 'partials/system-updates', 'partials/cron', 'partials/timed-change'] as $name) {
+foreach (['services', 'firewall', 'panel-access', 'software-php', 'software', 'partials/system-updates', 'partials/cron', 'partials/timed-change', 'panel-address-moving'] as $name) {
     $source = (string) file_get_contents(dirname(__DIR__, 2).'/resources/views/admin/'.$name.'.blade.php');
     env_assert(!str_contains($source, '{!!') && preg_match('/<style\b|<script\b|@php\b/i', $source) !== 1, "The {$name} view prints nothing raw and holds no script.");
 }

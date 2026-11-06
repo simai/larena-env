@@ -209,6 +209,14 @@ final readonly class SiteExtrasReader
         return $data === null ? null : \Larena\Env\Backup\BackupStorage::copies($data);
     }
 
+    /** Where the panel answers: by IP and port, and by its domain (simai-panel-address/1, simai-env 1.51.0). */
+    public function panelAddress(PanelActor $actor): ?\Larena\Env\Panel\PanelAddress
+    {
+        $data = $this->data($actor, 'panel:address', []);
+
+        return $data === null ? null : \Larena\Env\Panel\PanelAddress::fromData($data);
+    }
+
     /** Access for AI assistants over MCP (simai-mcp-status/1, simai-env 1.49.0), the administrator's. */
     public function mcp(PanelActor $actor): ?\Larena\Env\Security\McpStatus
     {

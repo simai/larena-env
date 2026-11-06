@@ -35,7 +35,8 @@ final readonly class FirewallController
     /** How long an address stays blocked: an hour, a day, a week, or until it is unblocked. */
     public const array BLOCK_TTLS = ['3600', '86400', '604800', ''];
     /** Which page each kind of timed change is kept from. */
-    public const array CHANGE_PAGES = ['firewall' => 'larena.env.admin.firewall', 'panel_access' => 'larena.env.admin.panel.access', 'geo' => 'larena.env.admin.security'];
+    public const array CHANGE_PAGES = ['firewall' => 'larena.env.admin.firewall', 'panel_access' => 'larena.env.admin.panel.access', 'geo' => 'larena.env.admin.security',
+        'panel_address' => 'larena.env.admin.panel.access'];
 
     public function __construct(
         private PanelOperations $operations,
@@ -85,6 +86,9 @@ final readonly class FirewallController
             // Where this person reaches the panel from: a list without it would shut them out, and the server would undo it.
             'address' => $address,
             'addressListed' => $panelAccess === 'any' || $panelAccess === null || AddressList::contains($panelAccess, $address),
+            // Where the panel answers (simai-env 1.51.0): by IP and port, by a domain, and the changes of both.
+            'panelAddress' => $page === 'panel_access' && $capabilities->allows('panel:address') ? $this->extras->panelAddress($actor) : null,
+            'addressAllows' => array_map(static fn (string $command): bool => $canOperate && $capabilities->allows($command), PanelAddressController::OPERATIONS),
             'notice' => $request->session()->get('larena_env_notice'),
         ]);
     }

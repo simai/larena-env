@@ -52,7 +52,7 @@ env_assert($names === ['larena.env.admin.alerts.ack.open', 'larena.env.admin.ale
     'larena.env.admin.dns.connection.disconnect', 'larena.env.admin.dns.connection.save', 'larena.env.admin.dns.run', 'larena.env.admin.dns.zone',
     'larena.env.admin.dns.zone.plan', 'larena.env.admin.dns.zone.undo', 'larena.env.admin.firewall', 'larena.env.admin.firewall.plan', 'larena.env.admin.firewall.run',
     'larena.env.admin.index', 'larena.env.admin.job', 'larena.env.admin.job.cancel', 'larena.env.admin.overview',
-    'larena.env.admin.panel.access', 'larena.env.admin.people', 'larena.env.admin.people.act', 'larena.env.admin.people.assign', 'larena.env.admin.people.owners.plan',
+    'larena.env.admin.panel.access', 'larena.env.admin.panel.address.plan', 'larena.env.admin.panel.address.run', 'larena.env.admin.people', 'larena.env.admin.people.act', 'larena.env.admin.people.assign', 'larena.env.admin.people.owners.plan',
     'larena.env.admin.people.owners.run', 'larena.env.admin.people.stop', 'larena.env.admin.security', 'larena.env.admin.security.plan', 'larena.env.admin.security.run', 'larena.env.admin.services', 'larena.env.admin.services.plan', 'larena.env.admin.services.run',
     'larena.env.admin.site', 'larena.env.admin.site.cron.plan', 'larena.env.admin.site.cron.run', 'larena.env.admin.site.dns.plan', 'larena.env.admin.site.dns.run',
     'larena.env.admin.site.files.download', 'larena.env.admin.site.files.plan', 'larena.env.admin.site.files.run', 'larena.env.admin.site.nginx.plan',
@@ -90,7 +90,7 @@ foreach ($with['routes'] as $name => $route) {
     // A site's own scheduled jobs are a site's (5.4).
     $serverTools = str_starts_with($name, 'larena.env.admin.services') || str_starts_with($name, 'larena.env.admin.firewall') || str_starts_with($name, 'larena.env.admin.security')
         || str_starts_with($name, 'larena.env.admin.storages')
-        || $name === 'larena.env.admin.panel.access' || $name === 'larena.env.admin.change.keep' || str_starts_with($name, 'larena.env.admin.dns.certificates')
+        || str_starts_with($name, 'larena.env.admin.panel.') || $name === 'larena.env.admin.change.keep' || str_starts_with($name, 'larena.env.admin.dns.certificates')
         // And the server's software and PHP versions (simai-env 1.37.0–1.38.0).
         || $name === 'larena.env.admin.software' || str_starts_with($name, 'larena.env.admin.software.');
     $serverToolChanges = $serverTools && (str_ends_with($name, '.plan') || str_ends_with($name, '.run') || $name === 'larena.env.admin.change.keep');
