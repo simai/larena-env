@@ -224,6 +224,89 @@
             </section>
         @endif
 
+        @if ($mcpSupported)
+            {{-- Access for AI assistants over MCP (simai-env 1.49.0): on or off, the keys with whom each works for, a key to
+                 add for the whole server or one owner's sites, and the lines to connect Claude Code, Codex or any client.
+                 Every change is the server's own command, planned and confirmed. --}}
+            <section class="larena-panel larena-panel-padded" data-env-security-mcp="{{ $mcp === null ? 'unreadable' : ($mcp->enabled ? 'on' : 'off') }}" aria-labelledby="env-security-mcp">
+                <h2 id="env-security-mcp" class="text-2">{{ __('larena-env::admin.security.mcp.title') }}</h2>
+                <p class="color-on-surface-variant">{{ __('larena-env::admin.security.mcp.note') }}</p>
+                @if ($mcp === null)
+                    <p role="alert">{{ __('larena-env::admin.security.mcp.unreadable') }}</p>
+                @else
+                    <div class="flex flex-wrap items-cross-center g-2">
+                        <span class="grow"><strong>{{ __('larena-env::admin.security.mcp.now') }}:</strong> {{ __('larena-env::admin.security.mcp.'.($mcp->enabled ? 'on' : 'off')) }}</span>
+                        @if ($allows[$mcp->enabled ? 'mcp-disable' : 'mcp-enable'])
+                            <form method="post" action="{{ route('larena.env.admin.security.plan', [], false) }}" class="m-0" data-env-security-op="{{ $mcp->enabled ? 'mcp-disable' : 'mcp-enable' }}">
+                                @csrf
+                                <input type="hidden" name="op" value="{{ $mcp->enabled ? 'mcp-disable' : 'mcp-enable' }}">
+                                <button type="submit" class="larena-button @if (!$mcp->enabled) larena-button-primary @endif" style="min-height: 2.75rem;">{{ __('larena-env::admin.security.operations.'.($mcp->enabled ? 'mcp-disable' : 'mcp-enable')) }}</button>
+                            </form>
+                        @endif
+                    </div>
+                    @if ($mcp->enabled)
+                        <h3 class="text-1 m-t-3">{{ __('larena-env::admin.security.mcp.keys') }}</h3>
+                        @if ($mcp->keys === [])
+                            <p class="m-0" data-env-security-mcp-keys="0">{{ __('larena-env::admin.security.mcp.keys_none') }}</p>
+                        @else
+                            <ul class="m-0 p-0" style="list-style: none;" data-env-security-mcp-keys="{{ count($mcp->keys) }}">
+                                @foreach ($mcp->keys as $key)
+                                    <li class="flex flex-wrap items-cross-center g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-security-mcp-key="{{ $key['fingerprint'] }}">
+                                        <span class="grow min-w-0">
+                                            <strong>{{ $key['role'] === 'owner' ? __('larena-env::admin.security.mcp.for_owner', ['owner' => $key['owner']]) : __('larena-env::admin.security.mcp.for_admin') }}</strong>
+                                            <span class="color-on-surface-variant text-0" style="display: block; overflow-wrap: anywhere; font-family: var(--sf-mono, monospace);">{{ $key['fingerprint'] }}</span>
+                                        </span>
+                                        @if ($allows['mcp-key-remove'])
+                                            <form method="post" action="{{ route('larena.env.admin.security.plan', [], false) }}" class="m-0" data-env-security-op="mcp-key-remove">
+                                                @csrf
+                                                <input type="hidden" name="op" value="mcp-key-remove">
+                                                <input type="hidden" name="fingerprint" value="{{ $key['fingerprint'] }}">
+                                                <button type="submit" class="larena-button" style="min-height: 2.75rem;">{{ __('larena-env::admin.security.mcp.remove') }}</button>
+                                            </form>
+                                        @endif
+                                    </li>
+                                @endforeach
+                            </ul>
+                        @endif
+                        @if ($allows['mcp-key-add'])
+                            <form method="post" action="{{ route('larena.env.admin.security.plan', [], false) }}" class="m-0 m-t-3" data-env-security-op="mcp-key-add">
+                                @csrf
+                                <input type="hidden" name="op" value="mcp-key-add">
+                                <label style="display: block;">
+                                    <span style="font-weight: 600; display: block;">{{ __('larena-env::admin.security.mcp.pubkey') }}</span>
+                                    <textarea name="pubkey" class="larena-input" rows="3" required style="inline-size: 100%; font-family: var(--sf-mono, monospace);" placeholder="ssh-ed25519 AAAA… name@computer" autocomplete="off" spellcheck="false"></textarea>
+                                    <span class="color-on-surface-variant" style="display: block;">{{ __('larena-env::admin.security.mcp.pubkey_hint') }}</span>
+                                </label>
+                                <fieldset class="m-0 m-t-2 p-0" style="border: 0;">
+                                    <legend style="font-weight: 600;">{{ __('larena-env::admin.security.mcp.role') }}</legend>
+                                    <label class="flex items-cross-center g-1" style="min-height: 2.75rem;"><input type="radio" name="role" value="owner" @checked($owners !== [])> {{ __('larena-env::admin.security.mcp.role_owner') }}</label>
+                                    @if ($owners !== [])
+                                        <select name="owner" class="larena-input" style="min-height: 2.75rem; margin-inline-start: 1.5rem;" aria-label="{{ __('larena-env::admin.security.mcp.owner') }}">
+                                            @foreach ($owners as $owner)<option value="{{ $owner }}">{{ $owner }}</option>@endforeach
+                                        </select>
+                                    @endif
+                                    <label class="flex items-cross-center g-1" style="min-height: 2.75rem;"><input type="radio" name="role" value="administrator" @checked($owners === [])> {{ __('larena-env::admin.security.mcp.role_admin') }}</label>
+                                </fieldset>
+                                <button type="submit" class="larena-button larena-button-primary m-t-2" style="min-height: 2.75rem;">{{ __('larena-env::admin.security.mcp.add') }}</button>
+                            </form>
+                        @endif
+                        @if ($mcp->clients !== [])
+                            <h3 class="text-1 m-t-3">{{ __('larena-env::admin.security.mcp.connect') }}</h3>
+                            <p class="color-on-surface-variant m-0">{{ __('larena-env::admin.security.mcp.connect_note') }}</p>
+                            @foreach (['claude_code', 'codex', 'json'] as $client)
+                                @if (isset($mcp->clients[$client]))
+                                    <label class="m-t-2" style="display: block;" data-env-security-mcp-client="{{ $client }}">
+                                        <span style="font-weight: 600; display: block;">{{ __('larena-env::admin.security.mcp.clients.'.$client) }}</span>
+                                        <input type="text" readonly class="larena-input" style="inline-size: 100%; min-height: 2.75rem; font-family: var(--sf-mono, monospace);" value="{{ $mcp->clients[$client] }}">
+                                    </label>
+                                @endif
+                            @endforeach
+                        @endif
+                    @endif
+                @endif
+            </section>
+        @endif
+
         <section class="larena-panel larena-panel-padded" data-env-security-vulnerabilities="{{ count($status->vulnerabilities) }}" aria-labelledby="env-security-vulnerabilities">
             <h2 id="env-security-vulnerabilities" class="text-2">{{ __('larena-env::admin.security.vulnerabilities') }}</h2>
             @if ($status->vulnerabilities === [])

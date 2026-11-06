@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- «Безопасность» has «Доступ для ИИ-ассистентов» (simai-env 1.49.0, mcp:*): on or off, the keys with whom each works for
+  (the whole server or one owner's sites) and their fingerprints, removing a key, adding a pasted public key for an
+  owner or the administrator, and the ready lines to connect Claude Code, Codex or any client by JSON; every change is
+  planned and confirmed.
 - The overview's charts read simai-env 1.50.0: the processor's busy share in percent, «Сеть» in and out in Mbit/s or
   kbit/s with the interface and the link (its speed the whole where the server knows it), «Диск: чтение и запись» in MB/s
   or KB/s with the disk's kind and device; two lines with a legend and both values on hover. An hour reads the server's

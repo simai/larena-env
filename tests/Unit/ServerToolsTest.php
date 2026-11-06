@@ -515,9 +515,11 @@ env_assert($words['security_updates']['title'] === 'Security updates' && $words[
     && $words['file_scan']['line'] === 'The sites\' files were not checked yet.' && $words['https:demo-php.test']['how'] !== '', 'Each check in the panel\'s words.');
 $securityPage = static fn (array $data): string => $factory->make('larena-env::admin.security', $data + ['source' => 'recorded', 'supported' => true, 'status' => $security,
     'words' => $words, 'engines' => ['simai-env signatures', 'ClamAV antivirus'], 'fixes' => ['security_updates' => true, 'fail2ban' => true, 'https:demo-php.test' => false],
-    'allows' => ['fix' => true, 'scan' => true, 'level' => true, 'files-scan' => true, 'quarantine' => true, 'restore' => true, 'geo' => true, 'geo-update' => true],
+    'allows' => ['fix' => true, 'scan' => true, 'level' => true, 'files-scan' => true, 'quarantine' => true, 'restore' => true, 'geo' => true, 'geo-update' => true,
+        'mcp-enable' => true, 'mcp-disable' => true, 'mcp-key-add' => true, 'mcp-key-remove' => true],
     'levels' => \Larena\Env\Security\SecurityStatus::LEVELS, 'files' => $found, 'quarantine' => $kept, 'filesSupported' => true, 'notice' => null,
-    'geo' => null, 'geoSupported' => false, 'lookup' => null, 'lookupSupported' => false, 'countries' => [], 'myAddress' => '203.0.113.7'])->render();
+    'geo' => null, 'geoSupported' => false, 'lookup' => null, 'lookupSupported' => false, 'countries' => [], 'myAddress' => '203.0.113.7',
+    'mcp' => null, 'mcpSupported' => false, 'owners' => []])->render();
 $page = $securityPage([]);
 env_assert(str_contains($page, 'data-env-security="risk"') && str_contains($page, 'data-env-security-score="45"') && str_contains($page, 'data-env-security-problems="13"')
     && str_contains($page, 'data-env-security-fix="security_updates"') && str_contains($page, 'data-env-security-fix="fail2ban"') && !str_contains($page, 'data-env-security-fix="https:demo-php.test"')
@@ -558,6 +560,38 @@ env_assert($asked(['mode' => 'deny', 'countries' => ['cn', 'KP', 'ZZ'], 'ports' 
     && $asked(['mode' => 'off', 'countries' => ['CN']]) === ['mode' => 'off'] && $asked(['mode' => 'allow', 'countries' => []]) === null
     && $asked(['mode' => 'allow', 'countries' => 'RU,KZ']) === ['mode' => 'allow', 'countries' => 'RU,KZ', 'ports' => 'web'], 'The country blocking form\'s arguments.');
 \Larena\Env\Gateway\PanelCommands::check('security:geo', ['mode' => 'deny', 'countries' => 'CN,KP', 'ports' => 'web', 'keep' => '203.0.113.7'], true);
+
+// Access for AI assistants over MCP (simai-env 1.49.0): off offers to turn it on; on lists the keys with whom each works
+// for, removes one by its fingerprint, adds a key for an owner's sites or the whole server, and shows the lines to connect.
+$mcpOff = \Larena\Env\Security\McpStatus::fromData(['schema' => 'simai-mcp-status/1', 'enabled' => false, 'account' => 'simai-mcp', 'keys' => [], 'connect' => null, 'clients' => []]);
+$mcpOffPage = $securityPage(['mcp' => $mcpOff, 'mcpSupported' => true]);
+env_assert(str_contains($mcpOffPage, 'data-env-security-mcp="off"') && str_contains($mcpOffPage, 'data-env-security-op="mcp-enable"') && !str_contains($mcpOffPage, 'name="pubkey"'),
+    'MCP off: only turning it on. '.$mcpOffPage);
+$mcpOn = \Larena\Env\Security\McpStatus::fromData(['schema' => 'simai-mcp-status/1', 'enabled' => true, 'account' => 'simai-mcp',
+    'keys' => [['role' => 'administrator', 'owner' => null, 'fingerprint' => 'SHA256:abcdefgh12345678'], ['role' => 'owner', 'owner' => 'acme', 'fingerprint' => 'SHA256:zyxwvuts87654321'],
+        ['role' => 'owner', 'owner' => 'acme', 'fingerprint' => 'not a fingerprint']],
+    'connect' => 'ssh -T simai-mcp@server.example.com',
+    'clients' => ['claude_code' => 'claude mcp add simai -- ssh -T simai-mcp@server.example.com', 'codex' => 'codex mcp add simai -- ssh -T simai-mcp@server.example.com',
+        'json' => ['mcpServers' => ['simai' => ['command' => 'ssh', 'args' => ['-T', 'simai-mcp@server.example.com']]]]]]);
+$mcpPage = $securityPage(['mcp' => $mcpOn, 'mcpSupported' => true, 'owners' => ['acme', 'beta']]);
+env_assert($mcpOn !== null && count($mcpOn->keys) === 2 && $mcpOn->clients['json'] === '{"mcpServers":{"simai":{"command":"ssh","args":["-T","simai-mcp@server.example.com"]}}}'
+    && str_contains($mcpPage, 'data-env-security-mcp="on"') && str_contains($mcpPage, 'data-env-security-mcp-keys="2"') && substr_count($mcpPage, 'data-env-security-op="mcp-key-remove"') === 2
+    && str_contains($mcpPage, 'value="SHA256:zyxwvuts87654321"') && str_contains($mcpPage, '<option value="beta">beta</option>') && str_contains($mcpPage, 'data-env-security-mcp-client="codex"')
+    && str_contains($mcpPage, 'data-env-security-op="mcp-disable"') && \Larena\Env\Security\McpStatus::fromData(['schema' => 'x', 'enabled' => true]) === null,
+    'MCP on: keys, adding, connecting. '.$mcpPage);
+$mcpArgs = new \ReflectionMethod(\Larena\Env\Http\Controllers\SecurityController::class, 'mcpKeyArgs');
+$mcpAsked = static fn (array $input): ?array => $mcpArgs->invoke(null, \Illuminate\Http\Request::create('/', 'POST', $input));
+$pub = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGq0examplekeyexamplekeyexample me@laptop';
+env_assert($mcpAsked(['pubkey' => "  $pub\n", 'role' => 'administrator', 'owner' => 'acme']) === ['pubkey' => $pub, 'admin' => 'yes']
+    && $mcpAsked(['pubkey' => $pub, 'role' => 'owner', 'owner' => 'Acme']) === ['pubkey' => $pub, 'owner' => 'acme'] && $mcpAsked(['pubkey' => $pub, 'role' => 'owner']) === null,
+    'The MCP key form\'s arguments.');
+\Larena\Env\Gateway\PanelCommands::check('mcp:key-add', ['pubkey' => $pub, 'owner' => 'acme'], true);
+\Larena\Env\Gateway\PanelCommands::check('mcp:key-remove', ['fingerprint' => 'SHA256:zyxwvuts87654321'], true);
+try {
+    \Larena\Env\Gateway\PanelCommands::check('mcp:key-remove', ['fingerprint' => 'MD5:aa:bb'], true);
+    env_assert(false, 'A fingerprint not in SHA256 form is refused.');
+} catch (\Larena\Env\Gateway\PanelRefused) {
+}
 $refusedGeo = false;
 try {
     \Larena\Env\Gateway\PanelCommands::check('security:geo', ['mode' => 'deny', 'countries' => 'RUS'], true);

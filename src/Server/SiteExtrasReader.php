@@ -195,6 +195,14 @@ final readonly class SiteExtrasReader
         return $data === null ? null : \Larena\Env\Security\GeoStatus::fromData($data);
     }
 
+    /** Access for AI assistants over MCP (simai-mcp-status/1, simai-env 1.49.0), the administrator's. */
+    public function mcp(PanelActor $actor): ?\Larena\Env\Security\McpStatus
+    {
+        $data = $this->data($actor, 'mcp:status', []);
+
+        return $data === null ? null : \Larena\Env\Security\McpStatus::fromData($data);
+    }
+
     /** The country of an address by the server's database (simai-geo-lookup/1), or null when it cannot say. */
     public function geoLookup(PanelActor $actor, string $ip): ?string
     {

@@ -24,7 +24,8 @@ use Larena\Env\Server\SiteExtrasReader;
 /**
  * «Сервер › Безопасность» (simai-env 1.45.0–1.47.0), the system level's: the server's score and grade, its problems
  * first with «Исправить» where the server can put one right itself, the protection level in one choice, the sites'
- * packages with known vulnerabilities, and the sites' files checked for malicious code with the quarantine. Every change
+ * packages with known vulnerabilities, the sites' files checked for malicious code with the quarantine, the countries and
+ * access for AI assistants over MCP (1.49.0). Every change
  * is the server's own command, planned and confirmed; a problem's fix is taken from the server's answer by the check's
  * id on both steps, never from the form.
  */
@@ -36,7 +37,8 @@ final readonly class SecurityController
     /** The changes of this screen besides a check's fix. */
     public const array OPERATIONS = ['scan' => 'security:scan', 'level' => 'security:level', 'files-scan' => 'security:files-scan',
         'quarantine' => 'security:quarantine', 'restore' => 'security:quarantine-restore',
-        'geo' => 'security:geo', 'geo-update' => 'security:geo-update'];
+        'geo' => 'security:geo', 'geo-update' => 'security:geo-update',
+        'mcp-enable' => 'mcp:enable', 'mcp-disable' => 'mcp:disable', 'mcp-key-add' => 'mcp:key-add', 'mcp-key-remove' => 'mcp:key-remove'];
     /** The requests one address may send a second and at once when the limit is turned on here (the server's defaults). */
     public const array WEB_PROTECT = ['enabled' => 'yes'];
 
@@ -105,6 +107,10 @@ final readonly class SecurityController
             'lookupSupported' => $capabilities->allows('security:geo-lookup'),
             'countries' => $countries,
             'myAddress' => (string) $request->ip(),
+            // Access for AI assistants (simai-env 1.49.0): on or off, the keys and the lines to connect a client.
+            'mcp' => $capabilities->allows('mcp:status') ? $this->extras->mcp($actor) : null,
+            'mcpSupported' => $capabilities->allows('mcp:status'),
+            'owners' => $read->overview->owners ?? [],
             'notice' => $request->session()->get('larena_env_notice'),
         ]);
     }
@@ -184,10 +190,15 @@ final readonly class SecurityController
             'quarantine' => ['domain' => strtolower((string) $request->input('domain')), 'path' => (string) $request->input('path')],
             'restore' => ['id' => (string) $request->input('id')],
             'geo' => self::geoArgs($request),
+            'mcp-key-add' => self::mcpKeyArgs($request),
+            'mcp-key-remove' => ['fingerprint' => (string) $request->input('fingerprint')],
             default => [],
         };
         if ($op === 'geo' && $args === null) {
             return 'geo_countries_needed';
+        }
+        if ($op === 'mcp-key-add' && $args === null) {
+            return 'mcp_owner_needed';
         }
         try {
             PanelCommands::check($command, $args, true);
@@ -224,6 +235,23 @@ final readonly class SecurityController
         }
 
         return $args;
+    }
+
+    /**
+     * An MCP key's arguments: the public key as pasted (one line, spaces kept), for the whole server or for one owner's
+     * sites; null when an owner's key names no owner.
+     *
+     * @return array<string, string>|null
+     */
+    private static function mcpKeyArgs(Request $request): ?array
+    {
+        $key = trim((string) preg_replace('/\s+/', ' ', (string) $request->input('pubkey')));
+        if ($request->input('role') === 'administrator') {
+            return ['pubkey' => $key, 'admin' => 'yes'];
+        }
+        $owner = strtolower(trim((string) $request->input('owner')));
+
+        return $owner === '' ? null : ['pubkey' => $key, 'owner' => $owner];
     }
 
     /**

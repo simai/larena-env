@@ -57,6 +57,9 @@ final class PanelCommands
     private const string ALERT_TARGET = '/\A(?:https:\/\/[!-~]{1,500}|-?[0-9]{1,20}|@[A-Za-z0-9_]{5,32})\z/D';
     private const string BOT_TOKEN = '/\A[0-9]{5,12}:[A-Za-z0-9_-]{30,64}\z/D';
     // The history's periods: an hour and six hours since simai-env 1.50.0, an older server refuses them.
+    // A key's fingerprint as ssh-keygen prints it (simai-env 1.49.0, MCP keys).
+    private const string FINGERPRINT = '/\A(?:SHA256:[A-Za-z0-9+\/]{8,64})\z/D';
+    private const string YES = '/\A(?:yes)\z/D';
     private const string PERIOD = '/\A(?:hour|6h|day|week|month)\z/D';
     // The server's security (simai-env 1.45.0–1.47.0): what security:fix puts right, the protection levels, and the
     // requests one address may send a second (2–1000) and at once (10–10000).
@@ -267,6 +270,13 @@ final class PanelCommands
         'security:geo-status' => ['args' => [], 'required' => [], 'since' => '1.48.0', 'kind' => self::READ],
         'security:geo-update' => ['args' => [], 'required' => [], 'since' => '1.48.0', 'kind' => self::ACTION],
         'security:geo-lookup' => ['args' => ['ip' => self::IP], 'required' => ['ip'], 'since' => '1.48.0', 'kind' => self::READ],
+        // Access for AI assistants over MCP (simai-env 1.49.0), administrators only: a key for the whole server or for
+        // one owner's sites, removed by its fingerprint or with all of an owner's.
+        'mcp:status' => ['args' => [], 'required' => [], 'since' => '1.49.0', 'kind' => self::READ],
+        'mcp:enable' => ['args' => [], 'required' => [], 'since' => '1.49.0', 'kind' => self::ACTION],
+        'mcp:disable' => ['args' => [], 'required' => [], 'since' => '1.49.0', 'kind' => self::ACTION],
+        'mcp:key-add' => ['args' => ['pubkey' => self::PUBKEY, 'owner' => self::OWNER, 'admin' => self::YES], 'required' => ['pubkey'], 'since' => '1.49.0', 'kind' => self::ACTION],
+        'mcp:key-remove' => ['args' => ['fingerprint' => self::FINGERPRINT, 'owner' => self::OWNER], 'required' => [], 'since' => '1.49.0', 'kind' => self::ACTION],
         'security:web-protect' => ['args' => ['enabled' => self::YES_NO, 'rate' => self::WEB_RATE, 'burst' => self::WEB_BURST], 'required' => ['enabled'], 'since' => '1.47.0', 'kind' => self::ACTION],
         'job:status' => ['args' => ['job_id' => self::JOB_ID], 'required' => ['job_id'], 'since' => '1.21.0', 'kind' => self::JOB],
         'job:log' => ['args' => ['job_id' => self::JOB_ID, 'after' => self::CURSOR], 'required' => ['job_id'], 'since' => '1.21.0', 'kind' => self::JOB],
