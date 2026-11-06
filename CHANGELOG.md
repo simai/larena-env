@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- «Отметить, что видели» resets the alert list the panel keeps for a minute, so the acknowledged alert leaves the bar
+  on the next page instead of staying up to a minute (seen on the stand 2026-11-06).
+
 - «Сервер › Безопасность» (simai-env 1.45.0–1.47.0): the server's protection score and grade, what to fix first in the
   order the server recommends with «Исправить» where the server can put it right itself (the fix is taken from the
   server's answer by the check's id on both steps, never from the form) and «Как исправить» otherwise, the checks that

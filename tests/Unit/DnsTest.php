@@ -272,7 +272,8 @@ env_assert(str_ends_with($certificates->plan($asked('store'))->getTargetUrl(), '
 // when the server has recorded it; the plain post and the link still show the plan.
 $recorded = new Larena\Env\Gateway\RecordedAnswersGateway(env_recorded_path());
 $alertsController = new Larena\Env\Http\Controllers\AlertsController(new Larena\Env\Operations\PanelOperations($recorded),
-    new Larena\Env\Server\ServerOverviewReader($recorded), new Larena\Env\Server\SiteExtrasReader($recorded), $views, $translator, $encrypter);
+    new Larena\Env\Server\ServerOverviewReader($recorded), new Larena\Env\Server\SiteExtrasReader($recorded), $views, $translator, $encrypter,
+    $ackCache = new Illuminate\Cache\Repository(new Illuminate\Cache\ArrayStore()));
 $ack = static function (string $method, bool $json): Illuminate\Http\Request {
     $request = Illuminate\Http\Request::create('/admin/server/alerts/ack/plan?id=3591eb397633&back=%2Fadmin%2Fserver', $method);
     if ($json) {
@@ -284,6 +285,8 @@ $ack = static function (string $method, bool $json): Illuminate\Http\Request {
 };
 $oneClick = $alertsController->ackPlan($ack('POST', true));
 env_assert($oneClick instanceof Illuminate\Http\JsonResponse && $oneClick->getData(true)['acknowledged'] === true, 'One click acknowledges: '.json_encode($oneClick instanceof Illuminate\Http\JsonResponse ? $oneClick->getData(true) : null));
+// The bar keeps its list a minute: an acknowledgement makes the next page read it anew.
+env_assert($ackCache->get(Larena\Env\Warnings\EnvAdminAlertSource::GENERATION) === 1, 'The acknowledgement resets the kept alert list.');
 env_assert($alertsController->ackPlan($ack('GET', true)) instanceof Illuminate\View\View && $alertsController->ackPlan($ack('POST', false)) instanceof Illuminate\View\View,
     'The link and the plain form still show the plan.');
 

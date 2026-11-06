@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Larena\Env\Http\Controllers;
 
+use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Contracts\Encryption\StringEncrypter;
 use Illuminate\Contracts\Translation\Translator;
 use Illuminate\Contracts\View\Factory;
@@ -16,6 +17,7 @@ use Larena\Env\Operations\JobState;
 use Larena\Env\Operations\PanelOperations;
 use Larena\Env\Server\ServerOverviewReader;
 use Larena\Env\Server\SiteExtrasReader;
+use Larena\Env\Warnings\EnvAdminAlertSource;
 use Throwable;
 
 /**
@@ -39,6 +41,7 @@ final readonly class AlertsController
         private Factory $views,
         private Translator $translator,
         private StringEncrypter $encrypter,
+        private ?CacheRepository $cache = null,
     ) {
     }
 
@@ -78,6 +81,7 @@ final readonly class AlertsController
             return $this->notice($request, $back, 'invalid_argument');
         }
         $started = $this->operations->startCommand(ResolvePanelActor::of($request), 'self:alerts-ack', ['id' => $id]);
+        EnvAdminAlertSource::forgetKept($this->cache);
 
         return $started->jobId === null
             ? $this->notice($request, $back, $started->reason ?? 'answer_shape_invalid')
@@ -98,6 +102,9 @@ final readonly class AlertsController
         for ($try = 0; $try < self::ACK_WAIT_TRIES; $try++) {
             $state = $this->operations->view($actor, $started->jobId)->status?->state;
             if ($state !== null && $state->isOver()) {
+                // The bar's kept list still names the alert: the next page reads it anew.
+                EnvAdminAlertSource::forgetKept($this->cache);
+
                 return new JsonResponse(['acknowledged' => $state === JobState::Succeeded, 'job' => $started->jobId]);
             }
             usleep(250_000);

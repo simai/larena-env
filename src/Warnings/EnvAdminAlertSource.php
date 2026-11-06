@@ -33,6 +33,19 @@ final readonly class EnvAdminAlertSource implements AdminAlertSource
     /** How long the server's answer is reused, in seconds. */
     public const int TTL = 60;
 
+    /** Bumped when a person acknowledges an alert: every kept list is read anew (the kept lists' keys carry it). */
+    public const string GENERATION = 'larena-env:alerts:generation';
+
+    /** The kept lists are read anew on the next page: someone acknowledged an alert. */
+    public static function forgetKept(?\Illuminate\Contracts\Cache\Repository $cache): void
+    {
+        if ($cache === null) {
+            return;
+        }
+        $generation = $cache->get(self::GENERATION);
+        $cache->forever(self::GENERATION, is_int($generation) ? $generation + 1 : 1);
+    }
+
     /**
      * @param Closure(string, int, Closure(): list<PanelWarning>): list<PanelWarning>|null $remember a cache's remember()
      * @param list<string> $ownHosts the panel's own addresses: its site is not one of the server's sites to warn about
