@@ -67,6 +67,7 @@ final class EnvServiceProvider extends ServiceProvider
         // The load the panel measured, and the warnings it has already told people about (Panel plan 4.5, 4.6).
         $this->app->bind(MetricSamples::class, static fn (Application $app): MetricSamples => new MetricSamples($app->make('db')->connection()));
         $this->app->bind(WarningLedger::class, static fn (Application $app): WarningLedger => new WarningLedger($app->make('db')->connection()));
+        $this->app->bind(\Larena\Env\Setup\ServerSetup::class, static fn (Application $app): \Larena\Env\Setup\ServerSetup => new \Larena\Env\Setup\ServerSetup($app->make('db')->connection()));
         // DNS through the provider's API (Panel plan, stage 7): Cloudflare is the one provider for now.
         $this->app->bind(DnsProvider::class, static fn (Application $app): DnsProvider => new CloudflareDnsProvider($app->make(\Illuminate\Http\Client\Factory::class)));
         $this->app->bind(DnsService::class, static fn (Application $app): DnsService => new DnsService(

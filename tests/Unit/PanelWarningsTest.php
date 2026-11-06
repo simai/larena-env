@@ -83,6 +83,20 @@ foreach (glob(dirname(__DIR__, 2).'/database/migrations/*.php') ?: [] as $migrat
 }
 $connection = $capsule->getConnection();
 
+// The server's first setup: offered once, a mark kept, the server's own state passes a step, the next one to do.
+$setup = new \Larena\Env\Setup\ServerSetup($connection);
+$offered = [$setup->offerOnce($now), $setup->offerOnce($now)];
+env_assert($offered === [true, false] && $setup->marks() === [] && !$setup->hidden(), 'The setup is offered once.');
+$setup->mark('alerts', 'skipped', $now);
+$setup->mark('login', 'done', $now);
+$setup->mark('nothing', 'done', $now);
+$setupStates = \Larena\Env\Setup\ServerSetup::states($setup->marks(), ['address' => true]);
+env_assert($setupStates === ['login' => 'done', 'address' => 'done', 'alerts' => 'skipped', 'protection' => 'todo', 'backups' => 'todo', 'updates' => 'todo']
+    && \Larena\Env\Setup\ServerSetup::next($setupStates) === 'protection' && \Larena\Env\Setup\ServerSetup::next($setupStates, 'backups') === 'updates'
+    && \Larena\Env\Setup\ServerSetup::next(array_fill_keys(array_keys(\Larena\Env\Setup\ServerSetup::STEPS), 'done')) === null, 'Done by mark or by the server, put off, and the next to do: '.json_encode($setupStates));
+$setup->hide($now);
+env_assert($setup->hidden() && !array_key_exists('_hidden', $setup->marks()), 'The reminder hidden, the marks unchanged.');
+
 // The ledger: told when new, not again within a day, at once when worse, again after a day, forgotten when gone.
 $ledger = new WarningLedger($connection);
 $backup = new PanelWarning(PanelWarnings::BACKUP_NONE, PanelWarning::WARNING, 'a.test');

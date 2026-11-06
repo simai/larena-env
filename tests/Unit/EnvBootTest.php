@@ -54,6 +54,7 @@ env_assert($names === ['larena.env.admin.alerts.ack.open', 'larena.env.admin.ale
     'larena.env.admin.index', 'larena.env.admin.job', 'larena.env.admin.job.cancel', 'larena.env.admin.overview',
     'larena.env.admin.panel.access', 'larena.env.admin.panel.address.plan', 'larena.env.admin.panel.address.run', 'larena.env.admin.people', 'larena.env.admin.people.act', 'larena.env.admin.people.assign', 'larena.env.admin.people.owners.plan',
     'larena.env.admin.people.owners.run', 'larena.env.admin.people.stop', 'larena.env.admin.security', 'larena.env.admin.security.plan', 'larena.env.admin.security.run', 'larena.env.admin.services', 'larena.env.admin.services.plan', 'larena.env.admin.services.run',
+    'larena.env.admin.setup', 'larena.env.admin.setup.hide', 'larena.env.admin.setup.mark',
     'larena.env.admin.site', 'larena.env.admin.site.cron.plan', 'larena.env.admin.site.cron.run', 'larena.env.admin.site.dns.plan', 'larena.env.admin.site.dns.run',
     'larena.env.admin.site.files.download', 'larena.env.admin.site.files.plan', 'larena.env.admin.site.files.run', 'larena.env.admin.site.nginx.plan',
     'larena.env.admin.site.nginx.run', 'larena.env.admin.site.plan',
@@ -94,8 +95,10 @@ foreach ($with['routes'] as $name => $route) {
         // And the server's software and PHP versions (simai-env 1.37.0–1.38.0).
         || $name === 'larena.env.admin.software' || str_starts_with($name, 'larena.env.admin.software.');
     $serverToolChanges = $serverTools && (str_ends_with($name, '.plan') || str_ends_with($name, '.run') || $name === 'larena.env.admin.change.keep');
+    // The server's first setup is the administrator's: it leads through the server's own screens (ENV 2026-11-06).
+    $setup = str_starts_with($name, 'larena.env.admin.setup');
     // Changing a site is a right of its own: a new site, a site's action and stopping a job ask for it.
-    $changes = !$people && !$dns && !$nginx && !$channel && !$update && !$serverTools && (str_ends_with($name, '.plan') || str_ends_with($name, '.run') || str_ends_with($name, '.cancel')
+    $changes = !$people && !$dns && !$nginx && !$channel && !$update && !$serverTools && !$setup && (str_ends_with($name, '.plan') || str_ends_with($name, '.run') || str_ends_with($name, '.cancel')
         || in_array($name, ['larena.env.admin.sites.new', 'larena.env.admin.sites.port', 'larena.env.admin.sites.plan.draft', 'larena.env.admin.alerts.ack.open'], true));
     env_assert(in_array('access:env.sites.operate', $route['middleware'], true) === $changes, "{$name} asks for the wrong right.");
     // The server's overview and the people's spaces are the system level's; giving a space or acting for someone changes the server.
@@ -103,7 +106,7 @@ foreach ($with['routes'] as $name => $route) {
         'larena.env.admin.update', 'larena.env.admin.services', 'larena.env.admin.firewall', 'larena.env.admin.security', 'larena.env.admin.panel.access',
         'larena.env.admin.software', 'larena.env.admin.software.php', 'larena.env.admin.storages'], true);
     env_assert(in_array('access:env.server.read', $route['middleware'], true) === $reads, "{$name} asks for the wrong level.");
-    env_assert(in_array('access:env.server.operate', $route['middleware'], true) === (($people && !$reads) || $nginx || $channelChanges || $updateChanges || $serverToolChanges), "{$name} must ask for the server's right.");
+    env_assert(in_array('access:env.server.operate', $route['middleware'], true) === (($people && !$reads) || $nginx || $channelChanges || $updateChanges || $serverToolChanges || $setup), "{$name} must ask for the server's right.");
 }
 env_assert($with['commands'] === [RegisterServerAreaCommand::class, PanelCheckCommand::class] && $with['sites'] === 4, 'The rest does not change.');
 

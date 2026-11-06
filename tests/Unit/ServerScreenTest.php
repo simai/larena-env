@@ -138,6 +138,9 @@ $warnings = \Larena\Env\Warnings\PanelWarnings::of($overview, $metrics, new Date
 $kinds = array_map(static fn ($warning): string => $warning->kind.':'.($warning->domain ?? ''), $warnings);
 env_assert(in_array('disk_full:', $kinds, true) && $warnings[0]->kind === 'disk_full' && $warnings[0]->severity === 'error' && in_array('backup_stale:demo-php.test', $kinds, true), 'A disk at 98% is said first, as an error; an old backup is said too.');
 // What needs attention is in the admin's alert bar on every page (owner decision 2026-11-05): the screens draw no block of it.
+$left = $state(['section' => 'overview', 'overview' => $overview, 'setupLeft' => ['alerts', 'backups']]);
+env_assert(str_contains($left, 'data-env-setup-left') && str_contains($left, 'data-env-setup-left-step="alerts"') && str_contains($left, 'data-env-setup-hide')
+    && !str_contains($ok, 'data-env-setup-left'), 'What is left of the setup stands on the overview until done or hidden.');
 $loaded = $state(['section' => 'overview', 'overview' => $overview, 'metrics' => $metrics, 'warnings' => $warnings]);
 env_assert(str_contains($loaded, 'data-env-metrics') && str_contains($loaded, '98%') && !str_contains($loaded, 'data-env-warnings')
     && !str_contains($state(['overview' => $overview, 'sitesView' => ['stub' => true], 'warnings' => $warnings]), 'data-env-warnings'), 'The overview and the sites draw no warnings block.');

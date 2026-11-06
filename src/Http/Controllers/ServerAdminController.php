@@ -29,11 +29,18 @@ final readonly class ServerAdminController
         private ?\Larena\Access\Runtime\AccessOperationAuthorizer $authorizer = null,
         private ?\Larena\Env\Server\SiteExtrasReader $extras = null,
         private ?MetricSamples $samples = null,
+        private ?\Larena\Env\Setup\ServerSetup $setup = null,
+        private ?ServerSetupController $setupSteps = null,
     ) {
     }
 
     public function index(Request $request): mixed
     {
+        // The first sign-in of the server's administrator goes through the server's setup once (ENV 2026-11-06).
+        if ($this->canSetUp($request) && $this->setup?->offerOnce(PanelWarnings::now()) === true) {
+            return new \Illuminate\Http\RedirectResponse(route('larena.env.admin.setup', [], false));
+        }
+
         return $this->page($request, 'sites');
     }
 
@@ -83,6 +90,9 @@ final readonly class ServerAdminController
             // The load over time (Panel plan 4.6): the server's own history where it keeps one, else the panel's samples.
             'history' => $history,
             'charts' => $charts,
+            // What is left of the server's setup, until done or hidden.
+            'setupLeft' => $section === 'overview' ? $this->setupLeft($request, $actor) : [],
+            'setupLinks' => $this->setupSteps?->links() ?? [],
             // A safe update waiting (simai-env 1.32.0): only a hint here, the update screen says what it changes.
             'updates' => $section === 'overview' && $actor->owner === null ? $this->updates($actor, $overview) : [],
             'historyFromServer' => $overview?->capabilities?->allows('self:metrics-history') === true,
@@ -96,6 +106,22 @@ final readonly class ServerAdminController
                 AdminProductAssetManifest::dataviewActivation(),
             ),
         ]);
+    }
+
+    private function canSetUp(Request $request): bool
+    {
+        return $this->setup !== null && $this->setupSteps !== null && \Larena\Env\Http\Middleware\ResolvePanelActor::of($request)->owner === null
+            && ($this->authorizer?->authorize($request, 'env.server.operate')->isAllowed() ?? false);
+    }
+
+    /** @return list<string> the setup's steps not done yet, in order */
+    private function setupLeft(Request $request, \Larena\Env\Gateway\PanelActor $actor): array
+    {
+        if (!$this->canSetUp($request) || $this->setup?->hidden() !== false || $this->setupSteps === null) {
+            return [];
+        }
+
+        return array_keys(array_filter($this->setupSteps->states($actor), static fn (string $state): bool => $state !== \Larena\Env\Setup\ServerSetup::DONE));
     }
 
     /** @return list<array{target: string, available: ?string}> the targets the server has an update for */

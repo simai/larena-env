@@ -23,6 +23,24 @@
     @elseif ($section === 'overview')
         {{-- State first, details after (owner-approved prototype, 2026-11-02): what needs a person, a waiting update, the
              measures as tiles, then the server and its services, then the load over time. --}}
+        @if (($setupLeft ?? []) !== [])
+            {{-- What is left of the server's first setup (ENV 2026-11-06), until done or hidden. --}}
+            <section class="larena-panel larena-panel-padded m-bottom-2" data-env-setup-left aria-labelledby="env-setup-left">
+                <div class="flex flex-wrap items-cross-center g-2">
+                    <h2 id="env-setup-left" class="m-0 text-2 grow">{{ __('larena-env::admin.setup.left') }}</h2>
+                    <form method="post" action="{{ route('larena.env.admin.setup.hide', [], false) }}" class="m-0">
+                        @csrf
+                        <button type="submit" class="larena-button" style="min-height: 2.75rem;" data-env-setup-hide>{{ __('larena-env::admin.setup.hide') }}</button>
+                    </form>
+                </div>
+                <ul class="m-0 m-t-1 p-0" style="list-style: none;">
+                    @foreach ($setupLeft as $key)
+                        <li class="p-y-1" data-env-setup-left-step="{{ $key }}"><a href="{{ route('larena.env.admin.setup', ['step' => $key], false) }}" class="flex g-1 items-cross-center" style="min-height: 2.75rem;">
+                            <sf-icon icon="radio_button_unchecked" aria-hidden="true"></sf-icon>{{ __('larena-env::admin.setup.step.'.$key.'.name') }}</a></li>
+                    @endforeach
+                </ul>
+            </section>
+        @endif
         @if (($updates ?? []) !== [])
             <section class="larena-panel flex flex-wrap items-cross-center g-2 p-2 m-bottom-2" data-env-update-hint role="note" aria-labelledby="env-update-hint">
                 <sf-badge status="info" appearance="tonal" text="{{ __('larena-env::admin.update.hint_title') }}" id="env-update-hint"></sf-badge>

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- «Настройка сервера» after the administrator's first sign-in, offered once: six steps one at a time (password and
+  sign-in code, the panel's address, alerts, the protection level with «Усиленный» advised, backups with an S3
+  storage, updates), each done on its own screen or put off. A step the server already shows done (a domain with a
+  certificate, a channel, the enhanced or strict level, a storage) passes by itself. What is left stays on the
+  overview as «Что ещё настроить» until done or hidden.
 - «Доступ к панели» starts with «Адрес панели» (simai-env 1.51.0, panel:address/domain/port/ip-access): the address to
   open the panel at; the address by IP with its self-signed certificate's SHA-256 fingerprint; a domain attached with
   the hint which A record to add first (Let's Encrypt, nothing changes when no certificate comes) or detached; the port

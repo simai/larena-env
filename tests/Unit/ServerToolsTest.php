@@ -326,6 +326,14 @@ env_assert(str_contains($domainPage, 'data-env-panel-address="domain"') && str_c
     && str_contains($domainPage, 'data-env-panel-address-op="ip-access"') && !str_contains($domainPage, 'data-env-panel-address-op="domain"'), 'A domain with a certificate: detach it or turn the address by IP off: '.$domainPage);
 $readOnly = $panelPage(['panelAddress' => $byIp, 'addressAllows' => array_map(static fn (): bool => false, $allAddress)]);
 env_assert(str_contains($readOnly, 'data-env-panel-address-url') && !str_contains($readOnly, 'data-env-panel-address-op='), 'Without the right only the address is shown.');
+$setupLinks = ['login' => null, 'address' => '/admin/server/panel-access', 'alerts' => '/admin/server/alerts/channel', 'protection' => '/admin/server/security', 'backups' => '/admin/server/backups', 'updates' => '/admin/server/update'];
+$setupPage = $factory->make('larena-env::admin.setup', ['step' => 'protection', 'number' => 4, 'links' => $setupLinks, 'finished' => false,
+    'states' => ['login' => 'done', 'address' => 'done', 'alerts' => 'skipped', 'protection' => 'todo', 'backups' => 'todo', 'updates' => 'todo']])->render();
+env_assert(str_contains($setupPage, 'data-env-setup="protection"') && str_contains($setupPage, 'data-env-setup-state="skipped"') && str_contains($setupPage, 'aria-current="step"')
+    && str_contains($setupPage, 'href="/admin/server/security"') && str_contains($setupPage, 'data-env-setup-mark="skipped"') && str_contains($setupPage, 'data-env-setup-later'), 'A setup step: the steps, the screen to do it on, put off: '.$setupPage);
+$doneStep = $factory->make('larena-env::admin.setup', ['step' => 'login', 'number' => 1, 'links' => $setupLinks, 'finished' => false,
+    'states' => ['login' => 'done', 'address' => 'todo', 'alerts' => 'todo', 'protection' => 'todo', 'backups' => 'todo', 'updates' => 'todo']])->render();
+env_assert(str_contains($doneStep, 'data-env-setup-done') && str_contains($doneStep, 'data-env-setup-mark="next"') && !str_contains($doneStep, 'data-env-setup-open'), 'A done step without a screen here: only on.');
 $moving = $factory->make('larena-env::admin.panel-address-moving', ['op' => 'port', 'port' => 9443, 'next' => 'https://203.0.113.5:9443/admin/server/jobs/x', 'nextBase' => 'https://203.0.113.5:9443'])->render();
 env_assert(str_contains($moving, 'data-env-panel-address-moving="port"') && str_contains($moving, '9443') && str_contains($moving, 'data-env-panel-address-next'), 'The way to the new address: '.$moving);
 
@@ -479,7 +487,7 @@ $rebootPage = $softwarePage(['software' => new \Larena\Env\Software\ServerSoftwa
 env_assert(str_contains($rebootPage, 'data-env-system-reboot') && str_contains($rebootPage, 'linux-image-6.8') && str_contains($rebootPage, 'data-env-system-kept-back')
     && !str_contains($rebootPage, 'data-env-software-op="update-all"'), 'A pending reboot and kept-back packages said in words, nothing to install: '.$rebootPage);
 
-foreach (['services', 'firewall', 'panel-access', 'software-php', 'software', 'partials/system-updates', 'partials/cron', 'partials/timed-change', 'panel-address-moving'] as $name) {
+foreach (['services', 'firewall', 'panel-access', 'software-php', 'software', 'partials/system-updates', 'partials/cron', 'partials/timed-change', 'panel-address-moving', 'setup'] as $name) {
     $source = (string) file_get_contents(dirname(__DIR__, 2).'/resources/views/admin/'.$name.'.blade.php');
     env_assert(!str_contains($source, '{!!') && preg_match('/<style\b|<script\b|@php\b/i', $source) !== 1, "The {$name} view prints nothing raw and holds no script.");
 }
