@@ -30,6 +30,9 @@ use Larena\Env\Update\UpdatePlan;
  */
 final readonly class EnvAdminAlertSource implements AdminAlertSource
 {
+    /** The reasons a silent server is told by in words; any other is told by a general line. */
+    private const array UNANSWERED_REASONS = ['gateway_process_failed'];
+
     /** How long the server's answer is reused, in seconds. */
     public const int TTL = 60;
 
@@ -49,6 +52,7 @@ final readonly class EnvAdminAlertSource implements AdminAlertSource
     /**
      * @param Closure(string, int, Closure(): list<PanelWarning>): list<PanelWarning>|null $remember a cache's remember()
      * @param list<string> $ownHosts the panel's own addresses: its site is not one of the server's sites to warn about
+     * @param Closure(): ?int|null $silentSince since when the server has not answered (a Unix time), as the gateway keeps it
      */
     public function __construct(
         private PanelActorResolver $actors,
@@ -58,6 +62,7 @@ final readonly class EnvAdminAlertSource implements AdminAlertSource
         private ?AccessOperationAuthorizer $authorizer = null,
         private ?Closure $remember = null,
         private array $ownHosts = [],
+        private ?Closure $silentSince = null,
     ) {
     }
 
@@ -147,17 +152,32 @@ final readonly class EnvAdminAlertSource implements AdminAlertSource
         return (new PanelWarningSource($this->extras))->of($actor, $overview, $metrics, PanelWarnings::now())['warnings'];
     }
 
+    /**
+     * The red line of a silent server: since when it is silent, so the line reads the same on every page and says how
+     * long it has lasted (critics of 0.4.1: it named the time of each page), and why in words, not a reason code.
+     */
     private function unanswered(string $reason): AdminAlert
     {
         $text = fn (string $key, array $replace = []): string => (string) $this->translator->get('larena-env::admin.'.$key, $replace);
+        $since = $this->silentSince === null ? null : ($this->silentSince)();
+        $why = in_array($reason, self::UNANSWERED_REASONS, true) ? $reason : 'other';
 
         return new AdminAlert(
             id: 'env:server-unanswered',
             level: AdminAlertLevel::Danger,
-            text: $text('warnings.server_unanswered', ['time' => gmdate('H:i').' UTC', 'reason' => $reason]),
+            text: $text('warnings.server_unanswered', [
+                'time' => self::utc(is_int($since) ? $since : time()),
+                'reason' => $text('warnings.unanswered_reasons.'.$why),
+            ]),
             source: $text('warnings.bar_server'),
             action: new AdminAlertAction($text('warnings.go'), route('larena.env.admin.overview', [], false)),
         );
+    }
+
+    /** A moment in UTC as the panel writes it outside the site's zone: the time today, with the day before that. */
+    public static function utc(int $time, ?int $now = null): string
+    {
+        return gmdate(gmdate('Y-m-d', $time) === gmdate('Y-m-d', $now ?? time()) ? 'H:i' : 'd.m.Y H:i', $time).' UTC';
     }
 
     private function alert(PanelWarning $warning, bool $canAcknowledge, string $back): AdminAlert

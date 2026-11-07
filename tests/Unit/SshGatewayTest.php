@@ -169,11 +169,16 @@ $batched = (new SshGateway($target, $batchExecutor))->askAll($reads);
 $sent = json_decode((string) $batchExecutor->recorded()[0]->stdin, true, 16, JSON_THROW_ON_ERROR);
 env_assert($sent['command'] === 'batch' && $sent['requests'] === [['command' => 'self:describe'], ['command' => 'self:metrics-history', 'args' => ['period' => 'day']]]
     && !array_key_exists('confirm', $sent) && !array_key_exists('args', $sent), 'One batch line with the reads in order: '.json_encode($sent));
+$batched = $batched->answers;
 env_assert($batched !== null && $batched[0]->data === ['a' => 1] && $batched[0]->requestId === $reads[0]->requestId
     && $batched[1]->status === PanelAnswerStatus::Refused && $batched[1]->requestId === $reads[1]->requestId, 'The answers come back in order.');
 $oldServer = new RecordingProcessExecutor(ProcessResult::finished(0, json_encode(['schema' => 'simai-panel-answer/1', 'request_id' => $batchId, 'status' => 'refused', 'reason' => 'unknown_command'], JSON_THROW_ON_ERROR)));
-env_assert((new SshGateway($target, $oldServer))->askAll($reads) === null, 'A server without batch: null, ask one by one.');
-env_assert((new SshGateway($target, $oldServer))->askAll([PanelRequest::read($actor, 'self:describe'), PanelRequest::plan($actor, 'service:restart', ['name' => 'nginx'])]) === null
-    && count($oldServer->recorded()) === 1, 'Only reads go in a batch.');
+$withoutBatch = (new SshGateway($target, $oldServer))->askAll($reads);
+env_assert($withoutBatch->answers === null && $withoutBatch->unknownToServer && !$withoutBatch->unanswered(), 'A server without batch says so: ask one by one.');
+$mixed = (new SshGateway($target, $oldServer))->askAll([PanelRequest::read($actor, 'self:describe'), PanelRequest::plan($actor, 'service:restart', ['name' => 'nginx'])]);
+env_assert($mixed->answers === null && !$mixed->unknownToServer && count($oldServer->recorded()) === 1, 'Only reads go in a batch.');
+// A batch the process did not finish (a hung server, ssh failed) is no answer, not a server without batch (critics of 0.4.1).
+$hungBatch = (new SshGateway($target, new RecordingProcessExecutor(ProcessResult::notStarted())))->askAll($reads);
+env_assert($hungBatch->answers === null && $hungBatch->unanswered() && !$hungBatch->unknownToServer, 'A hung batch is told apart: '.($hungBatch->reason ?? ''));
 
 echo "SshGatewayTest passed.\n";

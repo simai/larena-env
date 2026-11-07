@@ -57,7 +57,7 @@ final readonly class SudoGateway implements PanelGateway, PanelFileGateway, Pane
         return PanelAnswer::fromDocument($request->requestId, $answer->payload);
     }
 
-    public function askAll(array $requests): ?array
+    public function askAll(array $requests): PanelBatchAnswer
     {
         return GatewayTransfer::batch(new SudoGatewayAdapter($this->target), $this->executor, $requests);
     }

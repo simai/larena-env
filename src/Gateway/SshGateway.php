@@ -60,11 +60,12 @@ final readonly class SshGateway implements PanelGateway, PanelFileGateway, Panel
         return PanelAnswer::fromDocument($request->requestId, $answer->payload);
     }
 
-    public function askAll(array $requests): ?array
+    public function askAll(array $requests): PanelBatchAnswer
     {
         if (!is_readable($this->target->keyPath) || !is_readable($this->target->knownHostsPath)) {
-            return null;
+            return PanelBatchAnswer::failed(PanelReason::CREDENTIALS_UNREADABLE);
         }
+
         return GatewayTransfer::batch(new SshGatewayAdapter($this->target), $this->executor, $requests);
     }
 

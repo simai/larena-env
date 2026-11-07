@@ -13,6 +13,7 @@ use Larena\Env\Gateway\CachingPanelGateway;
 use Larena\Env\Gateway\PanelActor;
 use Larena\Env\Gateway\PanelAnswer;
 use Larena\Env\Gateway\PanelAnswerStatus;
+use Larena\Env\Gateway\PanelBatchAnswer;
 use Larena\Env\Gateway\PanelRequest;
 
 require_once dirname(__DIR__, 2).'/vendor/autoload.php';
@@ -145,15 +146,15 @@ $batching = new class () implements PanelGateway, Larena\Env\Contracts\PanelBatc
         return PanelAnswer::fromDocument($request->requestId, ['status' => 'ok', 'kind' => 'result', 'data' => ['one' => $request->command]]);
     }
 
-    public function askAll(array $requests): ?array
+    public function askAll(array $requests): PanelBatchAnswer
     {
         if (!$this->knows) {
-            return null;
+            return PanelBatchAnswer::unknownToServer('unknown_command');
         }
         $this->batches[] = array_map(static fn (PanelRequest $request): string => $request->command, $requests);
 
-        return array_map(static fn (PanelRequest $request): PanelAnswer => PanelAnswer::fromDocument($request->requestId,
-            ['status' => 'ok', 'kind' => 'result', 'data' => ['batch' => $request->command]]), $requests);
+        return PanelBatchAnswer::answered(array_map(static fn (PanelRequest $request): PanelAnswer => PanelAnswer::fromDocument($request->requestId,
+            ['status' => 'ok', 'kind' => 'result', 'data' => ['batch' => $request->command]]), $requests));
     }
 
     public function source(): string
@@ -262,6 +263,66 @@ $hungCache = new Repository(new ArrayStore());
 $first = (new CachingPanelGateway($hung, $hungCache, 30))->ask(PanelRequest::read($admin, 'self:describe'));
 $then = (new CachingPanelGateway($hung, $hungCache, 30))->ask(PanelRequest::read($admin, 'service:list'));
 env_assert($first->reason === 'gateway_process_failed' && $then->reason === 'gateway_process_failed' && $hung->asked() === 1, 'After no answer the next reads do not wait.');
+$since = CachingPanelGateway::silentSince($hungCache);
+env_assert(is_int($since) && abs($since - time()) < 5, 'The moment the server went silent is kept.');
+$hungCache->forget('larena-env:gateway:down');
+$hungCache->put('larena-env:gateway:silent-since', $since - 300, 900);
+(new CachingPanelGateway($hung, $hungCache, 30))->ask(PanelRequest::read($admin, 'db:list'));
+env_assert(CachingPanelGateway::silentSince($hungCache) === $since - 300 && $hung->asked() === 2, 'Still silent half a minute later: the first moment stays.');
+$hungCache->forget('larena-env:gateway:down');
+(new CachingPanelGateway($server, $hungCache, 30))->ask(PanelRequest::read($admin, 'firewall:status'));
+env_assert(CachingPanelGateway::silentSince($hungCache) === null, 'The first answer ends the silence.');
+
+// A server that hangs on a batch (critics of 0.4.1): one wait, then every read fails at once; batching stays on.
+$hangs = new class () implements PanelGateway, Larena\Env\Contracts\PanelBatchGateway {
+    public int $calls = 0;
+
+    public function calls(): int
+    {
+        return $this->calls;
+    }
+
+    public function ask(PanelRequest $request): PanelAnswer
+    {
+        $this->calls++;
+
+        return PanelAnswer::failed($request->requestId, 'gateway_process_failed');
+    }
+
+    public function askAll(array $requests): PanelBatchAnswer
+    {
+        $this->calls++;
+
+        return PanelBatchAnswer::failed('gateway_process_failed');
+    }
+
+    public function source(): string
+    {
+        return 'ssh';
+    }
+};
+$hangCache = new Repository(new ArrayStore());
+$overview = [PanelRequest::read($admin, 'self:describe'), PanelRequest::read($admin, 'self:metrics'), PanelRequest::read($admin, 'service:list'),
+    PanelRequest::read($admin, 'self:alerts'), PanelRequest::read($admin, 'self:update-plan', ['target' => 'env'])];
+$hangPage = new CachingPanelGateway($hangs, $hangCache, 30);
+$hangPage->prefetch($overview);
+$said = array_map(static fn (PanelRequest $request): ?string => $hangPage->ask($request)->reason, $overview);
+env_assert($hangs->calls() === 1 && array_unique($said) === ['gateway_process_failed'], 'A hung server is asked once for the whole page: '.$hangs->calls());
+env_assert($hangCache->get('larena-env:gateway:no-batch') === null && $hangCache->get('larena-env:gateway:down') === true,
+    'No answer marks the server down and never turns batching off.');
+
+// The warm-up over a hung server asks once, whoever's reads are due.
+$hangWarm = new Repository(new ArrayStore());
+$seen = new CachingPanelGateway($server, $hangWarm, 30);
+foreach ([$admin, $owner] as $who) {
+    foreach (['self:describe', 'firewall:status', 'service:list'] as $command) {
+        $seen->ask(PanelRequest::read($who, $command));
+    }
+}
+$age($hangWarm, 100);
+$hangs->calls = 0;
+(new CachingPanelGateway($hangs, $hangWarm, 30))->warm();
+env_assert($hangs->calls() === 1, 'The warm-up stops at the first unanswered call: '.$hangs->calls());
 
 // After a confirmed action the slow reads are kept only for the short time: the job may still be changing the server.
 $changeStore = new class () extends ArrayStore {
@@ -286,5 +347,32 @@ $changing->ask(PanelRequest::confirmed($admin, 'service:restart', ['name' => 'ng
 $changing->ask(PanelRequest::read($admin, 'php:list'));
 $kept = array_filter($changeStore->seconds(), static fn (string $key): bool => str_starts_with($key, 'larena-env:gateway:') && strlen($key) === strlen('larena-env:gateway:') + 40, ARRAY_FILTER_USE_KEY);
 env_assert(array_values($kept) === [30], 'While a job may be changing the server, the programs are kept half a minute: '.json_encode($changeStore->seconds()));
+
+// The warm-up too keeps a slow read only for the short time while a job may be changing the server.
+$changeWarm = new class () extends ArrayStore {
+    /** @var array<string, int> */
+    public array $seconds = [];
+
+    /** @return array<string, int> */
+    public function seconds(): array
+    {
+        return $this->seconds;
+    }
+
+    public function put($key, $value, $seconds)
+    {
+        $this->seconds[$key] = $seconds;
+
+        return parent::put($key, $value, $seconds);
+    }
+};
+$changeWarmCache = new Repository($changeWarm);
+(new CachingPanelGateway($batching, $changeWarmCache, 30, 600))->ask(PanelRequest::read($admin, 'php:list'));
+$changeWarmCache->put('larena-env:gateway:changing', true, 900);
+$age($changeWarmCache, 1000);
+$changeWarm->seconds = [];
+env_assert((new CachingPanelGateway($batching, $changeWarmCache, 30, 600))->warm() === 1, 'The slow read is due.');
+$warmKept = array_filter($changeWarm->seconds(), static fn (string $key): bool => str_starts_with($key, 'larena-env:gateway:') && strlen($key) === strlen('larena-env:gateway:') + 40, ARRAY_FILTER_USE_KEY);
+env_assert(array_values($warmKept) === [30], 'A warmed slow read is kept half a minute while a job may be changing the server: '.json_encode($changeWarm->seconds()));
 
 echo "CachingGatewayTest passed.\n";

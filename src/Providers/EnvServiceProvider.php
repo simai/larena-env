@@ -146,6 +146,7 @@ final class EnvServiceProvider extends ServiceProvider
                         $app->bound(\Larena\Access\Runtime\AccessOperationAuthorizer::class) ? $app->make(\Larena\Access\Runtime\AccessOperationAuthorizer::class) : null,
                         $cache === null ? null : static fn (string $key, int $ttl, \Closure $read): array => $cache->remember($key.':'.(string) $cache->get(\Larena\Env\Warnings\EnvAdminAlertSource::GENERATION, 0), $ttl, $read),
                         is_string($host) ? [$host] : [],
+                        $cache === null ? null : static fn (): ?int => \Larena\Env\Gateway\CachingPanelGateway::silentSince($cache),
                     ));
                 });
             }

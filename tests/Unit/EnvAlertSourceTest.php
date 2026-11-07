@@ -158,5 +158,26 @@ $down = new EnvAdminAlertSource($resolver, new ServerOverviewReader($silent), ne
 $said = $down->alerts($as(new PanelActor('admin@example.com')));
 env_assert(count($said) === 1 && $said[0]->level === AdminAlertLevel::Danger && $said[0]->id === 'env:server-unanswered' && $kept === [],
     'A silent server is said in red and nothing is kept: '.json_encode(array_map(static fn (AdminAlert $alert): string => $alert->id, $said)));
+env_assert(str_contains($said[0]->text, 'since '.gmdate('H:i')) && str_contains($said[0]->text, 'the server did not answer in time') && !str_contains($said[0]->text, 'gateway_process_failed'),
+    'Without a kept moment the line says now, and the reason in words: '.$said[0]->text);
+// The moment the server first went silent, as the gateway keeps it: the same on every page, in UTC (critics of 0.4.1).
+$firstSilent = gmmktime(3, 7, 0, 1, 2, 2026);
+$since = new EnvAdminAlertSource($resolver, new ServerOverviewReader($silent), new SiteExtrasReader($silent), $translator, null, $keeping, [], static fn (): int => $firstSilent);
+$line = $since->alerts($as(new PanelActor('admin@example.com')))[0]->text;
+env_assert(str_contains($line, 'since 02.01.2026 03:07 UTC'), 'Since the first silence: '.$line);
+env_assert(EnvAdminAlertSource::utc($firstSilent, $firstSilent + 3600) === '03:07 UTC', 'Today the time alone.');
+$otherwise = new class () implements \Larena\Env\Contracts\PanelGateway {
+    public function ask(\Larena\Env\Gateway\PanelRequest $request): \Larena\Env\Gateway\PanelAnswer
+    {
+        return \Larena\Env\Gateway\PanelAnswer::failed($request->requestId, 'gateway_answer_invalid');
+    }
+
+    public function source(): string
+    {
+        return 'ssh';
+    }
+};
+$odd = (new EnvAdminAlertSource($resolver, new ServerOverviewReader($otherwise), new SiteExtrasReader($otherwise), $translator))->alerts($as(new PanelActor('admin@example.com')))[0]->text;
+env_assert(str_contains($odd, 'the panel could not reach the server') && !str_contains($odd, 'gateway_answer_invalid'), 'Any other reason in general words: '.$odd);
 
 echo "EnvAlertSourceTest passed.\n";

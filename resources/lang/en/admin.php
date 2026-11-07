@@ -326,7 +326,11 @@ return [
         'update_go' => 'Update',
         'bar_site' => 'Site :site',
         'bar_server' => 'Server',
-        'server_unanswered' => 'The server is not answering the panel (checked at :time, reason: :reason): what the pages show may be out of date.',
+        'server_unanswered' => 'The server has not answered the panel since :time (:reason): what the pages show may be out of date.',
+        'unanswered_reasons' => [
+            'gateway_process_failed' => 'the server did not answer in time',
+            'other' => 'the panel could not reach the server',
+        ],
         'disk_full' => 'The disk :mount is :percent% full, :free left. Free space before the sites stop.',
         'swap_full' => 'Swap is :percent% used: the server is short of memory and its sites slow down. See what takes it, or give the server more memory.',
         'certificate_ending' => 'The certificate of :domain ends in :days days.',

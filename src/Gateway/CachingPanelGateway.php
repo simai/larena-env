@@ -65,8 +65,17 @@ final class CachingPanelGateway implements PanelGateway, PanelFileGateway
 
     private const int DOWN_SECONDS = 30;
 
+    /**
+     * When the server first stopped answering, kept while it stays silent: the alert bar says since when, not the time
+     * of every page (critics of 0.4.1). It outlives the DOWN mark, which lapses every half a minute so the server is
+     * tried again, and goes with the first answer.
+     */
+    private const string SILENT_SINCE = 'larena-env:gateway:silent-since';
+
+    private const int SILENT_SECONDS = 900;
+
     /** The reason the gateway gives when it did not answer at all. */
-    private const string UNANSWERED = 'gateway_process_failed';
+    private const string UNANSWERED = PanelReason::UNANSWERED;
 
     /**
      * Set for a quarter of an hour by a confirmed action: a job may change the server well after it started, so the slow
@@ -76,7 +85,10 @@ final class CachingPanelGateway implements PanelGateway, PanelFileGateway
 
     private const int CHANGING_SECONDS = 900;
 
-    /** Set for an hour when the server refused a batch (simai-env before 1.52.0). */
+    /**
+     * Set for an hour when the server answered that it does not know `batch` (simai-env before 1.52.0); never because
+     * a batch went unanswered: that is the server being down, said by DOWN.
+     */
     private const string NO_BATCH = 'larena-env:gateway:no-batch';
 
     /** @var array<string, PanelAnswer> the answers this request already has */
@@ -116,12 +128,11 @@ final class CachingPanelGateway implements PanelGateway, PanelFileGateway
             return PanelAnswer::failed($request->requestId, self::UNANSWERED);
         }
         $answer = $this->inner->ask($request);
+        $this->note($answer);
         // A refusal or a failure is said again on the next screen, never kept.
         if ($answer->status === PanelAnswerStatus::Ok) {
             $this->asked[$key] = $answer;
             $this->write($key, $answer, $this->ttlFor($request->command, $this->ttl));
-        } else {
-            $this->noteUnanswered($answer);
         }
 
         return $answer;
@@ -181,15 +192,17 @@ final class CachingPanelGateway implements PanelGateway, PanelFileGateway
             $due[$read['user']."\0".($read['owner'] ?? '')][] = ['id' => $id, 'request' => $request, 'key' => $this->key($request)];
             $count++;
         }
-        foreach ($this->flag(self::DOWN) ? [] : $due as $person) {
+        foreach ($due as $person) {
             foreach (array_chunk($person, PanelBatchGateway::MOST) as $chunk) {
+                // A server found down by an earlier chunk is not asked again: each ask would wait its timeout.
+                if ($this->flag(self::DOWN)) {
+                    break 2;
+                }
                 $answers = $this->askTogether(array_column($chunk, 'request'));
                 foreach ($chunk as $index => $one) {
                     if ($answers[$index]->status === PanelAnswerStatus::Ok) {
                         $this->write($one['key'], $answers[$index], $this->ttlFor($one['request']->command, max($this->ttl, self::WARM_SECONDS)));
                         $keep[$one['id']]['warmed'] = $now;
-                    } else {
-                        $this->noteUnanswered($answers[$index]);
                     }
                 }
             }
@@ -243,8 +256,6 @@ final class CachingPanelGateway implements PanelGateway, PanelFileGateway
                     if ($answer->status === PanelAnswerStatus::Ok) {
                         $this->asked[$key] = $answer;
                         $this->write($key, $answer, $this->ttlFor($chunk[$key]->command, $this->ttl));
-                    } else {
-                        $this->noteUnanswered($answer);
                     }
                 }
             }
@@ -252,8 +263,10 @@ final class CachingPanelGateway implements PanelGateway, PanelFileGateway
     }
 
     /**
-     * The reads in one call where the server can (`batch`), else one by one; a server that refused a batch is asked
-     * one by one for an hour.
+     * The reads in one call where the server can (`batch`), else one by one. Only a server that answered it does not
+     * know `batch` is asked one by one for an hour. A batch the gateway did not answer at all marks the server down and
+     * every read fails at once: asking each again would wait the timeout each, minutes for a page (critics of 0.4.1).
+     * The DOWN mark is looked at before every ask, so a hung server costs one wait, not one per read.
      *
      * @param list<PanelRequest> $requests
      *
@@ -261,32 +274,83 @@ final class CachingPanelGateway implements PanelGateway, PanelFileGateway
      */
     private function askTogether(array $requests): array
     {
-        if (count($requests) > 1 && $this->inner instanceof PanelBatchGateway && !$this->flag(self::NO_BATCH)) {
-            $answers = $this->inner->askAll($requests);
-            if ($answers !== null) {
-                return $answers;
+        if (!$this->flag(self::DOWN) && count($requests) > 1 && $this->inner instanceof PanelBatchGateway && !$this->flag(self::NO_BATCH)) {
+            $batch = $this->inner->askAll($requests);
+            if ($batch->answers !== null) {
+                array_map($this->note(...), $batch->answers);
+
+                return $batch->answers;
             }
-            try {
-                $this->cache->put(self::NO_BATCH, true, 3600);
-            } catch (Throwable) {
-                // Asked as a batch again next time.
+            if ($batch->unanswered()) {
+                $this->markDown();
+            } elseif ($batch->unknownToServer) {
+                $this->flagFor(self::NO_BATCH, 3600);
             }
         }
 
-        return array_map(fn (PanelRequest $request): PanelAnswer => $this->inner->ask($request), $requests);
+        return array_map(function (PanelRequest $request): PanelAnswer {
+            if ($this->flag(self::DOWN)) {
+                return PanelAnswer::failed($request->requestId, self::UNANSWERED);
+            }
+            $answer = $this->inner->ask($request);
+            $this->note($answer);
+
+            return $answer;
+        }, $requests);
     }
 
-    /** How long an answer is kept: a slow read for its long time, unless an action may be changing the server. */
+    /**
+     * How long an answer is kept: a slow read for its long time, unless an action may be changing the server; then
+     * only for `ttl`, also when the warm-up asks for longer.
+     */
     private function ttlFor(string $command, int $ttl): int
     {
-        return in_array($command, self::SLOW, true) && !$this->flag(self::CHANGING) ? max($this->ttl, $this->slowTtl) : $ttl;
+        if (!in_array($command, self::SLOW, true)) {
+            return $ttl;
+        }
+
+        return $this->flag(self::CHANGING) ? $this->ttl : max($this->ttl, $this->slowTtl);
     }
 
-    private function noteUnanswered(PanelAnswer $answer): void
+    /** Notes what an answer from the server says of the server: down when the gateway did not answer, up otherwise. */
+    private function note(PanelAnswer $answer): void
     {
         if ($answer->reason === self::UNANSWERED) {
-            $this->flagFor(self::DOWN, self::DOWN_SECONDS);
+            $this->markDown();
+
+            return;
         }
+        try {
+            if ($this->cache->get(self::SILENT_SINCE) !== null) {
+                $this->cache->forget(self::SILENT_SINCE);
+            }
+        } catch (Throwable) {
+            // Not forgotten: it lapses by itself.
+        }
+    }
+
+    /** Marks the server down for DOWN_SECONDS, keeping the moment it first went silent. */
+    private function markDown(): void
+    {
+        $this->flagFor(self::DOWN, self::DOWN_SECONDS);
+        try {
+            $since = $this->cache->get(self::SILENT_SINCE);
+            $this->cache->put(self::SILENT_SINCE, is_int($since) ? $since : time(), self::SILENT_SECONDS);
+        } catch (Throwable) {
+            // Not kept: the bar says the time of its own look.
+        }
+    }
+
+    /** Since when the server has not answered the panel (a Unix time), or null while it answers. */
+    public static function silentSince(Repository $cache): ?int
+    {
+        try {
+            $since = $cache->get(self::SILENT_SINCE);
+        } catch (Throwable) {
+            return null;
+        }
+
+        return is_int($since) ? $since : null;
     }
 
     private function flagFor(string $key, int $seconds): void

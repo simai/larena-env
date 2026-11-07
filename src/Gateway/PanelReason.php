@@ -24,6 +24,8 @@ final class PanelReason
     public const string NOT_CONFIGURED = 'gateway_not_configured';
     public const string CREDENTIALS_UNREADABLE = 'gateway_credentials_unreadable';
     public const string ANSWER_INVALID = 'gateway_answer_invalid';
+    /** larena/core's runner: the gateway process did not finish (ssh or sudo failed, or the server hung past the timeout). */
+    public const string UNANSWERED = 'gateway_process_failed';
     public const string RECORDING_MISSING = 'recording_missing';
     public const string RECORDING_TAMPERED = 'recording_tampered';
     public const string ANSWER_SHAPE_INVALID = 'answer_shape_invalid';

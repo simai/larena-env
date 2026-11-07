@@ -50,22 +50,22 @@ final class GatewayTransfer
 
     /**
      * Several reads of one person as one `batch` call (simai-env 1.52.0). The batch carries the first request's id;
-     * its answers are matched back by order. Null when the batch is not answered as a batch.
+     * its answers are matched back by order. A batch the gateway did not answer at all (the process failed or hung) is
+     * told apart from one the server refused as a command it does not know: the first means the server is down, the
+     * second an older simai-env (critics of 0.4.1, 2026-11-07).
      *
      * @param list<PanelRequest> $requests
-     *
-     * @return list<PanelAnswer>|null
      */
-    public static function batch(GatewayAdapter $adapter, ProcessExecutor $executor, array $requests): ?array
+    public static function batch(GatewayAdapter $adapter, ProcessExecutor $executor, array $requests): PanelBatchAnswer
     {
         if (count($requests) < 2 || count($requests) > \Larena\Env\Contracts\PanelBatchGateway::MOST) {
-            return null;
+            return PanelBatchAnswer::failed(PanelReason::BAD_REQUEST);
         }
         $actor = $requests[0]->actor;
         $reads = [];
         foreach ($requests as $request) {
             if ($request->actor != $actor || $request->confirm || $request->attachment !== null || PanelCommands::kind($request->command) !== PanelCommands::READ) {
-                return null;
+                return PanelBatchAnswer::failed(PanelReason::BAD_REQUEST);
             }
             $reads[] = $request->args === [] ? ['command' => $request->command] : ['command' => $request->command, 'args' => (object) $request->args];
         }
@@ -74,13 +74,18 @@ final class GatewayTransfer
             JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)."\n";
         try {
             $answer = (new GatewayRunner($executor))->run($adapter, new GatewayRequest('batch', ['request_id' => $id, 'line' => $line]));
-        } catch (GatewayRejected|ProcessRejected) {
-            return null;
+        } catch (GatewayRejected|ProcessRejected $rejected) {
+            return PanelBatchAnswer::failed($rejected->reasonCode);
         }
         $document = $answer->payload;
+        $status = $document['status'] ?? null;
+        // Refused as a whole, or answered as some other command: this simai-env does not run `batch`.
+        if ($status === 'refused' || ($status === 'ok' && ($document['kind'] ?? null) !== 'batch')) {
+            return PanelBatchAnswer::unknownToServer(is_string($document['reason'] ?? null) ? $document['reason'] : PanelReason::NOT_ALLOWED);
+        }
         $answers = $document['answers'] ?? null;
-        if (($document['status'] ?? null) !== 'ok' || ($document['kind'] ?? null) !== 'batch' || !is_array($answers) || !array_is_list($answers) || count($answers) !== count($requests)) {
-            return null;
+        if ($status !== 'ok' || !is_array($answers) || !array_is_list($answers) || count($answers) !== count($requests)) {
+            return PanelBatchAnswer::failed(is_string($document['reason'] ?? null) ? $document['reason'] : PanelReason::ANSWER_INVALID);
         }
         $result = [];
         foreach ($requests as $index => $request) {
@@ -90,7 +95,7 @@ final class GatewayTransfer
                 : PanelAnswer::failed($request->requestId, PanelReason::ANSWER_INVALID);
         }
 
-        return $result;
+        return PanelBatchAnswer::answered($result);
     }
 
     public static function download(GatewayAdapter $adapter, ProcessExecutor $executor, PanelRequest $request, string $into): PanelDownload
@@ -125,7 +130,7 @@ final class GatewayTransfer
             return PanelDownload::of(PanelAnswer::failed($request->requestId, PanelReason::TOO_LARGE));
         }
         if (!$result->started || $result->stopReason !== null || $result->signaled || $result->exitCode !== 0) {
-            return PanelDownload::of(PanelAnswer::failed($request->requestId, 'gateway_process_failed'));
+            return PanelDownload::of(PanelAnswer::failed($request->requestId, PanelReason::UNANSWERED));
         }
 
         return PanelDownload::read($request->requestId, $into);
