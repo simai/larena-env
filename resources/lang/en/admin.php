@@ -1291,7 +1291,7 @@ return [
         'update' => 'Update',
         'update_line' => 'See what changes and confirm the update.',
         'sites' => 'sites: :count',
-        'security_part' => 'Of these, from the «Security» page — do now: :now · advised: :todo; the rest are server setup steps and updates.',
+        'security_part' => 'Of these, from the «Security» page — urgent: :now · advised: :todo; the rest are server setup steps and updates.',
     ],
     'setup' => [
         'title' => 'Server setup',
