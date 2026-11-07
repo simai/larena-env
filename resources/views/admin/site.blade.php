@@ -1,7 +1,8 @@
 @extends('larena-admin::layouts.app')
 
-@section('title', __('larena-env::admin.site.title', ['domain' => $domain]))
-@section('heading', $domain)
+{{-- The open section is named in the tab's title and the heading (critics 2026-11-07): «Журнал — shop.ru». --}}
+@section('title', ($tab !== 'overview' && $site !== null ? __('larena-env::admin.site.tabs.'.$tab).' — ' : '').__('larena-env::admin.site.title', ['domain' => $domain]))
+@section('heading', $tab !== 'overview' && $site !== null ? $domain.' · '.__('larena-env::admin.site.tabs.'.$tab) : $domain)
 @section('eyebrow', __('larena-env::admin.eyebrow'))
 @section('description', __('larena-env::admin.site.description'))
 
@@ -28,8 +29,8 @@
     @include('larena-env::admin.partials.notes')
 
     @if ($site === null)
-        <section class="larena-panel larena-empty" data-env-state="{{ $refused ? 'refused' : 'failed' }}" role="alert">
-            <h2 class="text-2">{{ $refused ? __('larena-env::admin.refused_title') : __('larena-env::admin.failed_title') }}</h2>
+        <section class="larena-panel larena-empty" data-env-state="{{ ($missing ?? false) ? 'missing' : ($refused ? 'refused' : 'failed') }}" role="alert">
+            <h2 class="text-2">{{ ($missing ?? false) ? __('larena-env::admin.site.missing_title') : ($refused ? __('larena-env::admin.refused_title') : __('larena-env::admin.failed_title')) }}</h2>
             <p>{{ $reasonText }}</p>
             <p><a href="{{ route('larena.env.admin.index', [], false) }}">{{ __('larena-env::admin.site.back') }}</a></p>
         </section>
@@ -42,9 +43,9 @@
                 <h2 id="env-site-facts" class="text-2">{{ __('larena-env::admin.site.facts') }}</h2>
                 <dl class="m-0" style="display: block;" data-env-facts>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-answers="{{ $site->answersChecked ? ($site->answers ?? 'none') : 'unchecked' }}"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.answers') }}</dt><dd class="m-0 min-w-0 text-end">{{ __('larena-env::admin.sites.state.'.\Larena\Env\Admin\SiteState::of($site->answersChecked, $site->answers)) }}{{ $site->answers !== null ? ' · '.__('larena-env::admin.sites.answers_code', ['code' => (string) $site->answers]) : '' }}</dd></div>
-                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.owner') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->owner ?? '—' }}</dd></div>
+                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.owner') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->owner ?? __('larena-env::admin.access.own_account') }}</dd></div>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.profile') }}</dt><dd class="m-0 min-w-0 text-end">{{ __('larena-env::admin.new_site.profiles.'.$site->profile) }}</dd></div>
-                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.php') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->php }}</dd></div>
+                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.php') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->php === 'none' ? __('larena-env::admin.site.php_none') : $site->php }}</dd></div>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.ssl') }}</dt><dd class="m-0 min-w-0 text-end" data-env-https="{{ $site->certificate === null ? 'none' : 'on' }}">{{ $site->certificate === null ? __('larena-env::admin.sites.https_none') : ($site->certificate->daysLeft === null ? __('larena-env::admin.sites.https_on') : __('larena-env::admin.sites.https_yes', ['days' => (string) $site->certificate->daysLeft])) }}</dd></div>
                     @if ($site->databaseEngine !== null)
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.database') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->databaseEngine ?? '—' }}</dd></div>
@@ -100,7 +101,7 @@
             <section class="larena-panel larena-panel-padded" data-env-runtime aria-labelledby="env-site-runtime">
                 <h2 id="env-site-runtime" class="text-2">{{ __('larena-env::admin.runtime.title') }}</h2>
                 <dl class="m-0" style="display: block;" data-env-facts>
-                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.php') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->php }}</dd></div>
+                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.php') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->php === 'none' ? __('larena-env::admin.site.php_none') : $site->php }}</dd></div>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.runtime.service') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->service ?? '—' }}</dd></div>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.runtime.workers') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->workers === [] ? '—' : implode(', ', $site->workers) }}</dd></div>
                     @if ($site->webServer !== null)
@@ -146,7 +147,7 @@
                     <p>{{ __('larena-env::admin.database.none') }}</p>
                 @else
                     <dl class="m-0" style="display: block;" data-env-facts>
-                        <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.database.engine') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->databaseEngine }}</dd></div>
+                        <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.database.engine') }}</dt><dd class="m-0 min-w-0 text-end">{{ __('larena-env::admin.new_site.engines.'.$site->databaseEngine) === 'larena-env::admin.new_site.engines.'.$site->databaseEngine ? $site->databaseEngine : __('larena-env::admin.new_site.engines.'.$site->databaseEngine) }}</dd></div>
                     </dl>
                     @if ($databases !== null)
                         <ul class="m-0 m-top-1 p-0" style="list-style: none;">
@@ -200,7 +201,7 @@
                                 @if ($backup->encrypted)
                                     <sf-badge appearance="tonal" status="info" text="{{ __('larena-env::admin.backups.encrypted') }}"></sf-badge>
                                 @endif
-                                <span class="text-small color-on-surface-variant">{{ \Larena\Env\Server\Bytes::human($backup->sizeBytes) }} · {{ implode(', ', $backup->parts) }}</span>
+                                <span class="text-small color-on-surface-variant">{{ \Larena\Env\Server\Bytes::human($backup->sizeBytes) }} · {{ implode(', ', array_map(static fn (string $part): string => __('larena-env::admin.backups.parts.'.$part) === 'larena-env::admin.backups.parts.'.$part ? $part : __('larena-env::admin.backups.parts.'.$part), $backup->parts)) }}</span>
                             </li>
                         @endforeach
                     </ul>

@@ -32,7 +32,7 @@ function route(string $name, array $parameters = [], bool $absolute = true): str
 
     return match ($name) {
         'larena.env.admin.overview' => '/admin/server/overview',
-        'larena.env.admin.setup' => '/admin/server/setup/'.($parameters['step'] ?? ''),
+        'larena.env.admin.overview.setup' => '/admin/server/setup/'.($parameters['step'] ?? ''),
         default => throw new RuntimeException($name),
     }.($query === [] ? '' : '?'.http_build_query($query));
 }
@@ -120,6 +120,9 @@ $location = static fn (mixed $response): string => $response instanceof Redirect
 $controller->show($request(), 'protection');
 env_assert($views->data['step'] === 'protection' && $views->data['phase'] === 'form' && $views->data['wizard']['protection']['type'] === 'form'
     && count($views->data['wizard']) === 6 && array_key_exists('level', $views->data['data']), 'The level step takes its choice in the wizard.');
+
+// A step the wizard has not goes to the step it opens on.
+env_assert($location($controller->show($request(), 'nosuch')) === '/admin/server/setup/'.array_key_first(Larena\Env\Setup\ServerSetup::STEPS), 'An unknown step goes to the right address: '.$location($controller->show($request(), 'nosuch')));
 
 // The fields: the server's plan, shown in the same step; the arguments wait in the session, sealed.
 $planned = $controller->submit($request('POST', ['phase' => 'form', 'wizard-action' => 'next', 'set' => 'enhanced']), 'protection');

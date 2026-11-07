@@ -23,18 +23,41 @@
     @elseif ($section === 'overview')
         {{-- State first, details after (owner-approved prototype, 2026-11-02): what needs a person, a waiting update, the
              measures as tiles, then the server and its services, then the load over time. --}}
+        @if (($metrics ?? null) !== null)
+            <section class="m-bottom-2" data-env-metrics aria-labelledby="env-server-metrics">
+                <div class="flex flex-wrap items-cross-center g-1 m-bottom-1">
+                    <h2 id="env-server-metrics" class="m-0 text-2">{{ __('larena-env::admin.metrics.title') }}</h2>
+                    <span class="color-on-surface-variant">{{ __('larena-env::admin.metrics.checked_at') }} {{ \Larena\Env\Server\Moment::human($metrics->checkedAt) }}</span>
+                </div>
+                <div class="grid g-2 grid-col-1 md:grid-col-2 xl:grid-col-4">
+                    @foreach (\Larena\Env\Admin\ServerMetricTiles::of($metrics, ($history ?? null)['day'] ?? null, static fn (string $key, array $replace = []): string => __('larena-env::admin.'.$key, $replace)) as $tile)
+                        @include('larena-env::admin.partials.metric', $tile)
+                    @endforeach
+                </div>
+            </section>
+        @endif
         @if (($actions ?? []) !== [])
             {{-- «Рекомендуемые действия» (owner 2026-11-06): what to do now first, then what is advised, the done ones folded;
                  each with its one click, which goes through the usual plan and confirmation. --}}
             <section class="larena-panel larena-panel-padded m-bottom-2" data-env-actions aria-labelledby="env-actions">
                 <h2 id="env-actions" class="m-0 text-2">{{ __('larena-env::admin.actions.title') }}</h2>
                 <p class="m-0 color-on-surface-variant">{{ __('larena-env::admin.actions.summary', ['now' => (string) $actionCounts['now'], 'todo' => (string) $actionCounts['todo'], 'done' => (string) $actionCounts['done']]) }}</p>
+                {{-- All the urgent ones and at most five advised are in view; the rest folds (critics 2026-11-07). --}}
                 <ul class="m-0 m-t-1 p-0" style="list-style: none;">
-                    @foreach ($actions as $item)
-                        @continue($item['state'] === 'done')
+                    @foreach (\Larena\Env\Admin\RecommendedActions::inView($actions) as $item)
                         @include('larena-env::admin.partials.recommended-action', ['item' => $item])
                     @endforeach
                 </ul>
+                @if (($folded = \Larena\Env\Admin\RecommendedActions::folded($actions)) !== [])
+                    <details class="m-t-1" data-env-actions-more>
+                        <summary style="cursor: pointer; min-height: 2.75rem; display: flex; align-items: center;">{{ __('larena-env::admin.actions.more_list', ['count' => (string) count($folded)]) }}</summary>
+                        <ul class="m-0 p-0" style="list-style: none;">
+                            @foreach ($folded as $item)
+                                @include('larena-env::admin.partials.recommended-action', ['item' => $item])
+                            @endforeach
+                        </ul>
+                    </details>
+                @endif
                 @if ($actionCounts['done'] > 0)
                     <details class="m-t-1" data-env-actions-done>
                         <summary style="cursor: pointer; min-height: 2.75rem; display: flex; align-items: center;">{{ __('larena-env::admin.actions.done_list', ['count' => (string) $actionCounts['done']]) }}</summary>
@@ -57,19 +80,6 @@
                     @endforeach
                 </ul>
                 <a class="larena-button" href="{{ route('larena.env.admin.software', [], false) }}#update">{{ __('larena-env::admin.update.hint_open') }}</a>
-            </section>
-        @endif
-        @if (($metrics ?? null) !== null)
-            <section class="m-bottom-2" data-env-metrics aria-labelledby="env-server-metrics">
-                <div class="flex flex-wrap items-cross-center g-1 m-bottom-1">
-                    <h2 id="env-server-metrics" class="m-0 text-2">{{ __('larena-env::admin.metrics.title') }}</h2>
-                    <span class="color-on-surface-variant">{{ __('larena-env::admin.metrics.checked_at') }} {{ \Larena\Env\Server\Moment::human($metrics->checkedAt) }}</span>
-                </div>
-                <div class="grid g-2 grid-col-1 md:grid-col-2 xl:grid-col-4">
-                    @foreach (\Larena\Env\Admin\ServerMetricTiles::of($metrics, ($history ?? null)['day'] ?? null, static fn (string $key, array $replace = []): string => __('larena-env::admin.'.$key, $replace)) as $tile)
-                        @include('larena-env::admin.partials.metric', $tile)
-                    @endforeach
-                </div>
             </section>
         @endif
         <div class="grid g-2 grid-col-1 lg:grid-col-2 m-bottom-2" style="align-items: start;">

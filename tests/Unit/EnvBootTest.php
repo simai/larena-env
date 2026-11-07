@@ -54,21 +54,23 @@ $names = array_keys($with['routes']);
 sort($names);
 env_assert($names === ['larena.env.admin.alerts.ack.open', 'larena.env.admin.alerts.ack.plan', 'larena.env.admin.alerts.ack.run', 'larena.env.admin.alerts.channel',
     'larena.env.admin.alerts.channel.plan', 'larena.env.admin.alerts.channel.run', 'larena.env.admin.alerts.test.plan', 'larena.env.admin.alerts.test.run',
-    'larena.env.admin.change.keep', 'larena.env.admin.dns', 'larena.env.admin.dns.certificates.plan', 'larena.env.admin.dns.certificates.run', 'larena.env.admin.dns.connection', 'larena.env.admin.dns.connection.addresses',
-    'larena.env.admin.dns.connection.disconnect', 'larena.env.admin.dns.connection.save', 'larena.env.admin.dns.run', 'larena.env.admin.dns.zone',
-    'larena.env.admin.dns.zone.plan', 'larena.env.admin.dns.zone.undo', 'larena.env.admin.firewall', 'larena.env.admin.firewall.plan', 'larena.env.admin.firewall.run',
-    'larena.env.admin.index', 'larena.env.admin.job', 'larena.env.admin.job.cancel', 'larena.env.admin.overview',
-    'larena.env.admin.panel.access', 'larena.env.admin.panel.address.plan', 'larena.env.admin.panel.address.run', 'larena.env.admin.people', 'larena.env.admin.people.act', 'larena.env.admin.people.assign', 'larena.env.admin.people.owners.plan',
-    'larena.env.admin.people.owners.run', 'larena.env.admin.people.stop', 'larena.env.admin.security', 'larena.env.admin.security.plan', 'larena.env.admin.security.run', 'larena.env.admin.services', 'larena.env.admin.services.plan', 'larena.env.admin.services.run',
-    'larena.env.admin.setup', 'larena.env.admin.setup.submit',
-    'larena.env.admin.site', 'larena.env.admin.site.cron.plan', 'larena.env.admin.site.cron.run', 'larena.env.admin.site.dns.plan', 'larena.env.admin.site.dns.run',
-    'larena.env.admin.site.files.download', 'larena.env.admin.site.files.plan', 'larena.env.admin.site.files.run', 'larena.env.admin.site.nginx.plan',
-    'larena.env.admin.site.nginx.run', 'larena.env.admin.site.plan',
-    'larena.env.admin.site.run', 'larena.env.admin.sites.new', 'larena.env.admin.sites.plan', 'larena.env.admin.sites.plan.draft', 'larena.env.admin.sites.port',
-    'larena.env.admin.sites.run', 'larena.env.admin.software', 'larena.env.admin.software.php', 'larena.env.admin.software.php.plan', 'larena.env.admin.software.php.run',
-    'larena.env.admin.software.plan', 'larena.env.admin.software.run',
-    'larena.env.admin.storages', 'larena.env.admin.storages.plan', 'larena.env.admin.storages.run',
-    'larena.env.admin.update', 'larena.env.admin.update.plan', 'larena.env.admin.update.run'],
+    'larena.env.admin.change.keep', 'larena.env.admin.dns', 'larena.env.admin.dns.certificates.plan', 'larena.env.admin.dns.certificates.run',
+    'larena.env.admin.dns.connection', 'larena.env.admin.dns.connection.addresses', 'larena.env.admin.dns.connection.disconnect',
+    'larena.env.admin.dns.connection.save', 'larena.env.admin.dns.run', 'larena.env.admin.dns.zone', 'larena.env.admin.dns.zone.plan',
+    'larena.env.admin.dns.zone.undo', 'larena.env.admin.firewall', 'larena.env.admin.firewall.plan', 'larena.env.admin.firewall.run',
+    'larena.env.admin.home', 'larena.env.admin.index', 'larena.env.admin.job', 'larena.env.admin.job.cancel', 'larena.env.admin.overview',
+    'larena.env.admin.overview.setup', 'larena.env.admin.overview.setup.submit', 'larena.env.admin.panel.access', 'larena.env.admin.panel.address.plan',
+    'larena.env.admin.panel.address.run', 'larena.env.admin.people', 'larena.env.admin.people.act', 'larena.env.admin.people.assign',
+    'larena.env.admin.people.owners.plan', 'larena.env.admin.people.owners.run', 'larena.env.admin.people.stop', 'larena.env.admin.security',
+    'larena.env.admin.security.plan', 'larena.env.admin.security.run', 'larena.env.admin.services', 'larena.env.admin.services.plan',
+    'larena.env.admin.services.run', 'larena.env.admin.site', 'larena.env.admin.site.cron.plan', 'larena.env.admin.site.cron.run',
+    'larena.env.admin.site.dns.plan', 'larena.env.admin.site.dns.run', 'larena.env.admin.site.files.download', 'larena.env.admin.site.files.plan',
+    'larena.env.admin.site.files.run', 'larena.env.admin.site.nginx.plan', 'larena.env.admin.site.nginx.run', 'larena.env.admin.site.plan',
+    'larena.env.admin.site.run', 'larena.env.admin.sites.new', 'larena.env.admin.sites.plan', 'larena.env.admin.sites.plan.draft',
+    'larena.env.admin.sites.port', 'larena.env.admin.sites.run', 'larena.env.admin.software', 'larena.env.admin.software.php',
+    'larena.env.admin.software.php.plan', 'larena.env.admin.software.php.run', 'larena.env.admin.software.plan', 'larena.env.admin.software.run',
+    'larena.env.admin.storages', 'larena.env.admin.storages.plan', 'larena.env.admin.storages.run', 'larena.env.admin.update',
+    'larena.env.admin.update.plan', 'larena.env.admin.update.run'],
     'The screens of the panel: '.implode(', ', $names));
 env_assert($with['routes']['larena.env.admin.index']['uri'] === 'admin/server', 'The sites keep their address.');
 env_assert($with['routes']['larena.env.admin.overview']['uri'] === 'admin/server/overview', 'The server\'s overview has its own address.');
@@ -102,7 +104,7 @@ foreach ($with['routes'] as $name => $route) {
         || $name === 'larena.env.admin.software' || str_starts_with($name, 'larena.env.admin.software.');
     $serverToolChanges = $serverTools && (str_ends_with($name, '.plan') || str_ends_with($name, '.run') || $name === 'larena.env.admin.change.keep');
     // The server's first setup is the administrator's: it leads through the server's own screens (ENV 2026-11-06).
-    $setup = str_starts_with($name, 'larena.env.admin.setup');
+    $setup = str_starts_with($name, 'larena.env.admin.overview.setup');
     // Changing a site is a right of its own: a new site, a site's action and stopping a job ask for it.
     $changes = !$people && !$dns && !$nginx && !$channel && !$update && !$serverTools && !$setup && (str_ends_with($name, '.plan') || str_ends_with($name, '.run') || str_ends_with($name, '.cancel')
         || in_array($name, ['larena.env.admin.sites.new', 'larena.env.admin.sites.port', 'larena.env.admin.sites.plan.draft', 'larena.env.admin.alerts.ack.open'], true));

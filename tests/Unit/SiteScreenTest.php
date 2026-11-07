@@ -108,6 +108,10 @@ $screen = static fn (array $data): string => $factory->make('larena-env::admin.s
 $capabilities = (new \Larena\Env\Server\ServerOverviewReader($gateway))->read(new PanelActor($user))->overview->capabilities;
 $onTab = static fn (string $tab, ?\Larena\Env\Gateway\PanelCapabilities $with = null): array => array_values(array_filter(SiteOperation::offeredFor($site, $with ?? $capabilities), static fn (SiteOperation $operation): bool => $operation->tab() === $tab));
 
+// A domain the server has no site on is «not found», not the server's failure (critics 2026-11-07).
+$missing = $screen(['missing' => true, 'reasonText' => 'no such site']);
+env_assert(str_contains($missing, 'data-env-state="missing"') && (str_contains($missing, 'Site not found') || str_contains($missing, 'missing_title')), 'An unknown site is not found: '.$missing);
+
 // The overview: the site, simai-env's check of it, its backups and «Back up now».
 $doctor = $reader->doctor(new PanelActor($user), 'demo-php.test');
 env_assert($doctor !== null && $doctor->status === 'WARN' && $doctor->problems !== [] && $doctor->passed > 0, 'The check reads: what did not pass is named.');
@@ -139,6 +143,9 @@ env_assert(str_contains($restore, 'data-env-operation="backup-schedule"') && str
 // simai-env 1.30.0: each new copy is checked, asked where the server takes it, on by default; the last check is said.
 $checked = \Larena\Env\Server\SiteDetails::fromDescription(['schema' => 'simai-site/1', 'domain' => 'demo-php.test', 'profile' => 'generic', 'php' => '8.3', 'ssl' => 'none',
     'backups' => ['schedule' => ['time' => '03:30', 'keep' => '7', 'verify' => true], 'items' => [], 'last_verify' => ['at' => '2026-01-01T00:00:00Z', 'ok' => false, 'backup' => '20260101-000000', 'restore_test' => true]]]);
+// A redirect has no code, files or database: only its overview, domains and log (critics 2026-11-07).
+$forwarding = \Larena\Env\Server\SiteDetails::fromDescription(['schema' => 'simai-site/1', 'domain' => 'go.test', 'profile' => 'redirect', 'php' => 'none', 'ssl' => 'none']);
+env_assert(\Larena\Env\Http\Controllers\SiteAdminController::sectionsOf($forwarding, $capabilities) === ['overview', 'domains', 'log'], 'A redirect\'s sections.');
 env_assert($checked->backupSchedule?->keep === 7 && $checked->backupSchedule->verify === true && $checked->lastVerify?->ok === false, 'The schedule reads its number as digits, and the last check.');
 $newer = \Larena\Env\Gateway\PanelCapabilities::fromHostDescription(['simai_env' => ['version' => '1.30.0'], 'gate' => ['commands' => ['backup:data-schedule']]]);
 $verifying = $screen(['site' => $checked, 'tab' => 'backups', 'tabOperations' => $onTab('backups', $newer), 'capabilities' => $newer]);

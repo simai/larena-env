@@ -8,7 +8,6 @@ use Illuminate\Contracts\Translation\Translator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Larena\Access\Runtime\AccessOperationAuthorizer;
 use Larena\Core\FirstRun\FirstRunCoordinator;
 use Larena\Env\Panel\SetupLink;
 
@@ -18,7 +17,13 @@ use Larena\Env\Panel\SetupLink;
  */
 final readonly class PanelEntryController
 {
-    public function __construct(private SetupLink $link, private FirstRunCoordinator $firstRun, private Translator $translator, private AccessOperationAuthorizer $authorizer)
+    /**
+     * The panel's home: it decides behind the admin's sign-in and access, where the person is known (critics 2026-11-07:
+     * here, before them, the overview was never chosen).
+     */
+    public const string HOME = '/admin/server/home';
+
+    public function __construct(private SetupLink $link, private FirstRunCoordinator $firstRun, private Translator $translator)
     {
     }
 
@@ -26,13 +31,13 @@ final readonly class PanelEntryController
     {
         $candidate = $request->query('setup');
         if (!is_string($candidate)) {
-            return new RedirectResponse($this->home($request));
+            return new RedirectResponse(self::HOME);
         }
         if (!$this->firstRun->availability()->isAvailable()) {
             // The first administrator exists: whatever the link was, it has done its work.
             $this->link->consume();
 
-            return new RedirectResponse($this->home($request));
+            return new RedirectResponse(self::HOME);
         }
         if (!$this->link->accepts($candidate)) {
             return new Response((string) $this->translator->get('larena-env::panel.setup_link_invalid'), 403, ['Content-Type' => 'text/plain; charset=UTF-8', 'Referrer-Policy' => 'no-referrer']);
@@ -41,10 +46,5 @@ final readonly class PanelEntryController
         $request->session()->put(SetupLink::SESSION_KEY, $this->link->digest());
 
         return new RedirectResponse('/admin/setup');
-    }
-
-    private function home(Request $request): string
-    {
-        return $this->authorizer->authorize($request, 'env.server.read')->isAllowed() ? '/admin/server/overview' : '/admin/server';
     }
 }

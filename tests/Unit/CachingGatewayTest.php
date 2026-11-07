@@ -229,4 +229,54 @@ $batching->knows = true;
 (new CachingPanelGateway($batching, $old, 30))->prefetch([PanelRequest::read($admin, 'self:alerts'), PanelRequest::read($admin, 'db:list')]);
 env_assert($batching->asked() === ['self:metrics', 'service:list', 'self:alerts', 'db:list'] && $batching->batches() === [], 'Without batch, one by one.');
 
+// A gateway that does not answer at all: the reads after it fail at once for half a minute instead of waiting each.
+$hung = new class () implements PanelGateway {
+    public int $asked = 0;
+
+    public function ask(PanelRequest $request): PanelAnswer
+    {
+        $this->asked++;
+
+        return PanelAnswer::failed($request->requestId, 'gateway_process_failed');
+    }
+
+    public function source(): string
+    {
+        return 'ssh';
+    }
+
+    public function asked(): int
+    {
+        return $this->asked;
+    }
+};
+$hungCache = new Repository(new ArrayStore());
+$first = (new CachingPanelGateway($hung, $hungCache, 30))->ask(PanelRequest::read($admin, 'self:describe'));
+$then = (new CachingPanelGateway($hung, $hungCache, 30))->ask(PanelRequest::read($admin, 'service:list'));
+env_assert($first->reason === 'gateway_process_failed' && $then->reason === 'gateway_process_failed' && $hung->asked() === 1, 'After no answer the next reads do not wait.');
+
+// After a confirmed action the slow reads are kept only for the short time: the job may still be changing the server.
+$changeStore = new class () extends ArrayStore {
+    /** @var array<string, int> */
+    public array $seconds = [];
+
+    /** @return array<string, int> */
+    public function seconds(): array
+    {
+        return $this->seconds;
+    }
+
+    public function put($key, $value, $seconds)
+    {
+        $this->seconds[$key] = $seconds;
+
+        return parent::put($key, $value, $seconds);
+    }
+};
+$changing = new CachingPanelGateway($server, new Repository($changeStore), 30, 600);
+$changing->ask(PanelRequest::confirmed($admin, 'service:restart', ['name' => 'nginx']));
+$changing->ask(PanelRequest::read($admin, 'php:list'));
+$kept = array_filter($changeStore->seconds(), static fn (string $key): bool => str_starts_with($key, 'larena-env:gateway:') && strlen($key) === strlen('larena-env:gateway:') + 40, ARRAY_FILTER_USE_KEY);
+env_assert(array_values($kept) === [30], 'While a job may be changing the server, the programs are kept half a minute: '.json_encode($changeStore->seconds()));
+
 echo "CachingGatewayTest passed.\n";

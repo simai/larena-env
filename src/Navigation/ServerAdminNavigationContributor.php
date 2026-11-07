@@ -68,7 +68,7 @@ final class ServerAdminNavigationContributor implements AdminNavigationContribut
             knownLimitations: ['not_production_ready'],
             surface: 'product',
             labelKey: 'larena-env::admin.overview.navigation',
-            activeRoutePattern: 'larena.env.admin.overview',
+            activeRoutePattern: 'larena.env.admin.overview*',
             icon: 'monitor_heart',
         ), new AdminNavigationDescriptor(
             // DNS through the provider's API (Panel plan, stage 7): the zones, and the connection among the panel's settings.

@@ -18,7 +18,7 @@
         @else
             @include('larena-env::admin.partials.timed-change', ['change' => $pending, 'canKeep' => $allows['keep']])
             <dl class="m-0" style="display: block;" data-env-facts>
-                <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.firewall.state') }}</dt><dd class="m-0 min-w-0 text-end">{{ $status->active ? __('larena-env::admin.firewall.on') : __('larena-env::admin.firewall.off') }}</dd></div>
+                <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.firewall.state') }}</dt><dd class="m-0 min-w-0 text-end"><sf-badge appearance="tonal" status="{{ $status->active ? 'success' : 'error' }}" @if (!$status->active) role="alert" @endif text="{{ $status->active ? __('larena-env::admin.firewall.on') : __('larena-env::admin.firewall.off') }}"></sf-badge></dd></div>
                 <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.firewall.default_incoming') }}</dt><dd class="m-0 min-w-0 text-end">{{ $status->defaultIncoming === null ? '—' : __('larena-env::admin.firewall.actions.'.($status->defaultIncoming === 'allow' ? 'allow' : 'deny')) }}</dd></div>
             </dl>
             <p>{{ __('larena-env::admin.firewall.protected_note') }}</p>

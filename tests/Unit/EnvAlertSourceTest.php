@@ -138,4 +138,25 @@ env_assert(array_filter($operator->alerts($person('test:staff', new PanelActor('
 env_assert(array_filter($operator->alerts($person('test:system', new PanelActor('admin@example.com'))), static fn (AdminAlert $alert): bool => $alert->acknowledge !== null && str_ends_with($alert->acknowledge->label, '…')) === [],
     'No «…» on a one-click acknowledgement.');
 
+// The server does not answer: a red line on every page, never kept (critics 2026-11-07: an empty bar read «all is well»).
+$silent = new class () implements \Larena\Env\Contracts\PanelGateway {
+    public function ask(\Larena\Env\Gateway\PanelRequest $request): \Larena\Env\Gateway\PanelAnswer
+    {
+        return \Larena\Env\Gateway\PanelAnswer::failed($request->requestId, 'gateway_process_failed');
+    }
+
+    public function source(): string
+    {
+        return 'ssh';
+    }
+};
+$kept = [];
+$keeping = static function (string $key, int $ttl, Closure $read) use (&$kept): array {
+    return $kept[$key] ??= $read();
+};
+$down = new EnvAdminAlertSource($resolver, new ServerOverviewReader($silent), new SiteExtrasReader($silent), $translator, null, $keeping);
+$said = $down->alerts($as(new PanelActor('admin@example.com')));
+env_assert(count($said) === 1 && $said[0]->level === AdminAlertLevel::Danger && $said[0]->id === 'env:server-unanswered' && $kept === [],
+    'A silent server is said in red and nothing is kept: '.json_encode(array_map(static fn (AdminAlert $alert): string => $alert->id, $said)));
+
 echo "EnvAlertSourceTest passed.\n";

@@ -98,30 +98,23 @@
                 <form method="post" action="{{ route('larena.env.admin.storages.plan', [], false) }}" class="m-0" data-env-storage-op="add" autocomplete="off">
                     @csrf
                     <input type="hidden" name="op" value="add">
-                    <div style="display: grid; gap: .75rem 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));">
-                        <label><span style="font-weight: 600; display: block;">{{ __('larena-env::admin.storages.fields.provider') }}</span>
-                            <select name="provider" class="larena-input" style="inline-size: 100%; min-height: 2.75rem;">
-                                @foreach ($providers as $provider)<option value="{{ $provider }}">{{ __('larena-env::admin.storages.providers.'.$provider) }}</option>@endforeach
-                            </select>
-                        </label>
-                        <label><span style="font-weight: 600; display: block;">{{ __('larena-env::admin.storages.fields.name') }}</span>
-                            <input type="text" name="name" required pattern="[a-z0-9][a-z0-9-]{0,31}" class="larena-input" style="inline-size: 100%; min-height: 2.75rem;" placeholder="yandex">
-                            <span class="color-on-surface-variant text-0">{{ __('larena-env::admin.storages.fields.name_hint') }}</span></label>
-                        <label><span style="font-weight: 600; display: block;">{{ __('larena-env::admin.storages.fields.bucket') }}</span>
-                            <input type="text" name="bucket" required class="larena-input" style="inline-size: 100%; min-height: 2.75rem;"></label>
-                        <label><span style="font-weight: 600; display: block;">{{ __('larena-env::admin.storages.fields.prefix') }}</span>
-                            <input type="text" name="prefix" class="larena-input" style="inline-size: 100%; min-height: 2.75rem;" placeholder="backups"></label>
-                        <label><span style="font-weight: 600; display: block;">{{ __('larena-env::admin.storages.fields.endpoint') }}</span>
-                            <input type="url" name="endpoint" class="larena-input" style="inline-size: 100%; min-height: 2.75rem;" placeholder="https://…">
-                            <span class="color-on-surface-variant text-0">{{ __('larena-env::admin.storages.fields.endpoint_hint') }}</span></label>
-                        <label><span style="font-weight: 600; display: block;">{{ __('larena-env::admin.storages.fields.region') }}</span>
-                            <input type="text" name="region" class="larena-input" style="inline-size: 100%; min-height: 2.75rem;"></label>
-                        <label><span style="font-weight: 600; display: block;">{{ __('larena-env::admin.storages.fields.access_key') }}</span>
-                            <input type="text" name="access_key" required class="larena-input" style="inline-size: 100%; min-height: 2.75rem;" spellcheck="false"></label>
-                        <label><span style="font-weight: 600; display: block;">{{ __('larena-env::admin.storages.fields.secret_key') }}</span>
-                            <input type="password" name="secret_key" required class="larena-input" style="inline-size: 100%; min-height: 2.75rem;" autocomplete="new-password"></label>
-                        <label><span style="font-weight: 600; display: block;">{{ __('larena-env::admin.storages.fields.keep') }}</span>
-                            <input type="number" name="keep" min="1" max="90" value="30" class="larena-input" style="inline-size: 100%; min-height: 2.75rem;"></label>
+                    {{-- The same fields as the wizard's backups step, on the Framework's inputs (critics 2026-11-07). --}}
+                    <div class="flex flex-column g-2">
+                        <sf-dropdown name="provider" label="{{ __('larena-env::admin.storages.fields.provider') }}" value="{{ $providers[0] ?? '' }}" required
+                            options="{{ json_encode(array_map(static fn (string $one): array => ['value' => $one, 'text' => __('larena-env::admin.storages.providers.'.$one)], array_values($providers)), JSON_UNESCAPED_UNICODE) }}"></sf-dropdown>
+                        <sf-input name="name" label="{{ __('larena-env::admin.storages.fields.name') }}" hint="{{ __('larena-env::admin.storages.fields.name_hint') }}" pattern="[a-z0-9][a-z0-9-]{0,31}" placeholder="yandex" autocomplete="off" required></sf-input>
+                        <sf-input name="bucket" label="{{ __('larena-env::admin.storages.fields.bucket') }}" autocomplete="off" required></sf-input>
+                        <sf-input name="access_key" label="{{ __('larena-env::admin.storages.fields.access_key') }}" autocomplete="off" spellcheck="false" required></sf-input>
+                        <sf-input name="secret_key" label="{{ __('larena-env::admin.storages.fields.secret_key') }}" input-type="password" autocomplete="new-password" required></sf-input>
+                        <details>
+                            <summary class="color-primary" style="cursor: pointer; min-height: 2.75rem; display: flex; align-items: center;">{{ __('larena-env::admin.more') }}</summary>
+                            <div class="flex flex-column g-2 m-t-2">
+                                <sf-input name="prefix" label="{{ __('larena-env::admin.storages.fields.prefix') }}" placeholder="backups" autocomplete="off"></sf-input>
+                                <sf-input name="endpoint" label="{{ __('larena-env::admin.storages.fields.endpoint') }}" hint="{{ __('larena-env::admin.storages.fields.endpoint_hint') }}" placeholder="https://…" autocomplete="off"></sf-input>
+                                <sf-input name="region" label="{{ __('larena-env::admin.storages.fields.region') }}" autocomplete="off"></sf-input>
+                                <sf-input name="keep" label="{{ __('larena-env::admin.storages.fields.keep') }}" inputmode="numeric" pattern="[0-9]{1,2}" default-value="30"></sf-input>
+                            </div>
+                        </details>
                     </div>
                     <label class="flex items-cross-center g-1 m-t-2" style="min-height: 2.75rem;"><input type="checkbox" name="default" value="1" @checked($storages === [])> {{ __('larena-env::admin.storages.fields.default') }}</label>
                     <button type="submit" class="larena-button larena-button-primary m-t-2" style="min-height: 2.75rem;">{{ __('larena-env::admin.storages.add_go') }}</button>

@@ -13,14 +13,14 @@
         running-text="{{ __('larena-env::admin.setup.running') }}" data-env-setup="{{ $step }}" data-env-setup-phase="{{ $phase }}">
         @foreach ($wizard as $key => $one)
             <sf-wizard-step name="{{ $key }}" label="{{ __('larena-env::admin.setup.step.'.$key.'.name') }}"
-                href="{{ route('larena.env.admin.setup', ['step' => $key], false) }}"
+                href="{{ route('larena.env.admin.overview.setup', ['step' => $key], false) }}"
                 description="{{ __('larena-env::admin.setup.step.'.$key.'.why') }}" optional
                 type="{{ $one['type'] }}" @if ($one['state'] !== '') state="{{ $one['state'] }}" @endif
                 @if ($one['action'] !== '') action-text="{{ $one['action'] }}" @endif
                 @if ($one['message'] !== null) message="{{ $one['message'] }}" @endif
                 data-env-setup-step="{{ $key }}" data-env-setup-state="{{ $states[$key] }}">
                 @if ($key === $step)
-                    <form method="post" action="{{ route('larena.env.admin.setup.submit', ['step' => $key], false) }}" id="env-setup-form" class="m-0 flex flex-column g-2">
+                    <form method="post" action="{{ route('larena.env.admin.overview.setup.submit', ['step' => $key], false) }}" id="env-setup-form" class="m-0 flex flex-column g-2">
                         @csrf
                         <input type="hidden" name="phase" value="{{ $phase }}">
                         @if ($phase === 'review' && $plan !== null)
@@ -35,7 +35,7 @@
             </sf-wizard-step>
         @endforeach
         <sf-wizard-step name="finish" label="{{ __('larena-env::admin.setup.finish.name') }}" type="result"
-            href="{{ route('larena.env.admin.setup', ['step' => 'finish'], false) }}" description="{{ __('larena-env::admin.setup.finish.why') }}" data-env-setup-step="finish">
+            href="{{ route('larena.env.admin.overview.setup', ['step' => 'finish'], false) }}" description="{{ __('larena-env::admin.setup.finish.why') }}" data-env-setup-step="finish">
             @if ($step === 'finish')
                 <ul class="m-0 p-0" style="list-style: none;" data-env-setup-summary>
                     @foreach ($states as $key => $state)

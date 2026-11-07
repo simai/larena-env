@@ -13,9 +13,9 @@
             @foreach ($item['action']['fields'] ?? [] as $name => $value)
                 <input type="hidden" name="{{ $name }}" value="{{ $value }}">
             @endforeach
-            <button type="submit" class="larena-button {{ $item['state'] === 'now' ? 'larena-button-primary' : '' }}" style="min-height: 2.75rem;">{{ $item['action']['label'] }}</button>
+            <button type="submit" class="larena-button {{ $item['state'] === 'now' ? 'larena-button-primary' : '' }}" style="min-height: 2.75rem;" aria-label="{{ $item['action']['label'] }}: {{ $item['title'] }}">{{ $item['action']['label'] }}</button>
         </form>
     @elseif ($item['action'] !== null)
-        <a class="larena-button {{ $item['state'] === 'now' ? 'larena-button-primary' : '' }}" style="min-height: 2.75rem;" href="{{ $item['action']['url'] }}" data-env-action-do="link">{{ $item['action']['label'] }}</a>
+        <a class="larena-button {{ $item['state'] === 'now' ? 'larena-button-primary' : '' }}" style="min-height: 2.75rem;" href="{{ $item['action']['url'] }}" data-env-action-do="link" aria-label="{{ $item['action']['label'] }}: {{ $item['title'] }}">{{ $item['action']['label'] }}</a>
     @endif
 </li>

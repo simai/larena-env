@@ -78,7 +78,12 @@ final readonly class ServerSetupController
         $actor = ResolvePanelActor::of($request);
         $capabilities = $this->capabilities($actor);
         $states = $this->states($actor);
+        $named = $step;
         $step = $this->step($step, $states);
+        // A step the wizard has not goes to the step it opens on, under its own address (critics 2026-11-07).
+        if ($named !== null && $named !== $step) {
+            return new RedirectResponse(route('larena.env.admin.overview.setup', ['step' => $step], false));
+        }
         $flow = $this->flow($request);
         $message = null;
         $phase = $this->phase($request, $step, $states, $capabilities);
@@ -252,7 +257,7 @@ final readonly class ServerSetupController
     {
         $links = [];
         foreach (array_keys(ServerSetup::STEPS) as $step) {
-            $links[$step] = route('larena.env.admin.setup', ['step' => $step], false);
+            $links[$step] = route('larena.env.admin.overview.setup', ['step' => $step], false);
         }
 
         return $links;
@@ -383,7 +388,7 @@ final readonly class ServerSetupController
         $keys = array_keys(ServerSetup::STEPS);
         $after = $keys[array_search($step, $keys, true) + 1] ?? self::FINISH;
 
-        return new RedirectResponse(route('larena.env.admin.setup', ['step' => $after], false));
+        return new RedirectResponse(route('larena.env.admin.overview.setup', ['step' => $after], false));
     }
 
     /** @param array<string, string> $query */
@@ -393,7 +398,7 @@ final readonly class ServerSetupController
             $request->session()->flash(self::ERROR, $this->reason($reason));
         }
 
-        return new RedirectResponse(route('larena.env.admin.setup', ['step' => $step] + $query, false));
+        return new RedirectResponse(route('larena.env.admin.overview.setup', ['step' => $step] + $query, false));
     }
 
     /** @param array<string, string> $args */

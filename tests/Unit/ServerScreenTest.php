@@ -156,6 +156,19 @@ env_assert($checks !== null && $keys[0] === 'security:ssh_password' && $list[0][
     && $list[0]['action']['fields'] === ['op' => 'fix', 'check' => 'ssh_password'] && in_array('update:env', $keys, true) && !in_array('setup:backups', $keys, true)
     && in_array('setup:alerts', $keys, true) && end($list)['state'] === 'done' && \Larena\Env\Admin\RecommendedActions::count($list, 'done') === 2
     && $list[array_search('security:antivirus', $keys, true)]['action']['url'] === '/admin/server/security#env-security-check-antivirus', 'The recommended actions: '.json_encode($keys));
+// The same finding on several sites is one line; a local name gets no HTTPS advice; alerts nobody gets are urgent (critics 2026-11-07).
+$spread = \Larena\Env\Security\SecurityStatus::fromData(['schema' => 'simai-security/1', 'score' => 50, 'checks' => [
+    ['id' => 'https:a.ru', 'check' => 'https', 'area' => 'sites', 'status' => 'warn', 'severity' => 'medium', 'domain' => 'a.ru'],
+    ['id' => 'https:b.ru', 'check' => 'https', 'area' => 'sites', 'status' => 'warn', 'severity' => 'medium', 'domain' => 'b.ru'],
+    ['id' => 'https:c.test', 'check' => 'https', 'area' => 'sites', 'status' => 'warn', 'severity' => 'medium', 'domain' => 'c.test'],
+]]);
+$spreadList = \Larena\Env\Admin\RecommendedActions::of($spread, [], [], '/admin/server/security', '/admin/server/security/plan',
+    static fn (string $domain): string => '/admin/server/sites/'.$domain, ['alerts' => 'skipped'], ['alerts' => '/b'], [], '/u', $words);
+$https = array_values(array_filter($spreadList, static fn (array $item): bool => str_starts_with($item['key'], 'security:https')));
+$alerts = array_values(array_filter($spreadList, static fn (array $item): bool => $item['key'] === 'setup:alerts'));
+env_assert(count($https) === 1 && $https[0]['sites'] === ['a.ru', 'b.ru'] && str_contains($https[0]['title'], 'actions.sites:2')
+    && $https[0]['action']['url'] === '/admin/server/security#env-security-check-https' && ($alerts[0]['state'] ?? '') === 'now',
+    'One line for the same finding, none for a local name, alerts urgent: '.json_encode($spreadList));
 $counts = ['now' => 1, 'todo' => \Larena\Env\Admin\RecommendedActions::count($list, 'todo'), 'done' => 2];
 $left = $state(['section' => 'overview', 'overview' => $overview, 'actions' => $list, 'actionCounts' => $counts]);
 env_assert(str_contains($left, 'data-env-actions') && str_contains($left, 'data-env-action="security:ssh_password"') && str_contains($left, 'data-env-action-state="now"')

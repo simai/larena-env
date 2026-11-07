@@ -50,6 +50,25 @@ final class CachingPanelGateway implements PanelGateway, PanelFileGateway
     /** A read is warmed again once it is this old (a slow one, once its own time is nearly over). */
     private const int REWARM_AFTER = 40;
 
+    /**
+     * Set for half a minute when the gateway did not answer at all (ssh or sudo failed, or the server hung): the reads
+     * after it fail at once instead of each waiting its timeout (critics 2026-11-07: every page waited 30 s).
+     */
+    private const string DOWN = 'larena-env:gateway:down';
+
+    private const int DOWN_SECONDS = 30;
+
+    /** The reason the gateway gives when it did not answer at all. */
+    private const string UNANSWERED = 'gateway_process_failed';
+
+    /**
+     * Set for a quarter of an hour by a confirmed action: a job may change the server well after it started, so the slow
+     * reads are kept only for `ttl` meanwhile, never for their long time (critics 2026-11-07).
+     */
+    private const string CHANGING = 'larena-env:gateway:changing';
+
+    private const int CHANGING_SECONDS = 900;
+
     /** Set for an hour when the server refused a batch (simai-env before 1.52.0). */
     private const string NO_BATCH = 'larena-env:gateway:no-batch';
 
@@ -71,6 +90,9 @@ final class CachingPanelGateway implements PanelGateway, PanelFileGateway
             if ($request->confirm || PanelCommands::kind($request->command) === PanelCommands::JOB) {
                 $this->forgetAll();
             }
+            if ($request->confirm) {
+                $this->flagFor(self::CHANGING, self::CHANGING_SECONDS);
+            }
 
             return $answer;
         }
@@ -83,11 +105,16 @@ final class CachingPanelGateway implements PanelGateway, PanelFileGateway
         if ($kept !== null) {
             return $this->asked[$key] = $kept;
         }
+        if ($this->flag(self::DOWN)) {
+            return PanelAnswer::failed($request->requestId, self::UNANSWERED);
+        }
         $answer = $this->inner->ask($request);
         // A refusal or a failure is said again on the next screen, never kept.
         if ($answer->status === PanelAnswerStatus::Ok) {
             $this->asked[$key] = $answer;
-            $this->write($key, $answer, in_array($request->command, self::SLOW, true) ? max($this->ttl, $this->slowTtl) : $this->ttl);
+            $this->write($key, $answer, $this->ttlFor($request->command, $this->ttl));
+        } else {
+            $this->noteUnanswered($answer);
         }
 
         return $answer;
@@ -124,7 +151,7 @@ final class CachingPanelGateway implements PanelGateway, PanelFileGateway
         $reads = $this->reads();
         $now = time();
         $keep = [];
-        /** @var array<string, list<array{id: string, request: PanelRequest, slow: bool}>> $due by person */
+        /** @var array<string, list<array{id: string, request: PanelRequest, key: string}>> $due by person */
         $due = [];
         $count = 0;
         uasort($reads, static fn (array $a, array $b): int => $b['used'] <=> $a['used']);
@@ -143,16 +170,19 @@ final class CachingPanelGateway implements PanelGateway, PanelFileGateway
                 unset($keep[$id]);
                 continue;
             }
-            $due[$read['user']."\0".($read['owner'] ?? '')][] = ['id' => $id, 'request' => $request, 'slow' => $slow];
+            // The key is taken before the server is asked: an action meanwhile makes it stale, never the answer fresh.
+            $due[$read['user']."\0".($read['owner'] ?? '')][] = ['id' => $id, 'request' => $request, 'key' => $this->key($request)];
             $count++;
         }
-        foreach ($due as $person) {
+        foreach ($this->flag(self::DOWN) ? [] : $due as $person) {
             foreach (array_chunk($person, PanelBatchGateway::MOST) as $chunk) {
                 $answers = $this->askTogether(array_column($chunk, 'request'));
                 foreach ($chunk as $index => $one) {
                     if ($answers[$index]->status === PanelAnswerStatus::Ok) {
-                        $this->write($this->key($one['request']), $answers[$index], $one['slow'] ? max($this->ttl, $this->slowTtl) : max($this->ttl, self::WARM_SECONDS));
+                        $this->write($one['key'], $answers[$index], $this->ttlFor($one['request']->command, max($this->ttl, self::WARM_SECONDS)));
                         $keep[$one['id']]['warmed'] = $now;
+                    } else {
+                        $this->noteUnanswered($answers[$index]);
                     }
                 }
             }
@@ -188,7 +218,7 @@ final class CachingPanelGateway implements PanelGateway, PanelFileGateway
             }
             $missing[$key] = $request;
         }
-        if (count($missing) < 2) {
+        if (count($missing) < 2 || $this->flag(self::DOWN)) {
             return;
         }
         $byPerson = [];
@@ -205,7 +235,9 @@ final class CachingPanelGateway implements PanelGateway, PanelFileGateway
                     $answer = $answers[$index];
                     if ($answer->status === PanelAnswerStatus::Ok) {
                         $this->asked[$key] = $answer;
-                        $this->write($key, $answer, in_array($chunk[$key]->command, self::SLOW, true) ? max($this->ttl, $this->slowTtl) : $this->ttl);
+                        $this->write($key, $answer, $this->ttlFor($chunk[$key]->command, $this->ttl));
+                    } else {
+                        $this->noteUnanswered($answer);
                     }
                 }
             }
@@ -237,6 +269,28 @@ final class CachingPanelGateway implements PanelGateway, PanelFileGateway
         return array_map(fn (PanelRequest $request): PanelAnswer => $this->inner->ask($request), $requests);
     }
 
+    /** How long an answer is kept: a slow read for its long time, unless an action may be changing the server. */
+    private function ttlFor(string $command, int $ttl): int
+    {
+        return in_array($command, self::SLOW, true) && !$this->flag(self::CHANGING) ? max($this->ttl, $this->slowTtl) : $ttl;
+    }
+
+    private function noteUnanswered(PanelAnswer $answer): void
+    {
+        if ($answer->reason === self::UNANSWERED) {
+            $this->flagFor(self::DOWN, self::DOWN_SECONDS);
+        }
+    }
+
+    private function flagFor(string $key, int $seconds): void
+    {
+        try {
+            $this->cache->put($key, true, $seconds);
+        } catch (Throwable) {
+            // Not kept: nothing changes but the waiting.
+        }
+    }
+
     private function flag(string $key): bool
     {
         try {
@@ -252,6 +306,8 @@ final class CachingPanelGateway implements PanelGateway, PanelFileGateway
         $this->asked = [];
         try {
             $this->cache->forever(self::GENERATION, bin2hex(random_bytes(8)));
+            // The alert bar's own lists too: the bar says what the page under it says (critics 2026-11-07).
+            \Larena\Env\Warnings\EnvAdminAlertSource::forgetKept($this->cache);
         } catch (Throwable) {
             // Without a cache nothing was kept.
         }

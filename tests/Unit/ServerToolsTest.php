@@ -337,7 +337,7 @@ $setupPage = static fn (string $step, string $phase, array $more = []): string =
 $levelForm = $setupPage('protection', 'form');
 env_assert(str_contains($levelForm, '<sf-wizard place="pages"') && str_contains($levelForm, 'current="protection"') && substr_count($levelForm, '<sf-wizard-step ') === 7
     && str_contains($levelForm, 'name="alerts"') && str_contains($levelForm, 'state="skipped"') && str_contains($levelForm, 'type="form"')
-    && str_contains($levelForm, 'larena.env.admin.setup.submit') && str_contains($levelForm, '<sf-dropdown name="set"') && str_contains($levelForm, 'later-href="/admin/server/overview"')
+    && str_contains($levelForm, 'larena.env.admin.overview.setup.submit') && str_contains($levelForm, '<sf-dropdown name="set"') && str_contains($levelForm, 'later-href="/admin/server/overview"')
     && !str_contains($levelForm, 'href="/admin/server/security"'), 'A step takes its fields inside the wizard, the others are in its progress: '.$levelForm);
 $levelPlan = new \Larena\Env\Operations\PanelPlan('security:level', ['set' => 'enhanced'], null, 'Sets the level.', 'firewall, fail2ban', null);
 $review = $setupPage('protection', 'review', ['plan' => $levelPlan]);
@@ -349,6 +349,38 @@ $setupFailed = $setupPage('protection', 'error', ['job' => 'job-1', 'message' =>
 env_assert(str_contains($setupFailed, 'state="error"') && str_contains($setupFailed, 'message="It failed."'), 'A failed run says so and offers to try again.');
 $finish = $setupPage('finish', 'info');
 env_assert(str_contains($finish, 'data-env-setup-summary-step="alerts"') && str_contains($finish, 'current="finish"'), 'The result lists what is done and put off.');
+// Every view of the panel compiles to valid PHP (critics 2026-11-07: a view that never rendered in a test failed on the stand).
+$compiler = new BladeCompiler($files, env_temp_directory());
+$views = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(dirname(__DIR__, 2).'/resources/views', FilesystemIterator::SKIP_DOTS));
+$compiled = 0;
+foreach ($views as $view) {
+    if (!str_ends_with($view->getFilename(), '.blade.php')) {
+        continue;
+    }
+    try {
+        token_get_all($compiler->compileString((string) file_get_contents($view->getPathname())), TOKEN_PARSE);
+    } catch (ParseError $error) {
+        throw new RuntimeException('The view '.$view->getPathname().' does not compile: '.$error->getMessage());
+    }
+    $compiled++;
+}
+env_assert($compiled > 40, 'Every view is compiled: '.$compiled);
+// Every step renders, in its fields and once done (an unparsable view once reached the stand: /setup/alerts, 2026-11-07).
+$stepData = ['login' => [], 'address' => ['address' => null], 'alerts' => ['channel' => ['kind' => 'telegram', 'target' => '12345'], 'canTest' => true],
+    'protection' => ['level' => 'basic'], 'backups' => ['storages' => []], 'updates' => ['plans' => ['env' => null, 'panel' => null], 'canUpdate' => true]];
+foreach ($stepData as $stepName => $data) {
+    foreach (['form', 'info'] as $stepPhase) {
+        foreach (['todo', 'done'] as $stepState) {
+            $states = [$stepName => $stepState] + $setupStates;
+            $html = $factory->make('larena-env::admin.setup', ['step' => $stepName, 'phase' => $stepPhase, 'message' => null, 'states' => $states, 'plan' => null, 'job' => null,
+                'loginUrl' => '/admin/security', 'overviewUrl' => '/admin/server/overview', 'capabilities' => \Larena\Env\Gateway\PanelCapabilities::none(),
+                'wizard' => \Larena\Env\Http\Controllers\ServerSetupController::wizard($stepName, $stepPhase, $states, null, $setupText), 'data' => $data])->render();
+            env_assert(str_contains($html, 'current="'.$stepName.'"'), "The step {$stepName} renders ({$stepPhase}, {$stepState}).");
+        }
+    }
+}
+$alertsForm = $setupPage('alerts', 'form', ['data' => ['channel' => null, 'canTest' => false]]);
+env_assert(str_contains($alertsForm, '<sf-dropdown name="kind"') && str_contains($alertsForm, '&quot;value&quot;:&quot;telegram&quot;'), 'The alerts step offers its channels: '.$alertsForm);
 $moving = $factory->make('larena-env::admin.panel-address-moving', ['op' => 'port', 'port' => 9443, 'next' => 'https://203.0.113.5:9443/admin/server/jobs/x', 'nextBase' => 'https://203.0.113.5:9443'])->render();
 env_assert(str_contains($moving, 'data-env-panel-address-moving="port"') && str_contains($moving, '9443') && str_contains($moving, 'data-env-panel-address-next'), 'The way to the new address: '.$moving);
 

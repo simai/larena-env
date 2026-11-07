@@ -48,6 +48,8 @@ final class PanelWarnings
     // simai-env 1.44.0: a backup made but its copy not sent to the storage away from the server.
     public const string BACKUP_OFFSITE_FAILED = 'backup_offsite_failed';
     public const string SERVER_ALERT = 'server_alert';
+    /** A serious finding of the server's security check, said by the check's own name in the panel's words. */
+    public const string SECURITY_RISK = 'security_risk';
     // An alert that cleared, told once in people's notifications.
     public const string RESOLVED = 'resolved';
 
@@ -55,7 +57,7 @@ final class PanelWarnings
     public const array KINDS = [self::DISK_FULL, self::SWAP_FULL, self::CERTIFICATE_ENDING, self::CERTIFICATE_EXPIRED, self::CERTIFICATE_MISSING,
         self::SITE_DOWN, self::SITE_ERROR, self::BACKUP_NONE, self::BACKUP_STALE, self::BACKUP_UNSCHEDULED,
         self::BACKUP_CHECK_FAILED, self::CERTIFICATE_RENEW_FAILED, self::DISK_ALERT, self::CERTIFICATE_ALERT, self::SITE_UNAVAILABLE,
-        self::PANEL_DOWN, self::BACKUP_MISSING, self::BACKUP_FAILED, self::BACKUP_OFFSITE_FAILED, self::SERVER_ALERT, self::RESOLVED];
+        self::PANEL_DOWN, self::BACKUP_MISSING, self::BACKUP_FAILED, self::BACKUP_OFFSITE_FAILED, self::SERVER_ALERT, self::SECURITY_RISK, self::RESOLVED];
 
     /** The server's alert kinds (simai-alerts/1) and the panel's words for each; an unknown kind keeps the server's message. */
     private const array ALERT_KINDS = [
@@ -68,7 +70,31 @@ final class PanelWarnings
         'backup_failed' => self::BACKUP_FAILED,
         'backup_offsite_failed' => self::BACKUP_OFFSITE_FAILED,
         'backup_check_failed' => self::BACKUP_CHECK_FAILED,
+        'security_risk' => self::SECURITY_RISK,
     ];
+
+    /**
+     * The words a warning is said with: a security finding names its check as the panel calls it, the server's English
+     * title only when the panel has no name for it (critics 2026-11-07: «security: …» on Russian pages).
+     *
+     * @param callable(string, array<string, string>): string $text the panel's line for a key under larena-env::admin.
+     * @return array<string, string>
+     */
+    public static function replaceFor(PanelWarning $warning, callable $text): array
+    {
+        if ($warning->kind !== self::SECURITY_RISK) {
+            return $warning->replace;
+        }
+        $key = 'security.checks.'.($warning->replace['check'] ?? '').'.title';
+        $title = $text($key, []);
+        if (str_ends_with($title, $key)) {
+            // «security: Title (domain): detail» — the title without the prefix, the domain and the detail.
+            $message = (string) preg_replace('/^security:\s*/', '', $warning->replace['message'] ?? '');
+            $title = trim((string) preg_replace('/\s*\([^)]*\)$/', '', explode(': ', $message)[0]));
+        }
+
+        return ['title' => $title] + $warning->replace;
+    }
 
     public const int DISK_PERCENT = 90;
     public const int DISK_ERROR_PERCENT = 95;
@@ -162,6 +188,10 @@ final class PanelWarnings
         $domain = $kind === self::PANEL_DOWN || $kind === self::DISK_ALERT ? null : $alert->domain;
         $replace = ['domain' => $alert->domain ?? '', 'target' => $alert->target ?? $alert->domain ?? '', 'message' => $alert->message,
             'time' => Moment::human($alert->lastSeen ?? $alert->firstSeen), 'since' => Moment::human($alert->firstSeen)];
+        if ($kind === self::SECURITY_RISK) {
+            // The check's kind is the start of its id (simai-env: «check» or «check:domain»).
+            $replace += ['check' => explode(':', (string) ($alert->target ?? ''))[0], 'where' => $alert->domain !== null ? ' · '.$alert->domain : ''];
+        }
 
         return new PanelWarning($kind, $alert->severity === 'critical' || $alert->severity === 'error' ? PanelWarning::ERROR : PanelWarning::WARNING,
             $domain, $replace, $alert->target, $alert->id, $alert->state, $alert->ackedBy, $alert->ackedAt);

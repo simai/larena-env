@@ -168,15 +168,26 @@ $readers = new class implements \Illuminate\Contracts\Config\Repository {
     public function prepend($key, $value): void {}
     public function push($key, $value): void {}
 };
-$entry = new PanelEntryController($setup, $coordinator, $translator, new \Larena\Access\Runtime\AccessOperationAuthorizer($readers, 'testing'));
-env_assert($entry($request('/'))->headers->get('Location') === '/admin/server', 'The address leads to the screen.');
+$entry = new PanelEntryController($setup, $coordinator, $translator);
+env_assert($entry($request('/'))->headers->get('Location') === '/admin/server/home', 'The address leads to the panel\'s home, which decides behind the sign-in.');
 $as = static function (Request $request, string $actor): Request {
     $request->attributes->set('larena_access_actor', $actor);
 
     return $request;
 };
-env_assert($entry($as($request('/'), 'test:system'))->headers->get('Location') === '/admin/server/overview'
-    && $entry($as($request('/'), 'test:anna'))->headers->get('Location') === '/admin/server', 'The administrator lands on the overview, an owner on the sites.');
+if (!function_exists('route')) {
+    /** @param array<string, string> $parameters */
+    function route(string $name, array $parameters = [], bool $absolute = true): string
+    {
+        return '/admin/server/'.match ($name) { 'larena.env.admin.overview' => 'overview', default => '' };
+    }
+}
+// The home decides: the administrator lands on the overview, an owner on the sites (critics 2026-11-07: the entry, before
+// the sign-in, could not tell and led everyone to the sites).
+$home = (new ReflectionClass(\Larena\Env\Http\Controllers\ServerAdminController::class))->newInstanceWithoutConstructor();
+(new ReflectionProperty($home, 'authorizer'))->setValue($home, new \Larena\Access\Runtime\AccessOperationAuthorizer($readers, 'testing'));
+env_assert($home->home($as($request('/admin/server/home'), 'test:system'))->headers->get('Location') === '/admin/server/overview'
+    && $home->home($as($request('/admin/server/home'), 'test:anna'))->headers->get('Location') === '/admin/server/', 'The administrator lands on the overview, an owner on the sites.');
 env_assert($entry($request('/?setup=wrong'))->getStatusCode() === 403 && !$session->has(SetupLink::SESSION_KEY), 'A wrong link opens nothing.');
 $opened = $entry($request('/?setup='.$token));
 env_assert($opened instanceof RedirectResponse && $opened->headers->get('Location') === '/admin/setup', 'The right link leads to the first run.');
@@ -205,7 +216,7 @@ env_assert(!$session->has(SetupLink::SESSION_KEY), 'The session forgets the link
 
 // Afterwards the link does nothing but lead on, and a line that came back is removed.
 file_put_contents($setupEnv, "SIMAI_PANEL_SETUP_TOKEN={$other}\n");
-env_assert($entry($request('/?setup='.$other))->headers->get('Location') === '/admin/server', 'The link leads on.');
+env_assert($entry($request('/?setup='.$other))->headers->get('Location') === '/admin/server/home', 'The link leads on.');
 env_assert((new EnvFile($setupEnv))->value(SetupLink::TOKEN_KEY) === null && !$session->has(SetupLink::SESSION_KEY), 'And opens nothing.');
 env_assert($guard->handle($request('/admin/setup', 'GET', 'larena.auth.admin.setup'), $next)->getStatusCode() === 200, 'The admin\'s screen answers by itself: it leads to the sign-in.');
 

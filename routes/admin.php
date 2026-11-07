@@ -27,6 +27,8 @@ $domain = '[A-Za-z0-9]([A-Za-z0-9-]{0,62}[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-
 
 // The sites are both levels' first screen; the server's overview is the system level's (env.server.read).
 $router->get('/', [ServerAdminController::class, 'index'])->name('larena.env.admin.index');
+// The panel's home after sign-in, behind the panel's own sign-in and access: the overview for those who may read the server, the sites for the rest.
+$router->get('/home', [ServerAdminController::class, 'home'])->name('larena.env.admin.home');
 $router->get('/overview', [ServerAdminController::class, 'overview'])->middleware('access:env.server.read')->name('larena.env.admin.overview');
 // The people of the user level and their spaces, the system level's (Panel plan 2.4–2.6). Before the site routes.
 $router->middleware(['access:env.server.read'])->group(static function ($router): void {
@@ -94,9 +96,9 @@ $router->middleware(['access:env.server.operate'])->group(static function ($rout
     $router->post('/security/run', [SecurityController::class, 'run'])->name('larena.env.admin.security.run');
     $router->post('/backups/plan', [BackupStorageController::class, 'plan'])->name('larena.env.admin.storages.plan');
     // The server's first setup, one step at a time on the Framework's wizard, each put off if wanted (ENV 2026-11-06).
-    $router->get('/setup/{step?}', [ServerSetupController::class, 'show'])->where('step', '[a-z]{1,16}')->name('larena.env.admin.setup');
+    $router->get('/setup/{step?}', [ServerSetupController::class, 'show'])->where('step', '[a-z]{1,16}')->name('larena.env.admin.overview.setup');
     // Each step is done inside the wizard (sf-wizard, place pages): its form posts here, the server answers with the same wizard.
-    $router->post('/setup/{step}', [ServerSetupController::class, 'submit'])->where('step', '[a-z]{1,16}')->name('larena.env.admin.setup.submit');
+    $router->post('/setup/{step}', [ServerSetupController::class, 'submit'])->where('step', '[a-z]{1,16}')->name('larena.env.admin.overview.setup.submit');
     // Where the panel answers (simai-env 1.51.0): a domain, the port, the address by IP.
     $router->post('/panel-access/address/plan', [PanelAddressController::class, 'plan'])->name('larena.env.admin.panel.address.plan');
     $router->post('/panel-access/address/run', [PanelAddressController::class, 'run'])->name('larena.env.admin.panel.address.run');

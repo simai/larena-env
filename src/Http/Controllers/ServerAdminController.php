@@ -44,6 +44,17 @@ final readonly class ServerAdminController
         return $this->offerSetup($request) ?? $this->page($request, 'sites');
     }
 
+    /**
+     * Where the panel's address and the sign-in lead (owner 2026-11-06: the overview is the dashboard). The panel's entry
+     * runs before the admin's sign-in and access, so it cannot tell who may read the server; this route can.
+     */
+    public function home(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $overview = $this->authorizer?->authorize($request, 'env.server.read')->isAllowed() ?? false;
+
+        return new \Illuminate\Http\RedirectResponse(route($overview ? 'larena.env.admin.overview' : 'larena.env.admin.index', [], false));
+    }
+
     public function overview(Request $request): mixed
     {
         return $this->offerSetup($request) ?? $this->page($request, 'overview');
@@ -56,7 +67,7 @@ final readonly class ServerAdminController
     private function offerSetup(Request $request): ?\Illuminate\Http\RedirectResponse
     {
         return $this->canSetUp($request) && $this->setup?->offerOnce(PanelWarnings::now()) === true
-            ? new \Illuminate\Http\RedirectResponse(route('larena.env.admin.setup', [], false)) : null;
+            ? new \Illuminate\Http\RedirectResponse(route('larena.env.admin.overview.setup', [], false)) : null;
     }
 
     private function canSetUp(Request $request): bool

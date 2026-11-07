@@ -9,7 +9,7 @@
     @endif
     @if ($phase === 'form')
         <sf-dropdown name="kind" label="{{ __('larena-env::admin.alerts.kind') }}" value="{{ ($channel['kind'] ?? null) === 'webhook' ? 'webhook' : 'telegram' }}" required
-            options='@json([['value' => 'telegram', 'text' => __('larena-env::admin.alerts.kinds.telegram')], ['value' => 'webhook', 'text' => __('larena-env::admin.alerts.kinds.webhook')]])'></sf-dropdown>
+            options="{{ json_encode([['value' => 'telegram', 'text' => __('larena-env::admin.alerts.kinds.telegram')], ['value' => 'webhook', 'text' => __('larena-env::admin.alerts.kinds.webhook')]], JSON_UNESCAPED_UNICODE) }}"></sf-dropdown>
         <sf-input name="target" label="{{ __('larena-env::admin.alerts.target') }}" default-value="{{ is_string($channel['target'] ?? null) ? $channel['target'] : '' }}" autocomplete="off" required></sf-input>
         <sf-input name="token" label="{{ __('larena-env::admin.alerts.token') }}" input-type="password" autocomplete="off" hint="{{ __('larena-env::admin.alerts.token_help') }}"></sf-input>
     @elseif ($state === 'done')
@@ -17,7 +17,7 @@
             @if ($canTest)
                 <sf-button appearance="outline" size="1" text="{{ __('larena-env::admin.alerts.test') }}" native-type="submit" name="intent" value="test" data-env-setup-test></sf-button>
             @endif
-            <sf-button appearance="link" size="1" text="{{ __('larena-env::admin.setup.edit') }}" href="{{ route('larena.env.admin.setup', ['step' => 'alerts', 'change' => '1'], false) }}"></sf-button>
+            <sf-button appearance="link" size="1" text="{{ __('larena-env::admin.setup.edit') }}" href="{{ route('larena.env.admin.overview.setup', ['step' => 'alerts', 'change' => '1'], false) }}"></sf-button>
         </div>
     @endif
 @endif

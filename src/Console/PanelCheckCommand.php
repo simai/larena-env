@@ -105,7 +105,8 @@ final class PanelCheckCommand extends Command
                 if ($owner !== null) {
                     $recipients = array_merge($recipients, array_keys(array_filter($spaces, static fn (string $space): bool => $space === $owner)));
                 }
-                $title = (string) $translator->get('larena-env::admin.warnings.'.$warning->kind, $warning->replace);
+                $title = (string) $translator->get('larena-env::admin.warnings.'.$warning->kind, \Larena\Env\Warnings\PanelWarnings::replaceFor($warning,
+                    static fn (string $key, array $replace): string => (string) $translator->get('larena-env::admin.'.$key, $replace)));
                 // The server's alert names its own message; a resolved one says what cleared.
                 foreach (array_unique($recipients) as $recipient) {
                     try {

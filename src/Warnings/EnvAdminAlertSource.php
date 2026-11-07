@@ -73,8 +73,13 @@ final readonly class EnvAdminAlertSource implements AdminAlertSource
             }
         }
         $read = fn (): array => $this->warnings($actor, $request);
-        $warnings = $this->remember === null ? $read()
-            : ($this->remember)('larena-env:alerts:'.sha1($actor->user."\0".($actor->owner ?? '')), self::TTL, $read);
+        try {
+            $warnings = $this->remember === null ? $read()
+                : ($this->remember)('larena-env:alerts:'.sha1($actor->user."\0".($actor->owner ?? '')), self::TTL, $read);
+        } catch (ServerUnanswered $unanswered) {
+            // Nothing to look at is no «all is well»: said in red, never kept, on every page until the server answers.
+            return [$this->unanswered($unanswered->reason)];
+        }
         $canAcknowledge = $this->authorizer?->authorize($request, 'env.sites.operate')->isAllowed() ?? false;
         $back = $request->getRequestUri();
         $alerts = [];
@@ -129,21 +134,39 @@ final readonly class EnvAdminAlertSource implements AdminAlertSource
     /** @return list<PanelWarning> */
     private function warnings(PanelActor $actor, Request $request): array
     {
-        $overview = $this->overviews->read($actor)->overview?->withoutSites(array_values(array_unique([...$this->ownHosts, $request->getHost()])));
+        $result = $this->overviews->read($actor);
+        $overview = $result->overview?->withoutSites(array_values(array_unique([...$this->ownHosts, $request->getHost()])));
         if ($overview === null) {
-            return [];
+            if ($result->refused) {
+                return [];
+            }
+            throw new ServerUnanswered($result->reason ?? 'unknown');
         }
         $metrics = $actor->owner === null && $overview->capabilities?->allows('self:metrics') === true ? $this->extras->metrics($actor) : null;
 
         return (new PanelWarningSource($this->extras))->of($actor, $overview, $metrics, PanelWarnings::now())['warnings'];
     }
 
+    private function unanswered(string $reason): AdminAlert
+    {
+        $text = fn (string $key, array $replace = []): string => (string) $this->translator->get('larena-env::admin.'.$key, $replace);
+
+        return new AdminAlert(
+            id: 'env:server-unanswered',
+            level: AdminAlertLevel::Danger,
+            text: $text('warnings.server_unanswered', ['time' => gmdate('H:i').' UTC', 'reason' => $reason]),
+            source: $text('warnings.bar_server'),
+            action: new AdminAlertAction($text('warnings.go'), route('larena.env.admin.overview', [], false)),
+        );
+    }
+
     private function alert(PanelWarning $warning, bool $canAcknowledge, string $back): AdminAlert
     {
         $text = fn (string $key, array $replace = []): string => (string) $this->translator->get('larena-env::admin.'.$key, $replace);
-        $href = $warning->domain !== null
+        $href = $warning->kind === PanelWarnings::SECURITY_RISK ? route('larena.env.admin.security', [], false)
+            : ($warning->domain !== null
             ? route('larena.env.admin.site', ['domain' => $warning->domain], false).'?tab='.$warning->tab()
-            : route('larena.env.admin.overview', [], false);
+            : route('larena.env.admin.overview', [], false));
         $acknowledge = $canAcknowledge && $warning->acknowledgeable() && $warning->alertId !== null
             ? new AdminAlertAction($text('warnings.ack'), route('larena.env.admin.alerts.ack.open', [], false).'?'.http_build_query(['id' => $warning->alertId, 'back' => self::panelBack($back)]))
             : null;
@@ -151,7 +174,7 @@ final readonly class EnvAdminAlertSource implements AdminAlertSource
         return new AdminAlert(
             id: self::id($warning),
             level: $warning->severity === PanelWarning::ERROR ? AdminAlertLevel::Danger : AdminAlertLevel::Warning,
-            text: $text('warnings.'.$warning->kind, $warning->replace),
+            text: $text('warnings.'.$warning->kind, PanelWarnings::replaceFor($warning, $text)),
             source: $warning->domain !== null ? $text('warnings.bar_site', ['site' => $warning->domain]) : $text('warnings.bar_server'),
             action: new AdminAlertAction($text('warnings.go'), $href),
             acknowledge: $acknowledge,

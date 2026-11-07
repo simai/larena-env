@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+- Fixes after the independent critique of 0.4.0 (seven critics, 2026-11-07):
+  - The wizard's «Оповещения» step no longer fails with an error 500 (Blade could not read `@json` with nested
+    brackets); a test now compiles every view of the panel and draws every wizard step.
+  - A server that does not answer is a red line in the alert bar («Сервер не отвечает панели…»), not an empty bar; for
+    30 s after such a failure the pages do not wait for it again. After an action the alert bar and the kept answers
+    are read anew, and while a job may still be changing the server the slow reads are kept 30 s, not 10 minutes.
+  - `/admin` and the sign-in lead to the overview (`/admin/server/home` decides after the admin's sign-in check).
+  - A domain the server has no site on says «Сайт не найден»; an unknown section or wizard step goes to the right address.
+  - The server's checks panel_access, panel_domain, vulnerability_scan, site_components, wordpress_core, certificate,
+    php_eol, backup_schedule and backup_offsite have the panel's words; a serious security alert is «Риск безопасности:
+    <check> · <site>» and leads to «Безопасность», never the server's «security: …».
+  - One scale on the overview and «Безопасность»: «Срочно / Советуем / Сделано», counted alike (the check's status);
+    alerts nobody receives are urgent; the same finding on several sites is one line; no HTTPS advice for .test or
+    .localhost names; the load tiles come first and at most five advised items are in view, the rest folds.
+  - Words: «Показать, что будет сделано» on every plan button; «SFTP и SSH»; «Кто может открыть панель»; «Поставщик»;
+    the roles «Администратор сервера» and «Владелец сайтов» instead of levels and spaces; «Копировать базу данных».
+  - The site card says «Без PHP», «MySQL», «настройки, база данных, файлы», «Свой аккаунт»; a redirect has only its
+    overview, domains and log; the open section is in the page's heading and the tab's title; repeated buttons
+    («Исправить») name their item for screen readers; a firewall turned off is a red mark.
+  - The storage form on «Копии» uses the Framework's inputs, as the wizard does; the wizard is under «Обзор» in the
+    menu and the breadcrumbs (its routes are `larena.env.admin.overview.setup*`).
+  - The processor tile says it is the last minute's load, the chart's mark «последний замер».
+
 - The panel opens faster (ENV 2026-11-07: each ask starts simai-env, 0.7-1 s; the overview took about five seconds).
   Every minute `larena:env-warm` (the application's scheduler) asks the server again what the pages asked within the
   last twenty minutes, once an answer is 40 s old, and keeps it for 150 s, so a page opens from kept answers; nobody

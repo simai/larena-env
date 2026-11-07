@@ -291,4 +291,37 @@ $offsiteAlert = \Larena\Env\Alerts\ServerAlert::fromData(['id' => 'o1', 'kind' =
     'message' => 'upload failed', 'state' => 'open']);
 $offsite = $offsiteAlert === null ? null : \Larena\Env\Warnings\PanelWarnings::fromAlert($offsiteAlert);
 env_assert($offsite?->kind === 'backup_offsite_failed', 'The offsite alert has the panel\'s words: '.json_encode($offsite));
+// A serious security finding is said by the check's name in the panel's words, never the server's «security: …»
+// (critics 2026-11-07); a check the panel cannot name keeps the server's title without the prefix.
+$lines = require dirname(__DIR__, 2).'/resources/lang/ru/admin.php';
+$ru = static function (string $key, array $replace) use ($lines): string {
+    $line = data_get($lines, $key);
+    if (!is_string($line)) {
+        return 'larena-env::admin.'.$key;
+    }
+    foreach ($replace as $name => $value) {
+        $line = str_replace(':'.$name, (string) $value, $line);
+    }
+
+    return $line;
+};
+$risk = static fn (string $target, string $message): ?\Larena\Env\Warnings\PanelWarning => ($alert = \Larena\Env\Alerts\ServerAlert::fromData(['id' => 'r1',
+    'kind' => 'security_risk', 'severity' => 'critical', 'domain' => 'shop.test', 'target' => $target, 'message' => $message, 'state' => 'open'])) === null
+    ? null : PanelWarnings::fromAlert($alert);
+$named = $risk('php_eol:shop.test', 'security: PHP without security fixes (shop.test): PHP 7.4 gets no security fixes since 2022-11-28');
+$said = $named === null ? '' : $ru('warnings.'.$named->kind, PanelWarnings::replaceFor($named, $ru));
+env_assert($named?->kind === 'security_risk' && str_contains($said, 'Поддержка версии PHP · shop.test') && !str_contains($said, 'security:'), 'A security risk in the panel\'s words: '.$said);
+$other = $risk('new_check:shop.test', 'security: Something new (shop.test): detail');
+$saidOther = $other === null ? '' : $ru('warnings.'.$other->kind, PanelWarnings::replaceFor($other, $ru));
+env_assert(str_contains($saidOther, 'Риск безопасности: Something new · shop.test') && !str_contains($saidOther, 'security:'), 'An unnamed check keeps its title: '.$saidOther);
+
+// Every check simai-env 1.52 makes has the panel's Russian title, line and advice.
+foreach (['antivirus', 'auto_updates', 'backup_offsite', 'backup_schedule', 'backup_storage', 'backup_verify', 'certificate', 'exposed_services', 'file_scan',
+    'firewall', 'https', 'malware', 'panel_access', 'panel_domain', 'php_eol', 'reboot_required', 'security_updates', 'site_components', 'ssh_password',
+    'ssh_root', 'vulnerability_scan', 'web_protect', 'wordpress_core'] as $check) {
+    foreach (['title', 'warn', 'how'] as $part) {
+        env_assert(is_string($lines['security']['checks'][$check][$part] ?? null), "The check {$check} has its {$part} in Russian.");
+    }
+}
+
 echo "PanelWarningsTest passed.\n";

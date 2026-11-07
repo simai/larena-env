@@ -48,6 +48,9 @@ final readonly class SiteAdminController
     ];
     /** The tabs shown only where the server lists the command they read. */
     private const array LISTED_TABS = ['cron' => 'cron:list'];
+    /** A site that only sends visitors elsewhere has no code, files or database: only these sections (critics 2026-11-07). */
+    private const array FORWARDING = ['redirect', 'alias'];
+    private const array FORWARDING_TABS = ['overview', 'domains', 'log'];
     private const array LOG_KINDS = ['access', 'error'];
     /** How many of the last lines the log reads; the gateway gives at most 1000. */
     public const array LOG_LINES = [200, 500, 1000];
@@ -77,7 +80,8 @@ final readonly class SiteAdminController
     {
         return array_values(array_filter(self::TABS,
             static fn (string $name): bool => (!isset(self::LISTED_TABS[$name]) || $capabilities->allows(self::LISTED_TABS[$name]))
-                && ($name !== 'releases' || $site?->release !== null || $site?->previousRelease !== null)));
+                && ($name !== 'releases' || $site?->release !== null || $site?->previousRelease !== null)
+                && (!in_array($site?->profile, self::FORWARDING, true) || in_array($name, self::FORWARDING_TABS, true))));
     }
 
     public static function section(mixed $asked): string
@@ -103,7 +107,14 @@ final readonly class SiteAdminController
         $capabilities = $overview->capabilities ?? PanelCapabilities::none();
         $tabs = self::sectionsOf($site, $capabilities);
         $asked = self::section($request->query('tab'));
+        // A section this site has not is not shown under another's name: the address goes to the site's first section
+        // (critics 2026-11-07).
+        if ($site !== null && $asked !== '' && !in_array($asked, $tabs, true)) {
+            return new RedirectResponse(route('larena.env.admin.site', ['domain' => $domain], false));
+        }
         $tab = in_array($asked, $tabs, true) ? $asked : self::TABS[0];
+        // A domain the server has no site on is said as such, not as the server's failure (critics 2026-11-07).
+        $missing = $site === null && !$result->refused && $this->unknownSite($actor, $domain);
         $kind = in_array($request->query('log'), self::LOG_KINDS, true) ? (string) $request->query('log') : 'access';
         $lines = in_array((int) $request->query('lines'), self::LOG_LINES, true) ? (int) $request->query('lines') : self::LOG_LINES[0];
         $search = mb_substr(trim((string) $request->query('q')), 0, 128);
@@ -162,7 +173,9 @@ final readonly class SiteAdminController
             'source' => $result->source,
             'site' => $site,
             'refused' => $result->refused,
-            'reasonText' => $result->reason === null ? null : $this->reasonText($result->reason),
+            'missing' => $missing,
+            'reasonText' => $missing ? (string) $this->translator->get('larena-env::admin.site.missing', ['domain' => $domain])
+                : ($result->reason === null ? null : $this->reasonText($result->reason)),
             'logKind' => $kind,
             'logKinds' => self::LOG_KINDS,
             'logLines' => $lines,
@@ -406,6 +419,14 @@ final readonly class SiteAdminController
         $line = (string) $this->translator->get($key);
 
         return $line !== $key ? $line : $this->reasonText($reason);
+    }
+
+    /** Whether the server lists its sites and this domain is not among them (the panel's own site is left out too). */
+    private function unknownSite(PanelActor $actor, string $domain): bool
+    {
+        $sites = $this->overviews->read($actor)->overview?->sites;
+
+        return $sites !== null && !in_array($domain, array_map(static fn (\Larena\Env\Server\SiteSummary $one): string => $one->domain, $sites), true);
     }
 
     private function reasonText(string $reason): string
