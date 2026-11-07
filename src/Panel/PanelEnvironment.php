@@ -22,7 +22,9 @@ final class PanelEnvironment
         'QUEUE_CONNECTION' => 'sync',
         'LARENA_AUTH_ADMIN_ENTRY_ROUTES' => 'true',
         'LARENA_AUTH_ADMIN_LOGIN_MODE' => 'persistent',
-        'LARENA_AUTH_ADMIN_REDIRECT' => '/admin/server',
+        // After sign-in the panel's own address decides: the overview for those who may read the server, the sites for the
+        // rest (PanelEntryController; the test server's owner landed on the sites, 2026-11-07).
+        'LARENA_AUTH_ADMIN_REDIRECT' => '/admin',
         'LARENA_AUTH_BROWSER_SETUP' => 'true',
         'LARENA_AUTH_LOCAL_TESTING_LOGIN' => 'false',
         'LARENA_AUTH_LOCAL_TESTING_DEMO_CREDENTIALS' => 'false',

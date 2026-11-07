@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Signing in leads to the server's overview again, also when the panel was opened signed out: the sign-in goes on to
+  the panel's address, which decides (the overview, or the sites for an owner of sites), not to the sites' screen. «Обзор»
+  is the first row of the panel's menu (the test server's owner, 2026-11-07).
 - After signing in, whoever may read the server lands on its overview, the panel's dashboard; an owner of sites on the
   sites (owner 2026-11-06). The overview starts with «Рекомендуемые действия»: one list of what to do now (the server's
   high and critical security problems), what is advised (the other problems, a waiting update, the setup's steps not

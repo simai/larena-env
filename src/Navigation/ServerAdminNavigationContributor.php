@@ -62,7 +62,8 @@ final class ServerAdminNavigationContributor implements AdminNavigationContribut
             accessScope: 'env.server.read',
             auditEvent: 'env.server.overview_viewed',
             statusCap: 'env_panel_skeleton',
-            order: 4,
+            // The panel's dashboard comes first in the menu (the test server's owner could not find it, 2026-11-07).
+            order: 1,
             group: 'operations',
             knownLimitations: ['not_production_ready'],
             surface: 'product',

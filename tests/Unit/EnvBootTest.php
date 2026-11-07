@@ -38,6 +38,12 @@ sort($navigation);
 env_assert($navigation === ['env.alerts.channel', 'env.dns', 'env.dns.connection', 'env.firewall', 'env.panel.access', 'env.people', 'env.security', 'env.server',
     'env.server.overview', 'env.services', 'env.software', 'env.software.php', 'env.storages'] && $with['navigation_valid'] === array_fill(0, 13, true),
     'With the admin the sites, the overview, the spaces, DNS, the alerts\' channel, the update, the services, the software, PHP, the firewall, the security, the backup storages and who reaches the panel are valid menu entries: '.implode(', ', $navigation));
+// The overview, the panel's dashboard, is the first of the panel's rows in the menu.
+$orders = [];
+foreach ((new \Larena\Env\Navigation\ServerAdminNavigationContributor(null))->navigationDescriptors() as $row) {
+    $orders[$row->id] = $row->order;
+}
+env_assert(min($orders) === $orders['env.server.overview'] && count(array_keys($orders, min($orders), true)) === 1, 'The overview comes first.');
 $rows = static fn (?\Closure $listed): array => array_map(static fn ($row): string => $row->id,
     (new \Larena\Env\Navigation\ServerAdminNavigationContributor($listed))->navigationDescriptors());
 env_assert(array_intersect(['env.services', 'env.firewall', 'env.panel.access'], $rows(null)) === []
