@@ -360,7 +360,7 @@ return [
         'certificate_alert' => 'The certificate of :domain is about to end or has ended.',
         'site_unavailable' => ':domain did not answer, or answered with an error, two checks in a row.',
         'panel_down' => 'The server could not reach the panel two checks in a row, since :since.',
-        'backup_missing' => ':domain has had no new backup for more than two days.',
+        'backup_missing' => 'No backup of :domain has been made in the last two days.',
         'backup_failed' => 'The last backup of :domain failed.',
         'backup_offsite_failed' => 'The backup of :domain was made but not sent to the storage away from the server. Check it in «Backup storages».',
         'security_risk' => 'Security risk: :title:where. How to fix it is on the «Security» page.',
@@ -1282,7 +1282,7 @@ return [
     ],
     'actions' => [
         'title' => 'Recommended actions',
-        'summary' => 'Do now: :now · advised: :todo · done: :done',
+        'summary' => 'Urgent: :now · advised: :todo · done: :done',
         'more_list' => 'More advice: :count',
         'done_list' => 'Done (:count)',
         'states' => ['now' => 'Urgent', 'todo' => 'Advised', 'done' => 'Done'],

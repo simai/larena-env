@@ -149,13 +149,17 @@ final class CachingPanelGateway implements PanelGateway, PanelFileGateway
         }
         $key = $this->key($request);
         $this->remember($request);
+        // A silent server is not asked again on a click: the person waits once, not on every «Обновить».
+        if ($this->flag(self::DOWN)) {
+            return PanelAnswer::failed($request->requestId, self::UNANSWERED);
+        }
         $answer = $this->inner->ask($request);
+        $this->note($answer);
         if ($answer->status === PanelAnswerStatus::Ok) {
             $this->asked[$key] = $answer;
             $this->write($key, $answer, $this->ttlFor($request->command, $this->ttl));
         } else {
             unset($this->asked[$key]);
-            $this->noteUnanswered($answer);
         }
 
         return $answer;
