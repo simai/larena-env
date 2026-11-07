@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Larena\Env\Server;
 
 use Larena\Env\Contracts\PanelGateway;
+use Larena\Env\Gateway\CachingPanelGateway;
 use Larena\Env\Gateway\PanelActor;
 use Larena\Env\Gateway\PanelAnswer;
 use Larena\Env\Gateway\PanelAnswerStatus;
@@ -39,14 +40,18 @@ final readonly class SiteDetailsReader
         }
     }
 
-    /** The last lines of the site's nginx log; `kind` is `access` or `error`, as the gateway names them. */
-    /** With $match the server searches its last 20000 lines for that fixed string (simai-env 1.28.0). */
-    public function log(PanelActor $actor, string $domain, string $kind, int $lines = 200, ?string $match = null): NginxLogResult
+    /**
+     * The last lines of the site's nginx log; `kind` is `access` or `error`, as the gateway names them. With $match the
+     * server searches its last 20000 lines for that fixed string (simai-env 1.28.0). With $fresh the server is read
+     * again past the panel's kept answer: the person pressed «Обновить».
+     */
+    public function log(PanelActor $actor, string $domain, string $kind, int $lines = 200, ?string $match = null, bool $fresh = false): NginxLogResult
     {
         $source = $this->gateway->source();
         try {
-            $answer = $this->gateway->ask(PanelRequest::read($actor, 'logs:nginx',
-                ['domain' => $domain, 'kind' => $kind, 'lines' => (string) $lines] + ($match === null ? [] : ['match' => $match])));
+            $request = PanelRequest::read($actor, 'logs:nginx',
+                ['domain' => $domain, 'kind' => $kind, 'lines' => (string) $lines] + ($match === null ? [] : ['match' => $match]));
+            $answer = $fresh && $this->gateway instanceof CachingPanelGateway ? $this->gateway->fresh($request) : $this->gateway->ask($request);
         } catch (PanelRefused $refused) {
             return new NginxLogResult($source, null, $refused->reasonCode, true);
         }
@@ -55,7 +60,8 @@ final readonly class SiteDetailsReader
             return new NginxLogResult($source, null, $failure[0], $failure[1]);
         }
         try {
-            return new NginxLogResult($source, NginxLogTail::fromData($answer->data));
+            // An answer kept before the panel noted the time is taken as read now.
+            return new NginxLogResult($source, NginxLogTail::fromData($answer->data), readAt: $answer->receivedAt ?? time());
         } catch (UnexpectedValueException) {
             return new NginxLogResult($source, null, PanelReason::ANSWER_SHAPE_INVALID);
         }

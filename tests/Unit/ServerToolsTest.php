@@ -603,6 +603,11 @@ env_assert(str_contains($page, 'data-env-security="risk"') && str_contains($page
     && str_contains($page, 'data-env-security-open="https:demo-php.test"') && str_contains($page, 'data-env-security-level-card="enhanced"') && substr_count($page, 'data-env-security-op="level-') === 3
     && str_contains($page, 'data-env-security-found="demo-php.test/public/up.php"') && str_contains($page, 'data-env-security-quarantine="1"') && substr_count($page, 'data-env-security-op="restore"') === 1
     && str_contains($page, 'Nobody blocks password guessing.') && !str_contains($page, 'nobody blocks password guessing'), 'The security page: '.$page);
+// A button that only opens the server's plan does not say the change is made (critics 2026-11-07): the plan page keeps «Применить».
+env_assert(str_contains($page, 'Fix…') && str_contains($page, 'Show what this would do') && !preg_match('/>\s*(Apply|Fix)\s*</', $page), 'The security page\'s buttons say they open a plan.');
+$russian = require dirname(__DIR__, 2).'/resources/lang/ru/admin.php';
+env_assert($russian['security']['fix'] === 'Исправить…' && $russian['actions']['fix'] === 'Исправить…' && $russian['security']['level_apply'] === 'Показать, что будет сделано'
+    && $russian['security']['geo']['apply'] === 'Показать, что будет сделано' && str_contains($russian['security']['checks']['https']['how'], '«Домены и HTTPS»'), 'The Russian buttons say the same.');
 $readOnlySecurity = $securityPage(['fixes' => [], 'allows' => ['fix' => false, 'scan' => false, 'level' => false, 'files-scan' => false, 'quarantine' => false, 'restore' => false, 'geo' => false, 'geo-update' => false]]);
 env_assert(!str_contains($readOnlySecurity, 'data-env-security-fix=') && !str_contains($readOnlySecurity, 'data-env-security-op=') && str_contains($readOnlySecurity, 'data-env-security-how'),
     'Without the right to change the server: what to do, no buttons.');

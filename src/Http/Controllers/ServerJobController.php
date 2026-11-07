@@ -21,6 +21,9 @@ use Larena\Env\Operations\PanelOperations;
  */
 final readonly class ServerJobController
 {
+    /** The server's refusal for a job it has no record of (simai-env's panel gate). */
+    public const string UNKNOWN_JOB = 'unknown_job';
+
     public function __construct(
         private PanelOperations $operations,
         private Factory $views,
@@ -62,6 +65,8 @@ final readonly class ServerJobController
             'status' => $result->status,
             'log' => $result->log,
             'refused' => $result->refused,
+            // A job the server does not know is said as not found, like a site, not as the server's refusal (critics 2026-11-07).
+            'missing' => $result->status === null && $result->reason === self::UNKNOWN_JOB,
             'reasonText' => $result->reason === null ? null : $this->reasonText($result->reason),
             'notice' => $request->session()->get('larena_env_notice'),
         ]);
