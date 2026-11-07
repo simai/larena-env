@@ -17,6 +17,7 @@ use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\NoticeRedirect;
 use Larena\Env\Operations\PanelOperations;
 use Larena\Env\Security\GeoStatus;
+use Larena\Env\Security\SecurityFindings;
 use Larena\Env\Security\SecurityStatus;
 use Larena\Env\Server\ServerOverviewReader;
 use Larena\Env\Server\SiteExtrasReader;
@@ -49,6 +50,8 @@ final readonly class SecurityController
         private Factory $views,
         private Translator $translator,
         private ?AccessOperationAuthorizer $authorizer = null,
+        // The panel's configured address, to tell the checks of its own site from the sites'.
+        private ?\Illuminate\Contracts\Config\Repository $config = null,
     ) {
     }
 
@@ -92,6 +95,8 @@ final readonly class SecurityController
         return $this->views->make('larena-env::admin.security', [
             'source' => $read->source,
             'words' => $status === null ? [] : $this->words($status),
+            // Counted and grouped as the overview's recommended actions count them, not by the server's summary (critics of 0.4.1).
+            'findings' => $status === null ? null : SecurityFindings::of($status, $this->config === null ? [$request->getHost()] : ServerAdminController::panelHosts($request, $this->config)),
             'engines' => array_map(fn (string $engine): string => $this->known('security.engines.'.$engine) ?? $engine, $files->engines ?? []),
             'supported' => $supported,
             'status' => $status,

@@ -32,7 +32,7 @@ function route(string $name, array $parameters = [], bool $absolute = true): str
 
     return match ($name) {
         'larena.env.admin.overview' => '/admin/server/overview',
-        'larena.env.admin.overview.setup' => '/admin/server/setup/'.($parameters['step'] ?? ''),
+        'larena.env.admin.overview.setup' => '/admin/server/overview/setup/'.($parameters['step'] ?? ''),
         default => throw new RuntimeException($name),
     }.($query === [] ? '' : '?'.http_build_query($query));
 }
@@ -107,7 +107,7 @@ $controller = new ServerSetupController($setup, new ServerOverviewReader($gatewa
     new Larena\Access\Runtime\AccessOperationAuthorizer($config, 'testing'));
 $session = new Store('panel', new ArraySessionHandler(10));
 $request = static function (string $method = 'GET', array $input = [], string $subject = 'test:system', array $query = []) use ($session): Request {
-    $request = Request::create('/admin/server/setup', $method, $method === 'GET' ? $query : $input);
+    $request = Request::create('/admin/server/overview/setup', $method, $method === 'GET' ? $query : $input);
     $request->setLaravelSession($session);
     $request->attributes->set(ResolvePanelActor::ATTRIBUTE, new PanelActor('admin@stand.test'));
     $request->attributes->set('larena_access_actor', $subject);
@@ -122,11 +122,11 @@ env_assert($views->data['step'] === 'protection' && $views->data['phase'] === 'f
     && count($views->data['wizard']) === 6 && array_key_exists('level', $views->data['data']), 'The level step takes its choice in the wizard.');
 
 // A step the wizard has not goes to the step it opens on.
-env_assert($location($controller->show($request(), 'nosuch')) === '/admin/server/setup/'.array_key_first(Larena\Env\Setup\ServerSetup::STEPS), 'An unknown step goes to the right address: '.$location($controller->show($request(), 'nosuch')));
+env_assert($location($controller->show($request(), 'nosuch')) === '/admin/server/overview/setup/'.array_key_first(Larena\Env\Setup\ServerSetup::STEPS), 'An unknown step goes to the right address: '.$location($controller->show($request(), 'nosuch')));
 
 // The fields: the server's plan, shown in the same step; the arguments wait in the session, sealed.
 $planned = $controller->submit($request('POST', ['phase' => 'form', 'wizard-action' => 'next', 'set' => 'enhanced']), 'protection');
-env_assert($location($planned) === '/admin/server/setup/protection', 'The plan stays in the step: '.$location($planned));
+env_assert($location($planned) === '/admin/server/overview/setup/protection', 'The plan stays in the step: '.$location($planned));
 $kept = $session->get('larena_env_setup')['protection'] ?? null;
 env_assert(is_array($kept) && $kept['command'] === 'security:level' && str_starts_with($kept['args'], 'sealed:') && !str_contains(json_encode($kept), 'enhanced'),
     'The arguments wait sealed in the session.');
@@ -137,35 +137,52 @@ env_assert($views->data['phase'] === 'review' && $views->data['plan']?->command 
 // A wrong value is refused in the step, nothing is kept.
 $session->forget('larena_env_setup');
 $refused = $controller->submit($request('POST', ['phase' => 'form', 'wizard-action' => 'next', 'set' => 'paranoid']), 'protection');
-env_assert(str_starts_with($location($refused), '/admin/server/setup/protection') && $session->get('larena_env_setup_error') !== null
+env_assert(str_starts_with($location($refused), '/admin/server/overview/setup/protection') && $session->get('larena_env_setup_error') !== null
     && !isset($session->get('larena_env_setup', [])['protection']), 'A wrong level is said in the step.');
 
 // «Применить»: the change runs from the step; the recorded job is over at once, so the step is done and says so.
 $controller->submit($request('POST', ['phase' => 'form', 'wizard-action' => 'next', 'set' => 'enhanced']), 'protection');
 $applied = $controller->submit($request('POST', ['phase' => 'review', 'wizard-action' => 'apply']), 'protection');
-env_assert($location($applied) === '/admin/server/setup/protection' && is_string($session->get('larena_env_setup')['protection']['job'] ?? null), 'The run starts from the step.');
+env_assert($location($applied) === '/admin/server/overview/setup/protection' && is_string($session->get('larena_env_setup')['protection']['job'] ?? null), 'The run starts from the step.');
 $controller->show($request(), 'protection');
 env_assert($views->data['phase'] === 'result' && $views->data['wizard']['protection']['state'] === 'done' && $setup->marks()['protection'] === ServerSetup::DONE
     && !isset($session->get('larena_env_setup', [])['protection']), 'The run went through: the step is done, nothing waits.');
 $on = $controller->submit($request('POST', ['phase' => 'result', 'wizard-action' => 'next']), 'protection');
-env_assert($location($on) === '/admin/server/setup/backups', 'Next goes to the following step: '.$location($on));
+env_assert($location($on) === '/admin/server/overview/setup/backups', 'Next goes to the following step: '.$location($on));
 
 // Put off; read; the last step leads to the result, the result to the overview.
-env_assert($location($controller->submit($request('POST', ['phase' => 'form', 'wizard-action' => 'skip']), 'backups')) === '/admin/server/setup/updates'
+env_assert($location($controller->submit($request('POST', ['phase' => 'form', 'wizard-action' => 'skip']), 'backups')) === '/admin/server/overview/setup/updates'
     && $setup->marks()['backups'] === ServerSetup::SKIPPED, 'A step is put off.');
-env_assert($location($controller->submit($request('POST', ['phase' => 'info', 'wizard-action' => 'next']), 'login')) === '/admin/server/setup/address'
+env_assert($location($controller->submit($request('POST', ['phase' => 'info', 'wizard-action' => 'next']), 'login')) === '/admin/server/overview/setup/address'
     && $setup->marks()['login'] === ServerSetup::DONE, 'The sign-in step is read and done.');
-env_assert($location($controller->submit($request('POST', ['phase' => 'info', 'wizard-action' => 'next']), 'updates')) === '/admin/server/setup/finish', 'Then the result.');
+env_assert($location($controller->submit($request('POST', ['phase' => 'info', 'wizard-action' => 'next']), 'updates')) === '/admin/server/overview/setup/finish', 'Then the result.');
 env_assert($location($controller->submit($request('POST', ['wizard-action' => 'done']), 'finish')) === '/admin/server/overview', 'The result leads to the overview.');
 
 // Only who may change the server changes it.
 $session->forget('larena_env_setup');
 $staff = $controller->submit($request('POST', ['phase' => 'form', 'wizard-action' => 'next', 'set' => 'strict'], 'test:staff'), 'protection');
-env_assert(str_starts_with($location($staff), '/admin/server/setup/protection') && !isset($session->get('larena_env_setup', [])['protection']), 'Without the right nothing is planned.');
+env_assert(str_starts_with($location($staff), '/admin/server/overview/setup/protection') && !isset($session->get('larena_env_setup', [])['protection']), 'Without the right nothing is planned.');
 
 // «Изменить» in the plan goes back to the fields.
 $controller->submit($request('POST', ['phase' => 'form', 'wizard-action' => 'next', 'set' => 'strict']), 'protection');
 $edit = $controller->submit($request('POST', ['phase' => 'review', 'wizard-action' => 'edit']), 'protection');
-env_assert($location($edit) === '/admin/server/setup/protection?change=1' && !isset($session->get('larena_env_setup', [])['protection']), 'Change goes back to the fields.');
+env_assert($location($edit) === '/admin/server/overview/setup/protection?change=1' && !isset($session->get('larena_env_setup', [])['protection']), 'Change goes back to the fields.');
+
+// The setup lies under the overview's address, so the admin's menu marks «Обзор» (the row whose address leads the page's,
+// not «Сайты» at /admin/server), and the breadcrumbs end with the setup after the overview (critics of 0.4.1).
+$routes = new Illuminate\Routing\Router(new Illuminate\Events\Dispatcher());
+$routes->group([], static function () use ($routes): void {
+    $router = $routes;
+    require dirname(__DIR__, 2).'/routes/admin.php';
+});
+$named = $routes->getRoutes();
+$named->refreshNameLookups();
+foreach (['larena.env.admin.overview.setup', 'larena.env.admin.overview.setup.submit'] as $name) {
+    env_assert(str_starts_with((string) $named->getByName($name)?->uri(), $named->getByName('larena.env.admin.overview')?->uri().'/'), 'The setup is under the overview: '.$name);
+}
+$crumbs = $request();
+$controller->show($crumbs, 'protection');
+$tail = $crumbs->attributes->get(Larena\Admin\View\AdminShellViewComposer::BREADCRUMB_TAIL);
+env_assert(($tail['parent_href'] ?? null) === '/admin/server/overview' && ($tail['items'][0]['label'] ?? null) === 'Server setup', 'The breadcrumbs end with the setup: '.json_encode($tail));
 
 echo "ServerSetupTest passed.\n";

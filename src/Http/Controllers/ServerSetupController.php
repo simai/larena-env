@@ -121,6 +121,7 @@ final readonly class ServerSetupController
             $message = $error;
         }
 
+        $this->breadcrumbs($request);
         $page = $this->views->make('larena-env::admin.setup', [
             'step' => $step,
             'phase' => $phase,
@@ -137,6 +138,21 @@ final readonly class ServerSetupController
 
         // A change still under way: the browser asks again in a few seconds (no script in the page).
         return $phase === 'running' ? new Response($page->render(), 200, ['Refresh' => '3']) : $page;
+    }
+
+    /**
+     * The breadcrumbs name the setup after the overview it belongs to, «Сервер › Обзор › Настройка сервера», the
+     * overview a link back (critics of 0.4.1: the last step said «Обзор»). The admin draws them where it is installed.
+     */
+    private function breadcrumbs(Request $request): void
+    {
+        if (!defined(\Larena\Admin\View\AdminShellViewComposer::class.'::BREADCRUMB_TAIL')) {
+            return;
+        }
+        $request->attributes->set(\Larena\Admin\View\AdminShellViewComposer::BREADCRUMB_TAIL, [
+            'parent_href' => route('larena.env.admin.overview', [], false),
+            'items' => [['label' => $this->text('setup.title')]],
+        ]);
     }
 
     /**

@@ -591,18 +591,26 @@ $words = $securityController->words($security);
 env_assert($words['security_updates']['title'] === 'Security updates' && $words['fail2ban']['line'] === 'Nobody blocks password guessing.'
     && $words['file_scan']['line'] === 'The sites\' files were not checked yet.' && $words['https:demo-php.test']['how'] !== '', 'Each check in the panel\'s words.');
 $securityPage = static fn (array $data): string => $factory->make('larena-env::admin.security', $data + ['source' => 'recorded', 'supported' => true, 'status' => $security,
-    'words' => $words, 'engines' => ['simai-env signatures', 'ClamAV antivirus'], 'fixes' => ['security_updates' => true, 'fail2ban' => true, 'https:demo-php.test' => false],
+    'words' => $words, 'findings' => \Larena\Env\Security\SecurityFindings::of($security), 'engines' => ['simai-env signatures', 'ClamAV antivirus'], 'fixes' => ['security_updates' => true, 'fail2ban' => true, 'https:demo-php.test' => false],
     'allows' => ['fix' => true, 'scan' => true, 'level' => true, 'files-scan' => true, 'quarantine' => true, 'restore' => true, 'geo' => true, 'geo-update' => true,
         'mcp-enable' => true, 'mcp-disable' => true, 'mcp-key-add' => true, 'mcp-key-remove' => true],
     'levels' => \Larena\Env\Security\SecurityStatus::LEVELS, 'files' => $found, 'quarantine' => $kept, 'filesSupported' => true, 'notice' => null,
     'geo' => null, 'geoSupported' => false, 'lookup' => null, 'lookupSupported' => false, 'countries' => [], 'myAddress' => '203.0.113.7',
     'mcp' => null, 'mcpSupported' => false, 'owners' => []])->render();
 $page = $securityPage([]);
-env_assert(str_contains($page, 'data-env-security="risk"') && str_contains($page, 'data-env-security-score="45"') && str_contains($page, 'data-env-security-problems="13"')
-    && str_contains($page, 'data-env-security-fix="security_updates"') && str_contains($page, 'data-env-security-fix="fail2ban"') && !str_contains($page, 'data-env-security-fix="https:demo-php.test"')
-    && str_contains($page, 'data-env-security-open="https:demo-php.test"') && str_contains($page, 'data-env-security-level-card="enhanced"') && substr_count($page, 'data-env-security-op="level-') === 3
+// The checks as the overview counts them (critics of 0.4.1): the two sites' backup check is one finding with both sites
+// under it, the four local names' HTTPS one quiet line, the counts the panel's and not the server's summary (1/12/4).
+env_assert(str_contains($page, 'data-env-security="risk"') && str_contains($page, 'data-env-security-score="45"') && str_contains($page, 'data-env-security-problems="8"')
+    && str_contains($page, 'data-env-security-fix="security_updates"') && str_contains($page, 'data-env-security-fix="fail2ban"') && !str_contains($page, 'data-env-security-check="https:demo-php.test"')
+    && str_contains($page, 'data-env-security-local="4"') && str_contains($page, 'Local addresses need no HTTPS: demo-owned.test, demo-php.test, demo-redirect.test, demo-static.test.')
+    && str_contains($page, 'id="env-security-check-backup_verify"') && str_contains($page, 'data-env-security-sites') && str_contains($page, 'data-env-security-open="backup_verify:demo-static.test"')
+    && str_contains($page, 'Urgent: 1 · advised: 7 · done: 4') && str_contains($page, 'data-env-security-level-card="enhanced"') && substr_count($page, 'data-env-security-op="level-') === 3
     && str_contains($page, 'data-env-security-found="demo-php.test/public/up.php"') && str_contains($page, 'data-env-security-quarantine="1"') && substr_count($page, 'data-env-security-op="restore"') === 1
     && str_contains($page, 'Nobody blocks password guessing.') && !str_contains($page, 'nobody blocks password guessing'), 'The security page: '.$page);
+// The checks of the panel's own address stand with who may open the panel, its button leads there.
+$panelSecurity = $securityPage(['findings' => \Larena\Env\Security\SecurityFindings::of($security, ['demo-owned.test'])]);
+env_assert(str_contains($panelSecurity, 'data-env-security-panel="1"') && str_contains($panelSecurity, 'data-env-security-open-panel="backup_verify:demo-owned.test"')
+    && str_contains($panelSecurity, 'data-env-security-open="backup_verify:demo-static.test"') && str_contains($panelSecurity, 'data-env-security-problems="9"'), 'The panel\'s own address apart: '.$panelSecurity);
 $readOnlySecurity = $securityPage(['fixes' => [], 'allows' => ['fix' => false, 'scan' => false, 'level' => false, 'files-scan' => false, 'quarantine' => false, 'restore' => false, 'geo' => false, 'geo-update' => false]]);
 env_assert(!str_contains($readOnlySecurity, 'data-env-security-fix=') && !str_contains($readOnlySecurity, 'data-env-security-op=') && str_contains($readOnlySecurity, 'data-env-security-how'),
     'Without the right to change the server: what to do, no buttons.');

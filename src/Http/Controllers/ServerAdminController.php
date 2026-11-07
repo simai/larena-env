@@ -10,8 +10,10 @@ use Illuminate\Http\Request;
 use Larena\Admin\Assets\AdminProductAssetManifest;
 use Larena\Admin\Runtime\AdminDataviewPagePresenter;
 use Larena\Env\Admin\RecommendedActions;
+use Larena\Env\Admin\ServerSitesCount;
 use Larena\Env\Admin\ServerSitesPage;
 use Larena\Env\History\MetricSamples;
+use Larena\Env\Security\SecurityFindings;
 use Larena\Env\Server\ServerOverviewReader;
 use Larena\Env\Warnings\PanelWarnings;
 
@@ -83,8 +85,7 @@ final readonly class ServerAdminController
         /** @param array<string, string> $replace */
         $text = fn (string $key, array $replace = []): string => (string) $this->translator->get('larena-env::admin.'.$key, $replace);
         // The gateway lists every site of the server, the panel's own among it; it is reached by the address it answers on.
-        $ownHost = parse_url((string) $this->config->get('app.url'), PHP_URL_HOST);
-        $overview = $result->overview?->withoutSites(is_string($ownHost) ? [$request->getHost(), $ownHost] : [$request->getHost()]);
+        $overview = $result->overview?->withoutSites(self::panelHosts($request, $this->config));
 
         // The server's load now (Panel plan 3.3), when the server's gateway reports it: the whole server's, so only the
         // system level reads it, and it also tells whether a disk is running out.
@@ -126,8 +127,10 @@ final readonly class ServerAdminController
             // What is left of the server's setup, until done or hidden.
             // «Рекомендуемые действия»: what to do now, what is advised, what is done (owner 2026-11-06).
             'actions' => $actions,
-            'actionCounts' => ['now' => RecommendedActions::count($actions, RecommendedActions::NOW), 'todo' => RecommendedActions::count($actions, RecommendedActions::TODO),
-                'done' => RecommendedActions::count($actions, RecommendedActions::DONE)],
+            // The security part of the counts is the security page's own (SecurityFindings); the rest is said in words.
+            'actionCounts' => RecommendedActions::counts($actions),
+            // The sites in one line under the load (critics of 0.4.1).
+            'sitesCount' => $section === 'overview' && $overview !== null ? ServerSitesCount::of($overview->sites, $now) : null,
             // A safe update waiting (simai-env 1.32.0): only a hint here, the update screen says what it changes.
             'updates' => $updates,
             'historyFromServer' => $overview?->capabilities?->allows('self:metrics-history') === true,
@@ -194,11 +197,25 @@ final readonly class ServerAdminController
             $fixes[$check->id] = $canOperate && $this->security->fixable($check->fixCommand, $check->fixArgs, $capabilities);
         }
 
-        return RecommendedActions::of($security, $security === null ? [] : $this->security->words($security), $fixes,
+        return RecommendedActions::of($security === null ? null : SecurityFindings::of($security, self::panelHosts($request, $this->config)),
+            $security === null ? [] : $this->security->words($security), $fixes,
             route('larena.env.admin.security', [], false), route('larena.env.admin.security.plan', [], false),
             static fn (string $domain): string => route('larena.env.admin.site', ['domain' => $domain], false),
             $canOperate ? $this->setupSteps->states($actor) : [], $canOperate ? $this->setupSteps->links() : [],
-            $updates, route('larena.env.admin.software', [], false).'#update', $text);
+            $updates, route('larena.env.admin.software', [], false).'#update', $text, route('larena.env.admin.panel.access', [], false));
+    }
+
+    /**
+     * The addresses the panel itself answers on: the one asked and the configured one. The gateway lists the panel's own
+     * site among the server's, and its checks belong with who may open the panel, not among the sites.
+     *
+     * @return list<string>
+     */
+    public static function panelHosts(Request $request, \Illuminate\Contracts\Config\Repository $config): array
+    {
+        $ownHost = parse_url((string) $config->get('app.url'), PHP_URL_HOST);
+
+        return array_values(array_unique(is_string($ownHost) ? [$request->getHost(), $ownHost] : [$request->getHost()]));
     }
 
     /** @return list<array{target: string, available: ?string}> the targets the server has an update for */

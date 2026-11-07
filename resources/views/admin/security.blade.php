@@ -29,7 +29,7 @@
             </div>
             <div class="grow min-w-0" style="flex-basis: 14rem;">
                 <h2 id="env-security-score" class="text-2 m-0">{{ __('larena-env::admin.security.grades.'.$status->grade) }}</h2>
-                <p class="m-0 color-on-surface-variant" data-env-security-summary>{{ __('larena-env::admin.security.summary', ['risk' => (string) $status->summary['risk'], 'warn' => (string) $status->summary['warn'], 'ok' => (string) $status->summary['ok']]) }}</p>
+                <p class="m-0 color-on-surface-variant" data-env-security-summary>{{ __('larena-env::admin.security.summary', ['risk' => (string) $findings->count('now'), 'warn' => (string) $findings->count('todo'), 'ok' => (string) $findings->count('done')]) }}</p>
                 @if ($status->checkedAt !== null)
                     <p class="m-0 color-on-surface-variant">{{ __('larena-env::admin.security.checked', ['when' => \Larena\Env\Server\Moment::human($status->checkedAt)]) }}</p>
                 @endif
@@ -48,53 +48,42 @@
             @endif
         </section>
 
-        <section class="larena-panel larena-panel-padded" data-env-security-problems="{{ count($status->problems()) }}" aria-labelledby="env-security-problems">
+        {{-- The findings as the overview counts them (SecurityFindings): one line per check with its sites under it, the
+             local names' HTTPS in one quiet line, the panel's own address with who may open the panel (critics of 0.4.1). --}}
+        <section class="larena-panel larena-panel-padded" data-env-security-problems="{{ count($findings->problems()) }}" aria-labelledby="env-security-problems">
             <h2 id="env-security-problems" class="text-2">{{ __('larena-env::admin.security.problems') }}</h2>
-            @if ($status->problems() === [])
+            @if ($findings->problems() === [])
                 <p class="m-0">{{ __('larena-env::admin.security.no_problems') }}</p>
-            @else
+            @elseif ($findings->problems(false) !== [])
                 <ul class="m-0 p-0" style="list-style: none;">
-                    @foreach ($status->problems() as $check)
-                        <li id="env-security-check-{{ $check->id }}" class="flex flex-wrap items-cross-center g-2 p-y-2 border-top-1 border-top-solid border-outline-variant" data-env-security-check="{{ $check->id }}" data-env-security-status="{{ $check->status }}">
-                            <sf-badge appearance="tonal" status="{{ $check->status === 'risk' ? 'error' : 'warning' }}" text="{{ __('larena-env::admin.security.statuses.'.$check->status) }}"></sf-badge>
-                            <div class="grow min-w-0" style="flex-basis: 16rem;">
-                                <div style="font-weight: 600; overflow-wrap: anywhere;">
-                                    {{ $words[$check->id]['title'] }}@if ($check->domain !== null) · {{ $check->domain }}@endif
-                                </div>
-                                <div class="color-on-surface-variant" style="overflow-wrap: anywhere;">
-                                    {{ $words[$check->id]['line'] }}
-                                </div>
-                                @if (!($fixes[$check->id] ?? false))
-                                    <details data-env-security-how>
-                                        <summary style="cursor: pointer;">{{ __('larena-env::admin.security.how') }}</summary>
-                                        <p class="m-0 p-y-1">{{ $words[$check->id]['how'] }}</p>
-                                    </details>
-                                @endif
-                            </div>
-                            @if ($fixes[$check->id] ?? false)
-                                <form method="post" action="{{ route('larena.env.admin.security.plan', [], false) }}" class="m-0" data-env-security-fix="{{ $check->id }}">
-                                    @csrf
-                                    <input type="hidden" name="op" value="fix">
-                                    <input type="hidden" name="check" value="{{ $check->id }}">
-                                    <button type="submit" class="larena-button larena-button-primary" style="min-height: 2.75rem;">{{ __('larena-env::admin.security.fix') }}</button>
-                                </form>
-                            @elseif ($check->domain !== null)
-                                <a class="larena-button" style="min-height: 2.75rem;" href="{{ route('larena.env.admin.site', ['domain' => $check->domain], false) }}{{ $check->check === 'https' ? '?tab=domains' : ($check->check === 'backup_verify' ? '?tab=backups' : '') }}" data-env-security-open="{{ $check->id }}">{{ __('larena-env::admin.security.open_site') }}</a>
-                            @endif
-                        </li>
+                    @foreach ($findings->problems(false) as $finding)
+                        @include('larena-env::admin.partials.security-finding', ['finding' => $finding])
                     @endforeach
                 </ul>
             @endif
-            @if ($status->rest() !== [])
-                <details class="m-t-2" data-env-security-fine>
-                    <summary style="cursor: pointer;">{{ __('larena-env::admin.security.fine', ['count' => (string) count($status->rest())]) }}</summary>
+            @if ($findings->problems(true) !== [])
+                <div class="m-t-2" data-env-security-panel="{{ count($findings->problems(true)) }}">
+                    <h3 class="text-1 m-0">{{ __('larena-env::admin.panel_access.title') }}</h3>
                     <ul class="m-0 p-0" style="list-style: none;">
-                        @foreach ($status->rest() as $check)
-                            <li class="flex flex-wrap items-cross-center g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-security-check="{{ $check->id }}" data-env-security-status="{{ $check->status }}">
-                                <sf-badge appearance="tonal" status="{{ $check->status === 'ok' ? 'success' : 'neutral' }}" text="{{ __('larena-env::admin.security.statuses.'.$check->status) }}"></sf-badge>
+                        @foreach ($findings->problems(true) as $finding)
+                            @include('larena-env::admin.partials.security-finding', ['finding' => $finding])
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+            @if ($findings->local !== [])
+                <p class="m-0 m-t-1 color-on-surface-variant" data-env-security-local="{{ count($findings->local) }}" style="overflow-wrap: anywhere;">{{ __('larena-env::admin.security.local_https', ['sites' => implode(', ', $findings->local)]) }}</p>
+            @endif
+            @if ($findings->rest() !== [])
+                <details class="m-t-2" data-env-security-fine>
+                    <summary style="cursor: pointer;">{{ __('larena-env::admin.security.fine', ['count' => (string) count($findings->rest())]) }}</summary>
+                    <ul class="m-0 p-0" style="list-style: none;">
+                        @foreach ($findings->rest() as $finding)
+                            <li class="flex flex-wrap items-cross-center g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-security-finding="{{ $finding['key'] }}" data-env-security-status="{{ $finding['checks'][0]->status }}">
+                                <sf-badge appearance="tonal" status="{{ $finding['state'] === 'done' ? 'success' : 'neutral' }}" text="{{ __('larena-env::admin.security.statuses.'.$finding['checks'][0]->status) }}"></sf-badge>
                                 <span class="grow min-w-0" style="overflow-wrap: anywhere;">
-                                    {{ $words[$check->id]['title'] }}@if ($check->domain !== null) · {{ $check->domain }}@endif
-                                    <span class="color-on-surface-variant">— {{ $words[$check->id]['line'] }}</span>
+                                    {{ $words[$finding['checks'][0]->id]['title'] }}@if ($finding['sites'] !== []) · {{ implode(', ', $finding['sites']) }}@endif
+                                    <span class="color-on-surface-variant">— {{ $words[$finding['checks'][0]->id]['line'] }}</span>
                                 </span>
                             </li>
                         @endforeach
