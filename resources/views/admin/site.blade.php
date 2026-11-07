@@ -165,6 +165,13 @@
         @elseif ($tab === 'backups')
             <section class="larena-panel larena-panel-padded" data-env-backups aria-labelledby="env-site-backups">
                 <h2 id="env-site-backups" class="text-2">{{ __('larena-env::admin.backups.title') }}</h2>
+                {{-- One line with the main reason, as the sites list and the backups page say it (critics of 0.4.1: three
+                     warnings at once, one of them false): a failed attempt, else none yet, else one older than two days. --}}
+                @if (($backupState ?? null) !== null)
+                    <p data-env-backup-state="{{ $backupState['state'] }}" @if ($backupState['color'] === 'danger') role="alert" @endif>
+                        <sf-badge appearance="tonal" status="{{ $backupState['color'] === 'danger' ? 'error' : ($backupState['color'] === 'success' ? 'success' : 'info') }}" text="{{ $backupState['words'] }}"></sf-badge>
+                    </p>
+                @endif
                 @if ($site->backupSchedule === null)
                     <p>{{ __('larena-env::admin.backups.no_schedule') }}</p>
                 @else
@@ -188,12 +195,14 @@
                         <a href="{{ route('larena.env.admin.storages', $site->lastOffsite['storage'] === null ? [] : ['storage' => $site->lastOffsite['storage']], false) }}">{{ __('larena-env::admin.backups.offsite_open') }}</a>
                     </p>
                 @endif
-                @foreach (array_filter($warnings ?? [], static fn ($warning): bool => in_array($warning->kind, ['backup_failed', 'backup_missing', 'backup_offsite_failed'], true) && $warning->domain === $domain) as $backupWarning)
-                    <p role="alert" data-env-backup-warning="{{ $backupWarning->kind }}">{{ __('larena-env::admin.warnings.'.$backupWarning->kind, $backupWarning->replace) }}</p>
-                @endforeach
-                @if ($site->backups === [])
-                    <p>{{ __('larena-env::admin.backups.none') }}</p>
-                @else
+                {{-- A copy not sent away from the server is another matter than the backup itself; said here only when the
+                     site's description has no last sending above. --}}
+                @if ($site->lastOffsite === null)
+                    @foreach (array_filter($warnings ?? [], static fn ($warning): bool => $warning->kind === 'backup_offsite_failed' && $warning->domain === $domain) as $backupWarning)
+                        <p role="alert" data-env-backup-warning="{{ $backupWarning->kind }}">{{ __('larena-env::admin.warnings.'.$backupWarning->kind, $backupWarning->replace) }}</p>
+                    @endforeach
+                @endif
+                @if ($site->backups !== [])
                     <ul class="m-0 p-0" style="list-style: none;">
                         @foreach ($site->backups as $backup)
                             <li class="flex flex-wrap items-cross-center g-1 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-backup="{{ $backup->name }}">

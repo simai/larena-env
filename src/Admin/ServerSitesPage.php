@@ -14,7 +14,8 @@ final class ServerSitesPage
     // What a person checks first (Panel plan 2.1): whether it works, what it runs, its certificate and its backups. The
     // state and the kind are choices: a coloured mark in the cell and a filter of the list (owner-approved prototype,
     // 2026-11-02). The list fits a laptop without scrolling sideways (the panel's UX audit, LAY-04): whose the site is
-    // and its disk are on the site's own screen, the kinds are short and a backup is its time.
+    // and its disk are on the site's own screen, the kinds are short and the backups are their state, as
+    // SiteBackupSummary says it everywhere.
     private const array COLUMNS = ['domain', 'answers', 'profile', 'certificate', 'backups'];
 
     /** The kinds a site can be, as the new-site screen names them. */
@@ -24,18 +25,23 @@ final class ServerSitesPage
     {
     }
 
-    /** @param callable(string, array<string, string>=): string $text */
-    public static function of(ServerOverview $overview, callable $text, ?\DateTimeImmutable $now = null): AdminDataviewPage
+    /**
+     * @param callable(string, array<string, string>=): string $text
+     * @param array<string, ?string> $failures the sites whose last backup failed (SiteBackupSummary::failures)
+     */
+    public static function of(ServerOverview $overview, callable $text, ?\DateTimeImmutable $now = null, array $failures = []): AdminDataviewPage
     {
         $now ??= new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
-        $rows = array_map(static fn (SiteSummary $site): array => self::row($site, $text), $overview->sites);
-        // The certificate and the last backup as coloured marks, their words kept (critics 2026-11-07): each value the
-        // rows hold is an option with the colour of what it means.
+        $backups = array_map(static fn (SiteSummary $site): array => SiteBackupSummary::row($site, $now, $failures, $text), $overview->sites);
+        $rows = array_map(static fn (SiteSummary $site, array $backup): array => self::row($site, $backup['words'], $text), $overview->sites, $backups);
+        // The certificate and the backups as coloured marks, their words kept (critics 2026-11-07): each value the rows
+        // hold is an option with the colour of what it means. The backups' words and colour are the ones the site's own
+        // tab and the backups page say (critics of 0.4.1).
         /** @var array<string, array<string, string>> $marks */
         $marks = ['certificate' => [], 'backups' => []];
         foreach ($overview->sites as $index => $site) {
             $marks['certificate'][$rows[$index]['certificate']] = self::certificateColor($site);
-            $marks['backups'][$rows[$index]['backups']] = self::backupColor($site, $now);
+            $marks['backups'][$backups[$index]['words']] = $backups[$index]['color'];
         }
 
         return new AdminDataviewPage(
@@ -72,26 +78,11 @@ final class ServerSitesPage
         return $site->ssl === 'none' ? 'danger' : 'warning';
     }
 
-    /** Red with no backup or one older than two days (PanelWarnings::BACKUP_HOURS), green otherwise. */
-    private static function backupColor(SiteSummary $site, \DateTimeImmutable $now): string
-    {
-        if ($site->lastBackup === null) {
-            return in_array($site->profile, ['redirect', 'alias'], true) ? 'neutral' : 'danger';
-        }
-        try {
-            $age = $now->getTimestamp() - (new \DateTimeImmutable($site->lastBackup))->getTimestamp();
-        } catch (\Exception) {
-            return 'neutral';
-        }
-
-        return $age > \Larena\Env\Warnings\PanelWarnings::BACKUP_HOURS * 3600 ? 'danger' : 'success';
-    }
-
     /**
      * @param callable(string, array<string, string>=): string $text
      * @return array<string, string>
      */
-    private static function row(SiteSummary $site, callable $text): array
+    private static function row(SiteSummary $site, string $backups, callable $text): array
     {
         return [
             'id' => $site->domain,
@@ -100,9 +91,7 @@ final class ServerSitesPage
             'certificate' => $site->certificateDaysLeft !== null
                 ? $text($site->certificateDaysLeft <= 14 ? 'sites.certificate_ends' : 'sites.certificate_left', ['days' => (string) $site->certificateDaysLeft])
                 : ($site->ssl === 'none' ? $text(RecommendedActions::local($site->domain) ? 'sites.certificate_local' : 'sites.certificate_none') : $site->ssl),
-            'backups' => $site->lastBackup !== null
-                ? \Larena\Env\Server\Moment::short($site->lastBackup)
-                : $text($site->backupSchedule ? 'sites.backups_scheduled' : 'sites.backups_unscheduled'),
+            'backups' => $backups,
             'answers' => SiteState::of($site->answersChecked, $site->answers),
         ];
     }

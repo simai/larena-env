@@ -21,6 +21,7 @@ use Larena\Env\Server\ServerOverviewReader;
 use Larena\Env\Server\SiteDetailsReader;
 use Larena\Env\Server\SiteExtrasReader;
 use Larena\Env\Server\SiteLogView;
+use Larena\Env\Admin\SiteBackupSummary;
 use Larena\Env\Warnings\PanelWarningSource;
 use Larena\Env\Warnings\PanelWarnings;
 
@@ -165,6 +166,8 @@ final readonly class SiteAdminController
                 array_map(static fn (SiteOperation $operation): array => $operation->accountChoices($sftpAccounts ?? []), $operations)),
             // What needs attention on this site (Panel plan 4.4), as the sites' list says it.
             'warnings' => $siteWarnings['warnings'] ?? null,
+            // The site's backups in one line, as the sites list and the backups page say them (critics of 0.4.1).
+            'backupState' => $site !== null && $tab === 'backups' ? $this->backupState($actor, $site, $overview, $capabilities) : null,
             'canAcknowledge' => $capabilities->allows('self:alerts-ack') && $this->canOperate($request),
             'capabilities' => $capabilities,
             // Whether a certificate may be checked through DNS: the server keeps a Cloudflare token (simai-env 1.36.0).
@@ -187,6 +190,32 @@ final readonly class SiteAdminController
             'logReasonText' => $log === null || $log->reason === null ? null : $this->reasonText($log->reason),
             'notice' => $request->session()->get('larena_env_notice'),
         ]);
+    }
+
+    /**
+     * The site's backup state by SiteBackupSummary's one rule: from the server's list of sites, as the sites list reads
+     * it, else from the site's own description; a failure from the server's alerts.
+     *
+     * @return array{domain: string, state: string, last: ?string, failed: ?string, scheduled: bool, words: string, color: string, schedule: string}
+     */
+    private function backupState(PanelActor $actor, \Larena\Env\Server\SiteDetails $site, ?\Larena\Env\Server\ServerOverview $overview, PanelCapabilities $capabilities): array
+    {
+        $summary = null;
+        foreach ($overview->sites ?? [] as $candidate) {
+            if (strcasecmp($candidate->domain, $site->domain) === 0) {
+                $summary = $candidate;
+            }
+        }
+        if ($summary === null) {
+            $times = array_filter(array_map(static fn (\Larena\Env\Server\SiteBackup $backup): ?string => $backup->createdAt, $site->backups), 'is_string');
+            rsort($times);
+            $summary = new \Larena\Env\Server\SiteSummary($site->domain, $site->profile, $site->php, $site->ssl, $site->owner, $site->databaseEngine, $site->release, null,
+                backupSchedule: $site->backupSchedule !== null, lastBackup: $times[0] ?? null);
+        }
+        $failures = SiteBackupSummary::failures($capabilities->allows('self:alerts') ? $this->extras->alerts($actor) : null);
+
+        return SiteBackupSummary::row($summary, PanelWarnings::now(), $failures,
+            fn (string $key, array $replace = []): string => (string) $this->translator->get('larena-env::admin.'.$key, $replace));
     }
 
     /**

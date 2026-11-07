@@ -137,7 +137,9 @@ final readonly class ServerAdminController
             'reason' => $result->reason,
             'reasonText' => $result->reason === null ? null : $this->reasonText($result->reason),
             'sitesView' => $overview === null || $section !== 'sites' ? null : $this->dataviews->present(
-                ServerSitesPage::of($overview, $text),
+                // A failed backup is known from the server's own alerts only: the list says it as the site's tab does.
+                ServerSitesPage::of($overview, $text, $now, \Larena\Env\Admin\SiteBackupSummary::failures(
+                    $overview->capabilities?->allows('self:alerts') === true ? $this->extras?->alerts($actor) : null)),
                 AdminProductAssetManifest::dataviewActivation(),
             ),
         ]);

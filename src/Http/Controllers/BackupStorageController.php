@@ -79,8 +79,11 @@ final readonly class BackupStorageController
             'allows' => $allows,
             'providers' => array_keys(BackupStorage::PROVIDERS),
             // Every site's last backup at a glance, the panel's own left out (critics 2026-11-07: /backups showed only storages).
+            // A failure named as in the sites list and on the site's tab (critics of 0.4.1: here it read «Копий нет»).
             'siteBackups' => \Larena\Env\Admin\SiteBackupSummary::of($read->overview?->withoutSites([$request->getHost()])->sites ?? [],
-                new \DateTimeImmutable('now', new \DateTimeZone('UTC'))),
+                new \DateTimeImmutable('now', new \DateTimeZone('UTC')),
+                \Larena\Env\Admin\SiteBackupSummary::failures($capabilities->allows('self:alerts') ? $this->extras->alerts($actor) : null),
+                fn (string $key, array $replace = []): string => (string) $this->translator->get('larena-env::admin.'.$key, $replace)),
             'notice' => $request->session()->get('larena_env_notice'),
         ]);
     }
