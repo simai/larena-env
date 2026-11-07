@@ -182,7 +182,8 @@
             "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/NewSitePortTest.php",
             "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/EnvAlertSourceTest.php",
             "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/SiteObjectMenuTest.php",
-            "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/CachingGatewayTest.php"
+            "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/CachingGatewayTest.php",
+            "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/ServerSetupTest.php"
         ],
         "test:unit": [
             "@test"

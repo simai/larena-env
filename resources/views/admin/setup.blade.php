@@ -5,44 +5,48 @@
 @section('eyebrow', __('larena-env::admin.eyebrow'))
 
 @section('content')
-    {{-- The server's first setup (ENV 2026-11-06): one step at a time; each is done on its own screen, the server's own
-         state passes a step by itself, and any step can be put off — what is left stays on the overview. --}}
-    <div class="flex flex-wrap g-3 items-cross-start" data-env-setup="{{ $step }}">
-        <ol class="m-0 p-0 grow-0" style="list-style: none; flex-basis: 15rem;" aria-label="{{ __('larena-env::admin.setup.steps') }}">
-            @foreach ($states as $key => $state)
-                <li class="p-y-1" data-env-setup-step="{{ $key }}" data-env-setup-state="{{ $state }}">
-                    <a href="{{ route('larena.env.admin.setup', ['step' => $key], false) }}" @if ($key === $step) aria-current="step" @endif
-                        class="flex g-1 items-cross-center" style="min-height: 2.75rem;{{ $key === $step ? ' font-weight: 600;' : '' }}">
-                        <sf-icon icon="{{ $state === 'done' ? 'check_circle' : ($state === 'skipped' ? 'schedule' : 'radio_button_unchecked') }}" aria-hidden="true"></sf-icon>
-                        <span>{{ $loop->iteration }}. {{ __('larena-env::admin.setup.step.'.$key.'.name') }}</span>
-                        <span class="sr-only">{{ __('larena-env::admin.setup.state.'.$state) }}</span>
-                    </a>
-                </li>
-            @endforeach
-        </ol>
-        <section class="larena-panel larena-panel-padded grow min-w-0" style="flex-basis: 20rem;" aria-labelledby="env-setup-step">
-            <p class="m-0 color-on-surface-variant">{{ __('larena-env::admin.setup.of', ['number' => (string) $number, 'count' => (string) count($states)]) }}</p>
-            <h2 id="env-setup-step" class="text-2">{{ __('larena-env::admin.setup.step.'.$step.'.name') }}</h2>
-            <p>{{ __('larena-env::admin.setup.step.'.$step.'.why') }}</p>
-            @if ($states[$step] === 'done')
-                <p data-env-setup-done><sf-badge status="success" appearance="tonal" text="{{ __('larena-env::admin.setup.state.done') }}"></sf-badge></p>
-            @endif
-            <div class="flex flex-wrap g-2 m-t-3">
-                @if ($links[$step] !== null)
-                    <a class="larena-button {{ $states[$step] === 'done' ? '' : 'larena-button-primary' }}" style="min-height: 2.75rem;" href="{{ $links[$step] }}" data-env-setup-open>{{ __('larena-env::admin.setup.step.'.$step.'.open') }}</a>
+    {{-- The server's first setup on the Framework's wizard (owner 2026-11-06): every step is done here — its fields, the
+         server's plan, the run — and any step can be put off; what is left stays on the overview. Each step's type and
+         state come from ServerSetupController::wizard(). --}}
+    <sf-wizard place="pages" navigation="free" current="{{ $step }}" label="{{ __('larena-env::admin.setup.title') }}"
+        later-href="{{ $overviewUrl }}" done-href="{{ $overviewUrl }}" focus-title
+        running-text="{{ __('larena-env::admin.setup.running') }}" data-env-setup="{{ $step }}" data-env-setup-phase="{{ $phase }}">
+        @foreach ($wizard as $key => $one)
+            <sf-wizard-step name="{{ $key }}" label="{{ __('larena-env::admin.setup.step.'.$key.'.name') }}"
+                href="{{ route('larena.env.admin.setup', ['step' => $key], false) }}"
+                description="{{ __('larena-env::admin.setup.step.'.$key.'.why') }}" optional
+                type="{{ $one['type'] }}" @if ($one['state'] !== '') state="{{ $one['state'] }}" @endif
+                @if ($one['action'] !== '') action-text="{{ $one['action'] }}" @endif
+                @if ($one['message'] !== null) message="{{ $one['message'] }}" @endif
+                data-env-setup-step="{{ $key }}" data-env-setup-state="{{ $states[$key] }}">
+                @if ($key === $step)
+                    <form method="post" action="{{ route('larena.env.admin.setup.submit', ['step' => $key], false) }}" id="env-setup-form" class="m-0 flex flex-column g-2">
+                        @csrf
+                        <input type="hidden" name="phase" value="{{ $phase }}">
+                        @if ($phase === 'review' && $plan !== null)
+                            @include('larena-env::admin.setup.plan', ['plan' => $plan])
+                        @elseif (in_array($phase, ['running', 'error'], true) && $job !== null)
+                            <p class="m-0"><a href="{{ route('larena.env.admin.job', ['job' => $job], false) }}" target="_blank" rel="noopener" data-env-setup-job>{{ __('larena-env::admin.setup.job_log') }}</a></p>
+                        @elseif ($phase !== 'result')
+                            @include('larena-env::admin.setup.'.$key, ['phase' => $phase, 'state' => $states[$key]] + $data)
+                        @endif
+                    </form>
                 @endif
-                <form method="post" action="{{ route('larena.env.admin.setup.mark', [], false) }}" class="m-0 flex flex-wrap g-2">
-                    @csrf
-                    <input type="hidden" name="step" value="{{ $step }}">
-                    @if ($states[$step] !== 'done')
-                        <button type="submit" name="state" value="done" class="larena-button" style="min-height: 2.75rem;" data-env-setup-mark="done">{{ __('larena-env::admin.setup.mark_done') }}</button>
-                        <button type="submit" name="state" value="skipped" class="larena-button" style="min-height: 2.75rem;" data-env-setup-mark="skipped">{{ __('larena-env::admin.setup.skip') }}</button>
-                    @else
-                        <button type="submit" name="state" value="done" class="larena-button" style="min-height: 2.75rem;" data-env-setup-mark="next">{{ __('larena-env::admin.setup.next') }}</button>
-                    @endif
-                </form>
-            </div>
-            <p class="m-0 m-t-3"><a href="{{ route('larena.env.admin.overview', [], false) }}" data-env-setup-later>{{ __('larena-env::admin.setup.later') }}</a></p>
-        </section>
-    </div>
+            </sf-wizard-step>
+        @endforeach
+        <sf-wizard-step name="finish" label="{{ __('larena-env::admin.setup.finish.name') }}" type="result"
+            href="{{ route('larena.env.admin.setup', ['step' => 'finish'], false) }}" description="{{ __('larena-env::admin.setup.finish.why') }}" data-env-setup-step="finish">
+            @if ($step === 'finish')
+                <ul class="m-0 p-0" style="list-style: none;" data-env-setup-summary>
+                    @foreach ($states as $key => $state)
+                        <li class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-setup-summary-step="{{ $key }}">
+                            <span>{{ __('larena-env::admin.setup.step.'.$key.'.name') }}</span>
+                            <sf-badge appearance="tonal" status="{{ $state === 'done' ? 'success' : '' }}" text="{{ __('larena-env::admin.setup.state.'.$state) }}"></sf-badge>
+                        </li>
+                    @endforeach
+                </ul>
+                <p class="m-0 m-t-2">{{ __('larena-env::admin.setup.finish.rest') }}</p>
+            @endif
+        </sf-wizard-step>
+    </sf-wizard>
 @endsection

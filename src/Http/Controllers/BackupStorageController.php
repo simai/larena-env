@@ -177,7 +177,7 @@ final readonly class BackupStorageController
      *
      * @return array<string, string>
      */
-    private static function addArgs(Request $request, string $name): array
+    public static function addArgs(Request $request, string $name): array
     {
         $provider = BackupStorage::PROVIDERS[(string) $request->input('provider')] ?? BackupStorage::PROVIDERS['other'];
         $args = ['name' => $name, 'bucket' => strtolower(trim((string) $request->input('bucket')))];

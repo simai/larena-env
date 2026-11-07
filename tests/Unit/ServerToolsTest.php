@@ -326,14 +326,29 @@ env_assert(str_contains($domainPage, 'data-env-panel-address="domain"') && str_c
     && str_contains($domainPage, 'data-env-panel-address-op="ip-access"') && !str_contains($domainPage, 'data-env-panel-address-op="domain"'), 'A domain with a certificate: detach it or turn the address by IP off: '.$domainPage);
 $readOnly = $panelPage(['panelAddress' => $byIp, 'addressAllows' => array_map(static fn (): bool => false, $allAddress)]);
 env_assert(str_contains($readOnly, 'data-env-panel-address-url') && !str_contains($readOnly, 'data-env-panel-address-op='), 'Without the right only the address is shown.');
-$setupLinks = ['login' => null, 'address' => '/admin/server/panel-access', 'alerts' => '/admin/server/alerts/channel', 'protection' => '/admin/server/security', 'backups' => '/admin/server/backups', 'updates' => '/admin/server/update'];
-$setupPage = $factory->make('larena-env::admin.setup', ['step' => 'protection', 'number' => 4, 'links' => $setupLinks, 'finished' => false,
-    'states' => ['login' => 'done', 'address' => 'done', 'alerts' => 'skipped', 'protection' => 'todo', 'backups' => 'todo', 'updates' => 'todo']])->render();
-env_assert(str_contains($setupPage, 'data-env-setup="protection"') && str_contains($setupPage, 'data-env-setup-state="skipped"') && str_contains($setupPage, 'aria-current="step"')
-    && str_contains($setupPage, 'href="/admin/server/security"') && str_contains($setupPage, 'data-env-setup-mark="skipped"') && str_contains($setupPage, 'data-env-setup-later'), 'A setup step: the steps, the screen to do it on, put off: '.$setupPage);
-$doneStep = $factory->make('larena-env::admin.setup', ['step' => 'login', 'number' => 1, 'links' => $setupLinks, 'finished' => false,
-    'states' => ['login' => 'done', 'address' => 'todo', 'alerts' => 'todo', 'protection' => 'todo', 'backups' => 'todo', 'updates' => 'todo']])->render();
-env_assert(str_contains($doneStep, 'data-env-setup-done') && str_contains($doneStep, 'data-env-setup-mark="next"') && !str_contains($doneStep, 'data-env-setup-open'), 'A done step without a screen here: only on.');
+// The server's setup on the Framework's wizard: every step is done inside it (owner 2026-11-06).
+$setupText = static fn (string $key): string => $key;
+$setupStates = ['login' => 'done', 'address' => 'done', 'alerts' => 'skipped', 'protection' => 'todo', 'backups' => 'todo', 'updates' => 'todo'];
+$setupPage = static fn (string $step, string $phase, array $more = []): string => $factory->make('larena-env::admin.setup', $more + [
+    'step' => $step, 'phase' => $phase, 'message' => null, 'states' => $setupStates, 'plan' => null, 'job' => null, 'loginUrl' => '/admin/security',
+    'overviewUrl' => '/admin/server/overview', 'capabilities' => \Larena\Env\Gateway\PanelCapabilities::none(),
+    'wizard' => \Larena\Env\Http\Controllers\ServerSetupController::wizard($step, $phase, $setupStates, $more['message'] ?? null, $setupText),
+    'data' => match ($step) { 'protection' => ['level' => 'basic'], default => [] }])->render();
+$levelForm = $setupPage('protection', 'form');
+env_assert(str_contains($levelForm, '<sf-wizard place="pages"') && str_contains($levelForm, 'current="protection"') && substr_count($levelForm, '<sf-wizard-step ') === 7
+    && str_contains($levelForm, 'name="alerts"') && str_contains($levelForm, 'state="skipped"') && str_contains($levelForm, 'type="form"')
+    && str_contains($levelForm, 'larena.env.admin.setup.submit') && str_contains($levelForm, '<sf-dropdown name="set"') && str_contains($levelForm, 'later-href="/admin/server/overview"')
+    && !str_contains($levelForm, 'href="/admin/server/security"'), 'A step takes its fields inside the wizard, the others are in its progress: '.$levelForm);
+$levelPlan = new \Larena\Env\Operations\PanelPlan('security:level', ['set' => 'enhanced'], null, 'Sets the level.', 'firewall, fail2ban', null);
+$review = $setupPage('protection', 'review', ['plan' => $levelPlan]);
+env_assert(str_contains($review, 'type="review"') && str_contains($review, 'data-env-setup-plan="security:level"') && str_contains($review, 'action-text="plan.confirm"')
+    && str_contains($review, 'value="edit"'), 'The server\'s plan in the step, applied from there or changed: '.$review);
+$running = $setupPage('protection', 'running', ['job' => 'job-1']);
+env_assert(str_contains($running, 'state="running"') && str_contains($running, 'data-env-setup-job') && str_contains($running, 'type="action"'), 'A run in the step: '.$running);
+$setupFailed = $setupPage('protection', 'error', ['job' => 'job-1', 'message' => 'It failed.']);
+env_assert(str_contains($setupFailed, 'state="error"') && str_contains($setupFailed, 'message="It failed."'), 'A failed run says so and offers to try again.');
+$finish = $setupPage('finish', 'info');
+env_assert(str_contains($finish, 'data-env-setup-summary-step="alerts"') && str_contains($finish, 'current="finish"'), 'The result lists what is done and put off.');
 $moving = $factory->make('larena-env::admin.panel-address-moving', ['op' => 'port', 'port' => 9443, 'next' => 'https://203.0.113.5:9443/admin/server/jobs/x', 'nextBase' => 'https://203.0.113.5:9443'])->render();
 env_assert(str_contains($moving, 'data-env-panel-address-moving="port"') && str_contains($moving, '9443') && str_contains($moving, 'data-env-panel-address-next'), 'The way to the new address: '.$moving);
 
@@ -487,7 +502,7 @@ $rebootPage = $softwarePage(['software' => new \Larena\Env\Software\ServerSoftwa
 env_assert(str_contains($rebootPage, 'data-env-system-reboot') && str_contains($rebootPage, 'linux-image-6.8') && str_contains($rebootPage, 'data-env-system-kept-back')
     && !str_contains($rebootPage, 'data-env-software-op="update-all"'), 'A pending reboot and kept-back packages said in words, nothing to install: '.$rebootPage);
 
-foreach (['services', 'firewall', 'panel-access', 'software-php', 'software', 'partials/system-updates', 'partials/cron', 'partials/timed-change', 'panel-address-moving', 'setup'] as $name) {
+foreach (['services', 'firewall', 'panel-access', 'software-php', 'software', 'partials/system-updates', 'partials/cron', 'partials/timed-change', 'panel-address-moving', 'setup', 'setup/plan', 'setup/login', 'setup/address', 'setup/alerts', 'setup/protection', 'setup/backups', 'setup/updates'] as $name) {
     $source = (string) file_get_contents(dirname(__DIR__, 2).'/resources/views/admin/'.$name.'.blade.php');
     env_assert(!str_contains($source, '{!!') && preg_match('/<style\b|<script\b|@php\b/i', $source) !== 1, "The {$name} view prints nothing raw and holds no script.");
 }

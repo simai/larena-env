@@ -9,11 +9,13 @@
   sites (owner 2026-11-06). The overview starts with «Рекомендуемые действия»: one list of what to do now (the server's
   high and critical security problems), what is advised (the other problems, a waiting update, the setup's steps not
   done) and what is done (folded), each with one click — a fix planned and confirmed, or the screen where it is done.
-- «Настройка сервера» (/admin/server/setup), not opened on its own for now (owner 2026-11-06: it waits for the
-  Framework's wizard); its steps not done are among the overview's recommended actions: six steps one at a time (password and
-  sign-in code, the panel's address, alerts, the protection level with «Усиленный» advised, backups with an S3
-  storage, updates), each done on its own screen or put off. A step the server already shows done (a domain with a
-  certificate, a channel, the enhanced or strict level, a storage) passes by itself.
+- «Настройка сервера» (/admin/server/setup) is made of the Framework's wizard (sf-wizard 1.0, owner 2026-11-06) and opens
+  once at the administrator's first sign-in. Every step is done inside it: the panel's domain with Let's Encrypt, where
+  alerts go and a test message, the protection level with «Усиленный» advised, an S3 storage for backups with its keys
+  checked, simai-env's update; each shows the server's plan, runs it on «Применить», says how it went and offers
+  «Повторить» after an error. The sign-in's own security opens in a new tab beside the wizard. Any step can be put off; a
+  step the server already shows done (a domain with a certificate, a channel, the enhanced or strict level, a storage)
+  passes by itself, and what is left stays among the overview's recommended actions, which open the wizard's step.
 - «Доступ к панели» starts with «Адрес панели» (simai-env 1.51.0, panel:address/domain/port/ip-access): the address to
   open the panel at; the address by IP with its self-signed certificate's SHA-256 fingerprint; a domain attached with
   the hint which A record to add first (Let's Encrypt, nothing changes when no certificate comes) or detached; the port

@@ -9,15 +9,15 @@ use DateTimeZone;
 use Illuminate\Database\ConnectionInterface;
 
 /**
- * The server's first setup (ENV task 2026-11-06): after the first sign-in the administrator goes through six steps,
- * each of them can be put off; what is left stays among the overview's recommended actions.
+ * The server's first setup (ENV task 2026-11-06): six steps on the Framework's wizard, each done inside it
+ * (ServerSetupController), each of them can be put off; what is left stays among the overview's recommended actions.
  * A step the server already shows as done needs no mark.
  */
 final readonly class ServerSetup
 {
     public const string TABLE = 'larena_env_setup';
 
-    /** The steps in order, each with the screen where it is done. */
+    /** The steps in order, each with the screen that has more of the same. */
     public const array STEPS = [
         'login' => 'larena.auth.admin.security.index',
         'address' => 'larena.env.admin.panel.access',
