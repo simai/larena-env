@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Critics of 0.4.1: the overview and «Безопасность» count the security checks in one way (`SecurityFindings`: the same
+  check on several sites is one finding, HTTPS of local names is one quiet line, the panel's own address stands under
+  «Кто может открыть панель») and the overview says which of its items are the setup steps and updates; the overview
+  has a line on the sites (how many work, have no fresh copy, go without HTTPS); the setup moved to
+  `/admin/server/overview/setup`, so the menu marks «Обзор», and its breadcrumbs end with «Настройка сервера».
 - Fixes after the independent critique of 0.4.0 (seven critics, 2026-11-07):
   - The wizard's «Оповещения» step no longer fails with an error 500 (Blade could not read `@json` with nested
     brackets); a test now compiles every view of the panel and draws every wizard step.

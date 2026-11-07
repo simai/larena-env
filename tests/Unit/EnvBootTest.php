@@ -74,6 +74,8 @@ env_assert($names === ['larena.env.admin.alerts.ack.open', 'larena.env.admin.ale
     'The screens of the panel: '.implode(', ', $names));
 env_assert($with['routes']['larena.env.admin.index']['uri'] === 'admin/server', 'The sites keep their address.');
 env_assert($with['routes']['larena.env.admin.overview']['uri'] === 'admin/server/overview', 'The server\'s overview has its own address.');
+// The setup under the overview's address: the admin's menu marks the row whose address leads the page's (critics of 0.4.1).
+env_assert(str_starts_with($with['routes']['larena.env.admin.overview.setup']['uri'], 'admin/server/overview/setup'), 'The setup lies under the overview.');
 foreach ($with['routes'] as $name => $route) {
     // Both levels reach their sites; every screen asks the gateway as the person's level.
     foreach (['web', 'larena-auth.entry', 'larena-auth.admin-required', 'larena-admin.locale', 'access:env.sites.read',
@@ -133,6 +135,8 @@ env_assert($adminNames === [
     'src/Admin/ServerSitesPage.php',
     'src/Admin/SiteObjectMenu.php',
     'src/Http/Controllers/ServerAdminController.php',
+    // The setup's breadcrumbs, only where the admin is installed.
+    'src/Http/Controllers/ServerSetupController.php',
     'src/Http/Controllers/SiteAdminController.php',
     'src/Navigation/ServerAdminNavigationContributor.php',
     'src/Providers/EnvServiceProvider.php',

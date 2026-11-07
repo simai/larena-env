@@ -166,7 +166,7 @@ $checks = \Larena\Env\Security\SecurityStatus::fromData(['schema' => 'simai-secu
     ['id' => 'firewall', 'check' => 'firewall', 'area' => 'network', 'status' => 'ok', 'severity' => 'high'],
 ]]);
 $words = static fn (string $key, array $replace = []): string => $key.($replace === [] ? '' : ':'.implode(',', $replace));
-$list = \Larena\Env\Admin\RecommendedActions::of($checks, [], ['ssh_password' => true], '/admin/server/security', '/admin/server/security/plan',
+$list = \Larena\Env\Admin\RecommendedActions::of(\Larena\Env\Security\SecurityFindings::of($checks), [], ['ssh_password' => true], '/admin/server/security', '/admin/server/security/plan',
     static fn (string $domain): string => '/admin/server/sites/'.$domain,
     ['login' => 'done', 'address' => 'todo', 'alerts' => 'skipped', 'protection' => 'todo', 'backups' => 'todo', 'updates' => 'todo'],
     ['login' => null, 'address' => '/a', 'alerts' => '/b', 'protection' => '/c', 'backups' => '/d', 'updates' => '/e'],
@@ -179,20 +179,47 @@ env_assert($checks !== null && $keys[0] === 'security:ssh_password' && $list[0][
 // The same finding on several sites is one line; a local name gets no HTTPS advice; alerts nobody gets are urgent (critics 2026-11-07).
 $spread = \Larena\Env\Security\SecurityStatus::fromData(['schema' => 'simai-security/1', 'score' => 50, 'checks' => [
     ['id' => 'https:a.ru', 'check' => 'https', 'area' => 'sites', 'status' => 'warn', 'severity' => 'medium', 'domain' => 'a.ru'],
-    ['id' => 'https:b.ru', 'check' => 'https', 'area' => 'sites', 'status' => 'warn', 'severity' => 'medium', 'domain' => 'b.ru'],
+    ['id' => 'https:b.ru', 'check' => 'https', 'area' => 'sites', 'status' => 'risk', 'severity' => 'medium', 'domain' => 'b.ru'],
     ['id' => 'https:c.test', 'check' => 'https', 'area' => 'sites', 'status' => 'warn', 'severity' => 'medium', 'domain' => 'c.test'],
+    ['id' => 'https:panel.example.ru', 'check' => 'https', 'area' => 'sites', 'status' => 'warn', 'severity' => 'medium', 'domain' => 'panel.example.ru'],
+    ['id' => 'certificate:panel.localhost', 'check' => 'certificate', 'area' => 'sites', 'status' => 'warn', 'severity' => 'medium', 'domain' => 'panel.localhost'],
+    ['id' => 'backup_verify:a.ru', 'check' => 'backup_verify', 'area' => 'backup', 'status' => 'ok', 'severity' => 'medium', 'domain' => 'a.ru'],
+    ['id' => 'backup_verify:b.ru', 'check' => 'backup_verify', 'area' => 'backup', 'status' => 'ok', 'severity' => 'medium', 'domain' => 'b.ru'],
 ]]);
-$spreadList = \Larena\Env\Admin\RecommendedActions::of($spread, [], [], '/admin/server/security', '/admin/server/security/plan',
-    static fn (string $domain): string => '/admin/server/sites/'.$domain, ['alerts' => 'skipped'], ['alerts' => '/b'], [], '/u', $words);
-$https = array_values(array_filter($spreadList, static fn (array $item): bool => str_starts_with($item['key'], 'security:https')));
+$spreadFindings = \Larena\Env\Security\SecurityFindings::of($spread, ['panel.example.ru']);
+$spreadList = \Larena\Env\Admin\RecommendedActions::of($spreadFindings, [], [], '/admin/server/security', '/admin/server/security/plan',
+    static fn (string $domain): string => '/admin/server/sites/'.$domain, ['alerts' => 'skipped'], ['alerts' => '/b'], [], '/u', $words, '/admin/server/panel-access');
+$https = array_values(array_filter($spreadList, static fn (array $item): bool => $item['key'] === 'security:https'));
+$panelHttps = array_values(array_filter($spreadList, static fn (array $item): bool => $item['key'] === 'security:panel-https'));
 $alerts = array_values(array_filter($spreadList, static fn (array $item): bool => $item['key'] === 'setup:alerts'));
-env_assert(count($https) === 1 && $https[0]['sites'] === ['a.ru', 'b.ru'] && str_contains($https[0]['title'], 'actions.sites:2')
-    && $https[0]['action']['url'] === '/admin/server/security#env-security-check-https' && ($alerts[0]['state'] ?? '') === 'now',
-    'One line for the same finding, none for a local name, alerts urgent: '.json_encode($spreadList));
-$counts = ['now' => 1, 'todo' => \Larena\Env\Admin\RecommendedActions::count($list, 'todo'), 'done' => 2];
+env_assert(count($https) === 1 && $https[0]['sites'] === ['b.ru', 'a.ru'] && $https[0]['state'] === 'now' && str_contains($https[0]['title'], 'actions.sites:2')
+    && $https[0]['action']['url'] === '/admin/server/security#env-security-check-https' && ($alerts[0]['state'] ?? '') === 'now'
+    && ($panelHttps[0]['action']['url'] ?? '') === '/admin/server/panel-access' && !str_contains((string) json_encode($spreadList), 'test')
+    && !str_contains((string) json_encode($spreadList), 'panel.localhost'),
+    'One line for the same finding, the worst state for it, none for a local name, the panel\'s own address apart, alerts urgent: '.json_encode($spreadList));
+// One count for the overview and «Безопасность» (critics of 0.4.1): the security page's findings are the overview's security
+// items, grouped by check, local names left out; the overview's extra items (setup, updates) are said apart.
+$spreadCounts = \Larena\Env\Admin\RecommendedActions::counts($spreadList);
+env_assert($spreadFindings->counts() === ['now' => 1, 'todo' => 1, 'done' => 1] && $spreadFindings->local === ['c.test', 'panel.localhost']
+    && $spreadCounts['security_now'] === $spreadFindings->count('now') && $spreadCounts['security_todo'] === $spreadFindings->count('todo')
+    && $spreadCounts['now'] === 2 && $spreadCounts['other'] === true && count($spreadFindings->problems(true)) === 1 && count($spreadFindings->problems(false)) === 1,
+    'The same counts on both pages: '.json_encode([$spreadFindings->counts(), $spreadCounts]));
+$counts = \Larena\Env\Admin\RecommendedActions::counts($list);
 $left = $state(['section' => 'overview', 'overview' => $overview, 'actions' => $list, 'actionCounts' => $counts]);
 env_assert(str_contains($left, 'data-env-actions') && str_contains($left, 'data-env-action="security:ssh_password"') && str_contains($left, 'data-env-action-state="now"')
-    && str_contains($left, 'name="check" value="ssh_password"') && str_contains($left, 'data-env-actions-done') && !str_contains($ok, 'data-env-actions'), 'The block on the overview: '.$left);
+    && str_contains($left, 'name="check" value="ssh_password"') && str_contains($left, 'data-env-actions-done') && !str_contains($ok, 'data-env-actions')
+    && str_contains($left, 'data-env-actions-security="1:2"'), 'The block on the overview: '.$left);
+// The sites in one line on the overview (critics of 0.4.1): public names only for HTTPS, 48 hours for a fresh copy.
+$fresh = (new DateTimeImmutable('2026-11-01T12:00:00Z'))->modify('-1 hour')->format('Y-m-d\\TH:i:s\\Z');
+$sitesCount = \Larena\Env\Admin\ServerSitesCount::of([
+    new \Larena\Env\Server\SiteSummary('a.ru', 'php', '8.3', 'none', null, null, null, null, true, 200, true, null, $fresh),
+    new \Larena\Env\Server\SiteSummary('b.test', 'php', '8.3', 'none', null, null, null, null, true, 502, true, null, null),
+    new \Larena\Env\Server\SiteSummary('c.ru', 'redirect', '8.3', 'letsencrypt', null, null, null, 40, false, 301, true),
+], new DateTimeImmutable('2026-11-01T12:00:00Z'));
+env_assert($sitesCount === ['count' => 3, 'works' => 2, 'stale' => 1, 'plain' => 1], 'The sites counted: '.json_encode($sitesCount));
+$sitesLine = $state(['section' => 'overview', 'overview' => $overview, 'sitesCount' => $sitesCount]);
+env_assert(str_contains($sitesLine, 'data-env-sites-count="3"') && str_contains($sitesLine, $text('overview_sites.line', ['count' => '3', 'works' => '2', 'stale' => '1', 'plain' => '1']))
+    && str_contains($sitesLine, 'data-env-sites-open'), 'The sites\' line on the overview: '.$sitesLine);
 $loaded = $state(['section' => 'overview', 'overview' => $overview, 'metrics' => $metrics, 'warnings' => $warnings]);
 env_assert(str_contains($loaded, 'data-env-metrics') && str_contains($loaded, '98%') && !str_contains($loaded, 'data-env-warnings')
     && !str_contains($state(['overview' => $overview, 'sitesView' => ['stub' => true], 'warnings' => $warnings]), 'data-env-warnings'), 'The overview and the sites draw no warnings block.');

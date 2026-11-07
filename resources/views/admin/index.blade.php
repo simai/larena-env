@@ -36,12 +36,24 @@
                 </div>
             </section>
         @endif
+        @if (($sitesCount ?? null) !== null)
+            {{-- The sites in one line under the load (critics of 0.4.1): how many work, have no fresh copy, go without HTTPS. --}}
+            <section class="larena-panel flex flex-wrap items-cross-center content-main-between g-2 p-2 m-bottom-2" data-env-sites-count="{{ $sitesCount['count'] }}"
+                data-env-sites-works="{{ $sitesCount['works'] }}" data-env-sites-stale="{{ $sitesCount['stale'] }}" data-env-sites-plain="{{ $sitesCount['plain'] }}" aria-label="{{ __('larena-env::admin.overview_sites.label') }}">
+                <p class="grow min-w-0 m-0" style="overflow-wrap: anywhere;">{{ __('larena-env::admin.overview_sites.line', ['count' => (string) $sitesCount['count'], 'works' => (string) $sitesCount['works'], 'stale' => (string) $sitesCount['stale'], 'plain' => (string) $sitesCount['plain']]) }}</p>
+                <a class="larena-button" style="min-height: 2.75rem;" href="{{ route('larena.env.admin.index', [], false) }}" data-env-sites-open>{{ __('larena-env::admin.overview_sites.open') }}</a>
+            </section>
+        @endif
         @if (($actions ?? []) !== [])
             {{-- «Рекомендуемые действия» (owner 2026-11-06): what to do now first, then what is advised, the done ones folded;
                  each with its one click, which goes through the usual plan and confirmation. --}}
             <section class="larena-panel larena-panel-padded m-bottom-2" data-env-actions aria-labelledby="env-actions">
                 <h2 id="env-actions" class="m-0 text-2">{{ __('larena-env::admin.actions.title') }}</h2>
                 <p class="m-0 color-on-surface-variant">{{ __('larena-env::admin.actions.summary', ['now' => (string) $actionCounts['now'], 'todo' => (string) $actionCounts['todo'], 'done' => (string) $actionCounts['done']]) }}</p>
+                {{-- The security page counts only its own findings: the overview says which of its items are those (critics of 0.4.1). --}}
+                @if ($actionCounts['other'] ?? false)
+                    <p class="m-0 color-on-surface-variant" data-env-actions-security="{{ $actionCounts['security_now'] }}:{{ $actionCounts['security_todo'] }}">{{ __('larena-env::admin.actions.security_part', ['now' => (string) $actionCounts['security_now'], 'todo' => (string) $actionCounts['security_todo']]) }}</p>
+                @endif
                 {{-- All the urgent ones and at most five advised are in view; the rest folds (critics 2026-11-07). --}}
                 <ul class="m-0 m-t-1 p-0" style="list-style: none;">
                     @foreach (\Larena\Env\Admin\RecommendedActions::inView($actions) as $item)

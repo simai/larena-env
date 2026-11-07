@@ -1100,6 +1100,8 @@ return [
         'fix' => 'Fix',
         'how' => 'How to fix',
         'open_site' => 'Open the site',
+        'open_panel' => 'Who may open the panel',
+        'local_https' => 'Local addresses need no HTTPS: :sites.',
         'open_page' => 'Open',
         'site' => 'Site :site',
         'fine' => 'Fine: :count',
@@ -1259,6 +1261,11 @@ return [
         'operations' => ['rule-add' => 'Add a firewall rule', 'rule-remove' => 'Remove a firewall rule', 'block' => 'Keep an address out',
             'unblock' => 'Let an address in again', 'access' => 'Change who reaches the panel'],
     ],
+    'overview_sites' => [
+        'label' => 'Sites',
+        'line' => 'Sites: :count · working :works · without a fresh copy :stale · without HTTPS :plain',
+        'open' => 'All sites',
+    ],
     'actions' => [
         'title' => 'Recommended actions',
         'summary' => 'Do now: :now · advised: :todo · done: :done',
@@ -1270,6 +1277,7 @@ return [
         'update' => 'Update',
         'update_line' => 'See what changes and confirm the update.',
         'sites' => 'sites: :count',
+        'security_part' => 'Of these, from the «Security» page — do now: :now · advised: :todo; the rest are server setup steps and updates.',
     ],
     'setup' => [
         'title' => 'Server setup',

@@ -96,9 +96,10 @@ $router->middleware(['access:env.server.operate'])->group(static function ($rout
     $router->post('/security/run', [SecurityController::class, 'run'])->name('larena.env.admin.security.run');
     $router->post('/backups/plan', [BackupStorageController::class, 'plan'])->name('larena.env.admin.storages.plan');
     // The server's first setup, one step at a time on the Framework's wizard, each put off if wanted (ENV 2026-11-06).
-    $router->get('/setup/{step?}', [ServerSetupController::class, 'show'])->where('step', '[a-z]{1,16}')->name('larena.env.admin.overview.setup');
+    // Under the overview's address: the admin's menu marks the row whose address leads the page's (critics of 0.4.1).
+    $router->get('/overview/setup/{step?}', [ServerSetupController::class, 'show'])->where('step', '[a-z]{1,16}')->name('larena.env.admin.overview.setup');
     // Each step is done inside the wizard (sf-wizard, place pages): its form posts here, the server answers with the same wizard.
-    $router->post('/setup/{step}', [ServerSetupController::class, 'submit'])->where('step', '[a-z]{1,16}')->name('larena.env.admin.overview.setup.submit');
+    $router->post('/overview/setup/{step}', [ServerSetupController::class, 'submit'])->where('step', '[a-z]{1,16}')->name('larena.env.admin.overview.setup.submit');
     // Where the panel answers (simai-env 1.51.0): a domain, the port, the address by IP.
     $router->post('/panel-access/address/plan', [PanelAddressController::class, 'plan'])->name('larena.env.admin.panel.address.plan');
     $router->post('/panel-access/address/run', [PanelAddressController::class, 'run'])->name('larena.env.admin.panel.address.run');

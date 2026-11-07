@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 namespace Larena\Env\Admin;
 
-use Larena\Env\Security\SecurityCheck;
-use Larena\Env\Security\SecurityStatus;
+use Larena\Env\Security\SecurityFindings;
 use Larena\Env\Setup\ServerSetup;
 
 /**
@@ -22,23 +21,10 @@ final class RecommendedActions
     /** The setup step the server's check of this kind already says. */
     private const array COVERED = ['backups' => 'backup_storage', 'updates' => 'auto_updates', 'address' => 'panel_domain'];
 
-    /**
-     * @param array<string, array{title: string, line: string, how: string}> $words the security checks in the panel's words
-     * @param array<string, bool> $fixes check id => fixable here by one click
-     * @param array<string, string> $setup the setup steps' states
-     * @param array<string, ?string> $setupLinks each step's screen
-     * @param list<array{target: string, available: ?string}> $updates
-     * @param callable(string, array<string, string>=): string $text
-     *
-     * @return list<array{key: string, state: string, title: string, line: string, action: ?array{kind: string, url: string, label: string, fields?: array<string, string>}}>
-     */
-    /** The checks that only make sense for a name the internet can reach. */
-    private const array PUBLIC_ONLY = ['https', 'certificate'];
-
-    /** Whether the name is one no certificate authority issues for: a reserved or local top-level name. */
+    /** Whether the name is one no certificate authority issues for (SecurityFindings::local, kept for the sites' list). */
     public static function local(string $domain): bool
     {
-        return preg_match('/(^|\.)(test|localhost|local|example|invalid|internal|lan|home\.arpa)$/i', $domain) === 1;
+        return SecurityFindings::local($domain);
     }
 
     /** How many advised items the overview shows before folding the rest. */
@@ -73,51 +59,57 @@ final class RecommendedActions
         return array_values(array_filter($items, static fn (array $item): bool => ($item['state'] ?? null) === $state));
     }
 
-    public static function of(?SecurityStatus $security, array $words, array $fixes, string $securityUrl, string $fixUrl, callable $siteUrl,
-        array $setup, array $setupLinks, array $updates, string $updateUrl, callable $text): array
+    /**
+     * The security findings are SecurityFindings', the ones «Безопасность» lists and counts, so the two pages say the
+     * same «Срочно» for the same thing; the overview adds the waiting update and the setup steps left, and says so.
+     *
+     * @param array<string, array{title: string, line: string, how: string}> $words the security checks in the panel's words
+     * @param array<string, bool> $fixes check id => fixable here by one click
+     * @param callable(string): string $siteUrl
+     * @param array<string, string> $setup the setup steps' states
+     * @param array<string, ?string> $setupLinks each step's screen
+     * @param list<array{target: string, available: ?string}> $updates
+     * @param callable(string, array<string, string>=): string $text
+     * @param ?string $panelUrl «Кто может открыть панель», where the checks of the panel's own address lead
+     *
+     * @return list<array{key: string, state: string, title: string, line: string, action: ?array{kind: string, url: string, label: string, fields?: array<string, string>}, sites?: list<string>}>
+     */
+    public static function of(?SecurityFindings $security, array $words, array $fixes, string $securityUrl, string $fixUrl, callable $siteUrl,
+        array $setup, array $setupLinks, array $updates, string $updateUrl, callable $text, ?string $panelUrl = null): array
     {
         $items = [];
-        $kinds = [];
-        $grouped = [];
-        foreach ($security->checks ?? [] as $check) {
-            $kinds[$check->check] = true;
-            // A local name (.test, .localhost) gets no public certificate: HTTPS is not advised for it (critics 2026-11-07).
-            if (in_array($check->check, self::PUBLIC_ONLY, true) && $check->domain !== null && self::local($check->domain)) {
+        foreach ($security->findings ?? [] as $finding) {
+            if ($finding['state'] === SecurityFindings::UNKNOWN) {
                 continue;
             }
-            $word = $words[$check->id] ?? ['title' => $check->title ?? $check->check, 'line' => $check->detail ?? '', 'how' => ''];
-            $title = $word['title'].($check->domain !== null ? ' · '.$check->domain : '');
-            if (!$check->isProblem()) {
-                if ($check->status === 'ok') {
-                    $items[] = ['key' => 'security:'.$check->id, 'state' => self::DONE, 'title' => $title, 'line' => $word['line'], 'action' => null];
-                }
-                continue;
+            $first = $finding['checks'][0];
+            $word = $words[$first->id] ?? ['title' => $first->title ?? $first->check, 'line' => $first->detail ?? '', 'how' => ''];
+            $sites = $finding['sites'];
+            $title = $word['title'].match (count($sites)) {
+                0 => '',
+                1 => ' · '.$sites[0],
+                default => ' · '.$text('actions.sites', ['count' => (string) count($sites)]),
+            };
+            $anchor = $securityUrl.'#env-security-check-'.$finding['key'];
+            $action = null;
+            if ($finding['state'] !== SecurityFindings::DONE) {
+                $action = match (true) {
+                    count($finding['checks']) === 1 && ($fixes[$first->id] ?? false) => ['kind' => 'form', 'url' => $fixUrl, 'label' => $text('actions.fix'),
+                        'fields' => ['op' => 'fix', 'check' => $first->id]],
+                    // The panel's own address is set where who may open the panel is (critics of 0.4.1).
+                    $finding['panel'] && $sites !== [] => ['kind' => 'link', 'url' => $panelUrl ?? $anchor, 'label' => $text('actions.open')],
+                    count($sites) === 1 => ['kind' => 'link', 'url' => $siteUrl($sites[0]), 'label' => $text('actions.open')],
+                    default => ['kind' => 'link', 'url' => $anchor, 'label' => $text('actions.open')],
+                };
             }
-            $action = ($fixes[$check->id] ?? false)
-                ? ['kind' => 'form', 'url' => $fixUrl, 'label' => $text('actions.fix'), 'fields' => ['op' => 'fix', 'check' => $check->id]]
-                : ['kind' => 'link', 'url' => $check->domain !== null ? $siteUrl($check->domain) : $securityUrl.'#env-security-check-'.$check->id, 'label' => $text('actions.open')];
-            // The same scale as the security page: its «risk» is urgent, its «warn» advised (critics 2026-11-07).
-            $state = $check->status === 'risk' ? self::NOW : self::TODO;
-            // The same finding on several sites is one line with their count, leading to the security page (critics 2026-11-07).
-            if ($check->domain !== null) {
-                $same = 'security:'.$check->check.':'.$state;
-                if (isset($grouped[$same])) {
-                    $items[$grouped[$same]]['sites'][] = $check->domain;
-                    $items[$grouped[$same]]['title'] = $word['title'].' · '.$text('actions.sites', ['count' => (string) count($items[$grouped[$same]]['sites'])]);
-                    $items[$grouped[$same]]['action'] = ['kind' => 'link', 'url' => $securityUrl.'#env-security-check-'.$check->check, 'label' => $text('actions.open')];
-                    continue;
-                }
-                $grouped[$same] = count($items);
-            }
-            $items[] = ['key' => 'security:'.$check->id, 'state' => $state, 'title' => $title, 'line' => $word['line'], 'action' => $action,
-                'sites' => $check->domain === null ? [] : [$check->domain]];
+            $items[] = ['key' => 'security:'.$finding['key'], 'state' => $finding['state'], 'title' => $title, 'line' => $word['line'], 'action' => $action, 'sites' => $sites];
         }
         foreach ($updates as $update) {
             $items[] = ['key' => 'update:'.$update['target'], 'state' => self::TODO, 'title' => $text('update.hint.'.$update['target'], ['available' => $update['available'] ?? '—']),
                 'line' => $text('actions.update_line'), 'action' => ['kind' => 'link', 'url' => $updateUrl.(str_contains($updateUrl, '?') ? '&' : '?').'target='.$update['target'], 'label' => $text('actions.update')]];
         }
         foreach ($setup as $step => $state) {
-            if (isset(self::COVERED[$step], $kinds[self::COVERED[$step]])) {
+            if (isset(self::COVERED[$step], $security?->kinds[self::COVERED[$step]])) {
                 continue;
             }
             $link = $setupLinks[$step] ?? null;
@@ -136,5 +128,22 @@ final class RecommendedActions
     public static function count(array $items, string $state): int
     {
         return count(array_filter($items, static fn (array $item): bool => $item['state'] === $state));
+    }
+
+    /**
+     * How many urgent and advised items the overview shows, and how many of them are the security page's: the rest are
+     * the setup steps left and the waiting update, which the overview says in words so its «Срочно» never looks like a
+     * different count of the same thing.
+     *
+     * @param list<array{key: string, state: string}> $items
+     * @return array{now: int, todo: int, done: int, security_now: int, security_todo: int, other: bool}
+     */
+    public static function counts(array $items): array
+    {
+        $security = array_values(array_filter($items, static fn (array $item): bool => str_starts_with($item['key'], 'security:')));
+        $counts = ['now' => self::count($items, self::NOW), 'todo' => self::count($items, self::TODO), 'done' => self::count($items, self::DONE),
+            'security_now' => self::count($security, self::NOW), 'security_todo' => self::count($security, self::TODO)];
+
+        return $counts + ['other' => $counts['now'] + $counts['todo'] > $counts['security_now'] + $counts['security_todo']];
     }
 }
