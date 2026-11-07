@@ -611,6 +611,11 @@ env_assert(str_contains($page, 'data-env-security="risk"') && str_contains($page
 $panelSecurity = $securityPage(['findings' => \Larena\Env\Security\SecurityFindings::of($security, ['demo-owned.test'])]);
 env_assert(str_contains($panelSecurity, 'data-env-security-panel="1"') && str_contains($panelSecurity, 'data-env-security-open-panel="backup_verify:demo-owned.test"')
     && str_contains($panelSecurity, 'data-env-security-open="backup_verify:demo-static.test"') && str_contains($panelSecurity, 'data-env-security-problems="9"'), 'The panel\'s own address apart: '.$panelSecurity);
+// A button that only opens the server's plan does not say the change is made (critics 2026-11-07): the plan page keeps «Применить».
+env_assert(str_contains($page, 'Fix…') && str_contains($page, 'Show what this would do') && !preg_match('/>\s*(Apply|Fix)\s*</', $page), 'The security page\'s buttons say they open a plan.');
+$russian = require dirname(__DIR__, 2).'/resources/lang/ru/admin.php';
+env_assert($russian['security']['fix'] === 'Исправить…' && $russian['actions']['fix'] === 'Исправить…' && $russian['security']['level_apply'] === 'Показать, что будет сделано'
+    && $russian['security']['geo']['apply'] === 'Показать, что будет сделано' && str_contains($russian['security']['checks']['https']['how'], '«Домены и HTTPS»'), 'The Russian buttons say the same.');
 $readOnlySecurity = $securityPage(['fixes' => [], 'allows' => ['fix' => false, 'scan' => false, 'level' => false, 'files-scan' => false, 'quarantine' => false, 'restore' => false, 'geo' => false, 'geo-update' => false]]);
 env_assert(!str_contains($readOnlySecurity, 'data-env-security-fix=') && !str_contains($readOnlySecurity, 'data-env-security-op=') && str_contains($readOnlySecurity, 'data-env-security-how'),
     'Without the right to change the server: what to do, no buttons.');

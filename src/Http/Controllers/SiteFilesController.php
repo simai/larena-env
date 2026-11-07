@@ -356,6 +356,14 @@ final readonly class SiteFilesController
         return $command !== null && $this->capabilities($actor)->allows($command) ? $command : null;
     }
 
+    /** Whether the server lists its sites and this domain is not among them; an unread list is not a missing site. */
+    private function unknownSite(PanelActor $actor, string $domain): bool
+    {
+        $sites = $this->overviews->read($actor)->overview?->sites;
+
+        return $sites !== null && !in_array($domain, array_map(static fn (\Larena\Env\Server\SiteSummary $one): string => $one->domain, $sites), true);
+    }
+
     private function capabilities(PanelActor $actor): PanelCapabilities
     {
         return $this->overviews->read($actor)->overview->capabilities ?? PanelCapabilities::none();
@@ -388,6 +396,11 @@ final readonly class SiteFilesController
 
     private function back(Request $request, string $domain, string $tab, string $reason, ?string $path = null, ?string $op = null): RedirectResponse
     {
+        // A site the server has not is said once by the site's page («Сайт не найден»), not also as a file that is gone
+        // (critics 2026-11-07).
+        if ($this->unknownSite(ResolvePanelActor::of($request), $domain)) {
+            return new RedirectResponse(route('larena.env.admin.site', ['domain' => $domain], false));
+        }
         $key = 'larena-env::admin.'.($tab === 'nginx' ? 'nginx' : 'files').'.reasons.'.$reason;
         $line = (string) $this->translator->get($key);
         if ($line === $key && $tab === 'nginx') {

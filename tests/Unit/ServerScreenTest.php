@@ -149,7 +149,7 @@ $state = static fn (array $data): string => $factory->make('larena-env::admin.in
 
 $ok = $state(['section' => 'overview', 'source' => 'recorded', 'overview' => $overview]);
 env_assert(str_contains($ok, 'data-env-state="ok"') && str_contains($ok, 'data-env-source="recorded"'), 'The recorded data is marked as recorded: '.$ok);
-env_assert(str_contains($ok, 'ubuntu 24.04') && str_contains($ok, 'data-env-service="nginx"') && !str_contains($ok, 'stub-dataview'), 'The overview draws the status, not the sites.');
+env_assert(str_contains($ok, 'Ubuntu 24.04') && str_contains($ok, 'data-env-service="nginx"') && !str_contains($ok, 'stub-dataview'), 'The overview draws the status, not the sites.');
 $sites = $state(['source' => 'recorded', 'overview' => $overview, 'sitesView' => ['stub' => true]]);
 env_assert(str_contains($sites, 'stub-dataview env-server-sites larena/env 4') && !str_contains($sites, 'data-env-service'), 'The sites screen draws the sites, not the server\'s status.');
 

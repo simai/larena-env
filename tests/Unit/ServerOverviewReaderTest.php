@@ -41,6 +41,7 @@ $result = $recorded->read(new PanelActor('admin@example.com'));
 $overview = $result->overview;
 env_assert($overview !== null && $result->reason === null && $result->source === 'recorded', 'The recording reads.');
 env_assert($overview->envVersion === '1.49.0' && $overview->osId === 'ubuntu' && $overview->osVersion === '24.04', 'The server\'s status is typed.');
+env_assert($overview->osName() === 'Ubuntu 24.04', 'The system is named as its maker writes it, not by its lower-case id.');
 env_assert($overview->phpVersions === ['8.3'], 'PHP versions.');
 $states = [];
 foreach ($overview->services as $service) {

@@ -11,6 +11,11 @@
   «Кто может открыть панель») and the overview says which of its items are the setup steps and updates; the overview
   has a line on the sites (how many work, have no fresh copy, go without HTTPS); the setup moved to
   `/admin/server/overview/setup`, so the menu marks «Обзор», and its breadcrumbs end with «Настройка сервера».
+- Texts after the critique of 0.4.1: buttons that open the server's plan say «Исправить…» or «Показать, что будет
+  сделано», not «Применить»; the site's database engine, the OS name and the log's answer groups in words; an unknown
+  job is «Задача не найдена»; a download from an unknown site says only «Сайт не найден»; the log says when it was read
+  and «Обновить» reads it past the panel's 30 s cache (`CachingPanelGateway::fresh`); plainer words for the antivirus,
+  the S3 bucket, the alerts' webhook, the site's account, system packages and a change kept with «Оставить».
 - Fixes after the independent critique of 0.4.0 (seven critics, 2026-11-07):
   - The wizard's «Оповещения» step no longer fails with an error 500 (Blade could not read `@json` with nested
     brackets); a test now compiles every view of the panel and draws every wizard step.

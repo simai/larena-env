@@ -48,7 +48,7 @@
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.php') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->php === 'none' ? __('larena-env::admin.site.php_none') : $site->php }}</dd></div>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.ssl') }}</dt><dd class="m-0 min-w-0 text-end" data-env-https="{{ $site->certificate === null ? 'none' : 'on' }}">{{ $site->certificate === null ? __('larena-env::admin.sites.https_none') : ($site->certificate->daysLeft === null ? __('larena-env::admin.sites.https_on') : __('larena-env::admin.sites.https_yes', ['days' => (string) $site->certificate->daysLeft])) }}</dd></div>
                     @if ($site->databaseEngine !== null)
-                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.database') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->databaseEngine ?? '—' }}</dd></div>
+                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.database') }}</dt><dd class="m-0 min-w-0 text-end">{{ __('larena-env::admin.new_site.engines.'.$site->databaseEngine) === 'larena-env::admin.new_site.engines.'.$site->databaseEngine ? $site->databaseEngine : __('larena-env::admin.new_site.engines.'.$site->databaseEngine) }}</dd></div>
                     @endif
                     @if ($site->release !== null)
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.release') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->release ?? '—' }}</dd></div>
@@ -253,7 +253,7 @@
                         <select id="env-log-group" name="group">
                             <option value="">{{ __('larena-env::admin.log.all') }}</option>
                             @foreach ($logGroups as $group)
-                                <option value="{{ $group }}" @if ($group === $logGroup) selected @endif>{{ $group }}</option>
+                                <option value="{{ $group }}" @if ($group === $logGroup) selected @endif>{{ $logKind === 'error' ? $group : __('larena-env::admin.log.groups.'.$group) }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -267,8 +267,12 @@
                     </div>
                     <div class="larena-form-actions">
                         <button type="submit" class="larena-button">{{ __('larena-env::admin.log.show') }}</button>
+                        <button type="submit" name="fresh" value="1" class="larena-button" data-env-log-refresh>{{ __('larena-env::admin.log.refresh') }}</button>
                     </div>
                 </form>
+                @if (($logReadAt ?? null) !== null)
+                    <p class="color-on-surface-variant" data-env-log-read="{{ $logReadAt }}">{{ __('larena-env::admin.log.read_at', ['time' => $logReadAt]) }}</p>
+                @endif
                 @if ($log === null)
                     <p>{{ $logReasonText ?? __('larena-env::admin.log.none') }}</p>
                 @elseif ($log->total === 0)

@@ -35,6 +35,15 @@ final readonly class ServerOverview
     ) {
     }
 
+    /** The systems a server runs, by their id in os-release, as their makers write the name. */
+    private const array OS_NAMES = ['ubuntu' => 'Ubuntu', 'debian' => 'Debian', 'almalinux' => 'AlmaLinux', 'rocky' => 'Rocky Linux', 'centos' => 'CentOS'];
+
+    /** The system and its version as a person reads them («Ubuntu 24.04»), not os-release's lower-case id. */
+    public function osName(): string
+    {
+        return trim((self::OS_NAMES[strtolower($this->osId)] ?? ucfirst($this->osId)).' '.$this->osVersion);
+    }
+
     /**
      * The overview without the sites on these domains: the panel leaves its own site out of the sites it manages.
      *

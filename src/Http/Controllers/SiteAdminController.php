@@ -124,7 +124,8 @@ final readonly class SiteAdminController
         // Each tab asks the gateway only for what it shows.
         // A search goes to the server, which looks through far more lines than are shown, when its release can.
         $match = $search !== '' && preg_match('/\A[ -~]{1,200}\z/D', $search) === 1 && $capabilities->searchesLogs() ? $search : null;
-        $log = $site === null || $tab !== 'log' ? null : $this->sites->log($actor, $domain, $kind, $lines, $match);
+        // «Обновить» reads the server again past the half minute the panel keeps a log's answer (critics 2026-11-07).
+        $log = $site === null || $tab !== 'log' ? null : $this->sites->log($actor, $domain, $kind, $lines, $match, $request->query('fresh') === '1');
         $doctor = $site === null || $tab !== 'overview' ? null : $this->sites->doctor($actor, $domain);
         $operations = $site === null ? [] : SiteOperation::offeredFor($site, $capabilities);
         // A site's owner is not offered what the system level alone may do (Apache, simai-env 1.42.0).
@@ -187,6 +188,7 @@ final readonly class SiteAdminController
             'logGroup' => $group,
             'logGroups' => $groups,
             'log' => $log?->log === null ? null : SiteLogView::of($log->log, $search, $group),
+            'logReadAt' => $log?->readAt === null ? null : gmdate('H:i:s', $log->readAt),
             'logReasonText' => $log === null || $log->reason === null ? null : $this->reasonText($log->reason),
             'notice' => $request->session()->get('larena_env_notice'),
         ]);

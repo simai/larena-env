@@ -23,6 +23,11 @@ final readonly class PanelAnswer
         public ?string $operationId = null,
         /** The started action's job, on an answer of kind `job` and nowhere else. */
         public ?string $jobId = null,
+        /**
+         * When the panel received the answer (Unix time): a kept answer says how old it is, so a log can tell when it
+         * was read (critics 2026-11-07). Null on an answer the panel made itself.
+         */
+        public ?int $receivedAt = null,
     ) {
     }
 
@@ -67,7 +72,7 @@ final readonly class PanelAnswer
         }
 
         return new self($requestId, $status, $kind, $data, null, self::text($document['command_status'] ?? null),
-            self::text($document['operation_id'] ?? null), $kind === 'job' ? (string) $jobId : null);
+            self::text($document['operation_id'] ?? null), $kind === 'job' ? (string) $jobId : null, time());
     }
 
     private static function text(mixed $value): ?string

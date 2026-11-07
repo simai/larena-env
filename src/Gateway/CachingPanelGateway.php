@@ -138,6 +138,29 @@ final class CachingPanelGateway implements PanelGateway, PanelFileGateway
         return $answer;
     }
 
+    /**
+     * Asks the server past the kept answer and keeps the new one: a person's «Обновить» on a log wants what is there
+     * now, not the half-minute-old lines (critics 2026-11-07).
+     */
+    public function fresh(PanelRequest $request): PanelAnswer
+    {
+        if (!self::keeps($request)) {
+            return $this->ask($request);
+        }
+        $key = $this->key($request);
+        $this->remember($request);
+        $answer = $this->inner->ask($request);
+        if ($answer->status === PanelAnswerStatus::Ok) {
+            $this->asked[$key] = $answer;
+            $this->write($key, $answer, $this->ttlFor($request->command, $this->ttl));
+        } else {
+            unset($this->asked[$key]);
+            $this->noteUnanswered($answer);
+        }
+
+        return $answer;
+    }
+
     public function download(PanelRequest $request, string $into): PanelDownload
     {
         if (!$this->inner instanceof PanelFileGateway) {

@@ -16,9 +16,9 @@
             <p><a href="{{ route('larena.env.admin.job', ['job' => $jobId], false) }}" class="larena-button">{{ __('larena-env::admin.update.reload') }}</a></p>
         </section>
     @elseif ($status === null)
-        <section class="larena-panel larena-empty" data-env-state="{{ $refused ? 'refused' : 'failed' }}" role="alert">
-            <h2 class="text-2">{{ $refused ? __('larena-env::admin.refused_title') : __('larena-env::admin.failed_title') }}</h2>
-            <p>{{ $reasonText }}</p>
+        <section class="larena-panel larena-empty" data-env-state="{{ ($missing ?? false) ? 'missing' : ($refused ? 'refused' : 'failed') }}" role="alert">
+            <h2 class="text-2">{{ ($missing ?? false) ? __('larena-env::admin.job.missing_title') : ($refused ? __('larena-env::admin.refused_title') : __('larena-env::admin.failed_title')) }}</h2>
+            <p>{{ ($missing ?? false) ? __('larena-env::admin.job.missing') : $reasonText }}</p>
         </section>
     @else
         <section class="larena-panel larena-panel-padded" data-env-job="{{ $status->jobId }}" data-env-job-state="{{ $status->state->value }}" aria-labelledby="env-job">

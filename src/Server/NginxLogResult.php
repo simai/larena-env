@@ -12,6 +12,8 @@ final readonly class NginxLogResult
         public ?NginxLogTail $log,
         public ?string $reason = null,
         public bool $refused = false,
+        /** When the lines were read from the server (Unix time); a kept answer is up to half a minute old. */
+        public ?int $readAt = null,
     ) {
     }
 }

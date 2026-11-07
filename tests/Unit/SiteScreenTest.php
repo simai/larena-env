@@ -84,6 +84,32 @@ env_assert($reader->read(new PanelActor($user), 'nothing.test')->reason === Pane
 $log = $reader->log(new PanelActor($user), 'demo-static.test', 'access');
 env_assert($log->log !== null && $log->log->kind === 'access' && count($log->log->lines) === 3, 'The last lines of the log.');
 env_assert($reader->log(new PanelActor($user), 'demo-static.test', 'everything')->reason === PanelReason::INVALID_ARGUMENT, 'Only access or error.');
+env_assert($log->readAt !== null && abs($log->readAt - time()) < 60, 'The log says when it was read.');
+// «Обновить» reads past the panel's kept answer: the server is asked again, and the new answer is kept (critics 2026-11-07).
+$counting = new class ($gateway) implements \Larena\Env\Contracts\PanelGateway {
+    public int $asked = 0;
+
+    public function __construct(private RecordedAnswersGateway $inner)
+    {
+    }
+
+    public function ask(\Larena\Env\Gateway\PanelRequest $request): \Larena\Env\Gateway\PanelAnswer
+    {
+        $this->asked++;
+
+        return $this->inner->ask($request);
+    }
+
+    public function source(): string
+    {
+        return $this->inner->source();
+    }
+};
+$kept = new SiteDetailsReader(new \Larena\Env\Gateway\CachingPanelGateway($counting, new \Illuminate\Cache\Repository(new \Illuminate\Cache\ArrayStore())));
+$kept->log(new PanelActor($user), 'demo-static.test', 'access');
+$kept->log(new PanelActor($user), 'demo-static.test', 'access');
+env_assert($counting->asked === 1, 'A log read twice within the half minute is asked once.');
+env_assert($kept->log(new PanelActor($user), 'demo-static.test', 'access', fresh: true)->log !== null && $counting->asked === 2, 'A fresh read asks the server again.');
 
 // The views on stubs.
 $files = new Filesystem();
@@ -119,6 +145,7 @@ $ok = $screen(['site' => $site, 'doctor' => $doctor, 'tabOperations' => $onTab('
 env_assert(str_contains($ok, 'data-env-state="ok"') && str_contains($ok, 'data-env-doctor="WARN"') && str_contains($ok, 'data-env-problem="WARN"'), 'The overview shows the check and its problems.');
 env_assert(str_contains($ok, 'data-env-answers="') && str_contains($ok, 'data-env-disk') && !str_contains($ok, 'data-env-no-backup'), 'Whether it answers and its disk; it has a backup.');
 env_assert(str_contains($screen(['site' => $site]), 'text="PHP 8.3"'), 'A PHP site\'s badge says PHP once.');
+env_assert(str_contains($ok, '>MySQL</dd>') && !str_contains($ok, '>mysql</dd>'), 'The overview names the database engine as the database tab does.');
 // The backups tab says the failed attempt the bar warns about in one line, not three (critics of 0.4.1: «no new backup
 // for more than two days», «the last backup failed» and «no backup yet» at once for a site that never had one).
 $siteText = static fn (string $key, array $replace = []): string => __('larena-env::admin.'.$key, $replace);
@@ -206,7 +233,10 @@ env_assert(SiteOperation::DatabaseExport->command() === 'backup:data' && SiteOpe
     === ['domain' => 'demo-php.test', 'db' => 'yes', 'files' => 'no'], 'A database dump is a backup without the files.');
 env_assert(str_contains($php, 'data-env-operation="php-version"') && preg_match('/<option value="8\.3"\s+selected\s*>/', $php) === 1, 'PHP offers the server\'s versions, the current one chosen.');
 env_assert(!str_contains($php, 'data-env-operation="queue-restart"'), 'And nothing the site cannot be asked for.');
-$logged = $screen(['site' => $site, 'tab' => 'log', 'log' => \Larena\Env\Server\SiteLogView::of($log->log)]);
+$logged = $screen(['site' => $site, 'tab' => 'log', 'log' => \Larena\Env\Server\SiteLogView::of($log->log), 'logReadAt' => '12:34:56']);
+env_assert(str_contains($logged, 'data-env-log-read="12:34:56"') && str_contains($logged, 'Read at 12:34:56 UTC')
+    && str_contains($logged, 'name="fresh" value="1"'), 'The log says when it was read and offers to read it again.');
+env_assert(str_contains($logged, 'Visitor errors (4xx)') && !str_contains($logged, '>4xx<'), 'The answers\' groups are named in words, the codes kept beside them.');
 env_assert(str_contains($logged, 'data-env-log="access"') && str_contains($logged, 'data-env-log-filter') && str_contains($logged, 'name="tab" value="log"'), 'The log keeps its tab and can be narrowed.');
 env_assert(str_contains($logged, 'data-env-log-row="200"') && str_contains($logged, 'GET /') && !str_contains($logged, '<code>127.0.0.1'), 'A request line is read into its parts, not repeated.');
 
@@ -284,6 +314,10 @@ $view = (new PanelOperations($gateway))->view(new PanelActor($user), '0000000000
 env_assert($view->status instanceof PanelJobStatus && $view->log instanceof PanelJobLog, 'The job reads.');
 $job = static fn (array $data): string => $factory->make('larena-env::admin.job', $data + ['jobId' => '000000000000000000000000',
     'source' => 'sudo', 'status' => null, 'log' => null, 'refused' => false, 'reasonText' => null, 'notice' => null])->render();
+
+// A job the server does not know is «not found», like a site, not the server's refusal (critics 2026-11-07).
+$unknown = $job(['refused' => true, 'missing' => true, 'reasonText' => 'The server does not know this job any more.']);
+env_assert(str_contains($unknown, 'data-env-state="missing"') && str_contains($unknown, 'Job not found') && !str_contains($unknown, 'refused this request'), 'An unknown job is not found: '.$unknown);
 
 $done = $job(['status' => $view->status, 'log' => $view->log]);
 env_assert(str_contains($done, 'data-env-job-state="succeeded"') && str_contains($done, 'Data backup'), 'A finished job shows its output.');
