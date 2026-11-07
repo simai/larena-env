@@ -37,9 +37,17 @@ final readonly class UpdateController
     ) {
     }
 
-    /** The update's own address opens its place in «Программы и обновления», with the notice the last step left. */
-    public function index(Request $request): RedirectResponse
+    /**
+     * The update's own address opens its place in «Программы и обновления», with the notice the last step left; with
+     * `?target=env|panel`, as the alert bar and the overview link it («Обновить», owner 2026-11-07), it opens the
+     * server's plan of that update at once, to confirm. A plan changes nothing.
+     */
+    public function index(Request $request): mixed
     {
+        if ($request->query('target') !== null && self::target($request) !== null
+            && ($this->authorizer?->authorize($request, 'env.server.operate')->isAllowed() ?? false)) {
+            return $this->plan($request);
+        }
         $session = $request->hasSession() ? $request->session() : null;
         if ($session instanceof Store) {
             $session->reflash();

@@ -20,6 +20,9 @@ final class PanelAnswerDecoder
     public const string PROTOCOL = 'simai-panel';
     public const int PROTOCOL_VERSION = 1;
 
+    /** Several reads in one call (simai-env 1.52.0): sent only by GatewayTransfer::batch(). */
+    public const string BATCH = 'batch';
+
     /** A host description with many sites is well above the runner's default limit. */
     public const int STDOUT_LIMIT_BYTES = 8_388_608;
 
@@ -29,7 +32,7 @@ final class PanelAnswerDecoder
 
     public static function manifest(): GatewayManifest
     {
-        return new GatewayManifest('simai-env.panel-gate', self::PROTOCOL, self::PROTOCOL_VERSION, PanelCommands::names());
+        return new GatewayManifest('simai-env.panel-gate', self::PROTOCOL, self::PROTOCOL_VERSION, [...PanelCommands::names(), self::BATCH]);
     }
 
     public static function decode(GatewayRequest $request, ProcessResult $result): GatewayAnswer

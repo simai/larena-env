@@ -111,9 +111,9 @@ $unreadable = new SshGateway(new SshGatewayTarget('127.0.0.1', 'simai-panel', 22
 env_assert($unreadable->ask(new PanelRequest('r5', $actor, 'self:describe'))->reason === 'gateway_credentials_unreadable', 'An unreadable key is a reason.');
 env_assert($untouched->recorded() === [], 'Nothing ran.');
 
-// The manifest declares exactly this package's table: the screens' commands and nothing else.
+// The manifest declares exactly this package's table: the screens' commands and the batch of reads, nothing else.
 $manifest = (new SshGatewayAdapter($target))->manifest();
-env_assert($manifest->commands === PanelCommands::names() && $manifest->protocol === 'simai-panel' && $manifest->protocolVersion === 1, 'The adapter declares the protocol and the commands.');
+env_assert($manifest->commands === [...PanelCommands::names(), 'batch'] && $manifest->protocol === 'simai-panel' && $manifest->protocolVersion === 1, 'The adapter declares the protocol and the commands.');
 env_assert($manifest->allows('ssl:renew') && $manifest->allows('job:status'), 'The screens\' own commands pass the runner.');
 env_assert(!$manifest->allows('site:remove') && !$manifest->allows('site:deploy') && !$manifest->allows('owner:remove'), 'Deploys and removals do not.');
 
@@ -157,5 +157,23 @@ $real = (new SshGateway($realTarget, new ProcOpenProcessExecutor()))->ask($realR
 env_assert($real->status === PanelAnswerStatus::Refused && $real->reason === 'not_allowed', 'The real executor carries the answer back: '.($real->reason ?? 'ok'));
 env_assert(file_get_contents($received) === $realRequest->toLine(), 'The real executor carries the request on stdin.');
 env_assert(!str_contains((string) file_get_contents($received.'.env'), 'SSH_AUTH_SOCK'), 'The parent\'s environment is not inherited.');
+
+// Several reads in one call (simai-env 1.52.0): one `batch` line, the answers matched back by order.
+$reads = [PanelRequest::read($actor, 'self:describe'), PanelRequest::read($actor, 'self:metrics-history', ['period' => 'day'])];
+$batchId = $reads[0]->requestId;
+$batchExecutor = new RecordingProcessExecutor(ProcessResult::finished(0, json_encode(['schema' => 'simai-panel-answer/1', 'request_id' => $batchId, 'status' => 'ok', 'kind' => 'batch', 'answers' => [
+    ['request_id' => $batchId.'.0', 'status' => 'ok', 'kind' => 'result', 'data' => ['a' => 1]],
+    ['request_id' => $batchId.'.1', 'status' => 'refused', 'reason' => 'not_allowed'],
+]], JSON_THROW_ON_ERROR)));
+$batched = (new SshGateway($target, $batchExecutor))->askAll($reads);
+$sent = json_decode((string) $batchExecutor->recorded()[0]->stdin, true, 16, JSON_THROW_ON_ERROR);
+env_assert($sent['command'] === 'batch' && $sent['requests'] === [['command' => 'self:describe'], ['command' => 'self:metrics-history', 'args' => ['period' => 'day']]]
+    && !array_key_exists('confirm', $sent) && !array_key_exists('args', $sent), 'One batch line with the reads in order: '.json_encode($sent));
+env_assert($batched !== null && $batched[0]->data === ['a' => 1] && $batched[0]->requestId === $reads[0]->requestId
+    && $batched[1]->status === PanelAnswerStatus::Refused && $batched[1]->requestId === $reads[1]->requestId, 'The answers come back in order.');
+$oldServer = new RecordingProcessExecutor(ProcessResult::finished(0, json_encode(['schema' => 'simai-panel-answer/1', 'request_id' => $batchId, 'status' => 'refused', 'reason' => 'unknown_command'], JSON_THROW_ON_ERROR)));
+env_assert((new SshGateway($target, $oldServer))->askAll($reads) === null, 'A server without batch: null, ask one by one.');
+env_assert((new SshGateway($target, $oldServer))->askAll([PanelRequest::read($actor, 'self:describe'), PanelRequest::plan($actor, 'service:restart', ['name' => 'nginx'])]) === null
+    && count($oldServer->recorded()) === 1, 'Only reads go in a batch.');
 
 echo "SshGatewayTest passed.\n";

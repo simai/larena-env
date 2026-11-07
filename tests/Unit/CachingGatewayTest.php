@@ -111,4 +111,122 @@ $probe->ask(PanelRequest::read($admin, 'php:list'));
 env_assert(CachingPanelGateway::keeps(PanelRequest::read($admin, 'php:list')) && CachingPanelGateway::keeps(PanelRequest::read($admin, 'site:doctor', ['domain' => 'a.test'])) && !CachingPanelGateway::keeps(PanelRequest::read($admin, 'file:read', ['domain' => 'a.test', 'path' => 'x']))
     && $probe->source() === 'sudo', 'Only the reads of the server\'s state are kept.');
 
+// Several reads in one call (simai-env 1.52.0 batch): the overview's reads are asked together, then found kept.
+$batching = new class () implements PanelGateway, Larena\Env\Contracts\PanelBatchGateway {
+    /** @var list<string> */
+    public array $asked = [];
+    /** @var list<list<string>> */
+    public array $batches = [];
+    public bool $knows = true;
+
+    /** Read through methods, so the checks see what the calls did. */
+    public function clear(): void
+    {
+        $this->asked = [];
+        $this->batches = [];
+    }
+
+    /** @return list<string> */
+    public function asked(): array
+    {
+        return $this->asked;
+    }
+
+    /** @return list<list<string>> */
+    public function batches(): array
+    {
+        return $this->batches;
+    }
+
+    public function ask(PanelRequest $request): PanelAnswer
+    {
+        $this->asked[] = $request->command;
+
+        return PanelAnswer::fromDocument($request->requestId, ['status' => 'ok', 'kind' => 'result', 'data' => ['one' => $request->command]]);
+    }
+
+    public function askAll(array $requests): ?array
+    {
+        if (!$this->knows) {
+            return null;
+        }
+        $this->batches[] = array_map(static fn (PanelRequest $request): string => $request->command, $requests);
+
+        return array_map(static fn (PanelRequest $request): PanelAnswer => PanelAnswer::fromDocument($request->requestId,
+            ['status' => 'ok', 'kind' => 'result', 'data' => ['batch' => $request->command]]), $requests);
+    }
+
+    public function source(): string
+    {
+        return 'sudo';
+    }
+};
+$batchCache = new Repository(new ArrayStore());
+$page = new CachingPanelGateway($batching, $batchCache, 30);
+$page->prefetch([PanelRequest::read($admin, 'self:metrics'), PanelRequest::read($admin, 'service:list'), PanelRequest::read($admin, 'self:update-plan', ['target' => 'env']),
+    PanelRequest::read($admin, 'service:log', ['name' => 'nginx'])]);
+env_assert($batching->batches() === [['self:metrics', 'service:list', 'self:update-plan']] && $batching->asked() === [], 'The page\'s reads go in one call; a log is never among them.');
+env_assert($page->ask(PanelRequest::read($admin, 'service:list'))->data === ['batch' => 'service:list'] && $batching->asked() === [], 'The page then finds the answers.');
+$page->prefetch([PanelRequest::read($admin, 'self:metrics'), PanelRequest::read($admin, 'service:list')]);
+env_assert(count($batching->batches()) === 1, 'What is kept is not asked again.');
+
+// The warm-up: what pages asked lately is asked again once it gets old, in one call, and kept longer than a minute.
+$warmStore = new class () extends ArrayStore {
+    /** @var array<string, int> */
+    public array $seconds = [];
+
+    /** @return array<string, int> */
+    public function seconds(): array
+    {
+        return $this->seconds;
+    }
+
+    public function put($key, $value, $seconds)
+    {
+        $this->seconds[$key] = $seconds;
+
+        return parent::put($key, $value, $seconds);
+    }
+};
+$warmCache = new Repository($warmStore);
+$visit = new CachingPanelGateway($batching, $warmCache, 30);
+$visit->ask(PanelRequest::read($admin, 'self:describe'));
+$visit->ask(PanelRequest::read($admin, 'firewall:status'));
+$visit->ask(PanelRequest::read($admin, 'service:log', ['name' => 'nginx']));
+$visit->ask(PanelRequest::read($owner, 'self:describe'));
+$visit->ask(PanelRequest::read(new PanelActor('admin@example.com', null, 'root@example.com'), 'self:describe'));
+$batching->clear();
+env_assert((new CachingPanelGateway($batching, $warmCache, 30))->warm() === 0, 'Fresh answers are not asked again.');
+$age = static function (Repository $cache, int $seconds): void {
+    $reads = $cache->get('larena-env:gateway:reads');
+    foreach ($reads as $id => $read) {
+        $reads[$id]['warmed'] -= $seconds;
+    }
+    $cache->forever('larena-env:gateway:reads', $reads);
+};
+$age($warmCache, 100);
+$warmed = (new CachingPanelGateway($batching, $warmCache, 30))->warm();
+env_assert($warmed === 3 && count($batching->batches()) === 1 && in_array($batching->batches()[0], [['self:describe', 'firewall:status'], ['firewall:status', 'self:describe']], true),
+    'The admin\'s two reads in one call, the owner\'s alone; no log, no read seen as someone else: '.json_encode($batching->batches()));
+env_assert(in_array(CachingPanelGateway::WARM_SECONDS, $warmStore->seconds(), true), 'A warmed answer outlives the minute between warm-ups.');
+$batching->clear();
+$read = (new CachingPanelGateway($batching, $warmCache, 30))->ask(PanelRequest::read($admin, 'firewall:status'));
+env_assert($read->data === ['batch' => 'firewall:status'] && $batching->asked() === [], 'The next page reads the warmed answer.');
+$reads = $warmCache->get('larena-env:gateway:reads');
+foreach ($reads as $id => $one) {
+    $reads[$id]['used'] -= 3600;
+}
+$warmCache->forever('larena-env:gateway:reads', $reads);
+$age($warmCache, 100);
+env_assert((new CachingPanelGateway($batching, $warmCache, 30))->warm() === 0 && $warmCache->get('larena-env:gateway:reads') === [], 'Nobody looked for an hour: nothing is asked, the list is emptied.');
+
+// A server before 1.52.0 refuses a batch: the reads are asked one by one, and no batch is tried for an hour.
+$batching->knows = false;
+$batching->clear();
+$old = new Repository(new ArrayStore());
+(new CachingPanelGateway($batching, $old, 30))->prefetch([PanelRequest::read($admin, 'self:metrics'), PanelRequest::read($admin, 'service:list')]);
+$batching->knows = true;
+(new CachingPanelGateway($batching, $old, 30))->prefetch([PanelRequest::read($admin, 'self:alerts'), PanelRequest::read($admin, 'db:list')]);
+env_assert($batching->asked() === ['self:metrics', 'service:list', 'self:alerts', 'db:list'] && $batching->batches() === [], 'Without batch, one by one.');
+
 echo "CachingGatewayTest passed.\n";

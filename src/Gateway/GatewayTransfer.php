@@ -7,6 +7,7 @@ namespace Larena\Env\Gateway;
 use Larena\Core\Gateway\GatewayAdapter;
 use Larena\Core\Gateway\GatewayRejected;
 use Larena\Core\Gateway\GatewayRequest;
+use Larena\Core\Gateway\GatewayRunner;
 use Larena\Core\Process\ProcessExecutor;
 use Larena\Core\Process\ProcessRejected;
 use Larena\Core\Process\ProcessSpecification;
@@ -45,6 +46,51 @@ final class GatewayTransfer
         }
 
         return $arguments;
+    }
+
+    /**
+     * Several reads of one person as one `batch` call (simai-env 1.52.0). The batch carries the first request's id;
+     * its answers are matched back by order. Null when the batch is not answered as a batch.
+     *
+     * @param list<PanelRequest> $requests
+     *
+     * @return list<PanelAnswer>|null
+     */
+    public static function batch(GatewayAdapter $adapter, ProcessExecutor $executor, array $requests): ?array
+    {
+        if (count($requests) < 2 || count($requests) > \Larena\Env\Contracts\PanelBatchGateway::MOST) {
+            return null;
+        }
+        $actor = $requests[0]->actor;
+        $reads = [];
+        foreach ($requests as $request) {
+            if ($request->actor != $actor || $request->confirm || $request->attachment !== null || PanelCommands::kind($request->command) !== PanelCommands::READ) {
+                return null;
+            }
+            $reads[] = $request->args === [] ? ['command' => $request->command] : ['command' => $request->command, 'args' => (object) $request->args];
+        }
+        $id = $requests[0]->requestId;
+        $line = json_encode(['schema' => PanelRequest::SCHEMA, 'request_id' => $id, 'actor' => $actor->toDocument(), 'command' => 'batch', 'requests' => $reads],
+            JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)."\n";
+        try {
+            $answer = (new GatewayRunner($executor))->run($adapter, new GatewayRequest('batch', ['request_id' => $id, 'line' => $line]));
+        } catch (GatewayRejected|ProcessRejected) {
+            return null;
+        }
+        $document = $answer->payload;
+        $answers = $document['answers'] ?? null;
+        if (($document['status'] ?? null) !== 'ok' || ($document['kind'] ?? null) !== 'batch' || !is_array($answers) || !array_is_list($answers) || count($answers) !== count($requests)) {
+            return null;
+        }
+        $result = [];
+        foreach ($requests as $index => $request) {
+            $one = $answers[$index];
+            $result[] = is_array($one) && ($one['request_id'] ?? null) === $id.'.'.$index
+                ? PanelAnswer::fromDocument($request->requestId, $one)
+                : PanelAnswer::failed($request->requestId, PanelReason::ANSWER_INVALID);
+        }
+
+        return $result;
     }
 
     public static function download(GatewayAdapter $adapter, ProcessExecutor $executor, PanelRequest $request, string $into): PanelDownload

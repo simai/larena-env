@@ -34,6 +34,8 @@ final readonly class ServerAdminController
         private ?\Larena\Env\Server\SiteExtrasReader $extras = null,
         private ?MetricSamples $samples = null,
         private ?\Larena\Env\Setup\ServerSetup $setup = null,
+        // The kept answers, to ask the overview's reads together.
+        private ?\Larena\Env\Contracts\PanelGateway $gateway = null,
     ) {
     }
 
@@ -75,6 +77,9 @@ final readonly class ServerAdminController
 
         // The server's load now (Panel plan 3.3), when the server's gateway reports it: the whole server's, so only the
         // system level reads it, and it also tells whether a disk is running out.
+        if ($section === 'overview' && $actor->owner === null && $this->gateway instanceof \Larena\Env\Gateway\CachingPanelGateway) {
+            $this->gateway->prefetch($this->overviewReads($actor, $overview, $request));
+        }
         $metrics = $section === 'overview' && $actor->owner === null && $overview?->capabilities?->allows('self:metrics') === true ? $this->extras?->metrics($actor) : null;
         $now = PanelWarnings::now();
 
@@ -128,6 +133,36 @@ final readonly class ServerAdminController
     }
 
     /**
+     * The reads the overview makes after the server's description, asked together (ENV 2026-11-07: one by one they took
+     * about five seconds).
+     *
+     * @return list<\Larena\Env\Gateway\PanelRequest>
+     */
+    private function overviewReads(\Larena\Env\Gateway\PanelActor $actor, ?\Larena\Env\Server\ServerOverview $overview, Request $request): array
+    {
+        $allows = static fn (string $command): bool => $overview?->capabilities?->allows($command) === true;
+        $reads = [];
+        foreach (['self:metrics', 'service:list', 'self:alerts'] as $command) {
+            if ($allows($command)) {
+                $reads[] = \Larena\Env\Gateway\PanelRequest::read($actor, $command);
+            }
+        }
+        if ($allows('self:metrics-history')) {
+            [, $source] = \Larena\Env\History\HistoryCharts::PERIODS[\Larena\Env\History\HistoryCharts::period($request->query('period'))];
+            foreach (array_unique(['day', $source]) as $period) {
+                $reads[] = \Larena\Env\Gateway\PanelRequest::read($actor, 'self:metrics-history', ['period' => $period]);
+            }
+        }
+        if ($allows('self:update-plan')) {
+            foreach (\Larena\Env\Update\UpdatePlan::TARGETS as $target) {
+                $reads[] = \Larena\Env\Gateway\PanelRequest::read($actor, 'self:update-plan', ['target' => $target]);
+            }
+        }
+
+        return $reads;
+    }
+
+    /**
      * @param list<array{target: string, available: ?string}> $updates
      * @param callable(string, array<string, string>=): string $text
      *
@@ -165,6 +200,8 @@ final readonly class ServerAdminController
             $plan = $target === 'panel' ? $plan?->beside(UpdateController::panelBuild()) : $plan;
             if ($plan?->updateAvailable === true) {
                 $updates[] = ['target' => $target, 'available' => $plan->available];
+                // simai-env first, then the panel (ENV 2026-11-07): one update offered at a time.
+                break;
             }
         }
 

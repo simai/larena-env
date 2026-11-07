@@ -26,7 +26,7 @@ $without = env_boot('without');
 env_assert($without['admin_loadable'] === false, 'The proof must really run without the admin classes.');
 env_assert($without['routes'] === [], 'Without the admin no route may exist.');
 env_assert($without['navigation'] === [], 'Without the admin no menu entry.');
-env_assert($without['commands'] === [RegisterServerAreaCommand::class, PanelCheckCommand::class], 'The console serves without the admin, the panel\'s check too.');
+env_assert($without['commands'] === [RegisterServerAreaCommand::class, PanelCheckCommand::class, \Larena\Env\Console\PanelWarmCommand::class], 'The console serves without the admin, the panel\'s check too.');
 env_assert($without['gateway_source'] === 'recorded' && $without['sites'] === 4, 'The gateway and the typed read work without the admin.');
 env_assert($without['operation_owner'] === 'larena/env', 'The right is declared when the registry is resolved.');
 
@@ -114,7 +114,7 @@ foreach ($with['routes'] as $name => $route) {
     env_assert(in_array('access:env.server.read', $route['middleware'], true) === $reads, "{$name} asks for the wrong level.");
     env_assert(in_array('access:env.server.operate', $route['middleware'], true) === (($people && !$reads) || $nginx || $channelChanges || $updateChanges || $serverToolChanges || $setup), "{$name} must ask for the server's right.");
 }
-env_assert($with['commands'] === [RegisterServerAreaCommand::class, PanelCheckCommand::class] && $with['sites'] === 4, 'The rest does not change.');
+env_assert($with['commands'] === [RegisterServerAreaCommand::class, PanelCheckCommand::class, \Larena\Env\Console\PanelWarmCommand::class] && $with['sites'] === 4, 'The rest does not change.');
 
 $root = dirname(__DIR__, 2);
 $adminNames = [];

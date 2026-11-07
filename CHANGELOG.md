@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- The panel opens faster (ENV 2026-11-07: each ask starts simai-env, 0.7-1 s; the overview took about five seconds).
+  Every minute `larena:env-warm` (the application's scheduler) asks the server again what the pages asked within the
+  last twenty minutes, once an answer is 40 s old, and keeps it for 150 s, so a page opens from kept answers; nobody
+  looking, nothing is asked. With simai-env 1.52.0 the reads go together in one `batch` call, and the overview asks its
+  reads (load, services, alerts, history, update plans) in one call too; an older server is asked one by one.
+- An update waiting shows in the admin's alert bar and among the overview's recommended actions, simai-env first, then
+  the panel; «Обновить» opens the server's plan of that update at once, to confirm (/admin/server/update?target=env).
 - Signing in leads to the server's overview again, also when the panel was opened signed out: the sign-in goes on to
   the panel's address, which decides (the overview, or the sites for an owner of sites), not to the sites' screen. «Обзор»
   is the first row of the panel's menu (the test server's owner, 2026-11-07).

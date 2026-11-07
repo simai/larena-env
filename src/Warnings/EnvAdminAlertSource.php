@@ -95,7 +95,7 @@ final readonly class EnvAdminAlertSource implements AdminAlertSource
         return $alerts;
     }
 
-    /** @return list<AdminAlert> one info item per update waiting, named by its version so a newer one shows again */
+    /** @return list<AdminAlert> the first update waiting, simai-env before the panel, named by its version so a newer one shows again */
     private function updates(PanelActor $actor): array
     {
         $text = fn (string $key, array $replace = []): string => (string) $this->translator->get('larena-env::admin.'.$key, $replace);
@@ -117,8 +117,10 @@ final readonly class EnvAdminAlertSource implements AdminAlertSource
                 level: AdminAlertLevel::Info,
                 text: $text('warnings.update_'.$target, ['version' => $plan->available, 'current' => $plan->current ?? '—']),
                 source: $text('warnings.bar_server'),
-                action: new AdminAlertAction($text('warnings.update_go'), route('larena.env.admin.update', [], false)),
+                action: new AdminAlertAction($text('warnings.update_go'), route('larena.env.admin.update', ['target' => $target], false)),
             );
+            // simai-env first, then the panel: the panel's update is offered once the server's is done (ENV 2026-11-07).
+            break;
         }
 
         return $alerts;

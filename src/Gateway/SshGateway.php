@@ -9,6 +9,7 @@ use Larena\Core\Gateway\GatewayRequest;
 use Larena\Core\Gateway\GatewayRunner;
 use Larena\Core\Process\ProcessExecutor;
 use Larena\Core\Process\ProcessRejected;
+use Larena\Env\Contracts\PanelBatchGateway;
 use Larena\Env\Contracts\PanelFileGateway;
 use Larena\Env\Contracts\PanelGateway;
 
@@ -16,7 +17,7 @@ use Larena\Env\Contracts\PanelGateway;
  * The live driver, over larena/core's gateway runner. Failures become reason codes only: ssh's stderr can name the key's
  * path, so it never reaches an answer, a message or a log. This class writes no log at all; the gateway keeps its own.
  */
-final readonly class SshGateway implements PanelGateway, PanelFileGateway
+final readonly class SshGateway implements PanelGateway, PanelFileGateway, PanelBatchGateway
 {
     public function __construct(
         private SshGatewayTarget $target,
@@ -57,6 +58,14 @@ final readonly class SshGateway implements PanelGateway, PanelFileGateway
         }
 
         return PanelAnswer::fromDocument($request->requestId, $answer->payload);
+    }
+
+    public function askAll(array $requests): ?array
+    {
+        if (!is_readable($this->target->keyPath) || !is_readable($this->target->knownHostsPath)) {
+            return null;
+        }
+        return GatewayTransfer::batch(new SshGatewayAdapter($this->target), $this->executor, $requests);
     }
 
     public function download(PanelRequest $request, string $into): PanelDownload

@@ -9,6 +9,7 @@ use Larena\Core\Gateway\GatewayRequest;
 use Larena\Core\Gateway\GatewayRunner;
 use Larena\Core\Process\ProcessExecutor;
 use Larena\Core\Process\ProcessRejected;
+use Larena\Env\Contracts\PanelBatchGateway;
 use Larena\Env\Contracts\PanelFileGateway;
 use Larena\Env\Contracts\PanelGateway;
 
@@ -16,7 +17,7 @@ use Larena\Env\Contracts\PanelGateway;
  * The live driver of a panel installed on the server it manages. Failures become reason codes only: sudo's stderr is
  * never kept, shown or logged. The gateway keeps its own log.
  */
-final readonly class SudoGateway implements PanelGateway, PanelFileGateway
+final readonly class SudoGateway implements PanelGateway, PanelFileGateway, PanelBatchGateway
 {
     public function __construct(
         private SudoGatewayTarget $target,
@@ -54,6 +55,11 @@ final readonly class SudoGateway implements PanelGateway, PanelFileGateway
         }
 
         return PanelAnswer::fromDocument($request->requestId, $answer->payload);
+    }
+
+    public function askAll(array $requests): ?array
+    {
+        return GatewayTransfer::batch(new SudoGatewayAdapter($this->target), $this->executor, $requests);
     }
 
     public function download(PanelRequest $request, string $into): PanelDownload

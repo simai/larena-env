@@ -55,7 +55,7 @@ final class RecommendedActions
         }
         foreach ($updates as $update) {
             $items[] = ['key' => 'update:'.$update['target'], 'state' => self::TODO, 'title' => $text('update.hint.'.$update['target'], ['available' => $update['available'] ?? '—']),
-                'line' => $text('actions.update_line'), 'action' => ['kind' => 'link', 'url' => $updateUrl, 'label' => $text('actions.update')]];
+                'line' => $text('actions.update_line'), 'action' => ['kind' => 'link', 'url' => $updateUrl.(str_contains($updateUrl, '?') ? '&' : '?').'target='.$update['target'], 'label' => $text('actions.update')]];
         }
         foreach ($setup as $step => $state) {
             if (isset(self::COVERED[$step], $kinds[self::COVERED[$step]])) {
