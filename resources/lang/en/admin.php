@@ -42,6 +42,7 @@ return [
         'certificate' => 'HTTPS',
         'certificate_left' => ':days days left',
         'certificate_ends' => 'Ends in :days days',
+        'certificate_local' => 'Local name',
         'certificate_none' => 'None',
         'backups' => 'Backups',
         'backups_scheduled' => 'daily',
@@ -412,6 +413,9 @@ return [
         'kinds' => ['nvme' => 'NVMe', 'ssd' => 'SSD', 'hdd' => 'HDD', 'virtual' => 'virtual disk'],
     ],
     'storages' => [
+        'site_backups' => 'Sites\' backups',
+        'site_backup_last' => 'Last backup :time',
+        'site_backup_none' => 'No backups',
         'navigation' => 'Backup storages',
         'title' => 'Backup storages',
         'description' => 'Copies of the sites\' backups away from the server: if the server is lost, the sites come back from the storage.',

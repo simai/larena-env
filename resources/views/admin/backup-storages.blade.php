@@ -11,6 +11,20 @@
     {{-- Storages for the sites' backups away from the server (simai-env 1.44.0), the administrator's: each storage with its
          bucket, how long copies stay and its last test, the copies in the open one with «Забрать на сервер», and a storage
          to add. Every change is planned and confirmed; the keys never come back into the page. --}}
+    @if (($siteBackups ?? []) !== [])
+        <section class="larena-panel larena-panel-padded m-bottom-2" data-env-site-backups aria-labelledby="env-site-backups">
+            <h2 id="env-site-backups" class="text-2">{{ __('larena-env::admin.storages.site_backups') }}</h2>
+            <ul class="m-0 p-0" style="list-style: none;">
+                @foreach ($siteBackups as $row)
+                    <li class="flex flex-wrap items-cross-center content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-site-backup="{{ $row['domain'] }}" data-env-site-backup-state="{{ $row['state'] }}">
+                        <a href="{{ route('larena.env.admin.site', ['domain' => $row['domain']], false) }}?tab=backups">{{ $row['domain'] }}</a>
+                        <sf-badge appearance="tonal" status="{{ $row['state'] === 'fresh' ? 'success' : 'error' }}"
+                            text="{{ $row['last'] !== null ? __('larena-env::admin.storages.site_backup_last', ['time' => \Larena\Env\Server\Moment::short($row['last'])]) : __('larena-env::admin.storages.site_backup_none') }}"></sf-badge>
+                    </li>
+                @endforeach
+            </ul>
+        </section>
+    @endif
     @if (!$supported)
         <section class="larena-panel larena-panel-padded" data-env-storages="unsupported">
             <p class="m-0">{{ __('larena-env::admin.storages.unsupported') }}</p>

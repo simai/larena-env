@@ -24,6 +24,10 @@
   - The storage form on «Копии» uses the Framework's inputs, as the wizard does; the wizard is under «Обзор» in the
     menu and the breadcrumbs (its routes are `larena.env.admin.overview.setup*`).
   - The processor tile says it is the last minute's load, the chart's mark «последний замер».
+  - The sites' list colours the certificate (red without HTTPS on a public name, «Локальный адрес» grey) and the last
+    backup (red when none or older than two days), the words kept; «Копии» starts with every site's last backup.
+  - A site's log opened again within 30 s is not searched again (it is never asked in the background); the software
+    filter says «Новые версии программ».
 
 - The panel opens faster (ENV 2026-11-07: each ask starts simai-env, 0.7-1 s; the overview took about five seconds).
   Every minute `larena:env-warm` (the application's scheduler) asks the server again what the pages asked within the

@@ -229,6 +229,14 @@ $batching->knows = true;
 (new CachingPanelGateway($batching, $old, 30))->prefetch([PanelRequest::read($admin, 'self:alerts'), PanelRequest::read($admin, 'db:list')]);
 env_assert($batching->asked() === ['self:metrics', 'service:list', 'self:alerts', 'db:list'] && $batching->batches() === [], 'Without batch, one by one.');
 
+// A site's log opened again within the ttl is not searched again, and is never asked in the background (critics 2026-11-07).
+$logCache = new Repository(new ArrayStore());
+$logPage = new CachingPanelGateway($batching, $logCache, 30);
+$before = count($batching->asked());
+$logPage->ask(PanelRequest::read($admin, 'logs:nginx', ['domain' => 'a.test', 'kind' => 'access']));
+$logPage->ask(PanelRequest::read($admin, 'logs:nginx', ['domain' => 'a.test', 'kind' => 'access']));
+env_assert(count($batching->asked()) === $before + 1 && ($logCache->get('larena-env:gateway:reads') ?? []) === [], 'A log is kept for a second look, never warmed.');
+
 // A gateway that does not answer at all: the reads after it fail at once for half a minute instead of waiting each.
 $hung = new class () implements PanelGateway {
     public int $asked = 0;

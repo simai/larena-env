@@ -80,12 +80,32 @@ $columns = (string) json_encode(array_column($page->columns, null, 'key'), JSON_
 env_assert(str_contains($columns, '"answers":{"key":"answers","label":"'.$text('sites.answers').'","type":"choice","options":[{"value":"works"')
     && str_contains($columns, '{"value":"down","label":"'.$text('sites.state.down').'","color":"danger"}')
     && str_contains($columns, '"type":"choice","options":[{"value":"generic"') && str_contains($columns, '{"value":"redirect","label":"'.$text('sites.kinds.redirect').'"}'), 'The state and the kind are coloured choices the list filters by: '.$columns);
-env_assert($byDomain['demo-php.test']['certificate'] === $text('sites.certificate_none'), 'Empty values in words.');
+env_assert($byDomain['demo-php.test']['certificate'] === $text('sites.certificate_local'), 'Empty values in words; a local name is said so.');
 env_assert($byDomain['demo-owned.test']['backups'] !== $text('sites.backups_unscheduled'), 'A site with its daily backup and none yet does not say it has none scheduled.');
 env_assert($byDomain['demo-php.test']['backups'] === \Larena\Env\Server\Moment::short('2026-01-01T00:00:00Z'), 'Its newest backup is named.');
 env_assert(\Larena\Env\Server\Moment::short('2026-01-01T00:00:00Z', 2026) === '01.01 00:00 UTC' && \Larena\Env\Server\Moment::short('2025-01-01T00:00:00Z', 2026) === '01.01.2025 00:00 UTC', 'A backup this year without its year.');
 $soon = new ServerOverview('now', '1', 'ubuntu', '24.04', [], [], [new \Larena\Env\Server\SiteSummary('a.test', 'static', 'none', 'letsencrypt', null, null, null, 9, true)]);
 $soonRow = ServerSitesPage::of($soon, $text)->rows[0];
+// The certificate and the backup are coloured marks with their words: a backup two days old is red, a fresh one green;
+// a local name without a certificate is not red (critics 2026-11-07).
+$marked = new ServerOverview('now', '1', 'ubuntu', '24.04', [], [], [
+    new \Larena\Env\Server\SiteSummary('old.ru', 'generic', '8.3', 'none', null, null, null, null, true, lastBackup: '2026-01-01T00:00:00Z'),
+    new \Larena\Env\Server\SiteSummary('new.test', 'static', 'none', 'none', null, null, null, null, true, lastBackup: '2026-01-05T00:00:00Z'),
+]);
+$markedPage = ServerSitesPage::of($marked, $text, new DateTimeImmutable('2026-01-05T12:00:00Z'));
+$markedColumns = json_decode((string) json_encode($markedPage->columns), true);
+$options = static function (string $key) use ($markedColumns): array {
+    foreach (is_array($markedColumns) ? $markedColumns : [] as $column) {
+        if (is_array($column) && ($column['key'] ?? null) === $key && is_array($column['options'] ?? null)) {
+            return array_column($column['options'], 'color', 'value');
+        }
+    }
+
+    return [];
+};
+$markedRows = array_column($markedPage->rows ?? [], null, 'id');
+env_assert(($options('backups')[$markedRows['old.ru']['backups']] ?? '') === 'danger' && ($options('backups')[$markedRows['new.test']['backups']] ?? '') === 'success'
+    && ($options('certificate')[$text('sites.certificate_none')] ?? '') === 'danger' && ($options('certificate')[$text('sites.certificate_local')] ?? '') === 'neutral', 'The backups and certificates are coloured: '.json_encode([$options('backups'), $options('certificate')]));
 env_assert($soonRow['certificate'] === $text('sites.certificate_ends', ['days' => '9']) && $soonRow['backups'] === $text('sites.backups_scheduled'), 'A certificate that ends soon is said so.');
 
 // The admin's real presenter draws the list, as the controller asks it to.

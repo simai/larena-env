@@ -697,6 +697,16 @@ env_assert(str_contains($listed, 'data-env-storages="2"') && str_contains($liste
     && str_contains($listed, 'name="secret_key"') && str_contains($listed, 'acme-backups/srv1') && !str_contains($listed, 'name="default" value="1" checked'), 'The storages page: '.$listed);
 env_assert(str_contains($storagePage(['storages' => []]), 'name="default" value="1" checked') && str_contains($storagePage(['supported' => false]), 'data-env-storages="unsupported"')
     && !str_contains($storagePage(['allows' => ['add' => false, 'test' => false, 'remove' => false, 'fetch' => false]]), 'data-env-storage-op='), 'First storage takes new copies; older server; read only.');
+// Every site's last backup on the backups page, the ones in need first (critics 2026-11-07).
+$summary = \Larena\Env\Admin\SiteBackupSummary::of([
+    new \Larena\Env\Server\SiteSummary('fresh.ru', 'generic', '8.3', 'none', null, null, null, null, true, lastBackup: '2026-01-05T00:00:00Z'),
+    new \Larena\Env\Server\SiteSummary('go.ru', 'redirect', 'none', 'none', null, null, null, null, false),
+    new \Larena\Env\Server\SiteSummary('old.ru', 'generic', '8.3', 'none', null, null, null, null, true, lastBackup: '2026-01-01T00:00:00Z'),
+    new \Larena\Env\Server\SiteSummary('bare.ru', 'static', 'none', 'none', null, null, null, null, false),
+], new DateTimeImmutable('2026-01-05T12:00:00Z'));
+env_assert(array_column($summary, 'state', 'domain') === ['bare.ru' => 'none', 'old.ru' => 'stale', 'fresh.ru' => 'fresh'], 'The sites\' backups, those in need first: '.json_encode($summary));
+$withSummary = $storagePage(['siteBackups' => $summary]);
+env_assert(str_contains($withSummary, 'data-env-site-backup="old.ru" data-env-site-backup-state="stale"') && substr_count($withSummary, 'data-env-site-backup=') === 3, 'The backups page lists every site\'s last backup.');
 $storageArgs = new \ReflectionMethod(\Larena\Env\Http\Controllers\BackupStorageController::class, 'addArgs');
 $added = $storageArgs->invoke(null, \Illuminate\Http\Request::create('/', 'POST', ['provider' => 'yandex', 'bucket' => 'Acme-Backups ', 'prefix' => '/srv1/', 'keep' => '400',
     'default' => '1', 'access_key' => 'YCAJEexample1', 'secret_key' => 'YCsecretexample123']), 'yandex');

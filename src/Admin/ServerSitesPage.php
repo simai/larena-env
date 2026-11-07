@@ -25,8 +25,19 @@ final class ServerSitesPage
     }
 
     /** @param callable(string, array<string, string>=): string $text */
-    public static function of(ServerOverview $overview, callable $text): AdminDataviewPage
+    public static function of(ServerOverview $overview, callable $text, ?\DateTimeImmutable $now = null): AdminDataviewPage
     {
+        $now ??= new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
+        $rows = array_map(static fn (SiteSummary $site): array => self::row($site, $text), $overview->sites);
+        // The certificate and the last backup as coloured marks, their words kept (critics 2026-11-07): each value the
+        // rows hold is an option with the colour of what it means.
+        /** @var array<string, array<string, string>> $marks */
+        $marks = ['certificate' => [], 'backups' => []];
+        foreach ($overview->sites as $index => $site) {
+            $marks['certificate'][$rows[$index]['certificate']] = self::certificateColor($site);
+            $marks['backups'][$rows[$index]['backups']] = self::backupColor($site, $now);
+        }
+
         return new AdminDataviewPage(
             instanceId: 'env-server-sites',
             title: $text('sites.title'),
@@ -35,16 +46,45 @@ final class ServerSitesPage
                 'answers' => ['type' => 'choice', 'options' => array_map(static fn (string $state, string $color): array => ['value' => $state, 'label' => $text('sites.state.'.$state), 'color' => $color],
                     array_keys(SiteState::COLORS), SiteState::COLORS)],
                 'profile' => ['type' => 'choice', 'options' => array_map(static fn (string $profile): array => ['value' => $profile, 'label' => $text('sites.kinds.'.$profile)], self::PROFILES)],
-                default => [],
+                default => isset($marks[$key]) ? ['type' => 'choice', 'options' => array_map(static fn (string $value, string $color): array => ['value' => $value, 'label' => $value, 'color' => $color],
+                    array_map('strval', array_keys($marks[$key])), array_values($marks[$key]))] : [],
             }, self::COLUMNS),
             total: count($overview->sites),
             pageId: 'page.admin.env-server',
-            rows: array_map(static fn (SiteSummary $site): array => self::row($site, $text), $overview->sites),
+            rows: $rows,
             perPage: 100,
             rowLinks: ['view' => '/admin/server/sites/__ID__'],
             countLabel: $text('sites.count'),
             tableViewLabel: $text('sites.table_view'),
         );
+    }
+
+    /** Red without a certificate (a public name) or when it ends within 3 days, amber within 14, green otherwise. */
+    private static function certificateColor(SiteSummary $site): string
+    {
+        if ($site->certificateDaysLeft !== null) {
+            return $site->certificateDaysLeft <= 3 ? 'danger' : ($site->certificateDaysLeft <= 14 ? 'warning' : 'success');
+        }
+        if (RecommendedActions::local($site->domain)) {
+            return 'neutral';
+        }
+
+        return $site->ssl === 'none' ? 'danger' : 'warning';
+    }
+
+    /** Red with no backup or one older than two days (PanelWarnings::BACKUP_HOURS), green otherwise. */
+    private static function backupColor(SiteSummary $site, \DateTimeImmutable $now): string
+    {
+        if ($site->lastBackup === null) {
+            return in_array($site->profile, ['redirect', 'alias'], true) ? 'neutral' : 'danger';
+        }
+        try {
+            $age = $now->getTimestamp() - (new \DateTimeImmutable($site->lastBackup))->getTimestamp();
+        } catch (\Exception) {
+            return 'neutral';
+        }
+
+        return $age > \Larena\Env\Warnings\PanelWarnings::BACKUP_HOURS * 3600 ? 'danger' : 'success';
     }
 
     /**
@@ -59,7 +99,7 @@ final class ServerSitesPage
             'profile' => $site->profile,
             'certificate' => $site->certificateDaysLeft !== null
                 ? $text($site->certificateDaysLeft <= 14 ? 'sites.certificate_ends' : 'sites.certificate_left', ['days' => (string) $site->certificateDaysLeft])
-                : ($site->ssl === 'none' ? $text('sites.certificate_none') : $site->ssl),
+                : ($site->ssl === 'none' ? $text(RecommendedActions::local($site->domain) ? 'sites.certificate_local' : 'sites.certificate_none') : $site->ssl),
             'backups' => $site->lastBackup !== null
                 ? \Larena\Env\Server\Moment::short($site->lastBackup)
                 : $text($site->backupSchedule ? 'sites.backups_scheduled' : 'sites.backups_unscheduled'),

@@ -42,6 +42,7 @@ return [
         'certificate' => 'HTTPS',
         'certificate_left' => 'ещё :days дн.',
         'certificate_ends' => 'кончится через :days дн.',
+        'certificate_local' => 'Локальный адрес',
         'certificate_none' => 'нет',
         'backups' => 'Копии',
         'backups_scheduled' => 'ежедневно',
@@ -412,6 +413,9 @@ return [
         'kinds' => ['nvme' => 'NVMe', 'ssd' => 'SSD', 'hdd' => 'HDD', 'virtual' => 'виртуальный диск'],
     ],
     'storages' => [
+        'site_backups' => 'Копии сайтов',
+        'site_backup_last' => 'Последняя копия :time',
+        'site_backup_none' => 'Копий нет',
         'navigation' => 'Хранилища копий',
         'title' => 'Хранилища копий',
         'description' => 'Копии резервных копий сайтов вне сервера: если сервер пропадёт, сайты можно поднять из хранилища.',
@@ -958,7 +962,7 @@ return [
                 'all' => 'Все',
                 'installed' => 'Установлены',
                 'available' => 'Можно установить',
-                'updates' => 'Есть обновления',
+                'updates' => 'Новые версии программ',
             ],
             'remove_blocked' => [
                 'used_by_sites' => 'Удалить нельзя: её используют сайты :sites.',

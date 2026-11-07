@@ -28,6 +28,7 @@ final class CachingPanelGateway implements PanelGateway, PanelFileGateway
         'site:describe', 'site:doctor', 'site:php-ini-list', 'site:nginx-custom-show',
         'php:list', 'php:extensions', 'software:list', 'service:list', 'firewall:status', 'access:list', 'db:list', 'cron:list',
         'ssl:dns-status', 'file:list', 'security:status', 'security:files', 'security:quarantine-list', 'security:geo-status', 'mcp:status', 'backup:storage-list', 'panel:address',
+        'logs:nginx',
     ];
 
     /**
@@ -35,6 +36,12 @@ final class CachingPanelGateway implements PanelGateway, PanelFileGateway
      * through an action, which makes them stale at once: kept for `slowTtl` seconds instead of `ttl`.
      */
     public const array SLOW = ['software:list', 'php:list', 'php:extensions', 'self:update-plan', 'self:profiles', 'self:commands'];
+
+    /**
+     * The reads kept for a page opened again but not asked again in the background: a log's search reads up to 20000 lines
+     * (seconds on the server), worth keeping for a second look, not worth asking every minute (critics 2026-11-07).
+     */
+    public const array NOT_WARMED = ['logs:nginx'];
 
     private const string GENERATION = 'larena-env:gateway:generation';
 
@@ -319,7 +326,7 @@ final class CachingPanelGateway implements PanelGateway, PanelFileGateway
      */
     private function remember(PanelRequest $request): void
     {
-        if ($request->actor->impersonatedBy !== null) {
+        if ($request->actor->impersonatedBy !== null || in_array($request->command, self::NOT_WARMED, true)) {
             return;
         }
         $args = $request->args;

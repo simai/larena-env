@@ -78,6 +78,9 @@ final readonly class BackupStorageController
             'copies' => $copies,
             'allows' => $allows,
             'providers' => array_keys(BackupStorage::PROVIDERS),
+            // Every site's last backup at a glance, the panel's own left out (critics 2026-11-07: /backups showed only storages).
+            'siteBackups' => \Larena\Env\Admin\SiteBackupSummary::of($read->overview?->withoutSites([$request->getHost()])->sites ?? [],
+                new \DateTimeImmutable('now', new \DateTimeZone('UTC'))),
             'notice' => $request->session()->get('larena_env_notice'),
         ]);
     }
