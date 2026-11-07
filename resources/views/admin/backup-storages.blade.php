@@ -18,8 +18,11 @@
                 @foreach ($siteBackups as $row)
                     <li class="flex flex-wrap items-cross-center content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-site-backup="{{ $row['domain'] }}" data-env-site-backup-state="{{ $row['state'] }}">
                         <a href="{{ route('larena.env.admin.site', ['domain' => $row['domain']], false) }}?tab=backups">{{ $row['domain'] }}</a>
-                        <sf-badge appearance="tonal" status="{{ $row['state'] === 'fresh' ? 'success' : 'error' }}"
-                            text="{{ $row['last'] !== null ? __('larena-env::admin.storages.site_backup_last', ['time' => \Larena\Env\Server\Moment::short($row['last'])]) : __('larena-env::admin.storages.site_backup_none') }}"></sf-badge>
+                        {{-- The words and colour of the sites list and the site's own tab (SiteBackupSummary), the daily backup apart. --}}
+                        <span class="flex flex-wrap items-cross-center g-1">
+                            <sf-badge appearance="tonal" status="{{ $row['color'] === 'success' ? 'success' : 'error' }}" text="{{ $row['words'] }}"></sf-badge>
+                            <span class="text-small color-on-surface-variant" data-env-site-backup-schedule="{{ $row['scheduled'] ? 'daily' : 'none' }}">{{ $row['schedule'] }}</span>
+                        </span>
                     </li>
                 @endforeach
             </ul>

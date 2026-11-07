@@ -119,10 +119,22 @@ $ok = $screen(['site' => $site, 'doctor' => $doctor, 'tabOperations' => $onTab('
 env_assert(str_contains($ok, 'data-env-state="ok"') && str_contains($ok, 'data-env-doctor="WARN"') && str_contains($ok, 'data-env-problem="WARN"'), 'The overview shows the check and its problems.');
 env_assert(str_contains($ok, 'data-env-answers="') && str_contains($ok, 'data-env-disk') && !str_contains($ok, 'data-env-no-backup'), 'Whether it answers and its disk; it has a backup.');
 env_assert(str_contains($screen(['site' => $site]), 'text="PHP 8.3"'), 'A PHP site\'s badge says PHP once.');
-// The backups tab says the failed attempt the bar warns about, not only «no backups yet» (the panel's UX audit).
-$failedBackup = $screen(['site' => $site, 'tab' => 'backups', 'warnings' => [new \Larena\Env\Warnings\PanelWarning('backup_failed', 'warning', 'demo-php.test', ['domain' => 'demo-php.test']),
+// The backups tab says the failed attempt the bar warns about in one line, not three (critics of 0.4.1: «no new backup
+// for more than two days», «the last backup failed» and «no backup yet» at once for a site that never had one).
+$siteText = static fn (string $key, array $replace = []): string => __('larena-env::admin.'.$key, $replace);
+$never = new \Larena\Env\Server\SiteSummary('demo-php.test', 'laravel', '8.3', 'none', null, null, null, null, true);
+$failedState = \Larena\Env\Admin\SiteBackupSummary::row($never, new DateTimeImmutable('2026-01-05T12:00:00Z'), ['demo-php.test' => '2026-01-05T03:00:00Z'], $siteText);
+$failedBackup = $screen(['site' => $site, 'tab' => 'backups', 'backupState' => $failedState, 'warnings' => [
+    new \Larena\Env\Warnings\PanelWarning('backup_failed', 'warning', 'demo-php.test', ['domain' => 'demo-php.test']),
+    new \Larena\Env\Warnings\PanelWarning('backup_missing', 'warning', 'demo-php.test', ['domain' => 'demo-php.test']),
     new \Larena\Env\Warnings\PanelWarning('backup_failed', 'warning', 'other.test', ['domain' => 'other.test'])]]);
-env_assert(substr_count($failedBackup, 'data-env-backup-warning="backup_failed"') === 1, 'The backups tab says its own site\'s failed backup: '.$failedBackup);
+env_assert(substr_count($failedBackup, 'role="alert"') === 1 && str_contains($failedBackup, 'data-env-backup-state="failed"')
+    && str_contains($failedBackup, 'text="'.$siteText('backups.state.failed', ['time' => \Larena\Env\Server\Moment::short('2026-01-05T03:00:00Z')]).'"')
+    && !str_contains($failedBackup, 'data-env-backup-warning'), 'The backups tab says its failed backup once: '.$failedBackup);
+// Without a failure, no backup yet is the reason, not «older than two days».
+$noneState = \Larena\Env\Admin\SiteBackupSummary::row($never, new DateTimeImmutable('2026-01-05T12:00:00Z'), [], $siteText);
+$noneBackup = $screen(['site' => $site, 'tab' => 'backups', 'backupState' => $noneState]);
+env_assert(str_contains($noneBackup, 'data-env-backup-state="none"') && str_contains($noneBackup, 'text="'.$siteText('backups.state.none').'"'), 'No backup yet: '.$noneBackup);
 // The site's sections are its menu in the menu's second column (owner decision 2026-11-05): the page has no tabs of its
 // own, only the open section, and what needs attention is in the admin's alert bar.
 env_assert(!str_contains($ok, 'data-env-tabs') && !str_contains($ok, 'data-env-tab=') && !str_contains($ok, 'data-env-warnings')

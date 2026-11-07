@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- A site's backups are said one way in the sites list, on the site's «Резервные копии» and on «Резервные копии» of the
+  server (critics of 0.4.1): «Копий ещё нет», «Последняя копия не удалась 07.11 03:00 UTC», «Последняя копия 05.11
+  03:00 UTC — старше двух суток» or «Последняя копия 07.11 03:00 UTC», red or green, a failure (from the server's
+  alerts) first; the daily backup is said apart, and the site's tab shows one line instead of three warnings.
 - Fixes after the independent critique of 0.4.0 (seven critics, 2026-11-07):
   - The wizard's «Оповещения» step no longer fails with an error 500 (Blade could not read `@json` with nested
     brackets); a test now compiles every view of the panel and draws every wizard step.

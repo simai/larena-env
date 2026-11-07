@@ -81,8 +81,15 @@ env_assert(str_contains($columns, '"answers":{"key":"answers","label":"'.$text('
     && str_contains($columns, '{"value":"down","label":"'.$text('sites.state.down').'","color":"danger"}')
     && str_contains($columns, '"type":"choice","options":[{"value":"generic"') && str_contains($columns, '{"value":"redirect","label":"'.$text('sites.kinds.redirect').'"}'), 'The state and the kind are coloured choices the list filters by: '.$columns);
 env_assert($byDomain['demo-php.test']['certificate'] === $text('sites.certificate_local'), 'Empty values in words; a local name is said so.');
-env_assert($byDomain['demo-owned.test']['backups'] !== $text('sites.backups_unscheduled'), 'A site with its daily backup and none yet does not say it has none scheduled.');
-env_assert($byDomain['demo-php.test']['backups'] === \Larena\Env\Server\Moment::short('2026-01-01T00:00:00Z'), 'Its newest backup is named.');
+// A site with its daily backup on and none yet says it has none, not «daily» (critics of 0.4.1); a redirect needs none.
+env_assert($byDomain['demo-owned.test']['backups'] === $text('backups.state.none'), 'No backup yet is said so: '.$byDomain['demo-owned.test']['backups']);
+env_assert($byDomain['demo-redirect.test']['backups'] === $text('backups.state.not_needed'), 'A redirect needs no backup.');
+env_assert(str_starts_with($byDomain['demo-php.test']['backups'], $text('backups.state.stale', ['time' => \Larena\Env\Server\Moment::short('2026-01-01T00:00:00Z')])), 'Its old newest backup is named and said old.');
+// A failure the server's alerts tell is said first, with its time, in red.
+$failedPage = ServerSitesPage::of($overview, $text, null, \Larena\Env\Admin\SiteBackupSummary::failures(\Larena\Env\Alerts\ServerAlerts::fromData(
+    (array) json_decode((string) file_get_contents(env_recorded_path().'/self-alerts.json'), true)['data'])));
+$failedRow = array_column($failedPage->rows ?? [], null, 'id')['demo-owned.test'];
+env_assert($failedRow['backups'] === $text('backups.state.failed', ['time' => \Larena\Env\Server\Moment::short('2026-01-01T00:00:00Z')]), 'A failed backup is named: '.$failedRow['backups']);
 env_assert(\Larena\Env\Server\Moment::short('2026-01-01T00:00:00Z', 2026) === '01.01 00:00 UTC' && \Larena\Env\Server\Moment::short('2025-01-01T00:00:00Z', 2026) === '01.01.2025 00:00 UTC', 'A backup this year without its year.');
 $soon = new ServerOverview('now', '1', 'ubuntu', '24.04', [], [], [new \Larena\Env\Server\SiteSummary('a.test', 'static', 'none', 'letsencrypt', null, null, null, 9, true)]);
 $soonRow = ServerSitesPage::of($soon, $text)->rows[0];
@@ -106,7 +113,7 @@ $options = static function (string $key) use ($markedColumns): array {
 $markedRows = array_column($markedPage->rows ?? [], null, 'id');
 env_assert(($options('backups')[$markedRows['old.ru']['backups']] ?? '') === 'danger' && ($options('backups')[$markedRows['new.test']['backups']] ?? '') === 'success'
     && ($options('certificate')[$text('sites.certificate_none')] ?? '') === 'danger' && ($options('certificate')[$text('sites.certificate_local')] ?? '') === 'neutral', 'The backups and certificates are coloured: '.json_encode([$options('backups'), $options('certificate')]));
-env_assert($soonRow['certificate'] === $text('sites.certificate_ends', ['days' => '9']) && $soonRow['backups'] === $text('sites.backups_scheduled'), 'A certificate that ends soon is said so.');
+env_assert($soonRow['certificate'] === $text('sites.certificate_ends', ['days' => '9']) && $soonRow['backups'] === $text('backups.state.none'), 'A certificate that ends soon is said so.');
 
 // The admin's real presenter draws the list, as the controller asks it to.
 $manager = SmartManager::withDefaults();

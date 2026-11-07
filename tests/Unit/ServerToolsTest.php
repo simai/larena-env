@@ -703,10 +703,22 @@ $summary = \Larena\Env\Admin\SiteBackupSummary::of([
     new \Larena\Env\Server\SiteSummary('go.ru', 'redirect', 'none', 'none', null, null, null, null, false),
     new \Larena\Env\Server\SiteSummary('old.ru', 'generic', '8.3', 'none', null, null, null, null, true, lastBackup: '2026-01-01T00:00:00Z'),
     new \Larena\Env\Server\SiteSummary('bare.ru', 'static', 'none', 'none', null, null, null, null, false),
-], new DateTimeImmutable('2026-01-05T12:00:00Z'));
-env_assert(array_column($summary, 'state', 'domain') === ['bare.ru' => 'none', 'old.ru' => 'stale', 'fresh.ru' => 'fresh'], 'The sites\' backups, those in need first: '.json_encode($summary));
+    new \Larena\Env\Server\SiteSummary('broke.ru', 'generic', '8.3', 'none', null, null, null, null, true, lastBackup: '2026-01-05T00:00:00Z'),
+], new DateTimeImmutable('2026-01-05T12:00:00Z'), ['broke.ru' => '2026-01-05T03:00:00Z'], $text);
+// The same words and colours as the sites list and the site's tab (critics of 0.4.1): a failure first, named with its time.
+env_assert(array_column($summary, 'state', 'domain') === ['broke.ru' => 'failed', 'bare.ru' => 'none', 'old.ru' => 'stale', 'fresh.ru' => 'fresh'], 'The sites\' backups, those in need first: '.json_encode($summary));
+$summaryWords = array_column($summary, 'words', 'domain');
+env_assert($summaryWords['broke.ru'] === $text('backups.state.failed', ['time' => \Larena\Env\Server\Moment::short('2026-01-05T03:00:00Z')])
+    && $summaryWords['bare.ru'] === $text('backups.state.none') && str_ends_with($summaryWords['old.ru'], 'over two days old')
+    && array_column($summary, 'color', 'domain')['fresh.ru'] === 'success' && array_column($summary, 'color', 'domain')['broke.ru'] === 'danger', 'The states in words: '.json_encode($summaryWords));
+env_assert(\Larena\Env\Admin\SiteBackupSummary::failures(\Larena\Env\Alerts\ServerAlerts::fromData(['alerts' => [
+    ['id' => 'a1', 'kind' => 'backup_failed', 'domain' => 'Demo.test', 'state' => 'open', 'first_seen' => '2026-01-01T00:00:00Z'],
+    ['id' => 'a2', 'kind' => 'backup_failed', 'domain' => 'gone.test', 'state' => 'resolved'],
+    ['id' => 'a3', 'kind' => 'backup_missing', 'domain' => 'old.test', 'state' => 'open'],
+]])) === ['demo.test' => '2026-01-01T00:00:00Z'], 'Only a current failure of a backup counts.');
 $withSummary = $storagePage(['siteBackups' => $summary]);
-env_assert(str_contains($withSummary, 'data-env-site-backup="old.ru" data-env-site-backup-state="stale"') && substr_count($withSummary, 'data-env-site-backup=') === 3, 'The backups page lists every site\'s last backup.');
+env_assert(str_contains($withSummary, 'data-env-site-backup="old.ru" data-env-site-backup-state="stale"') && substr_count($withSummary, 'data-env-site-backup=') === 4
+    && str_contains($withSummary, 'text="'.e($summaryWords['broke.ru']).'"') && str_contains($withSummary, 'data-env-site-backup-schedule="none"'), 'The backups page lists every site\'s backups: '.$withSummary);
 $storageArgs = new \ReflectionMethod(\Larena\Env\Http\Controllers\BackupStorageController::class, 'addArgs');
 $added = $storageArgs->invoke(null, \Illuminate\Http\Request::create('/', 'POST', ['provider' => 'yandex', 'bucket' => 'Acme-Backups ', 'prefix' => '/srv1/', 'keep' => '400',
     'default' => '1', 'access_key' => 'YCAJEexample1', 'secret_key' => 'YCsecretexample123']), 'yandex');
