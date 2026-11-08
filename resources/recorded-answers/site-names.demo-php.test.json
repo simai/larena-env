@@ -1,0 +1,53 @@
+{
+  "schema": "simai-panel-answer/1",
+  "written_from": "Written by the panel from ENV's contract for simai-env 1.53.0 (2026-11-07), not recorded from a server: replace with ENV's recorded answers when 1.53.0 is released.",
+  "request_id": "fixture-site-names.demo-php.test",
+  "status": "ok",
+  "kind": "result",
+  "data": {
+    "schema": "simai-site-names/1",
+    "domain": "demo-php.test",
+    "names": [
+      {
+        "name": "demo-php.test",
+        "kind": "primary",
+        "mode": "serve",
+        "dns": {
+          "points_here": true,
+          "addresses": [
+            "203.0.113.5"
+          ]
+        },
+        "https": false
+      },
+      {
+        "name": "www.demo-php.test",
+        "kind": "extra",
+        "mode": "redirect",
+        "dns": {
+          "points_here": true,
+          "addresses": [
+            "203.0.113.5"
+          ]
+        },
+        "https": false
+      },
+      {
+        "name": "old-demo.test",
+        "kind": "extra",
+        "mode": "serve",
+        "dns": {
+          "points_here": false,
+          "addresses": [
+            "198.51.100.7"
+          ]
+        },
+        "https": false
+      }
+    ],
+    "certificate": null,
+    "suggest": []
+  },
+  "command_status": "success",
+  "operation_id": "fixture"
+}

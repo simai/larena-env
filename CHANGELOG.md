@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- A site's names (owner decision 2026-11-07, simai-env 1.53.0): «Домены и HTTPS» gets «Имена сайта», one row per
+  name with its kind (основное / дополнительное / все поддомены), whether it shows the site or redirects to the main
+  domain, whether its DNS points here and whether the certificate covers it; «Добавить имя» (redirect and the DNS check
+  by default), «Убрать» for an extra name and the server's «Добавить www.<domain>» in one click, each through the
+  server's plan; a taken or refused name is said in words. Read from `site:names` (`SiteNamesReader`, kept like the
+  site's other reads), added and removed with `site:name-add` and `site:name-remove`; the block is not there on a server
+  that does not list `site:names`. Its answers in the recorded set are written from ENV's contract (`written_from`)
+  until ENV records them.
 - A site's backups are said one way in the sites list, on the site's «Резервные копии» and on «Резервные копии» of the
   server (critics of 0.4.1): «Копий ещё нет», «Последняя копия не удалась 07.11 03:00 UTC», «Последняя копия 05.11
   03:00 UTC — старше двух суток» or «Последняя копия 07.11 03:00 UTC», red or green, a failure (from the server's

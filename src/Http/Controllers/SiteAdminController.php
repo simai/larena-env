@@ -67,6 +67,7 @@ final readonly class SiteAdminController
         private ?SiteFiles $files = null,
         private ?PanelWarningSource $warningSource = null,
         private ?\Larena\Access\Runtime\AccessOperationAuthorizer $authorizer = null,
+        private ?\Larena\Env\Server\SiteNamesReader $names = null,
     ) {
     }
 
@@ -136,6 +137,7 @@ final readonly class SiteAdminController
         $nginx = $ask('site:nginx-custom-show', 'php') && $actor->owner === null ? $this->files?->nginxCustom($actor, $domain) : null;
         // A failed or missing backup said where backups are; the rest of what needs attention is in the admin's alert bar.
         $siteWarnings = $overview === null || $tab !== 'backups' ? null : ($this->warningSource ?? new PanelWarningSource($this->extras))->ofSite($actor, $overview, $domain, PanelWarnings::now());
+        $siteNames = $ask('site:names', 'domains') ? $this->names?->read($actor, $domain) : null;
 
         $this->breadcrumbs($request, $domain, $tab);
 
@@ -173,7 +175,13 @@ final readonly class SiteAdminController
             'capabilities' => $capabilities,
             // Whether a certificate may be checked through DNS: the server keeps a Cloudflare token (simai-env 1.36.0).
             'dnsCertificates' => $ask('ssl:dns-status', 'domains') && $this->extras->dnsCertificates($actor)?->configured === true,
-            'tabOperations' => array_values(array_filter($operations, static fn (SiteOperation $operation): bool => $operation->tab() === $tab)),
+            'tabOperations' => array_values(array_filter($operations, static fn (SiteOperation $operation): bool => $operation->tab() === $tab
+                && !in_array($operation, SiteOperation::NAMES, true))),
+            // The site's names (simai-env 1.53.0): the block is there only where the server lists site:names, so an older
+            // server shows the tab as before, without a refusal; adding and removing go through the plan as every action.
+            'siteNames' => $siteNames,
+            'namesReasonText' => $siteNames?->reason === null ? null : $this->namesReasonText($siteNames->reason),
+            'namesAllows' => ['add' => $capabilities->allows('site:name-add'), 'remove' => $capabilities->allows('site:name-remove')],
             'source' => $result->source,
             'site' => $site,
             'refused' => $result->refused,
@@ -192,6 +200,18 @@ final readonly class SiteAdminController
             'logReasonText' => $log === null || $log->reason === null ? null : $this->reasonText($log->reason),
             'notice' => $request->session()->get('larena_env_notice'),
         ]);
+    }
+
+    /**
+     * A refusal of a name's action in words: the names' own first (a name taken by another site, a name the server does
+     * not take or one past the twenty a site may have), then the gateway's.
+     */
+    public function namesReasonText(string $reason): string
+    {
+        $key = 'larena-env::admin.names.reasons.'.$reason;
+        $line = (string) $this->translator->get($key);
+
+        return $line !== $key ? $line : $this->reasonText($reason);
     }
 
     /**
@@ -325,7 +345,7 @@ final readonly class SiteAdminController
         $input = $this->input($request, $actor, $operation);
         $result = $this->operations->plan($actor, $operation, $domain, $input);
         if ($result->plan === null) {
-            return $this->back($request, $domain, $result->reason ?? 'answer_shape_invalid', $operation->tab());
+            return $this->back($request, $domain, $result->reason ?? 'answer_shape_invalid', $operation->tab(), $operation);
         }
 
         return $this->views->make('larena-env::admin.plan', [
@@ -379,7 +399,7 @@ final readonly class SiteAdminController
         }
         $started = $this->operations->start($actor, $operation, $domain, $this->input($request, $actor, $operation));
         if ($started->jobId === null) {
-            return $this->back($request, $domain, $started->reason ?? 'answer_shape_invalid', $operation->tab());
+            return $this->back($request, $domain, $started->reason ?? 'answer_shape_invalid', $operation->tab(), $operation);
         }
 
         return new RedirectResponse(route('larena.env.admin.job', ['job' => $started->jobId], false));
@@ -427,9 +447,10 @@ final readonly class SiteAdminController
         ]);
     }
 
-    private function back(Request $request, string $domain, string $reason, string $tab = 'overview'): RedirectResponse
+    private function back(Request $request, string $domain, string $reason, string $tab = 'overview', ?SiteOperation $operation = null): RedirectResponse
     {
-        return NoticeRedirect::to($request, route('larena.env.admin.site', ['domain' => $domain], false).'?tab='.$tab, $this->reasonText($reason));
+        return NoticeRedirect::to($request, route('larena.env.admin.site', ['domain' => $domain], false).'?tab='.$tab,
+            in_array($operation, SiteOperation::NAMES, true) ? $this->namesReasonText($reason) : $this->reasonText($reason));
     }
 
     /** @return list<\Larena\Env\Warnings\PanelWarning> */

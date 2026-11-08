@@ -257,6 +257,16 @@
       "sha256": "a0f0072af2d932ef9aa66a204d390730d5dc10179a2bb8cfffd34eb8704fc691",
       "status": "ok"
     },
+    "plan.site-name-add.json": {
+      "sha256": "109af7fb5527e9dadc0149a2fb3887e0d800089a86a357f4b2a64542d3005356",
+      "status": "ok",
+      "written_from": "Written by the panel from ENV's contract for simai-env 1.53.0 (2026-11-07), not recorded from a server: replace with ENV's recorded answers when 1.53.0 is released."
+    },
+    "plan.site-name-remove.json": {
+      "sha256": "c1b232653c0f895e4666ddc0fafbbd4fc192c98c579de33e00e20980de356256",
+      "status": "ok",
+      "written_from": "Written by the panel from ENV's contract for simai-env 1.53.0 (2026-11-07), not recorded from a server: replace with ENV's recorded answers when 1.53.0 is released."
+    },
     "plan.site-nginx-custom.json": {
       "sha256": "8c7e524d6e94b7b32428c593c49fa4bd803e510618552f2fa097345c4d23c134",
       "status": "ok"
@@ -512,6 +522,16 @@
     "site-doctor.demo-static.test.json": {
       "sha256": "aed260e50358996ddd6503d4a53034a68588b4062c1208d9f82cf817e3854387",
       "status": "ok"
+    },
+    "site-names.demo-owned.test.json": {
+      "sha256": "368e9936750da56fead5be205788381e85993395cd5b4b036d45fcb1b1396e0a",
+      "status": "ok",
+      "written_from": "Written by the panel from ENV's contract for simai-env 1.53.0 (2026-11-07), not recorded from a server: replace with ENV's recorded answers when 1.53.0 is released."
+    },
+    "site-names.demo-php.test.json": {
+      "sha256": "12273f1c5ac01b9df2bd2656d8f61a6be8f302c96deba058a3c14f170ac8fec9",
+      "status": "ok",
+      "written_from": "Written by the panel from ENV's contract for simai-env 1.53.0 (2026-11-07), not recorded from a server: replace with ENV's recorded answers when 1.53.0 is released."
     },
     "site-nginx-custom-show.demo-php.test.json": {
       "sha256": "0524e086d15d816dc8fb6ab5333fe3231c5d0b99311e692988f64880438a854e",

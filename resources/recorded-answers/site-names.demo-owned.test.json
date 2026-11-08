@@ -1,0 +1,29 @@
+{
+  "schema": "simai-panel-answer/1",
+  "written_from": "Written by the panel from ENV's contract for simai-env 1.53.0 (2026-11-07), not recorded from a server: replace with ENV's recorded answers when 1.53.0 is released.",
+  "request_id": "fixture-site-names.demo-owned.test",
+  "status": "ok",
+  "kind": "result",
+  "data": {
+    "schema": "simai-site-names/1",
+    "domain": "demo-owned.test",
+    "names": [
+      {
+        "name": "demo-owned.test",
+        "kind": "primary",
+        "mode": "serve",
+        "dns": {
+          "points_here": null,
+          "addresses": []
+        },
+        "https": false
+      }
+    ],
+    "certificate": null,
+    "suggest": [
+      "www.demo-owned.test"
+    ]
+  },
+  "command_status": "success",
+  "operation_id": "fixture"
+}

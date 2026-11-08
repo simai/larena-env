@@ -40,6 +40,9 @@ enum SiteOperation: string
     // Apache behind nginx for .htaccess, or nginx alone again (simai-env 1.42.0).
     case ApacheOn = 'apache-on';
     case ApacheOff = 'apache-off';
+    // A site's extra name, such as www, added or removed (simai-env 1.53.0).
+    case NameAdd = 'name-add';
+    case NameRemove = 'name-remove';
 
     public function command(): string
     {
@@ -66,6 +69,8 @@ enum SiteOperation: string
             self::SftpEnable => 'access:enable',
             self::SftpRemove => 'access:remove',
             self::ApacheOn, self::ApacheOff => 'site:apache',
+            self::NameAdd => 'site:name-add',
+            self::NameRemove => 'site:name-remove',
         };
     }
 
@@ -73,7 +78,7 @@ enum SiteOperation: string
     public function tab(): string
     {
         return match ($this) {
-            self::CertificateIssue, self::CertificateRenew => 'domains',
+            self::CertificateIssue, self::CertificateRenew, self::NameAdd, self::NameRemove => 'domains',
             self::PhpVersion, self::PhpSetting, self::PhpSettingRemove, self::ServiceRestart, self::QueueRestart, self::ApacheOn, self::ApacheOff => 'php',
             self::DatabaseCreate, self::DatabasePassword, self::DatabaseExport => 'database',
             self::Backup, self::BackupRestoreDatabase, self::BackupExtractFiles, self::BackupVerify, self::BackupSchedule => 'backups',
@@ -105,6 +110,9 @@ enum SiteOperation: string
             self::SftpCreate => ['login', 'pubkey'],
             self::SftpAddKey => ['login', 'pubkey'],
             self::SftpDisable, self::SftpEnable, self::SftpRemove => ['login'],
+            // `name` is here a host name of the site, `mode` serve or redirect, `check-dns` yes or no.
+            self::NameAdd => ['name', 'mode', 'check-dns'],
+            self::NameRemove => ['name'],
             default => [],
         };
     }
@@ -123,14 +131,15 @@ enum SiteOperation: string
      * The yes-or-no fields, asked as one tick each (the panel's UX audit): the box shows what the server would do
      * anyway, so a person reads a plain choice instead of «как решит сервер»; an unticked box sends no.
      */
-    public const array SWITCHES = ['db', 'files', 'redirect', 'hsts', 'staging', 'wildcard', 'enabled', 'verify'];
+    public const array SWITCHES = ['db', 'files', 'redirect', 'hsts', 'staging', 'wildcard', 'enabled', 'verify', 'check-dns'];
 
     /** Whether a yes-or-no field starts ticked for this site. */
     public static function switchedOn(string $field, ?\Larena\Env\Server\SiteDetails $site): bool
     {
         return match ($field) {
             'db' => $site?->databaseEngine !== null,
-            'files', 'redirect', 'enabled' => true,
+            // A new name is checked in DNS unless the person unticks it: without the check a mistyped name is added too.
+            'files', 'redirect', 'enabled', 'check-dns' => true,
             'verify' => $site?->backupSchedule?->verify !== false,
             default => false,
         };
@@ -138,6 +147,12 @@ enum SiteOperation: string
 
     /** The fields asked only where the server keeps a DNS token for certificates: without one a DNS check fails. */
     public const array DNS_FIELDS = ['challenge', 'wildcard'];
+
+    /**
+     * The actions of the site's names: the «Имена сайта» block offers them on its own rows, so the tab's row of action
+     * buttons leaves them out.
+     */
+    public const array NAMES = [self::NameAdd, self::NameRemove];
 
     /** The actions of the system level alone: a site's owner is not offered them (the server refuses them too). */
     public const array SYSTEM_ONLY = [self::ApacheOn, self::ApacheOff];

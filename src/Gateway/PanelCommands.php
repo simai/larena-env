@@ -101,6 +101,8 @@ final class PanelCommands
     private const string PORT = '/\A(?!(?:80|443)\z)(?:[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])\z/D';
     // A 1C-Bitrix site's installer in its root: none yet, bitrixsetup.php, or restore.php.
     private const string BITRIX_FILES = '/\A(?:none|setup|restore)\z/D';
+    // How a site's extra name answers (simai-env 1.53.0): it shows the same site, or sends visitors to the main domain.
+    private const string NAME_MODE = '/\A(?:serve|redirect)\z/D';
     private const string UPSTREAM_PATH = '/\A\/[A-Za-z0-9._~\/-]{0,200}\z/D';
     // A site's own scheduled job (simai-env 1.34.0): five fields of numbers, `*`, ranges and steps (their ranges checked
     // by CronSchedule::valid, as the server does), and one line of printable text run by the site's user, not starting
@@ -239,6 +241,12 @@ final class PanelCommands
         'site:nginx-custom' => ['args' => ['domain' => self::DOMAIN, 'content' => self::FILE_CONTENT], 'required' => ['domain', 'content'], 'since' => '1.41.0', 'kind' => self::ACTION],
         // Apache behind nginx for a PHP site that relies on .htaccess (simai-env 1.42.0), the system level's.
         'site:apache' => ['args' => ['domain' => self::DOMAIN, 'enable' => self::YES_NO], 'required' => ['domain', 'enable'], 'since' => '1.42.0', 'kind' => self::ACTION],
+        // A site's names besides its domain, www and the others (simai-env 1.53.0, ENV's contract of 2026-11-07): read,
+        // added and removed; a wildcard name is chosen when the site is made and is only read here.
+        'site:names' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => '1.53.0', 'kind' => self::READ],
+        'site:name-add' => ['args' => ['domain' => self::DOMAIN, 'name' => self::DOMAIN, 'mode' => self::NAME_MODE, 'check-dns' => self::YES_NO],
+            'required' => ['domain', 'name'], 'since' => '1.53.0', 'kind' => self::ACTION],
+        'site:name-remove' => ['args' => ['domain' => self::DOMAIN, 'name' => self::DOMAIN], 'required' => ['domain', 'name'], 'since' => '1.53.0', 'kind' => self::ACTION],
         // A timed change kept by the person who made it (the firewall, the panel's access, nginx directives): without the
         // confirmation in time, the server puts the previous one back by itself.
         'change:confirm' => ['args' => ['change_id' => self::CHANGE_ID], 'required' => ['change_id'], 'since' => '1.35.0', 'kind' => self::ACTION],

@@ -25,7 +25,7 @@ final class CachingPanelGateway implements PanelGateway, PanelFileGateway
     /** The reads whose answer is the server's state, kept for the ttl. */
     public const array KEPT = [
         'self:describe', 'self:commands', 'self:metrics', 'self:alerts', 'self:metrics-history', 'self:update-plan', 'self:profiles',
-        'site:describe', 'site:doctor', 'site:php-ini-list', 'site:nginx-custom-show',
+        'site:describe', 'site:doctor', 'site:php-ini-list', 'site:nginx-custom-show', 'site:names',
         'php:list', 'php:extensions', 'software:list', 'service:list', 'firewall:status', 'access:list', 'db:list', 'cron:list',
         'ssl:dns-status', 'file:list', 'security:status', 'security:files', 'security:quarantine-list', 'security:geo-status', 'mcp:status', 'backup:storage-list', 'panel:address',
         'logs:nginx',

@@ -76,6 +76,9 @@
                 @endif
             </section>
         @elseif ($tab === 'domains')
+            @if (($siteNames ?? null) !== null)
+                @include('larena-env::admin.partials.site-names')
+            @endif
             <section class="larena-panel larena-panel-padded" data-env-certificate="{{ $site->certificate ? 'present' : 'none' }}" aria-labelledby="env-site-certificate">
                 <h2 id="env-site-certificate" class="text-2">{{ __('larena-env::admin.certificate.title') }}</h2>
                 @if ($site->certificate === null)
