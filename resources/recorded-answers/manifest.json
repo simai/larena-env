@@ -258,14 +258,14 @@
       "status": "ok"
     },
     "plan.site-name-add.json": {
-      "sha256": "109af7fb5527e9dadc0149a2fb3887e0d800089a86a357f4b2a64542d3005356",
+      "sha256": "c5e3776c5cd4018c1b5ec127770101991c974518a9a6b785b2eccc5e105a6efc",
       "status": "ok",
-      "written_from": "Written by the panel from ENV's contract for simai-env 1.53.0 (2026-11-07), not recorded from a server: replace with ENV's recorded answers when 1.53.0 is released."
+      "recorded_from": "simai-env v1.53.0, testing/fixtures/panel/plan.site-name-add.json"
     },
     "plan.site-name-remove.json": {
-      "sha256": "c1b232653c0f895e4666ddc0fafbbd4fc192c98c579de33e00e20980de356256",
+      "sha256": "92488ce915aead69c758a822e5b2d7c56dc8c0b379decf2bb0074b3b84eef291",
       "status": "ok",
-      "written_from": "Written by the panel from ENV's contract for simai-env 1.53.0 (2026-11-07), not recorded from a server: replace with ENV's recorded answers when 1.53.0 is released."
+      "recorded_from": "simai-env v1.53.0, testing/fixtures/panel/plan.site-name-remove.json"
     },
     "plan.site-nginx-custom.json": {
       "sha256": "8c7e524d6e94b7b32428c593c49fa4bd803e510618552f2fa097345c4d23c134",
@@ -403,6 +403,11 @@
       "sha256": "6c757a2388d73453c32299b66920ebde638ba4f900e9972e3445daf07015f0e2",
       "status": "refused"
     },
+    "refused.owner-scope.site-names.json": {
+      "sha256": "258635df8ad660d791204acd3a4da111a4105ebbc77d7d1c2df28a545b446f19",
+      "status": "refused",
+      "recorded_from": "simai-env v1.53.0, testing/fixtures/panel/refused.owner-scope.site-names.json"
+    },
     "refused.owner-scope.site-php-ini-list.json": {
       "sha256": "96de89c80b1fc7b883ae8156cc8073fe69faacf8ecf7bf184338c1b7b2e81d90",
       "status": "refused"
@@ -523,15 +528,15 @@
       "sha256": "aed260e50358996ddd6503d4a53034a68588b4062c1208d9f82cf817e3854387",
       "status": "ok"
     },
-    "site-names.demo-owned.test.json": {
-      "sha256": "368e9936750da56fead5be205788381e85993395cd5b4b036d45fcb1b1396e0a",
+    "site-names.demo-names.test.json": {
+      "sha256": "8d204f4dc0dc986d94dcbfbe8a41b05fd4527ec57b215a4de5db60847de6ba61",
       "status": "ok",
-      "written_from": "Written by the panel from ENV's contract for simai-env 1.53.0 (2026-11-07), not recorded from a server: replace with ENV's recorded answers when 1.53.0 is released."
+      "recorded_from": "simai-env v1.53.0, testing/fixtures/panel/site-names.demo-names.test.json"
     },
-    "site-names.demo-php.test.json": {
-      "sha256": "12273f1c5ac01b9df2bd2656d8f61a6be8f302c96deba058a3c14f170ac8fec9",
+    "site-names.demo-owned.test.json": {
+      "sha256": "59d16753fbc5a4aaa577f1accc5ba537b43a543c7d1c5fd34cf0085ad8aafde0",
       "status": "ok",
-      "written_from": "Written by the panel from ENV's contract for simai-env 1.53.0 (2026-11-07), not recorded from a server: replace with ENV's recorded answers when 1.53.0 is released."
+      "recorded_from": "simai-env v1.53.0, testing/fixtures/panel/site-names.demo-owned.test.json"
     },
     "site-nginx-custom-show.demo-php.test.json": {
       "sha256": "0524e086d15d816dc8fb6ab5333fe3231c5d0b99311e692988f64880438a854e",

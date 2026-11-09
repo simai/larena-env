@@ -42,7 +42,7 @@
                                         @csrf
                                         <input type="hidden" name="operation" value="{{ \Larena\Env\Operations\SiteOperation::NameRemove->value }}">
                                         <input type="hidden" name="name" value="{{ $row->name }}">
-                                        <sf-button appearance="outline" size="1/2" native-type="submit" text="{{ __('larena-env::admin.names.remove') }}"></sf-button>
+                                        <sf-button appearance="outline" native-type="submit" text="{{ __('larena-env::admin.names.remove') }}"></sf-button>
                                     </form>
                                 @elseif ($row->kind === \Larena\Env\Server\SiteName::WILDCARD)
                                     <span class="text-small color-on-surface-variant" data-env-name-wildcard>{{ __('larena-env::admin.names.wildcard_note') }}</span>
@@ -66,7 +66,7 @@
                         <input type="hidden" name="name" value="{{ $suggested }}">
                         <input type="hidden" name="mode" value="{{ \Larena\Env\Server\SiteName::REDIRECT }}">
                         <input type="hidden" name="check-dns" value="yes">
-                        <sf-button appearance="outline" size="1" native-type="submit" text="{{ __('larena-env::admin.names.suggest', ['name' => $suggested]) }}"></sf-button>
+                        <sf-button appearance="outline" native-type="submit" text="{{ __('larena-env::admin.names.suggest', ['name' => $suggested]) }}"></sf-button>
                         <span class="text-small color-on-surface-variant">{{ __('larena-env::admin.names.suggest_note', ['name' => $suggested]) }}</span>
                     </form>
                 @endforeach

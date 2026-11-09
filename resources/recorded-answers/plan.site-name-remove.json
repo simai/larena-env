@@ -1,18 +1,17 @@
 {
   "schema": "simai-panel-answer/1",
-  "written_from": "Written by the panel from ENV's contract for simai-env 1.53.0 (2026-11-07), not recorded from a server: replace with ENV's recorded answers when 1.53.0 is released.",
   "request_id": "fixture-plan.site-name-remove",
   "status": "ok",
   "kind": "plan",
   "data": {
     "command": "site:name-remove",
     "args": {
-      "domain": "demo-php.test",
-      "name": "old-demo.test"
+      "domain": "demo-names.test",
+      "name": "www.demo-names.test"
     },
-    "target": "demo-php.test",
-    "description": "Remove a name from the site and reissue the certificate without it",
-    "effects": "write",
+    "target": "demo-names.test",
+    "description": "Remove an extra name of a site; the certificate is reissued without it",
+    "effects": "delete",
     "lock": "site",
     "applied": false
   }

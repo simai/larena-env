@@ -16,7 +16,7 @@
                 @if (($changeDomain ?? null) !== null)
                     <input type="hidden" name="domain" value="{{ $changeDomain }}">
                 @endif
-                <button type="submit" class="larena-button" style="min-height: 2.75rem;">{{ __('larena-env::admin.timed.keep') }}</button>
+                <button type="submit" class="larena-button larena-control-floor">{{ __('larena-env::admin.timed.keep') }}</button>
             </form>
         @endif
         <p>{{ __('larena-env::admin.timed.explain') }}</p>

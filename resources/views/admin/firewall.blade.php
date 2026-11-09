@@ -49,7 +49,7 @@
                                     @csrf
                                     <input type="hidden" name="op" value="rule-remove">
                                     <input type="hidden" name="id" value="{{ $rule->id }}">
-                                    <button type="submit" class="larena-button" style="min-height: 2.75rem;">{{ __('larena-env::admin.firewall.remove') }}</button>
+                                    <button type="submit" class="larena-button larena-control-floor">{{ __('larena-env::admin.firewall.remove') }}</button>
                                 </form>
                             @endif
                         </li>
@@ -63,7 +63,7 @@
                     <h3 class="m-top-2 m-bottom-1 text-medium">{{ __('larena-env::admin.firewall.add') }}</h3>
                     <div class="larena-field">
                         <label for="env-fw-action">{{ __('larena-env::admin.firewall.action') }}</label>
-                        <select id="env-fw-action" name="action" style="min-height: 2.75rem;">
+                        <select class="larena-control-floor" id="env-fw-action" name="action">
                             <option value="allow">{{ __('larena-env::admin.firewall.actions.allow') }}</option>
                             <option value="deny">{{ __('larena-env::admin.firewall.actions.deny') }}</option>
                         </select>
@@ -75,7 +75,7 @@
                     </div>
                     <div class="larena-field">
                         <label for="env-fw-proto">{{ __('larena-env::admin.firewall.proto') }}</label>
-                        <select id="env-fw-proto" name="proto" style="min-height: 2.75rem;">
+                        <select class="larena-control-floor" id="env-fw-proto" name="proto">
                             <option value="tcp">TCP</option>
                             <option value="udp">UDP</option>
                         </select>
@@ -103,7 +103,7 @@
                                     @csrf
                                     <input type="hidden" name="op" value="unblock">
                                     <input type="hidden" name="address" value="{{ $block['address'] }}">
-                                    <button type="submit" class="larena-button" style="min-height: 2.75rem;">{{ __('larena-env::admin.firewall.unblock') }}</button>
+                                    <button type="submit" class="larena-button larena-control-floor">{{ __('larena-env::admin.firewall.unblock') }}</button>
                                 </form>
                             @endif
                         </li>
@@ -120,7 +120,7 @@
                     </div>
                     <div class="larena-field">
                         <label for="env-fw-ttl">{{ __('larena-env::admin.firewall.block_for') }}</label>
-                        <select id="env-fw-ttl" name="ttl" style="min-height: 2.75rem;">
+                        <select class="larena-control-floor" id="env-fw-ttl" name="ttl">
                             @foreach ($ttls as $ttl)
                                 <option value="{{ $ttl }}">{{ __('larena-env::admin.firewall.ttls.'.($ttl === '' ? 'forever' : $ttl)) }}</option>
                             @endforeach

@@ -55,7 +55,7 @@
                 <div class="flex flex-wrap g-1 m-bottom-2" data-env-files-toolbar>
                     @if ($files['allows']['mkdir'])
                         <details class="m-0" data-env-files-op="mkdir">
-                            <summary class="larena-button" style="min-height: 2.75rem; list-style: none; cursor: pointer;">{{ __('larena-env::admin.files.new_folder') }}</summary>
+                            <summary class="larena-button larena-control-floor" style="list-style: none; cursor: pointer;">{{ __('larena-env::admin.files.new_folder') }}</summary>
                             <form method="post" action="{{ route('larena.env.admin.site.files.plan', ['domain' => $domain], false) }}" class="larena-form larena-panel larena-panel-padded m-top-1" style="margin-bottom: 0;">
                                 @csrf
                                 <input type="hidden" name="op" value="mkdir">
@@ -70,7 +70,7 @@
                     @endif
                     @if ($files['allows']['create'])
                         <details class="m-0" data-env-files-op="create">
-                            <summary class="larena-button" style="min-height: 2.75rem; list-style: none; cursor: pointer;">{{ __('larena-env::admin.files.new_file') }}</summary>
+                            <summary class="larena-button larena-control-floor" style="list-style: none; cursor: pointer;">{{ __('larena-env::admin.files.new_file') }}</summary>
                             <form method="post" action="{{ route('larena.env.admin.site.files.plan', ['domain' => $domain], false) }}" class="larena-form larena-panel larena-panel-padded m-top-1" style="margin-bottom: 0;">
                                 @csrf
                                 <input type="hidden" name="op" value="create">
@@ -86,7 +86,7 @@
                     @endif
                     @if ($files['allows']['upload'])
                         <details class="m-0" data-env-files-op="upload">
-                            <summary class="larena-button" style="min-height: 2.75rem; list-style: none; cursor: pointer;">{{ __('larena-env::admin.files.upload') }}</summary>
+                            <summary class="larena-button larena-control-floor" style="list-style: none; cursor: pointer;">{{ __('larena-env::admin.files.upload') }}</summary>
                             <form method="post" action="{{ route('larena.env.admin.site.files.plan', ['domain' => $domain], false) }}" class="larena-form larena-panel larena-panel-padded m-top-1" style="margin-bottom: 0;" enctype="multipart/form-data">
                                 @csrf
                                 <input type="hidden" name="op" value="upload">
@@ -142,11 +142,11 @@
                                     <td data-label="{{ __('larena-env::admin.files.actions') }}" style="padding-inline: .625rem;">
                                         <div class="flex flex-wrap items-cross-center g-x-1" style="white-space: nowrap;">
                                             @if ($entry->type === 'file' && $files['allows']['download'])
-                                                <a class="flex items-cross-center p-x-1" style="min-height: 2.75rem;" href="{{ route('larena.env.admin.site.files.download', ['domain' => $domain], false) }}?path={{ rawurlencode(\Larena\Env\Files\FilePath::join($files['path'], $entry->name)) }}" data-env-file-download>{{ __('larena-env::admin.files.download') }}</a>
+                                                <a class="flex items-cross-center p-x-1 larena-control-floor" href="{{ route('larena.env.admin.site.files.download', ['domain' => $domain], false) }}?path={{ rawurlencode(\Larena\Env\Files\FilePath::join($files['path'], $entry->name)) }}" data-env-file-download>{{ __('larena-env::admin.files.download') }}</a>
                                             @endif
                                             @if ($files['allows']['rename'] || $files['allows']['remove'] || $files['allows']['archive'] || ($files['allows']['extract'] && $entry->isArchive()))
                                                 <details data-env-file-actions>
-                                                    <summary class="flex items-cross-center p-x-1" style="min-height: 2.75rem; cursor: pointer;" aria-label="{{ __('larena-env::admin.files.more_of', ['name' => $entry->name]) }}">{{ __('larena-env::admin.files.more') }}</summary>
+                                                    <summary class="flex items-cross-center p-x-1 larena-control-floor" style="cursor: pointer;" aria-label="{{ __('larena-env::admin.files.more_of', ['name' => $entry->name]) }}">{{ __('larena-env::admin.files.more') }}</summary>
                                                     <div class="flex flex-column g-1 p-y-1" style="min-width: min(18rem, 80vw); white-space: normal;">
                                                         @if ($files['allows']['rename'])
                                                             <form method="post" action="{{ route('larena.env.admin.site.files.plan', ['domain' => $domain], false) }}" class="flex flex-wrap items-cross-end g-1 m-0" data-env-files-op="rename">
@@ -154,9 +154,9 @@
                                                                 <input type="hidden" name="op" value="rename">
                                                                 <input type="hidden" name="path" value="{{ \Larena\Env\Files\FilePath::join($files['path'], $entry->name) }}">
                                                                 <label class="flex flex-column text-small grow">{{ __('larena-env::admin.files.new_name') }}
-                                                                    <input type="text" name="name" value="{{ $entry->name }}" required maxlength="255" style="min-height: 2.75rem;">
+                                                                    <input class="larena-control-floor" type="text" name="name" value="{{ $entry->name }}" required maxlength="255">
                                                                 </label>
-                                                                <button type="submit" class="larena-button" style="min-height: 2.75rem;">{{ __('larena-env::admin.files.operations.rename') }}</button>
+                                                                <button type="submit" class="larena-button larena-control-floor">{{ __('larena-env::admin.files.operations.rename') }}</button>
                                                             </form>
                                                         @endif
                                                         @if ($files['allows']['archive'])
@@ -165,13 +165,13 @@
                                                                 <input type="hidden" name="op" value="archive">
                                                                 <input type="hidden" name="path" value="{{ \Larena\Env\Files\FilePath::join($files['path'], $entry->name) }}">
                                                                 <label class="flex flex-column text-small">{{ __('larena-env::admin.files.format') }}
-                                                                    <select name="format" style="min-height: 2.75rem;">
+                                                                    <select class="larena-control-floor" name="format">
                                                                         @foreach ($files['formats'] as $format)
                                                                             <option value="{{ $format }}">{{ $format }}</option>
                                                                         @endforeach
                                                                     </select>
                                                                 </label>
-                                                                <button type="submit" class="larena-button" style="min-height: 2.75rem;">{{ __('larena-env::admin.files.operations.archive') }}</button>
+                                                                <button type="submit" class="larena-button larena-control-floor">{{ __('larena-env::admin.files.operations.archive') }}</button>
                                                             </form>
                                                         @endif
                                                         @if ($files['allows']['extract'] && $entry->isArchive())
@@ -180,10 +180,10 @@
                                                                 <input type="hidden" name="op" value="extract">
                                                                 <input type="hidden" name="path" value="{{ \Larena\Env\Files\FilePath::join($files['path'], $entry->name) }}">
                                                                 <label class="flex flex-column text-small grow">{{ __('larena-env::admin.files.extract_to') }}
-                                                                    <input type="text" name="folder" value="{{ $files['path'] }}" required maxlength="1024" style="min-height: 2.75rem;">
+                                                                    <input class="larena-control-floor" type="text" name="folder" value="{{ $files['path'] }}" required maxlength="1024">
                                                                 </label>
                                                                 <label class="flex items-cross-center g-1 text-small"><input type="checkbox" name="overwrite" value="yes" style="width: auto; min-width: 1.25rem; min-height: 1.25rem;"> {{ __('larena-env::admin.files.extract_overwrite') }}</label>
-                                                                <button type="submit" class="larena-button" style="min-height: 2.75rem;">{{ __('larena-env::admin.files.operations.extract') }}</button>
+                                                                <button type="submit" class="larena-button larena-control-floor">{{ __('larena-env::admin.files.operations.extract') }}</button>
                                                             </form>
                                                         @endif
                                                         @if ($files['allows']['remove'])
@@ -191,7 +191,7 @@
                                                                 @csrf
                                                                 <input type="hidden" name="op" value="remove">
                                                                 <input type="hidden" name="path" value="{{ \Larena\Env\Files\FilePath::join($files['path'], $entry->name) }}">
-                                                                <button type="submit" class="larena-button" style="min-height: 2.75rem;">{{ __('larena-env::admin.files.operations.remove') }}</button>
+                                                                <button type="submit" class="larena-button larena-control-floor">{{ __('larena-env::admin.files.operations.remove') }}</button>
                                                             </form>
                                                         @endif
                                                     </div>

@@ -28,7 +28,7 @@
                     <code class="mono text-small" style="overflow-wrap: anywhere; white-space: pre-wrap;">{{ $job->command }}</code>
                     <div class="flex flex-wrap items-cross-center g-1">
                         @if ($cron['allows']['runs'])
-                            <a href="{{ route('larena.env.admin.site', ['domain' => $domain], false) }}?tab=cron&amp;runs={{ urlencode($job->id) }}#env-cron-runs" data-env-cron-runs-link="{{ $job->id }}" class="flex items-cross-center" style="min-height: 2.75rem;">{{ __('larena-env::admin.cron.runs') }}</a>
+                            <a href="{{ route('larena.env.admin.site', ['domain' => $domain], false) }}?tab=cron&amp;runs={{ urlencode($job->id) }}#env-cron-runs" data-env-cron-runs-link="{{ $job->id }}" class="flex items-cross-center larena-control-floor">{{ __('larena-env::admin.cron.runs') }}</a>
                         @endif
                         @foreach ($job->enabled ? ['disable', 'remove'] : ['enable', 'remove'] as $op)
                             @if ($cron['allows'][$op])
@@ -36,7 +36,7 @@
                                     @csrf
                                     <input type="hidden" name="op" value="{{ $op }}">
                                     <input type="hidden" name="id" value="{{ $job->id }}">
-                                    <button type="submit" class="larena-button" style="min-height: 2.75rem;">{{ __('larena-env::admin.cron.operations.'.$op) }}</button>
+                                    <button type="submit" class="larena-button larena-control-floor">{{ __('larena-env::admin.cron.operations.'.$op) }}</button>
                                 </form>
                             @endif
                         @endforeach
@@ -81,7 +81,7 @@
             <input type="hidden" name="op" value="add">
             <div class="larena-field">
                 <label for="env-cron-preset">{{ __('larena-env::admin.cron.when') }}</label>
-                <select id="env-cron-preset" name="preset" style="min-height: 2.75rem;">
+                <select class="larena-control-floor" id="env-cron-preset" name="preset">
                     @foreach ($cron['presets'] as $key => $schedule)
                         <option value="{{ $key }}" @if ($key === 'hourly') selected @endif>{{ __('larena-env::admin.cron.presets.'.$key) }}</option>
                     @endforeach

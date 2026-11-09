@@ -14,6 +14,6 @@
             @endforeach
         </ul>
     @elseif ($state === 'done')
-        <div><sf-button appearance="link" size="1/2" text="{{ __('larena-env::admin.setup.edit') }}" href="{{ route('larena.env.admin.overview.setup', ['step' => 'protection', 'change' => '1'], false) }}"></sf-button></div>
+        <div><sf-button appearance="link" text="{{ __('larena-env::admin.setup.edit') }}" href="{{ route('larena.env.admin.overview.setup', ['step' => 'protection', 'change' => '1'], false) }}"></sf-button></div>
     @endif
 @endif

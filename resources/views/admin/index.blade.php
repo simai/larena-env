@@ -41,7 +41,7 @@
             <section class="larena-panel flex flex-wrap items-cross-center content-main-between g-2 p-2 m-bottom-2" data-env-sites-count="{{ $sitesCount['count'] }}"
                 data-env-sites-works="{{ $sitesCount['works'] }}" data-env-sites-stale="{{ $sitesCount['stale'] }}" data-env-sites-plain="{{ $sitesCount['plain'] }}" aria-label="{{ __('larena-env::admin.overview_sites.label') }}">
                 <p class="grow min-w-0 m-0" style="overflow-wrap: anywhere;">{{ __('larena-env::admin.overview_sites.line', ['count' => (string) $sitesCount['count'], 'works' => (string) $sitesCount['works'], 'stale' => (string) $sitesCount['stale'], 'plain' => (string) $sitesCount['plain']]) }}</p>
-                <a class="larena-button" style="min-height: 2.75rem;" href="{{ route('larena.env.admin.index', [], false) }}" data-env-sites-open>{{ __('larena-env::admin.overview_sites.open') }}</a>
+                <a class="larena-button larena-control-floor" href="{{ route('larena.env.admin.index', [], false) }}" data-env-sites-open>{{ __('larena-env::admin.overview_sites.open') }}</a>
             </section>
         @endif
         @if (($actions ?? []) !== [])
@@ -62,7 +62,7 @@
                 </ul>
                 @if (($folded = \Larena\Env\Admin\RecommendedActions::folded($actions)) !== [])
                     <details class="m-t-1" data-env-actions-more>
-                        <summary style="cursor: pointer; min-height: 2.75rem; display: flex; align-items: center;">{{ __('larena-env::admin.actions.more_list', ['count' => (string) count($folded)]) }}</summary>
+                        <summary class="larena-control-floor" style="cursor: pointer; display: flex; align-items: center;">{{ __('larena-env::admin.actions.more_list', ['count' => (string) count($folded)]) }}</summary>
                         <ul class="m-0 p-0" style="list-style: none;">
                             @foreach ($folded as $item)
                                 @include('larena-env::admin.partials.recommended-action', ['item' => $item])
@@ -72,7 +72,7 @@
                 @endif
                 @if ($actionCounts['done'] > 0)
                     <details class="m-t-1" data-env-actions-done>
-                        <summary style="cursor: pointer; min-height: 2.75rem; display: flex; align-items: center;">{{ __('larena-env::admin.actions.done_list', ['count' => (string) $actionCounts['done']]) }}</summary>
+                        <summary class="larena-control-floor" style="cursor: pointer; display: flex; align-items: center;">{{ __('larena-env::admin.actions.done_list', ['count' => (string) $actionCounts['done']]) }}</summary>
                         <ul class="m-0 p-0" style="list-style: none;">
                             @foreach ($actions as $item)
                                 @continue($item['state'] !== 'done')

@@ -9,6 +9,6 @@
         <sf-input name="domain" label="{{ __('larena-env::admin.panel_address.domain') }}" placeholder="panel.example.com" default-value="{{ $address->domain ?? '' }}" autocomplete="off" required></sf-input>
         <sf-input name="email" label="{{ __('larena-env::admin.panel_address.email') }}" input-type="email" autocomplete="email" hint="{{ __('larena-env::admin.setup.address.email_hint') }}"></sf-input>
     @elseif ($state === 'done')
-        <div><sf-button appearance="link" size="1/2" text="{{ __('larena-env::admin.setup.edit') }}" href="{{ route('larena.env.admin.overview.setup', ['step' => 'address', 'change' => '1'], false) }}"></sf-button></div>
+        <div><sf-button appearance="link" text="{{ __('larena-env::admin.setup.edit') }}" href="{{ route('larena.env.admin.overview.setup', ['step' => 'address', 'change' => '1'], false) }}"></sf-button></div>
     @endif
 @endif

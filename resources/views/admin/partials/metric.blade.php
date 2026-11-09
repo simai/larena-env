@@ -7,7 +7,7 @@
     <div class="flex items-cross-center flex-wrap g-1">
         <strong class="text-5 line-tight" style="font-variant-numeric: tabular-nums;">{{ $value }}</strong>
         @if ($tone !== 'success')
-            <sf-badge status="{{ $tone }}" appearance="tonal" size="1/3" text="{{ __('larena-env::admin.warnings.severity.'.$tone) }}"></sf-badge>
+            <sf-badge status="{{ $tone }}" appearance="tonal" text="{{ __('larena-env::admin.warnings.severity.'.$tone) }}"></sf-badge>
         @endif
     </div>
     @if (($points ?? null) !== null && count($points) > 1)
@@ -17,7 +17,7 @@
         </svg>
     @endif
     @if (($percent ?? null) !== null)
-        <sf-progress-bar value="{{ min(100, max(0, $percent)) }}" status="{{ $tone }}" size="1/2" label="{{ $label }}"></sf-progress-bar>
+        <sf-progress-bar value="{{ min(100, max(0, $percent)) }}" status="{{ $tone }}" label="{{ $label }}"></sf-progress-bar>
     @endif
     <span class="color-on-surface-variant">{{ $sub }}</span>
 </div>

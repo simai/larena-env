@@ -47,17 +47,17 @@
                     <p class="color-on-surface-variant">{{ __('larena-env::admin.panel_address.dns_hint', ['ip' => $panelAddress->ip ?? '—']) }}</p>
                     <div class="flex flex-wrap g-2 items-cross-end">
                         <label class="grow" style="flex-basis: 14rem;"><span style="font-weight: 600; display: block;">{{ __('larena-env::admin.panel_address.domain') }}</span>
-                            <input type="text" name="domain" required class="larena-input" style="inline-size: 100%; min-height: 2.75rem;" placeholder="panel.example.com" autocomplete="off"></label>
+                            <input type="text" name="domain" required class="larena-input larena-control-floor" style="inline-size: 100%;" placeholder="panel.example.com" autocomplete="off"></label>
                         <label class="grow" style="flex-basis: 14rem;"><span style="font-weight: 600; display: block;">{{ __('larena-env::admin.panel_address.email') }}</span>
-                            <input type="email" name="email" class="larena-input" style="inline-size: 100%; min-height: 2.75rem;" autocomplete="email"></label>
-                        <button type="submit" class="larena-button larena-button-primary" style="min-height: 2.75rem;">{{ __('larena-env::admin.panel_address.attach_go') }}</button>
+                            <input type="email" name="email" class="larena-input larena-control-floor" style="inline-size: 100%;" autocomplete="email"></label>
+                        <button type="submit" class="larena-button larena-button-primary larena-control-floor">{{ __('larena-env::admin.panel_address.attach_go') }}</button>
                     </div>
                 </form>
             @elseif ($addressAllows['domain-remove'] && $panelAddress->domain !== null)
                 <form method="post" action="{{ route('larena.env.admin.panel.address.plan', [], false) }}" class="m-0 m-t-3" data-env-panel-address-op="domain-remove">
                     @csrf
                     <input type="hidden" name="op" value="domain-remove">
-                    <button type="submit" class="larena-button" style="min-height: 2.75rem;">{{ __('larena-env::admin.panel_address.operations.domain-remove') }}</button>
+                    <button type="submit" class="larena-button larena-control-floor">{{ __('larena-env::admin.panel_address.operations.domain-remove') }}</button>
                 </form>
             @endif
             @if ($addressAllows['port'] && $panelAddress->ipAccess)
@@ -65,8 +65,8 @@
                     @csrf
                     <input type="hidden" name="op" value="port">
                     <label><span style="font-weight: 600; display: block;">{{ __('larena-env::admin.panel_address.port') }}</span>
-                        <input type="number" name="port" min="100" max="65535" required class="larena-input" style="inline-size: 9rem; min-height: 2.75rem;" value="{{ $panelAddress->port ?? 8500 }}"></label>
-                    <button type="submit" class="larena-button" style="min-height: 2.75rem;">{{ __('larena-env::admin.panel_address.port_go') }}</button>
+                        <input type="number" name="port" min="100" max="65535" required class="larena-input larena-control-floor" style="inline-size: 9rem;" value="{{ $panelAddress->port ?? 8500 }}"></label>
+                    <button type="submit" class="larena-button larena-control-floor">{{ __('larena-env::admin.panel_address.port_go') }}</button>
                 </form>
             @endif
             @if ($addressAllows['ip-access'] && ($panelAddress->ipAccess ? $panelAddress->domainSsl : true))
@@ -74,7 +74,7 @@
                     @csrf
                     <input type="hidden" name="op" value="ip-access">
                     <input type="hidden" name="enabled" value="{{ $panelAddress->ipAccess ? 'no' : 'yes' }}">
-                    <button type="submit" class="larena-button" style="min-height: 2.75rem;">{{ __('larena-env::admin.panel_address.'.($panelAddress->ipAccess ? 'ip_turn_off' : 'ip_turn_on')) }}</button>
+                    <button type="submit" class="larena-button larena-control-floor">{{ __('larena-env::admin.panel_address.'.($panelAddress->ipAccess ? 'ip_turn_off' : 'ip_turn_on')) }}</button>
                 </form>
             @endif
         </section>
@@ -125,7 +125,7 @@
                     @csrf
                     <input type="hidden" name="op" value="access">
                     <input type="hidden" name="everyone" value="yes">
-                    <button type="submit" class="larena-button" style="min-height: 2.75rem;">{{ __('larena-env::admin.panel_access.open_to_all') }}</button>
+                    <button type="submit" class="larena-button larena-control-floor">{{ __('larena-env::admin.panel_access.open_to_all') }}</button>
                 </form>
             @endif
             <p>{{ __('larena-env::admin.timed.after_plan') }}</p>

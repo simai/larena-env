@@ -10,7 +10,7 @@
     <section class="larena-panel larena-panel-padded" data-env-panel-address-moving="{{ $op }}" aria-labelledby="env-panel-address-moving">
         <h2 id="env-panel-address-moving" class="text-2">{{ __('larena-env::admin.panel_address.moving_'.$op, ['port' => (string) ($port ?? '')]) }}</h2>
         <p>{{ __('larena-env::admin.panel_address.moving_open') }}</p>
-        <p><a class="larena-button larena-button-primary" style="min-height: 2.75rem;" href="{{ $next }}" data-env-panel-address-next>{{ $nextBase }}</a></p>
+        <p><a class="larena-button larena-button-primary larena-control-floor" href="{{ $next }}" data-env-panel-address-next>{{ $nextBase }}</a></p>
         <p class="color-on-surface-variant">{{ __('larena-env::admin.panel_address.moving_back') }}</p>
     </section>
 @endsection

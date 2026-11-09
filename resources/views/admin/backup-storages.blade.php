@@ -60,7 +60,7 @@
                                     @else<span style="color: var(--sf-error);">{{ __('larena-env::admin.storages.test_failed', ['when' => \Larena\Env\Server\Moment::human($storage->lastTest['at']), 'error' => $storage->lastTest['error'] ?? '—']) }}</span>@endif
                                 </span>
                             </span>
-                            <a class="larena-button" style="min-height: 2.75rem;" href="{{ route('larena.env.admin.storages', ['storage' => $storage->name], false) }}#env-storage-copies"
+                            <a class="larena-button larena-control-floor" href="{{ route('larena.env.admin.storages', ['storage' => $storage->name], false) }}#env-storage-copies"
                                @if ($open?->name === $storage->name) aria-current="true" @endif>{{ __('larena-env::admin.storages.copies') }}</a>
                             @foreach (['test', 'remove'] as $op)
                                 @if ($allows[$op])
@@ -68,7 +68,7 @@
                                         @csrf
                                         <input type="hidden" name="op" value="{{ $op }}">
                                         <input type="hidden" name="name" value="{{ $storage->name }}">
-                                        <button type="submit" class="larena-button" style="min-height: 2.75rem;">{{ __('larena-env::admin.storages.'.$op) }}</button>
+                                        <button type="submit" class="larena-button larena-control-floor">{{ __('larena-env::admin.storages.'.$op) }}</button>
                                     </form>
                                 @endif
                             @endforeach
@@ -98,7 +98,7 @@
                                         <input type="hidden" name="name" value="{{ $open->name }}">
                                         <input type="hidden" name="domain" value="{{ $copy['domain'] }}">
                                         <input type="hidden" name="backup" value="{{ $copy['backup'] }}">
-                                        <button type="submit" class="larena-button" style="min-height: 2.75rem;">{{ __('larena-env::admin.storages.fetch') }}</button>
+                                        <button type="submit" class="larena-button larena-control-floor">{{ __('larena-env::admin.storages.fetch') }}</button>
                                     </form>
                                 @endif
                             </li>
@@ -124,7 +124,7 @@
                         <sf-input name="access_key" label="{{ __('larena-env::admin.storages.fields.access_key') }}" autocomplete="off" spellcheck="false" required></sf-input>
                         <sf-input name="secret_key" label="{{ __('larena-env::admin.storages.fields.secret_key') }}" input-type="password" autocomplete="new-password" required></sf-input>
                         <details>
-                            <summary class="color-primary" style="cursor: pointer; min-height: 2.75rem; display: flex; align-items: center;">{{ __('larena-env::admin.more') }}</summary>
+                            <summary class="color-primary larena-control-floor" style="cursor: pointer; display: flex; align-items: center;">{{ __('larena-env::admin.more') }}</summary>
                             <div class="flex flex-column g-2 m-t-2">
                                 <sf-input name="prefix" label="{{ __('larena-env::admin.storages.fields.prefix') }}" placeholder="backups" autocomplete="off"></sf-input>
                                 <sf-input name="endpoint" label="{{ __('larena-env::admin.storages.fields.endpoint') }}" hint="{{ __('larena-env::admin.storages.fields.endpoint_hint') }}" placeholder="https://…" autocomplete="off"></sf-input>
@@ -133,8 +133,8 @@
                             </div>
                         </details>
                     </div>
-                    <label class="flex items-cross-center g-1 m-t-2" style="min-height: 2.75rem;"><input type="checkbox" name="default" value="1" @checked($storages === [])> {{ __('larena-env::admin.storages.fields.default') }}</label>
-                    <button type="submit" class="larena-button larena-button-primary m-t-2" style="min-height: 2.75rem;">{{ __('larena-env::admin.storages.add_go') }}</button>
+                    <label class="flex items-cross-center g-1 m-t-2 larena-control-floor"><input type="checkbox" name="default" value="1" @checked($storages === [])> {{ __('larena-env::admin.storages.fields.default') }}</label>
+                    <button type="submit" class="larena-button larena-button-primary m-t-2 larena-control-floor">{{ __('larena-env::admin.storages.add_go') }}</button>
                 </form>
             </section>
         @endif

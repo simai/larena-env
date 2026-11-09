@@ -43,7 +43,7 @@
                 <form method="post" action="{{ route('larena.env.admin.security.plan', [], false) }}" class="m-0" data-env-security-op="scan">
                     @csrf
                     <input type="hidden" name="op" value="scan">
-                    <button type="submit" class="larena-button" style="min-height: 2.75rem;">{{ __('larena-env::admin.security.scan') }}</button>
+                    <button type="submit" class="larena-button larena-control-floor">{{ __('larena-env::admin.security.scan') }}</button>
                 </form>
             @endif
         </section>
@@ -112,7 +112,7 @@
                                 @csrf
                                 <input type="hidden" name="op" value="level">
                                 <input type="hidden" name="set" value="{{ $level }}">
-                                <button type="submit" class="larena-button @if ($level === 'enhanced') larena-button-primary @endif" style="min-height: 2.75rem;">{{ __('larena-env::admin.security.level_apply') }}</button>
+                                <button type="submit" class="larena-button @if ($level === 'enhanced') larena-button-primary @endif larena-control-floor">{{ __('larena-env::admin.security.level_apply') }}</button>
                             </form>
                         @endif
                     </div>
@@ -148,11 +148,11 @@
                             <fieldset class="m-0 p-0" style="border: 0;">
                                 <legend style="font-weight: 600;">{{ __('larena-env::admin.security.geo.mode') }}</legend>
                                 @foreach (\Larena\Env\Security\GeoStatus::MODES as $mode)
-                                    <label class="flex items-cross-center g-1" style="min-height: 2.75rem;"><input type="radio" name="mode" value="{{ $mode }}" @checked($geo->mode === $mode)> {{ __('larena-env::admin.security.geo.modes.'.$mode) }}</label>
+                                    <label class="flex items-cross-center g-1 larena-control-floor"><input type="radio" name="mode" value="{{ $mode }}" @checked($geo->mode === $mode)> {{ __('larena-env::admin.security.geo.modes.'.$mode) }}</label>
                                 @endforeach
                             </fieldset>
                             <details class="m-t-2" data-env-security-geo-pick @if ($geo->countries === []) open @endif>
-                                <summary style="cursor: pointer; min-height: 2.75rem; display: flex; align-items: center;">
+                                <summary class="larena-control-floor" style="cursor: pointer; display: flex; align-items: center;">
                                     {{ __('larena-env::admin.security.geo.countries_pick') }} · {{ __('larena-env::admin.security.geo.countries_chosen', ['count' => (string) count($geo->countries)]) }}
                                 </summary>
                                 <div style="max-block-size: 18rem; overflow: auto; display: grid; gap: .125rem .75rem; grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); padding: .5rem 0;">
@@ -167,16 +167,16 @@
                             <fieldset class="m-0 m-t-2 p-0" style="border: 0;">
                                 <legend style="font-weight: 600;">{{ __('larena-env::admin.security.geo.ports') }}</legend>
                                 @foreach (\Larena\Env\Security\GeoStatus::PORTS as $ports)
-                                    <label class="flex items-cross-center g-1" style="min-height: 2.75rem;"><input type="radio" name="ports" value="{{ $ports }}" @checked($geo->ports === $ports)> {{ __('larena-env::admin.security.geo.port_choices.'.$ports) }}</label>
+                                    <label class="flex items-cross-center g-1 larena-control-floor"><input type="radio" name="ports" value="{{ $ports }}" @checked($geo->ports === $ports)> {{ __('larena-env::admin.security.geo.port_choices.'.$ports) }}</label>
                                 @endforeach
                             </fieldset>
                             <label class="m-t-2" style="display: block;">
                                 <span style="font-weight: 600; display: block;">{{ __('larena-env::admin.security.geo.keep') }}</span>
-                                <input type="text" name="keep" class="larena-input" style="inline-size: 100%; max-inline-size: 32rem; min-height: 2.75rem;" value="{{ $myAddress }}" inputmode="text" autocomplete="off" data-env-security-geo-keep>
+                                <input type="text" name="keep" class="larena-input larena-control-floor" style="inline-size: 100%; max-inline-size: 32rem;" value="{{ $myAddress }}" inputmode="text" autocomplete="off" data-env-security-geo-keep>
                                 <span class="color-on-surface-variant" style="display: block;">{{ __('larena-env::admin.security.geo.keep_hint') }}</span>
                             </label>
                             <p class="color-on-surface-variant m-t-2">{{ __('larena-env::admin.security.geo.timed') }}</p>
-                            <button type="submit" class="larena-button larena-button-primary" style="min-height: 2.75rem;">{{ __('larena-env::admin.security.geo.apply') }}</button>
+                            <button type="submit" class="larena-button larena-button-primary larena-control-floor">{{ __('larena-env::admin.security.geo.apply') }}</button>
                         </form>
                     @endif
                     <div class="flex flex-wrap items-cross-center g-2 m-t-3">
@@ -187,7 +187,7 @@
                             <form method="post" action="{{ route('larena.env.admin.security.plan', [], false) }}" class="m-0" data-env-security-op="geo-update">
                                 @csrf
                                 <input type="hidden" name="op" value="geo-update">
-                                <button type="submit" class="larena-button" style="min-height: 2.75rem;">{{ __('larena-env::admin.security.geo.update') }}</button>
+                                <button type="submit" class="larena-button larena-control-floor">{{ __('larena-env::admin.security.geo.update') }}</button>
                             </form>
                         @endif
                     </div>
@@ -195,9 +195,9 @@
                         <form method="get" action="{{ route('larena.env.admin.security', [], false) }}#env-security-geo" class="flex flex-wrap items-cross-end g-2 m-t-3" data-env-security-geo-lookup>
                             <label class="grow" style="flex-basis: 12rem;">
                                 <span style="font-weight: 600; display: block;">{{ __('larena-env::admin.security.geo.lookup') }}</span>
-                                <input type="text" name="ip" class="larena-input" style="inline-size: 100%; min-height: 2.75rem;" value="{{ $lookup['ip'] ?? '' }}" placeholder="{{ __('larena-env::admin.security.geo.lookup_field') }}" autocomplete="off">
+                                <input type="text" name="ip" class="larena-input larena-control-floor" style="inline-size: 100%;" value="{{ $lookup['ip'] ?? '' }}" placeholder="{{ __('larena-env::admin.security.geo.lookup_field') }}" autocomplete="off">
                             </label>
-                            <button type="submit" class="larena-button" style="min-height: 2.75rem;">{{ __('larena-env::admin.security.geo.lookup_go') }}</button>
+                            <button type="submit" class="larena-button larena-control-floor">{{ __('larena-env::admin.security.geo.lookup_go') }}</button>
                         </form>
                         @if ($lookup !== null)
                             <p class="m-t-1" role="status" data-env-security-geo-answer="{{ $lookup['country'] ?? '' }}">
@@ -229,7 +229,7 @@
                             <form method="post" action="{{ route('larena.env.admin.security.plan', [], false) }}" class="m-0" data-env-security-op="{{ $mcp->enabled ? 'mcp-disable' : 'mcp-enable' }}">
                                 @csrf
                                 <input type="hidden" name="op" value="{{ $mcp->enabled ? 'mcp-disable' : 'mcp-enable' }}">
-                                <button type="submit" class="larena-button @if (!$mcp->enabled) larena-button-primary @endif" style="min-height: 2.75rem;">{{ __('larena-env::admin.security.operations.'.($mcp->enabled ? 'mcp-disable' : 'mcp-enable')) }}</button>
+                                <button type="submit" class="larena-button @if (!$mcp->enabled) larena-button-primary @endif larena-control-floor">{{ __('larena-env::admin.security.operations.'.($mcp->enabled ? 'mcp-disable' : 'mcp-enable')) }}</button>
                             </form>
                         @endif
                     </div>
@@ -250,7 +250,7 @@
                                                 @csrf
                                                 <input type="hidden" name="op" value="mcp-key-remove">
                                                 <input type="hidden" name="fingerprint" value="{{ $key['fingerprint'] }}">
-                                                <button type="submit" class="larena-button" style="min-height: 2.75rem;">{{ __('larena-env::admin.security.mcp.remove') }}</button>
+                                                <button type="submit" class="larena-button larena-control-floor">{{ __('larena-env::admin.security.mcp.remove') }}</button>
                                             </form>
                                         @endif
                                     </li>
@@ -268,15 +268,15 @@
                                 </label>
                                 <fieldset class="m-0 m-t-2 p-0" style="border: 0;">
                                     <legend style="font-weight: 600;">{{ __('larena-env::admin.security.mcp.role') }}</legend>
-                                    <label class="flex items-cross-center g-1" style="min-height: 2.75rem;"><input type="radio" name="role" value="owner" @checked($owners !== [])> {{ __('larena-env::admin.security.mcp.role_owner') }}</label>
+                                    <label class="flex items-cross-center g-1 larena-control-floor"><input type="radio" name="role" value="owner" @checked($owners !== [])> {{ __('larena-env::admin.security.mcp.role_owner') }}</label>
                                     @if ($owners !== [])
-                                        <select name="owner" class="larena-input" style="min-height: 2.75rem; margin-inline-start: 1.5rem;" aria-label="{{ __('larena-env::admin.security.mcp.owner') }}">
+                                        <select name="owner" class="larena-input larena-control-floor" style="margin-inline-start: 1.5rem;" aria-label="{{ __('larena-env::admin.security.mcp.owner') }}">
                                             @foreach ($owners as $owner)<option value="{{ $owner }}">{{ $owner }}</option>@endforeach
                                         </select>
                                     @endif
-                                    <label class="flex items-cross-center g-1" style="min-height: 2.75rem;"><input type="radio" name="role" value="administrator" @checked($owners === [])> {{ __('larena-env::admin.security.mcp.role_admin') }}</label>
+                                    <label class="flex items-cross-center g-1 larena-control-floor"><input type="radio" name="role" value="administrator" @checked($owners === [])> {{ __('larena-env::admin.security.mcp.role_admin') }}</label>
                                 </fieldset>
-                                <button type="submit" class="larena-button larena-button-primary m-t-2" style="min-height: 2.75rem;">{{ __('larena-env::admin.security.mcp.add') }}</button>
+                                <button type="submit" class="larena-button larena-button-primary m-t-2 larena-control-floor">{{ __('larena-env::admin.security.mcp.add') }}</button>
                             </form>
                         @endif
                         @if ($mcp->clients !== [])
@@ -286,7 +286,7 @@
                                 @if (isset($mcp->clients[$client]))
                                     <label class="m-t-2" style="display: block;" data-env-security-mcp-client="{{ $client }}">
                                         <span style="font-weight: 600; display: block;">{{ __('larena-env::admin.security.mcp.clients.'.$client) }}</span>
-                                        <input type="text" readonly class="larena-input" style="inline-size: 100%; min-height: 2.75rem; font-family: var(--sf-mono, monospace);" value="{{ $mcp->clients[$client] }}">
+                                        <input type="text" readonly class="larena-input larena-control-floor" style="inline-size: 100%; font-family: var(--sf-mono, monospace);" value="{{ $mcp->clients[$client] }}">
                                     </label>
                                 @endif
                             @endforeach
@@ -346,7 +346,7 @@
                                                 <input type="hidden" name="op" value="quarantine">
                                                 <input type="hidden" name="domain" value="{{ $domain }}">
                                                 <input type="hidden" name="path" value="{{ $file['path'] }}">
-                                                <button type="submit" class="larena-button larena-button-primary" style="min-height: 2.75rem;">{{ __('larena-env::admin.security.to_quarantine') }}</button>
+                                                <button type="submit" class="larena-button larena-button-primary larena-control-floor">{{ __('larena-env::admin.security.to_quarantine') }}</button>
                                             </form>
                                         @endif
                                     </li>
@@ -359,7 +359,7 @@
                     <form method="post" action="{{ route('larena.env.admin.security.plan', [], false) }}" class="m-0 m-t-2" data-env-security-op="files-scan">
                         @csrf
                         <input type="hidden" name="op" value="files-scan">
-                        <button type="submit" class="larena-button" style="min-height: 2.75rem;">{{ __('larena-env::admin.security.files_scan') }}</button>
+                        <button type="submit" class="larena-button larena-control-floor">{{ __('larena-env::admin.security.files_scan') }}</button>
                     </form>
                 @endif
 
@@ -379,7 +379,7 @@
                                         @csrf
                                         <input type="hidden" name="op" value="restore">
                                         <input type="hidden" name="id" value="{{ $file['id'] }}">
-                                        <button type="submit" class="larena-button" style="min-height: 2.75rem;">{{ __('larena-env::admin.security.restore') }}</button>
+                                        <button type="submit" class="larena-button larena-control-floor">{{ __('larena-env::admin.security.restore') }}</button>
                                     </form>
                                 @endif
                             </li>

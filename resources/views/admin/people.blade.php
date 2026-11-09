@@ -32,7 +32,7 @@
                             @csrf
                             <input type="hidden" name="subject" value="{{ $person['subject'] }}">
                             <label class="larena-visually-hidden" for="env-space-{{ $loop->index }}">{{ __('larena-env::admin.people.space') }}</label>
-                            <select id="env-space-{{ $loop->index }}" name="owner" style="min-height: 2.75rem; max-width: 14rem;">
+                            <select class="larena-control-floor" id="env-space-{{ $loop->index }}" name="owner" style="max-width: 14rem;">
                                 <option value="">{{ __('larena-env::admin.people.no_space') }}</option>
                                 @foreach ($owners as $owner)
                                     <option value="{{ $owner }}" @if ($person['owner'] === $owner) selected @endif>{{ $owner }}</option>
@@ -41,14 +41,14 @@
                                     <option value="{{ $person['owner'] }}" selected>{{ $person['owner'] }}</option>
                                 @endif
                             </select>
-                            <button type="submit" class="larena-button" style="min-height: 2.75rem;">{{ __('larena-env::admin.people.save') }}</button>
+                            <button type="submit" class="larena-button larena-control-floor">{{ __('larena-env::admin.people.save') }}</button>
                         </form>
                         <div data-env-person-actions>
                             @if ($person['owner'] !== null)
                                 <form method="post" action="{{ route('larena.env.admin.people.act', [], false) }}" class="m-0">
                                     @csrf
                                     <input type="hidden" name="subject" value="{{ $person['subject'] }}">
-                                    <button type="submit" class="larena-button" style="min-height: 2.75rem;">{{ __('larena-env::admin.people.act_as') }}</button>
+                                    <button type="submit" class="larena-button larena-control-floor">{{ __('larena-env::admin.people.act_as') }}</button>
                                 </form>
                             @endif
                         </div>
@@ -84,7 +84,7 @@
                                 @csrf
                                 <input type="hidden" name="action" value="{{ in_array($owner, $blockedOwners ?? [], true) ? 'unblock' : 'block' }}">
                                 <input type="hidden" name="name" value="{{ $owner }}">
-                                <button type="submit" class="larena-button" style="min-height: 2.75rem;">{{ __('larena-env::admin.people.'.(in_array($owner, $blockedOwners ?? [], true) ? 'unblock' : 'block')) }}</button>
+                                <button type="submit" class="larena-button larena-control-floor">{{ __('larena-env::admin.people.'.(in_array($owner, $blockedOwners ?? [], true) ? 'unblock' : 'block')) }}</button>
                             </form>
                         @endif
                     </li>

@@ -50,7 +50,7 @@
                                     @csrf
                                     <input type="hidden" name="op" value="update">
                                     <input type="hidden" name="php" value="{{ $version->version }}">
-                                    <button type="submit" class="larena-button{{ $version->updates !== [] ? ' larena-button-primary' : '' }}" style="min-height: 2.75rem;">{{ __('larena-env::admin.software.php.update') }}</button>
+                                    <button type="submit" class="larena-button{{ $version->updates !== [] ? ' larena-button-primary' : '' }} larena-control-floor">{{ __('larena-env::admin.software.php.update') }}</button>
                                 </form>
                             @endif
                             @if ($allows['remove'] && $version->removable)
@@ -58,10 +58,10 @@
                                     @csrf
                                     <input type="hidden" name="op" value="remove">
                                     <input type="hidden" name="php" value="{{ $version->version }}">
-                                    <button type="submit" class="larena-button" style="min-height: 2.75rem;">{{ __('larena-env::admin.software.php.remove') }}</button>
+                                    <button type="submit" class="larena-button larena-control-floor">{{ __('larena-env::admin.software.php.remove') }}</button>
                                 </form>
                             @endif
-                            <a class="flex items-cross-center p-x-1" style="min-height: 2.75rem;" href="{{ route('larena.env.admin.software.php', ['extensions' => $version->version], false) }}#env-php-extensions"
+                            <a class="flex items-cross-center p-x-1 larena-control-floor" href="{{ route('larena.env.admin.software.php', ['extensions' => $version->version], false) }}#env-php-extensions"
                                 data-env-php-extensions-link="{{ $version->version }}" @if ($extensionsOf === $version->version) aria-current="true" @endif>{{ __('larena-env::admin.software.php.extensions') }}</a>
                         </div>
                     </li>
@@ -82,7 +82,7 @@
                     <input type="hidden" name="op" value="install">
                     <div class="larena-field">
                         <label for="env-php-install-version">{{ __('larena-env::admin.software.php.version') }}</label>
-                        <select id="env-php-install-version" name="php" style="min-height: 2.75rem;">
+                        <select class="larena-control-floor" id="env-php-install-version" name="php">
                             @foreach ($php->installable as $installable)
                                 <option value="{{ $installable }}">PHP {{ $installable }}</option>
                             @endforeach
@@ -117,7 +117,7 @@
                                         <input type="hidden" name="php" value="{{ $extensionsOf }}">
                                         <input type="hidden" name="name" value="{{ $extension->name }}">
                                         <input type="hidden" name="enabled" value="{{ $extension->enabled ? 'no' : 'yes' }}">
-                                        <button type="submit" class="larena-button" style="min-height: 2.75rem;" aria-label="{{ __('larena-env::admin.software.php.operations.extension_'.($extension->enabled ? 'no' : 'yes'), ['php' => $extensionsOf, 'name' => $extension->name]) }}">
+                                        <button type="submit" class="larena-button larena-control-floor" aria-label="{{ __('larena-env::admin.software.php.operations.extension_'.($extension->enabled ? 'no' : 'yes'), ['php' => $extensionsOf, 'name' => $extension->name]) }}">
                                             {{ $extension->enabled ? __('larena-env::admin.software.php.turn_off') : __('larena-env::admin.software.php.turn_on') }}</button>
                                     </form>
                                 @endif

@@ -52,7 +52,7 @@
                                         @csrf
                                         <input type="hidden" name="op" value="restart">
                                         <input type="hidden" name="name" value="{{ $service->name }}">
-                                        <button type="submit" class="larena-button{{ $service->isActive() ? '' : ' larena-button-primary' }}" style="min-height: 2.75rem;">{{ __('larena-env::admin.services.restart') }}</button>
+                                        <button type="submit" class="larena-button{{ $service->isActive() ? '' : ' larena-button-primary' }} larena-control-floor">{{ __('larena-env::admin.services.restart') }}</button>
                                     </form>
                                 @endif
                                 @if ($allows['reload'] && $service->canReload)
@@ -60,11 +60,11 @@
                                         @csrf
                                         <input type="hidden" name="op" value="reload">
                                         <input type="hidden" name="name" value="{{ $service->name }}">
-                                        <button type="submit" class="larena-button" style="min-height: 2.75rem;">{{ __('larena-env::admin.services.reload') }}</button>
+                                        <button type="submit" class="larena-button larena-control-floor">{{ __('larena-env::admin.services.reload') }}</button>
                                     </form>
                                 @endif
                                 @if ($allows['log'])
-                                    <a class="flex items-cross-center p-x-1" style="min-height: 2.75rem;" href="{{ route('larena.env.admin.services', [], false) }}?log={{ urlencode($service->name) }}#env-service-log"
+                                    <a class="flex items-cross-center p-x-1 larena-control-floor" href="{{ route('larena.env.admin.services', [], false) }}?log={{ urlencode($service->name) }}#env-service-log"
                                         data-env-service-log-link="{{ $service->name }}" @if ($logOf === $service->name) aria-current="true" @endif>{{ __('larena-env::admin.services.journal') }}</a>
                                 @endif
                             </div>

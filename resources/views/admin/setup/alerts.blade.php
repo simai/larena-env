@@ -15,9 +15,9 @@
     @elseif ($state === 'done')
         <div class="flex flex-wrap g-2">
             @if ($canTest)
-                <sf-button appearance="outline" size="1" text="{{ __('larena-env::admin.alerts.test') }}" native-type="submit" name="intent" value="test" data-env-setup-test></sf-button>
+                <sf-button appearance="outline" text="{{ __('larena-env::admin.alerts.test') }}" native-type="submit" name="intent" value="test" data-env-setup-test></sf-button>
             @endif
-            <sf-button appearance="link" size="1" text="{{ __('larena-env::admin.setup.edit') }}" href="{{ route('larena.env.admin.overview.setup', ['step' => 'alerts', 'change' => '1'], false) }}"></sf-button>
+            <sf-button appearance="link" text="{{ __('larena-env::admin.setup.edit') }}" href="{{ route('larena.env.admin.overview.setup', ['step' => 'alerts', 'change' => '1'], false) }}"></sf-button>
         </div>
     @endif
 @endif

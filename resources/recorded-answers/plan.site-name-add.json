@@ -1,19 +1,17 @@
 {
   "schema": "simai-panel-answer/1",
-  "written_from": "Written by the panel from ENV's contract for simai-env 1.53.0 (2026-11-07), not recorded from a server: replace with ENV's recorded answers when 1.53.0 is released.",
   "request_id": "fixture-plan.site-name-add",
   "status": "ok",
   "kind": "plan",
   "data": {
     "command": "site:name-add",
     "args": {
-      "domain": "demo-php.test",
-      "name": "shop.demo-php.test",
-      "mode": "redirect",
-      "check-dns": "yes"
+      "domain": "demo-names.test",
+      "name": "old.demo-names.test",
+      "mode": "redirect"
     },
-    "target": "demo-php.test",
-    "description": "Add a name to the site: check its DNS, add it to nginx, extend the certificate",
+    "target": "demo-names.test",
+    "description": "Add an extra name (www, another domain) that shows the site or redirects to it; the certificate follows",
     "effects": "write",
     "lock": "site",
     "applied": false

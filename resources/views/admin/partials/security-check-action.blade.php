@@ -5,10 +5,10 @@
         @csrf
         <input type="hidden" name="op" value="fix">
         <input type="hidden" name="check" value="{{ $check->id }}">
-        <button type="submit" class="larena-button larena-button-primary" style="min-height: 2.75rem;">{{ __('larena-env::admin.security.fix') }}</button>
+        <button type="submit" class="larena-button larena-button-primary larena-control-floor">{{ __('larena-env::admin.security.fix') }}</button>
     </form>
 @elseif ($panel && $check->domain !== null)
-    <a class="larena-button" style="min-height: 2.75rem;" href="{{ route('larena.env.admin.panel.access', [], false) }}" data-env-security-open-panel="{{ $check->id }}">{{ __('larena-env::admin.security.open_panel') }}</a>
+    <a class="larena-button larena-control-floor" href="{{ route('larena.env.admin.panel.access', [], false) }}" data-env-security-open-panel="{{ $check->id }}">{{ __('larena-env::admin.security.open_panel') }}</a>
 @elseif ($check->domain !== null)
-    <a class="larena-button" style="min-height: 2.75rem;" href="{{ route('larena.env.admin.site', ['domain' => $check->domain], false) }}{{ $check->check === 'https' ? '?tab=domains' : ($check->check === 'backup_verify' ? '?tab=backups' : '') }}" data-env-security-open="{{ $check->id }}">{{ __('larena-env::admin.security.open_site') }}</a>
+    <a class="larena-button larena-control-floor" href="{{ route('larena.env.admin.site', ['domain' => $check->domain], false) }}{{ $check->check === 'https' ? '?tab=domains' : ($check->check === 'backup_verify' ? '?tab=backups' : '') }}" data-env-security-open="{{ $check->id }}">{{ __('larena-env::admin.security.open_site') }}</a>
 @endif

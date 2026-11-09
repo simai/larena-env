@@ -25,7 +25,7 @@
     </details>
     <input type="hidden" name="default" value="1">
 @elseif ($state === 'done')
-    <div><sf-button appearance="link" size="1/2" text="{{ __('larena-env::admin.setup.backups.another') }}" href="{{ route('larena.env.admin.overview.setup', ['step' => 'backups', 'change' => '1'], false) }}"></sf-button></div>
+    <div><sf-button appearance="link" text="{{ __('larena-env::admin.setup.backups.another') }}" href="{{ route('larena.env.admin.overview.setup', ['step' => 'backups', 'change' => '1'], false) }}"></sf-button></div>
 @elseif ($storages === [])
     <p class="m-0" data-env-setup-unsupported>{{ __('larena-env::admin.setup.unsupported') }}</p>
 @endif

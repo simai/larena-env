@@ -12,7 +12,7 @@
         @endforeach
     </dl>
     @if (($plans['env'] ?? null)?->updateAvailable && $canUpdate)
-        <div><sf-button appearance="outline" size="1" text="{{ __('larena-env::admin.setup.updates.env') }}" native-type="submit" name="intent" value="update" data-env-setup-update-env></sf-button></div>
+        <div><sf-button appearance="outline" text="{{ __('larena-env::admin.setup.updates.env') }}" native-type="submit" name="intent" value="update" data-env-setup-update-env></sf-button></div>
     @else
         <p class="m-0">{{ __('larena-env::admin.setup.updates.fresh') }}</p>
     @endif

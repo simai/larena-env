@@ -14,4 +14,4 @@
     <p>{{ $plan->description }}</p>
     <p class="m-0 color-on-surface-variant">{{ $plan->effects }}</p>
 </details>
-<div><sf-button appearance="link" size="1/2" text="{{ __('larena-env::admin.setup.edit') }}" native-type="submit" name="wizard-action" value="edit" data-env-setup-edit></sf-button></div>
+<div><sf-button appearance="link" text="{{ __('larena-env::admin.setup.edit') }}" native-type="submit" name="wizard-action" value="edit" data-env-setup-edit></sf-button></div>

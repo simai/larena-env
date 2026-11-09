@@ -31,7 +31,7 @@
             <form method="post" action="{{ route('larena.env.admin.site.nginx.plan', ['domain' => $domain], false) }}" data-env-nginx-op="nginx-clear">
                 @csrf
                 <input type="hidden" name="op" value="nginx-clear">
-                <button type="submit" class="larena-button" style="min-height: 2.75rem;">{{ __('larena-env::admin.files.operations.nginx-clear') }}</button>
+                <button type="submit" class="larena-button larena-control-floor">{{ __('larena-env::admin.files.operations.nginx-clear') }}</button>
             </form>
         @endif
     @endif
