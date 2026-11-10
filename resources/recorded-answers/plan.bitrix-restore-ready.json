@@ -1,0 +1,42 @@
+{
+  "schema": "simai-panel-answer/1",
+  "request_id": "fixture-plan.bitrix-restore-ready",
+  "status": "ok",
+  "kind": "plan",
+  "data": {
+    "command": "bitrix:restore-ready",
+    "args": {
+      "domain": "demo-bitrix.test"
+    },
+    "target": "demo-bitrix.test",
+    "description": "Prepare Bitrix restore.php flow",
+    "effects": "write",
+    "lock": "site",
+    "applied": false,
+    "resources": {
+      "disk_free_bytes": 1394521382912,
+      "needed_bytes": 483,
+      "ram_mb": 14963,
+      "ram_min_mb": 1536,
+      "ram_recommended_mb": 4096,
+      "ok": true,
+      "refusal": null,
+      "warnings": []
+    },
+    "archive": {
+      "base": "demo_20260101_full_abc.tar.gz",
+      "dir": "public",
+      "source": null,
+      "url": null,
+      "volumes": [
+        {
+          "name": "demo_20260101_full_abc.tar.gz",
+          "size": 161
+        }
+      ],
+      "count": 1,
+      "total_bytes": 161,
+      "encrypted": false
+    }
+  }
+}

@@ -61,6 +61,7 @@ final class EnvServiceProvider extends ServiceProvider
         $this->app->bind(SiteDetailsReader::class, static fn (Application $app): SiteDetailsReader => new SiteDetailsReader($app->make(PanelGateway::class)));
         $this->app->bind(\Larena\Env\Server\SiteExtrasReader::class, static fn (Application $app): \Larena\Env\Server\SiteExtrasReader => new \Larena\Env\Server\SiteExtrasReader($app->make(PanelGateway::class)));
         $this->app->bind(\Larena\Env\Server\SiteNamesReader::class, static fn (Application $app): \Larena\Env\Server\SiteNamesReader => new \Larena\Env\Server\SiteNamesReader($app->make(PanelGateway::class)));
+        $this->app->bind(\Larena\Env\Server\SiteRouteReader::class, static fn (Application $app): \Larena\Env\Server\SiteRouteReader => new \Larena\Env\Server\SiteRouteReader($app->make(PanelGateway::class)));
         $this->app->bind(\Larena\Env\Files\SiteFiles::class, static fn (Application $app): \Larena\Env\Files\SiteFiles => new \Larena\Env\Files\SiteFiles($app->make(PanelGateway::class)));
         $this->app->bind(PanelOperations::class, static fn (Application $app): PanelOperations => new PanelOperations($app->make(PanelGateway::class)));
         // Which owner of the server a person at the user level works as (Panel plan 2.4).

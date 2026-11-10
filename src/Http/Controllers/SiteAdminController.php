@@ -68,6 +68,8 @@ final readonly class SiteAdminController
         private ?PanelWarningSource $warningSource = null,
         private ?\Larena\Access\Runtime\AccessOperationAuthorizer $authorizer = null,
         private ?\Larena\Env\Server\SiteNamesReader $names = null,
+        private ?\Larena\Env\Server\SiteRouteReader $routes = null,
+        private ?\Larena\Env\Server\SiteExtrasReader $profiles = null,
     ) {
     }
 
@@ -176,7 +178,11 @@ final readonly class SiteAdminController
             // Whether a certificate may be checked through DNS: the server keeps a Cloudflare token (simai-env 1.36.0).
             'dnsCertificates' => $ask('ssl:dns-status', 'domains') && $this->extras->dnsCertificates($actor)?->configured === true,
             'tabOperations' => array_values(array_filter($operations, static fn (SiteOperation $operation): bool => $operation->tab() === $tab
-                && !in_array($operation, SiteOperation::NAMES, true) && !in_array($operation, SiteOperation::CHECKS, true))),
+                && !in_array($operation, SiteOperation::NAMES, true) && !in_array($operation, SiteOperation::CHECKS, true) && !$operation->isRouteStep())),
+            // Where the site stands on its creation route (simai-env 1.56.0), with its next step through the plan; a server
+            // without site:status shows the overview as before, without a refusal.
+            'siteRoute' => $site !== null && $tab === 'overview' && $capabilities->allows('site:status')
+                ? $this->routeBlock($request, $actor, $site, $capabilities) : null,
             // The fix of a profile's rule that does not pass (simai-env 1.55.1), offered on the rule's own row of «Проверка»
             // only where the server lists site:check-fix; an older server shows the block as before.
             'checkFixes' => $capabilities->allows(SiteOperation::CheckFix->command()),
@@ -203,6 +209,63 @@ final readonly class SiteAdminController
             'logReasonText' => $log === null || $log->reason === null ? null : $this->reasonText($log->reason),
             'notice' => $request->session()->get('larena_env_notice'),
         ]);
+    }
+
+    /**
+     * The «Создание сайта» block: the route and its steps from the server's own description of the kind, the step the site
+     * stands on, and the next step: a link the browser opens, a section of the card, or an action planned and confirmed.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function routeBlock(Request $request, PanelActor $actor, \Larena\Env\Server\SiteDetails $site, PanelCapabilities $capabilities): ?array
+    {
+        $status = $this->routes?->status($actor, $site->domain);
+        if ($status === null || !$status->worthShowing()) {
+            return null;
+        }
+        $profile = null;
+        foreach ($capabilities->allows('self:profiles') ? ($this->profiles?->profiles($actor) ?? []) : [] as $candidate) {
+            if ($candidate->name === ($status->profile ?? $site->profile)) {
+                $profile = $candidate;
+            }
+        }
+        $route = $profile?->route($status->route);
+        $text = fn (string $key, array $replace = []): string => (string) $this->translator->get('larena-env::admin.'.$key, $replace);
+        $known = static function (string $key, string $fallback) use ($text): string {
+            $line = $text($key);
+
+            return $line !== 'larena-env::admin.'.$key ? $line : $fallback;
+        };
+        $steps = [];
+        foreach ($route->steps ?? [] as $step) {
+            $steps[] = ['id' => $step['id'], 'label' => $known('routes.steps.'.\Larena\Env\Admin\RouteWords::stepKey($step['command'], $step['url_from']), $step['title'])];
+        }
+        $current = $route?->stepIndex($status->step);
+        $operation = $status->next !== null ? (SiteOperation::ROUTE_STEPS[$status->next] ?? null) : null;
+        if ($operation !== null && !$capabilities->allows($operation->command())) {
+            $operation = null;
+        }
+        $kept = $request->hasSession() ? $request->session()->get(NewSiteController::ROUTE_VALUES.'.'.strtolower($site->domain)) : null;
+
+        return [
+            'status' => $status,
+            'route' => $known('routes.names.'.$status->route, $route->title ?? $status->route),
+            'steps' => $steps,
+            'current' => $status->step === 'done' ? count($steps) : $current,
+            'stepText' => $known('routes.at.'.$status->step, $status->step),
+            'nextText' => $status->next === null ? null : $known('routes.steps.'.\Larena\Env\Admin\RouteWords::stepKey($status->next, $status->restoreUrl !== null ? 'restore_url' : 'installer_url'), $status->next),
+            'openUrl' => $status->openUrl(),
+            // A step the panel does not lead here (a deploy from Git): said, and done outside the panel.
+            'outside' => $status->next !== null && !in_array($status->next, ['open_url', 'file:upload', 'cron:add'], true) && $operation === null,
+            // A step done in another section of the card: the files of the site, its scheduled jobs.
+            'tab' => match ($status->next) {'file:upload' => 'files', 'cron:add' => 'cron', default => null},
+            'operation' => $operation,
+            'fields' => $operation === null ? [] : array_values(array_filter($operation->fields(), static fn (string $field): bool => $capabilities->takes($operation->command(), $field))),
+            // What the person gave when the site was made (a WordPress title, a repository), offered again at its step.
+            'values' => is_array($kept) ? array_filter($kept, 'is_string') : [],
+            'copies' => $operation === SiteOperation::WordpressRestoreReady && $capabilities->allows('wp:status') ? $this->routes->wordpressCopies($actor, $site->domain) : null,
+            'pending' => array_map(static fn (string $item): string => \Larena\Env\Server\SiteDoctor::checkText($item, $item), $status->pending),
+        ];
     }
 
     /**
@@ -346,6 +409,9 @@ final readonly class SiteAdminController
             return $this->back($request, $domain, 'not_allowed');
         }
         $input = $this->input($request, $actor, $operation);
+        if ($operation === SiteOperation::BitrixRestoreReady && isset($input['source'], $input['url'])) {
+            return $this->back($request, $domain, 'source_and_url', $operation->tab(), $operation);
+        }
         $result = $this->operations->plan($actor, $operation, $domain, $input);
         if ($result->plan === null) {
             return $this->back($request, $domain, $result->reason ?? 'answer_shape_invalid', $operation->tab(), $operation);
@@ -362,6 +428,8 @@ final readonly class SiteAdminController
             'hidden' => ['operation' => $operation->value] + $input,
             'replaces' => $this->replaces($actor, $operation, $domain, $input['backup'] ?? null),
             'check' => $result->plan->check,
+            'resources' => $result->plan->resources,
+            'then' => $operation === SiteOperation::WordpressInstall ? [(string) $this->translator->get('larena-env::admin.routes.password_once')] : [],
         ]);
     }
 

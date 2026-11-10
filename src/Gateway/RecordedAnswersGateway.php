@@ -17,8 +17,11 @@ final readonly class RecordedAnswersGateway implements PanelGateway
     private const string FIXTURES_SCHEMA = 'simai-panel-fixtures/1';
     private const string ANSWER_SCHEMA = 'simai-panel-answer/1';
 
+    private RecordedReplayState $state;
+
     public function __construct(private string $directory)
     {
+        $this->state = new RecordedReplayState();
     }
 
     public function source(): string
@@ -99,6 +102,37 @@ final readonly class RecordedAnswersGateway implements PanelGateway
             return $this->replay($request, $file);
         }
 
+        // A site's creation route (simai-env 1.56.0): the set holds a plan with the archive the server found, a plan with a
+        // folder named, and the refusals of a folder that is a link, a copy too large for the disk and an address that is
+        // not public; any other folder or address is missing, never answered with another's.
+        if ($request->command === 'bitrix:restore-ready' && !$request->confirm) {
+            $file = $this->restoreFile($request->args);
+            if ($file === null) {
+                return $this->unavailable($request, PanelReason::RECORDING_MISSING);
+            }
+
+            return $this->replay($request, $file);
+        }
+        // A kind the server has switched off (node on the recording's server) is refused before a plan.
+        if ($request->command === 'site:add' && ($request->args['profile'] ?? null) === 'node') {
+            return $this->replay($request, 'refused.profile-disabled.json');
+        }
+        // WordPress installed: the job, and its first answer once it ended carries the administrator's password; every
+        // later answer says it was shown once.
+        if ($request->command === 'job:status' && $this->state->startedCommand === 'wp:install') {
+            $file = $this->state->secretGiven ? 'job-wp-install-status-again.json' : 'job-wp-install-status.json';
+            $this->state->secretGiven = true;
+
+            return $this->replay($request, $file);
+        }
+        if ($request->confirm) {
+            $this->state->startedCommand = $request->command;
+            $this->state->secretGiven = false;
+            if ($request->command === 'wp:install') {
+                return $this->replay($request, 'job-wp-install.json');
+            }
+        }
+
         $answer = $this->replay($request, $this->fileFor($request, $domain));
         // The set holds one job; a question about another one is missing, never answered with this one's.
         $recordedJob = is_string($answer->data['job_id'] ?? null) ? $answer->data['job_id'] : null;
@@ -139,6 +173,26 @@ final readonly class RecordedAnswersGateway implements PanelGateway
         return $request->confirm ? 'job-site-check-fix.json' : 'plan.site-check-fix.json';
     }
 
+    /** @param array<string, mixed> $args */
+    private function restoreFile(array $args): ?string
+    {
+        $source = $args['source'] ?? null;
+        $url = $args['url'] ?? null;
+        if (is_string($url)) {
+            return str_contains($url, '://127.0.0.1') ? 'refused.url-invalid.json' : null;
+        }
+        if (is_string($source)) {
+            return match ($source) {
+                'upload/etc-link' => 'refused.source-invalid.json',
+                'upload/huge' => 'refused.not-enough-disk.json',
+                'upload/backup' => 'plan.bitrix-restore-ready-source.json',
+                default => null,
+            };
+        }
+
+        return 'plan.bitrix-restore-ready.json';
+    }
+
     private function fileFor(PanelRequest $request, ?string $domain): string
     {
         $name = str_replace(':', '-', $request->command);
@@ -150,7 +204,7 @@ final readonly class RecordedAnswersGateway implements PanelGateway
         if (PanelCommands::kind($request->command) === PanelCommands::ACTION) {
             // A new site is recorded again for the kinds that ask more: an app on a port and a 1C-Bitrix site.
             $profile = $request->command === 'site:add' ? ($request->args['profile'] ?? null) : null;
-            if (!$request->confirm && ($profile === 'proxy' || $profile === 'bitrix')) {
+            if (!$request->confirm && in_array($profile, ['proxy', 'bitrix', 'laravel'], true)) {
                 return "plan.{$name}-{$profile}.json";
             }
             // A certificate through DNS is recorded again (simai-env 1.36.0).

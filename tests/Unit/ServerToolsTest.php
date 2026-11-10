@@ -176,13 +176,14 @@ $failed = \Larena\Env\Operations\PanelJobStatus::fromData(['job_id' => 'j1', 'st
 env_assert(\Larena\Env\Http\Controllers\ServerJobController::configFailed($failed, ['nginx: the configuration test failed; the service was not reloaded and keeps running']) === 'nginx'
     && \Larena\Env\Http\Controllers\ServerJobController::configFailed($failed, ['Job failed: timeout']) === null, 'A broken configuration is told apart.');
 
-// The kinds of site (5.5, recorded set 9): from the server, only those site:add takes, with the fields each asks.
+// The kinds of site (5.5; simai-env v1.56.1 recording, where node is switched off): from the server, only those site:add
+// takes, with the fields each asks.
 $profiles = $extras->profiles($admin);
 $byName = [];
 foreach ($profiles ?? [] as $profile) {
     $byName[$profile->name] = $profile;
 }
-env_assert(array_keys($byName) === ['bitrix', 'generic', 'laravel', 'node', 'proxy', 'redirect', 'static', 'wordpress'], 'The server\'s kinds: '.implode(', ', array_keys($byName)));
+env_assert(array_keys($byName) === ['bitrix', 'generic', 'laravel', 'proxy', 'redirect', 'static', 'wordpress'], 'The server\'s kinds: '.implode(', ', array_keys($byName)));
 env_assert($byName['proxy']->takes('upstream-port') && $byName['proxy']->args['upstream-port']['required'] && $byName['proxy']->values('websockets') === ['yes', 'no']
     && !$byName['static']->takes('php') && $byName['bitrix']->values('bitrix-files') === ['none', 'setup', 'restore'] && $byName['bitrix']->title === '1C-Bitrix site'
     && $byName['bitrix']->db === 'required' && !$byName['proxy']->takes('backup'), 'Their arguments, values and titles (simai-site-profiles/1).');
@@ -192,10 +193,10 @@ env_assert(NewSiteController::groupsOf('proxy', $byName) === ['proxy'] && NewSit
     && NewSiteController::groupsOf('nope', $byName) === [], 'Each kind asks only its own fields.');
 env_assert(!NewSiteController::backsUp('proxy', $byName) && NewSiteController::backsUp('static', $byName) && !NewSiteController::backsUp('redirect', null), 'A proxy and a redirect hold nothing to back up.');
 env_assert(NewSiteController::groupsOf('laravel', null) === ['php', 'database'] && NewSiteController::groupsOf('node', null) === [], 'Without the server\'s list, the six every server has.');
-env_assert(count($extras->profiles($owner) ?? []) === 8, 'An owner sees the kinds too: they make sites in their space.');
+env_assert(count($extras->profiles($owner) ?? []) === 7, 'An owner sees the kinds too: they make sites in their space.');
 env_assert($operations->planCommand($admin, 'site:add', ['domain' => 'demo-proxy.test', 'profile' => 'proxy', 'upstream-port' => '3000', 'websockets' => 'yes'])->plan?->args['upstream-port'] === '3000'
-    && $operations->planCommand($admin, 'site:add', ['domain' => 'demo-bitrix.test', 'profile' => 'bitrix', 'bitrix-files' => 'setup'])->plan?->args['bitrix-files'] === 'setup',
-    'An app on a port and a 1C-Bitrix site are planned.');
+    && $operations->planCommand($admin, 'site:add', ['domain' => 'new-bitrix.test', 'profile' => 'bitrix', 'bitrix-files' => 'setup'])->plan?->args['profile'] === 'bitrix',
+    'An app on a port and a 1C-Bitrix site are planned (the 1.56.1 recording of the Bitrix plan holds the domain and the kind).');
 
 // A site's scheduled jobs (5.4): its own, added, turned off and on, removed; its runs, the newest first; an owner's own sites only.
 $jobs = $extras->cronJobs($admin, 'demo-owned.test');

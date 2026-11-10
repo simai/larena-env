@@ -54,7 +54,7 @@ final readonly class ServerJobController
         $canKeep = $change !== null && ($this->authorizer?->authorize($request, 'env.server.operate')->isAllowed() ?? false)
             && ($this->overviews?->read($actor)->overview?->capabilities?->allows('change:confirm') ?? false);
 
-        return $this->views->make('larena-env::admin.job', [
+        $view = $this->views->make('larena-env::admin.job', [
             'jobId' => $job,
             'configFailed' => self::configFailed($result->status, $result->log->lines ?? []),
             'change' => $change,
@@ -70,6 +70,13 @@ final readonly class ServerJobController
             'reasonText' => $result->reason === null ? null : $this->reasonText($result->reason),
             'notice' => $request->session()->get('larena_env_notice'),
         ]);
+        // A page that shows a value given once (WordPress's administrator password) is never kept by the browser or a proxy:
+        // the person sees it on this answer only.
+        if ($result->status?->secret !== null) {
+            return new \Illuminate\Http\Response($view->render(), 200, ['Cache-Control' => 'no-store, private', 'Pragma' => 'no-cache']);
+        }
+
+        return $view;
     }
 
     /**

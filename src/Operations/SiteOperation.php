@@ -45,6 +45,13 @@ enum SiteOperation: string
     case NameRemove = 'name-remove';
     // The fix the server offers for a profile rule of the site's check that did not pass (simai-env 1.55.1).
     case CheckFix = 'check-fix';
+    // The next step of a site's creation route (simai-env 1.55.0-1.56.0), offered by the site's «Создание сайта» block.
+    case BitrixRestoreReady = 'bitrix-restore-ready';
+    case BitrixFinalize = 'bitrix-finalize';
+    case WordpressInstall = 'wordpress-install';
+    case WordpressRestoreReady = 'wordpress-restore-ready';
+    case WordpressFinalize = 'wordpress-finalize';
+    case LaravelFinalize = 'laravel-finalize';
 
     public function command(): string
     {
@@ -74,6 +81,12 @@ enum SiteOperation: string
             self::NameAdd => 'site:name-add',
             self::NameRemove => 'site:name-remove',
             self::CheckFix => 'site:check-fix',
+            self::BitrixRestoreReady => 'bitrix:restore-ready',
+            self::BitrixFinalize => 'bitrix:finalize',
+            self::WordpressInstall => 'wp:install',
+            self::WordpressRestoreReady => 'wp:restore-ready',
+            self::WordpressFinalize => 'wp:finalize',
+            self::LaravelFinalize => 'laravel:finalize',
         };
     }
 
@@ -87,7 +100,8 @@ enum SiteOperation: string
             self::Backup, self::BackupRestoreDatabase, self::BackupExtractFiles, self::BackupVerify, self::BackupSchedule => 'backups',
             self::Rollback => 'releases',
             self::SftpCreate, self::SftpAddKey, self::SftpDisable, self::SftpEnable, self::SftpRemove => 'access',
-            self::CheckFix => 'overview',
+            self::CheckFix, self::BitrixRestoreReady, self::BitrixFinalize, self::WordpressInstall, self::WordpressRestoreReady,
+            self::WordpressFinalize, self::LaravelFinalize => 'overview',
         };
     }
 
@@ -119,6 +133,11 @@ enum SiteOperation: string
             self::NameRemove => ['name'],
             // `id` is the rule's fix id, as the site's check names it.
             self::CheckFix => ['id'],
+            // A Bitrix backup already on the server (a folder of the site) or at an https address, never both.
+            self::BitrixRestoreReady => ['source', 'url'],
+            self::WordpressInstall => ['title', 'admin-user', 'admin-email', 'locale'],
+            self::WordpressRestoreReady => ['files', 'dump'],
+            self::LaravelFinalize => ['migrate'],
             default => [],
         };
     }
@@ -137,7 +156,7 @@ enum SiteOperation: string
      * The yes-or-no fields, asked as one tick each (the panel's UX audit): the box shows what the server would do
      * anyway, so a person reads a plain choice instead of «как решит сервер»; an unticked box sends no.
      */
-    public const array SWITCHES = ['db', 'files', 'redirect', 'hsts', 'staging', 'wildcard', 'enabled', 'verify', 'check-dns'];
+    public const array SWITCHES = ['db', 'files', 'redirect', 'hsts', 'staging', 'wildcard', 'enabled', 'verify', 'check-dns', 'migrate'];
 
     /** Whether a yes-or-no field starts ticked for this site. */
     public static function switchedOn(string $field, ?\Larena\Env\Server\SiteDetails $site): bool
@@ -145,7 +164,7 @@ enum SiteOperation: string
         return match ($field) {
             'db' => $site?->databaseEngine !== null,
             // A new name is checked in DNS unless the person unticks it: without the check a mistyped name is added too.
-            'files', 'redirect', 'enabled', 'check-dns' => true,
+            'files', 'redirect', 'enabled', 'check-dns', 'migrate' => true,
             'verify' => $site?->backupSchedule?->verify !== false,
             default => false,
         };
@@ -162,6 +181,19 @@ enum SiteOperation: string
 
     /** The fix of a check's rule: the «Проверка» block offers it on the rule's own row, never among the tab's buttons. */
     public const array CHECKS = [self::CheckFix];
+
+    /**
+     * The steps of a site's creation route, by the gateway command site:status names as `next`: the «Создание сайта» block
+     * offers the one the site stands on, never the tab's row of buttons.
+     */
+    public const array ROUTE_STEPS = ['bitrix:restore-ready' => self::BitrixRestoreReady, 'bitrix:finalize' => self::BitrixFinalize,
+        'wp:install' => self::WordpressInstall, 'wp:restore-ready' => self::WordpressRestoreReady, 'wp:finalize' => self::WordpressFinalize,
+        'laravel:finalize' => self::LaravelFinalize];
+
+    public function isRouteStep(): bool
+    {
+        return in_array($this, self::ROUTE_STEPS, true);
+    }
 
     /** The actions of the system level alone: a site's owner is not offered them (the server refuses them too). */
     public const array SYSTEM_ONLY = [self::ApacheOn, self::ApacheOff];
@@ -261,6 +293,6 @@ enum SiteOperation: string
         $capabilities ??= PanelCapabilities::none();
 
         return array_values(array_filter(self::cases(),
-            static fn (self $operation): bool => $operation->suitsSite($site) && $capabilities->allows($operation->command())));
+            static fn (self $operation): bool => !$operation->isRouteStep() && $operation->suitsSite($site) && $capabilities->allows($operation->command())));
     }
 }

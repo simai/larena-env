@@ -71,6 +71,15 @@ final class PanelCommands
     // A profile rule of a site's check by its stable id, as site:doctor names it in `fix` (simai-env 1.55.1): bitrix.db-charset.
     private const string CHECK_ID = '/\A[a-z0-9][a-z0-9._-]{0,63}\z/D';
     private const string PERIOD = '/\A(?:hour|6h|day|week|month)\z/D';
+    // A site's creation route (simai-env 1.56.0). A Bitrix backup's base file and where it is: a folder of the site, from its
+    // root, without `..` or a leading `/` (`source`), or an https address ending with the archive's name (`url`), never both.
+    private const string BITRIX_ARCHIVE = '/\A[A-Za-z0-9][A-Za-z0-9._-]{0,200}\.(?:tar\.gz|tgz|tar|enc\.gz)\z/D';
+    private const string SITE_FOLDER = '/\A(?!\/)(?!(?:.*\/)?\.{1,2}(?:\/|\z))[A-Za-z0-9._\/-]{1,255}\z/D';
+    private const string ARCHIVE_URL = '/\Ahttps:\/\/[A-Za-z0-9.-]{1,253}(?::[0-9]{1,5})?\/[!-~]{0,1500}\.(?:tar\.gz|tgz|tar|enc\.gz)(?:\?[!-~]{0,500})?\z/D';
+    // WordPress by one click: the site's title (not starting with `-`), its administrator's login and the language.
+    private const string WP_TITLE = '/\A(?![-\s])[^\x00-\x1f\x7f]{1,200}\z/Du';
+    private const string WP_USER = '/\A[A-Za-z0-9][A-Za-z0-9._@-]{0,59}\z/D';
+    private const string WP_LOCALE = '/\A[a-z]{2,3}(?:_[A-Z]{2})?\z/D';
     // The server's security (simai-env 1.45.0–1.47.0): what security:fix puts right, the protection levels, and the
     // requests one address may send a second (2–1000) and at once (10–10000).
     private const string SECURITY_FIX = '/\A(?:auto_updates|fail2ban|ssh_password|antivirus)\z/D';
@@ -253,6 +262,19 @@ final class PanelCommands
         // planned and confirmed as every action; refused with unknown_check or, for a rule that passes, check_ok.
         'site:check-state' => ['args' => ['domain' => self::DOMAIN, 'id' => self::CHECK_ID], 'required' => ['domain', 'id'], 'since' => '1.55.1', 'kind' => self::READ],
         'site:check-fix' => ['args' => ['domain' => self::DOMAIN, 'id' => self::CHECK_ID], 'required' => ['domain', 'id'], 'since' => '1.55.1', 'kind' => self::ACTION],
+        // A site's creation route (simai-env 1.55.0-1.56.0): where the site stands on it (site:status, the same for every
+        // kind), the next step of each route, each planned and confirmed as every action, and WordPress's own state.
+        'site:status' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => '1.56.0', 'kind' => self::READ],
+        'bitrix:restore-ready' => ['args' => ['domain' => self::DOMAIN, 'archive' => self::BITRIX_ARCHIVE, 'source' => self::SITE_FOLDER, 'url' => self::ARCHIVE_URL],
+            'required' => ['domain'], 'since' => '1.55.0', 'kind' => self::ACTION],
+        'bitrix:finalize' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => '1.55.0', 'kind' => self::ACTION],
+        'wp:status' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => '1.56.0', 'kind' => self::READ],
+        'wp:install' => ['args' => ['domain' => self::DOMAIN, 'title' => self::WP_TITLE, 'admin-user' => self::WP_USER, 'admin-email' => self::EMAIL, 'locale' => self::WP_LOCALE],
+            'required' => ['domain', 'title', 'admin-user', 'admin-email'], 'since' => '1.56.0', 'kind' => self::ACTION],
+        'wp:restore-ready' => ['args' => ['domain' => self::DOMAIN, 'files' => self::SITE_FOLDER, 'dump' => self::SITE_FOLDER, 'overwrite' => self::YES_NO],
+            'required' => ['domain', 'files', 'dump'], 'since' => '1.56.0', 'kind' => self::ACTION],
+        'wp:finalize' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => '1.56.0', 'kind' => self::ACTION],
+        'laravel:finalize' => ['args' => ['domain' => self::DOMAIN, 'migrate' => self::YES_NO], 'required' => ['domain'], 'since' => '1.56.0', 'kind' => self::ACTION],
         // A timed change kept by the person who made it (the firewall, the panel's access, nginx directives): without the
         // confirmation in time, the server puts the previous one back by itself.
         'change:confirm' => ['args' => ['change_id' => self::CHANGE_ID], 'required' => ['change_id'], 'since' => '1.35.0', 'kind' => self::ACTION],
@@ -332,6 +354,8 @@ final class PanelCommands
         // An app on a local port and a 1C-Bitrix site's installer (simai-env 1.33.0).
         'site:add' => ['backup' => '1.30.0', 'upstream-port' => '1.33.0', 'upstream-path' => '1.33.0', 'websockets' => '1.33.0', 'bitrix-files' => '1.33.0'],
         'backup:data-schedule' => ['verify' => '1.30.0'],
+        // A Bitrix backup already on the server or at an https address (simai-env 1.56.0).
+        'bitrix:restore-ready' => ['source' => '1.56.0', 'url' => '1.56.0'],
         // A certificate through Cloudflare DNS, also for every subdomain (simai-env 1.36.0).
         'ssl:letsencrypt' => ['challenge' => '1.36.0', 'wildcard' => '1.36.0'],
     ];
@@ -379,6 +403,20 @@ final class PanelCommands
     public static function isCheckId(string $id): bool
     {
         return preg_match(self::CHECK_ID, $id) === 1;
+    }
+
+    /** Whether the command takes the argument at all (a route's input belongs to the step whose command takes it). */
+    public static function accepts(string $command, string $argument): bool
+    {
+        return isset(self::COMMANDS[$command]['args'][$argument]);
+    }
+
+    /** Whether one value of one argument is one the gateway would take, apart from the command's other arguments. */
+    public static function valid(string $command, string $argument, string $value): bool
+    {
+        $pattern = self::COMMANDS[$command]['args'][$argument] ?? null;
+
+        return $pattern !== null && preg_match($pattern, $value) === 1;
     }
 
     /** `read`, `action` or `job`; null for a command this package may not send. */

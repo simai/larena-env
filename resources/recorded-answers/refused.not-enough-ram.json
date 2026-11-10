@@ -1,0 +1,18 @@
+{
+  "schema": "simai-panel-answer/1",
+  "request_id": "fixture-refused.not-enough-ram",
+  "status": "refused",
+  "reason": "not_enough_ram",
+  "data": {
+    "resources": {
+      "disk_free_bytes": 1394521341952,
+      "needed_bytes": 0,
+      "ram_mb": 14963,
+      "ram_min_mb": 9999998,
+      "ram_recommended_mb": 9999998,
+      "ok": false,
+      "refusal": "not_enough_ram",
+      "warnings": []
+    }
+  }
+}

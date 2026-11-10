@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- «Создать сайт» by the server's routes (simai-env 1.56.1): a kind of site offers its ways (new site, restore from a
+  copy, …) with their steps; a way the server marks unavailable, or one that needs an upload from the computer, is
+  greyed with the reason. The plan shows what the site needs from the server (memory, disk, the archive found). The
+  site's card follows `site:status`: the current step and the next one (`bitrix:restore-ready`, `bitrix:finalize`,
+  `wp:install`, `wp:restore-ready`, `wp:finalize`, `laravel:finalize`), each through plan and confirmation; the Laravel
+  deploy step is marked «outside the panel». The WordPress administrator password is shown once on the job screen and
+  kept nowhere (not in the cache, session, log or history). Refusals are said in words. A server without routes shows
+  the screen as before. Answers are ENV's recordings of simai-env v1.56.1 (`recorded_from`).
 - The rules of a site's profile in «Проверка» (simai-env 1.55.1): a rule the server's check names (`key`) says what
   the server found and «с <когда>» it does not pass, in the same list as the other checks; where the server offers a
   fix and lists `site:check-fix`, «Исправить…» opens the server's plan (which names the rule, what was found and what

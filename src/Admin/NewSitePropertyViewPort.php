@@ -13,6 +13,7 @@ use Larena\Env\Gateway\PanelCommands;
 use Larena\Env\Gateway\PanelRefused;
 use Larena\Env\Http\Controllers\NewSiteController;
 use Larena\Env\Server\SiteProfile;
+use Larena\Env\Server\SiteRoute;
 use Larena\Property\Contracts\PropertyField;
 
 /**
@@ -33,8 +34,10 @@ final class NewSitePropertyViewPort extends PropertyViewPort
         'bitrix_files' => 'bitrix-files', 'daily_backup' => 'daily-backup'];
     private const array BOOLEANS = ['create_db', 'websockets', 'daily_backup'];
     /** The groups the fields stand in, in the order a person fills them. */
-    private const array GROUPS = ['address' => ['domain', 'redirect_to', 'owner'], 'run' => ['php', 'create_db', 'db_engine'],
-        'app' => ['upstream_port', 'upstream_path', 'websockets'], 'bitrix' => ['bitrix_files'], 'backup' => ['daily_backup']];
+    private const array GROUPS = ['address' => ['domain', 'redirect_to', 'redirect_code', 'redirect_path', 'owner'], 'run' => ['php', 'create_db', 'db_engine'],
+        'app' => ['upstream_port', 'upstream_path', 'websockets'], 'bitrix' => ['bitrix_files'],
+        // What a route's later steps take (simai-env 1.56.0): the WordPress site and its administrator, the repository.
+        'later' => ['title', 'admin_user', 'admin_email', 'locale', 'git', 'ref'], 'backup' => ['daily_backup']];
 
     private ?PanelActor $panelActor = null;
     private ?Session $session = null;
@@ -59,7 +62,8 @@ final class NewSitePropertyViewPort extends PropertyViewPort
 
     protected function collectionPattern(): string
     {
-        return '/^env\.new_site\.[a-z][a-z0-9-]{0,31}$/';
+        // A kind, and where the server lists its routes (simai-env 1.56.0) the route: env.new_site.wordpress.new.
+        return '/^env\.new_site\.[a-z][a-z0-9-]{0,31}(?:\.[a-z][a-z0-9_-]{0,31})?$/';
     }
 
     protected function recordPattern(): string
@@ -96,7 +100,7 @@ final class NewSitePropertyViewPort extends PropertyViewPort
             return ['answer' => 'refused', 'reason' => 'record_invalid'];
         }
 
-        return [$this->collectionOf($collection, $kind['name'], $kind['offer'], false), ['creatable' => true]];
+        return [$this->collectionOf($collection, $kind['name'], $kind['offer'], false, $kind['route']), ['creatable' => true]];
     }
 
     /** A draft read back: what was planned, read only (the plan screen shows the rest). */
@@ -108,14 +112,15 @@ final class NewSitePropertyViewPort extends PropertyViewPort
             return ['answer' => 'refused', 'reason' => 'record_unknown'];
         }
         $values = [];
-        foreach (self::ARGUMENTS as $field => $argument) {
+        $booleans = self::booleansOf($kind['route']);
+        foreach (self::argumentsOf($kind['route']) as $field => $argument) {
             if (!is_string($raw[$argument] ?? null)) {
                 continue;
             }
-            $values[$field] = in_array($field, self::BOOLEANS, true) ? $raw[$argument] === 'yes' : ($field === 'upstream_port' ? (int) $raw[$argument] : $raw[$argument]);
+            $values[$field] = in_array($field, $booleans, true) ? $raw[$argument] === 'yes' : ($field === 'upstream_port' ? (int) $raw[$argument] : $raw[$argument]);
         }
 
-        return [$this->collectionOf($collection, $kind['name'], $kind['offer'], true),
+        return [$this->collectionOf($collection, $kind['name'], $kind['offer'], true, $kind['route']),
             ['record_id' => $recordId, 'revision' => 'd'.substr(hash('sha256', $recordId), 0, 12), 'editable' => false, 'values' => $values]];
     }
 
@@ -129,8 +134,8 @@ final class NewSitePropertyViewPort extends PropertyViewPort
         if ($kind === null || $this->panelActor === null || $this->session === null) {
             return ['status' => 'rejected', 'reason_code' => 'record_invalid'];
         }
-        $raw = ['profile' => $kind['name']];
-        foreach (self::ARGUMENTS as $field => $argument) {
+        $raw = ['profile' => $kind['name']] + ($kind['route'] === null ? [] : ['route' => $kind['route']->id]);
+        foreach (self::argumentsOf($kind['route']) as $field => $argument) {
             $value = $values[$field] ?? null;
             if (is_bool($value)) {
                 $raw[$argument] = $value ? 'yes' : 'no';
@@ -140,7 +145,9 @@ final class NewSitePropertyViewPort extends PropertyViewPort
                 $raw[$argument] = trim($value);
             }
         }
-        $wrong = self::unofferedField($this->collectionOf($collection, $kind['name'], $kind['offer'], false), $values) ?? self::wrongField($raw);
+        $wrong = self::unofferedField($this->collectionOf($collection, $kind['name'], $kind['offer'], false, $kind['route']), $values) ?? self::wrongField($raw);
+        $later = $kind['route'] === null ? null : NewSiteController::wrongLater($raw, $kind['route']);
+        $wrong ??= $later === null ? null : RouteWords::inputKey($later);
         if ($wrong !== null) {
             return ['status' => 'rejected', 'reason_code' => 'invalid_argument', 'field' => $wrong, 'field_reason' => $wrong];
         }
@@ -255,16 +262,93 @@ final class NewSitePropertyViewPort extends PropertyViewPort
         return null;
     }
 
-    /** @return array{name: string, offer: array<string, mixed>}|null the kind a collection names, when this person may make it */
+    /**
+     * @return array{name: string, offer: array<string, mixed>, route: ?SiteRoute}|null the kind (and route) a collection names,
+     *                                                                                  when this person may make it
+     */
     private function kindOf(string $collection): ?array
     {
         if ($this->panelActor === null || preg_match($this->collectionPattern(), $collection) !== 1) {
             return null;
         }
-        $name = substr($collection, strlen(self::COLLECTION));
+        $parts = explode('.', substr($collection, strlen(self::COLLECTION)), 2);
+        $name = $parts[0];
         $offer = $this->sites->offer($this->panelActor);
+        if (!in_array($name, $offer['profiles'], true)) {
+            return null;
+        }
+        $route = null;
+        if (isset($parts[1])) {
+            // A route the server does not make now is no collection: the page offers only routes it does.
+            $route = NewSiteController::routeOf(['profile' => $name, 'route' => $parts[1]], $offer['server']);
+            if ($route === null) {
+                return null;
+            }
+        }
 
-        return in_array($name, $offer['profiles'], true) ? ['name' => $name, 'offer' => $offer] : null;
+        return ['name' => $name, 'offer' => $offer, 'route' => $route];
+    }
+
+    /** @return array<string, string> each field of the view and the argument it fills: a route's own inputs besides the usual */
+    private static function argumentsOf(?SiteRoute $route): array
+    {
+        $arguments = self::ARGUMENTS;
+        foreach ($route->inputs ?? [] as $input) {
+            if (in_array($input['kind'], SiteRoute::ASKED, true)
+                && (\Larena\Env\Gateway\PanelCommands::accepts('site:add', $input['name']) || $route->stepTaking($input['name']) !== null)) {
+                $arguments[RouteWords::inputKey($input['name'])] = $input['name'];
+            }
+        }
+
+        return $arguments;
+    }
+
+    /** @return list<string> the fields asked as one tick: a choice of yes and no */
+    private static function booleansOf(?SiteRoute $route): array
+    {
+        $booleans = self::BOOLEANS;
+        foreach ($route->inputs ?? [] as $input) {
+            if (in_array($input['values'] ?? [], [['yes', 'no'], ['no', 'yes']], true)) {
+                $booleans[] = RouteWords::inputKey($input['name']);
+            }
+        }
+
+        return array_values(array_unique($booleans));
+    }
+
+    /**
+     * A route's fields, as Property describes them: its texts, addresses and choices, in the order the server lists them;
+     * a file the route puts on the server is asked on the site's card, after the site is made.
+     *
+     * @param array<string, mixed> $offer
+     * @return list<PropertyField>
+     */
+    private function routeFieldsOf(SiteRoute $route, ?SiteProfile $profile, array $offer, bool $readonly): array
+    {
+        $fields = [];
+        $overview = $offer['overview'];
+        foreach ($route->inputs as $input) {
+            if ($input['name'] === 'domain' || !in_array($input['kind'], SiteRoute::ASKED, true)
+                || (!\Larena\Env\Gateway\PanelCommands::accepts('site:add', $input['name']) && $route->stepTaking($input['name']) === null)) {
+                continue;
+            }
+            $key = RouteWords::inputKey($input['name']);
+            $label = $this->text('routes.inputs.'.$key, $input['name']);
+            $values = $input['values'] ?? ($input['name'] === 'php' ? (is_array($overview?->phpVersions) ? $overview->phpVersions : []) : null);
+            if (in_array($values, [['yes', 'no'], ['no', 'yes']], true)) {
+                $fields[] = new PropertyField($key, 'boolean', 1, $label, readonly: $readonly, default: ($input['default'] ?? 'no') === 'yes');
+            } elseif ($input['kind'] === 'choice' && is_array($values) && $values !== []) {
+                $fields[] = new PropertyField($key, 'choice', 1, $label, ['options' => array_map(fn (string $value): array => ['value' => $value,
+                    'label' => $this->text('routes.values.'.$value, $value)], $values)], required: $input['required'], readonly: $readonly,
+                    default: $input['default'] !== null && in_array($input['default'], $values, true) ? $input['default'] : null);
+            } else {
+                $fields[] = new PropertyField($key, 'string', 1, $label, ['max_length' => $input['kind'] === 'url' ? 500 : 200]
+                    + ($input['kind'] === 'url' ? ['placeholder' => 'https://'] : []), required: $input['required'], readonly: $readonly,
+                    hint: $this->hint('routes.input_hints.'.$key), default: $input['default']);
+            }
+        }
+
+        return $fields;
     }
 
     /**
@@ -273,7 +357,7 @@ final class NewSitePropertyViewPort extends PropertyViewPort
      * @param array<string, mixed> $offer
      * @return array<string, mixed>
      */
-    private function collectionOf(string $collection, string $kind, array $offer, bool $readonly): array
+    private function collectionOf(string $collection, string $kind, array $offer, bool $readonly, ?SiteRoute $route = null): array
     {
         /** @var array<string, SiteProfile>|null $server */
         $server = $offer['server'];
@@ -286,6 +370,20 @@ final class NewSitePropertyViewPort extends PropertyViewPort
             new PropertyField('domain', 'string', 1, $this->text('new_site.domain', 'Domain'), ['max_length' => 253, 'placeholder' => 'example.com'],
                 required: true, readonly: $readonly, hint: $this->hint('new_site.domain_hint')),
         ];
+        if ($route !== null) {
+            if ($this->panelActor?->owner === null && is_array($overview?->owners) && $overview->owners !== []) {
+                $fields[] = new PropertyField('owner', 'choice', 1, $this->text('new_site.owner', 'Owner'), ['options' => $choices($overview->owners)],
+                    readonly: $readonly, hint: $this->hint('new_site.owner_hint'));
+            }
+            $fields = array_merge($fields, $this->routeFieldsOf($route, $profile, $offer, $readonly));
+            if (($offer['schedules'] ?? false) === true && NewSiteController::backsUp($kind, $server)) {
+                $fields[] = new PropertyField('daily_backup', 'boolean', 1, $this->text('new_site.daily_backup', 'Daily backup'), readonly: $readonly,
+                    hint: $this->hint('new_site.daily_backup_hint'), default: true);
+            }
+
+            return ['structure_id' => $collection, 'label' => $this->kindLabel($kind, $profile).' · '.$this->text('routes.names.'.$route->id, $route->title),
+                'fields' => array_map(static fn (PropertyField $field): array => $field->toArray(), $fields)];
+        }
         if (in_array('redirect', $groups, true)) {
             $fields[] = new PropertyField('redirect_to', 'string', 1, $this->text('new_site.redirect_to', 'Redirect to'),
                 ['max_length' => 300, 'placeholder' => 'https://example.org'], required: true, readonly: $readonly);

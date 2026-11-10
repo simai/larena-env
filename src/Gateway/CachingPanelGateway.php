@@ -25,7 +25,7 @@ final class CachingPanelGateway implements PanelGateway, PanelFileGateway
     /** The reads whose answer is the server's state, kept for the ttl. */
     public const array KEPT = [
         'self:describe', 'self:commands', 'self:metrics', 'self:alerts', 'self:metrics-history', 'self:update-plan', 'self:profiles',
-        'site:describe', 'site:doctor', 'site:php-ini-list', 'site:nginx-custom-show', 'site:names',
+        'site:describe', 'site:doctor', 'site:php-ini-list', 'site:nginx-custom-show', 'site:names', 'site:status', 'wp:status',
         'php:list', 'php:extensions', 'software:list', 'service:list', 'firewall:status', 'access:list', 'db:list', 'cron:list',
         'ssl:dns-status', 'file:list', 'security:status', 'security:files', 'security:quarantine-list', 'security:geo-status', 'mcp:status', 'backup:storage-list', 'panel:address',
         'logs:nginx',
@@ -547,6 +547,11 @@ final class CachingPanelGateway implements PanelGateway, PanelFileGateway
 
     private function write(string $key, PanelAnswer $answer, int $ttl): void
     {
+        // A value the server gives once (wp:install's administrator password, simai-env 1.56.0) is never kept: whatever
+        // read would carry it, the answer goes to the screen that asked and nowhere else.
+        if (\Larena\Env\Operations\JobSecret::in($answer->data)) {
+            return;
+        }
         try {
             $this->cache->put($key, serialize($answer), $ttl);
             // A log's answer says when it was read (receivedAt), so an old one is shown with its time.

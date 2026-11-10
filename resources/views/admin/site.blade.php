@@ -56,6 +56,66 @@
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-disk><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.disk') }}</dt><dd class="m-0 min-w-0 text-end">{{ \Larena\Env\Server\Bytes::human($site->diskBytes) }}</dd></div>
                 </dl>
             </section>
+            @if (($siteRoute ?? null) !== null)
+                {{-- Where the site stands on its creation route (simai-env 1.56.0): its steps, the one it is on, and the next
+                     one: an address the browser opens, a section of the card, or an action through its plan. --}}
+                <section class="larena-panel larena-panel-padded" data-env-site-route="{{ $siteRoute['status']->route }}" data-env-site-step="{{ $siteRoute['status']->step }}" aria-labelledby="env-site-route">
+                    <h2 id="env-site-route" class="text-2">{{ __('larena-env::admin.routes.site_title', ['route' => $siteRoute['route']]) }}</h2>
+                    @if ($siteRoute['steps'] !== [])
+                        <sf-steps class="m-bottom-2" current="{{ $siteRoute['current'] ?? 0 }}" aria-label="{{ __('larena-env::admin.routes.steps_title') }}" data-env-site-route-steps
+                            items="{{ json_encode(array_map(static fn (array $step): array => ['label' => $step['label']], $siteRoute['steps']), JSON_UNESCAPED_UNICODE) }}"></sf-steps>
+                    @endif
+                    @if ($siteRoute['status']->step === 'done')
+                        <p data-env-site-route-done>{{ __('larena-env::admin.routes.done') }}</p>
+                    @else
+                        <p data-env-site-route-at>{{ __('larena-env::admin.routes.now', ['step' => $siteRoute['stepText']]) }}</p>
+                        @if ($siteRoute['nextText'] !== null)
+                            <p data-env-site-route-next="{{ $siteRoute['status']->next }}">{{ __('larena-env::admin.routes.next', ['step' => $siteRoute['nextText']]) }}</p>
+                        @endif
+                    @endif
+                    @if ($siteRoute['pending'] !== [])
+                        <p class="color-on-surface-variant" data-env-site-route-pending>{{ __('larena-env::admin.routes.pending', ['items' => implode(', ', $siteRoute['pending'])]) }}</p>
+                    @endif
+                    @if ($siteRoute['openUrl'] !== null)
+                        <p><a href="{{ $siteRoute['openUrl'] }}" target="_blank" rel="noopener noreferrer" class="larena-button larena-button-primary" data-env-site-route-open>{{ $siteRoute['nextText'] }}</a></p>
+                        <p class="text-small color-on-surface-variant">{{ __('larena-env::admin.routes.open_then') }}</p>
+                    @elseif ($siteRoute['tab'] !== null)
+                        <p><a href="{{ route('larena.env.admin.site', ['domain' => $domain], false) }}?tab={{ $siteRoute['tab'] }}" class="larena-button" data-env-site-route-tab="{{ $siteRoute['tab'] }}">{{ __('larena-env::admin.routes.go_tab.'.$siteRoute['tab']) }}</a></p>
+                    @elseif ($siteRoute['outside'] ?? false)
+                        <p class="color-on-surface-variant" data-env-site-route-outside>{{ __('larena-env::admin.routes.outside_note') }}</p>
+                    @elseif ($siteRoute['operation'] !== null)
+                        <form method="post" action="{{ route('larena.env.admin.site.plan', ['domain' => $domain], false) }}" class="larena-form" data-env-site-route-step="{{ $siteRoute['operation']->value }}">
+                            @csrf
+                            <input type="hidden" name="operation" value="{{ $siteRoute['operation']->value }}">
+                            @foreach ($siteRoute['fields'] as $field)
+                                <div class="larena-field" data-env-site-route-field="{{ $field }}">
+                                    @if ($field === 'migrate')
+                                        <input type="hidden" name="migrate" value="no">
+                                        <label for="env-route-migrate"><input type="checkbox" id="env-route-migrate" name="migrate" value="yes" checked> {{ __('larena-env::admin.routes.inputs.migrate') }}</label>
+                                    @elseif (in_array($field, ['files', 'dump'], true) && ($siteRoute['copies'] ?? null) !== null)
+                                        <label for="env-route-{{ $field }}">{{ __('larena-env::admin.routes.inputs.'.$field) }}</label>
+                                        <select id="env-route-{{ $field }}" name="{{ $field }}" required>
+                                            @foreach ($siteRoute['copies'][$field === 'files' ? 'files' : 'dumps'] as $found)
+                                                <option value="{{ $found }}">{{ $found }}</option>
+                                            @endforeach
+                                        </select>
+                                    @else
+                                        <label for="env-route-{{ $field }}">{{ __('larena-env::admin.routes.inputs.'.str_replace('-', '_', $field)) }}</label>
+                                        <input type="{{ in_array($field, ['url', 'git'], true) ? 'url' : ($field === 'admin-email' ? 'email' : 'text') }}" id="env-route-{{ $field }}" name="{{ $field }}"
+                                            value="{{ $siteRoute['values'][$field] ?? '' }}" autocomplete="off" @if (in_array($field, ['title', 'admin-user', 'admin-email', 'files', 'dump', 'git', 'ref'], true)) required @endif>
+                                        @if (in_array($field, ['source', 'url'], true))
+                                            <p class="text-small color-on-surface-variant">{{ __('larena-env::admin.routes.input_hints.'.$field) }}</p>
+                                        @endif
+                                    @endif
+                                </div>
+                            @endforeach
+                            <div class="larena-form-actions">
+                                <button type="submit" class="larena-button larena-button-primary">{{ __('larena-env::admin.operations.'.$siteRoute['operation']->value) }}</button>
+                            </div>
+                        </form>
+                    @endif
+                </section>
+            @endif
             <section class="larena-panel larena-panel-padded" data-env-doctor="{{ $doctor?->status ?? 'unknown' }}" aria-labelledby="env-site-doctor">
                 <h2 id="env-site-doctor" class="text-2">{{ __('larena-env::admin.doctor.title') }}</h2>
                 @if ($doctor === null)

@@ -19,7 +19,20 @@ final readonly class SiteProfile
         public array $args,
         public ?string $title = null,
         public string $db = 'no',
+        /** @var list<SiteRoute> the ways a site of this kind is made (simai-env 1.56.0); none from an older server */
+        public array $routes = [],
     ) {
+    }
+
+    public function route(string $id): ?SiteRoute
+    {
+        foreach ($this->routes as $route) {
+            if ($route->id === $id) {
+                return $route;
+            }
+        }
+
+        return null;
     }
 
     public function takes(string $argument): bool
@@ -52,8 +65,15 @@ final readonly class SiteProfile
                 'values' => $values, 'description' => is_string($argument['description'] ?? null) ? $argument['description'] : null];
         }
         $db = $data['db'] ?? 'no';
+        $routes = [];
+        foreach (is_array($data['routes'] ?? null) ? $data['routes'] : [] as $route) {
+            $read = is_array($route) ? SiteRoute::fromData($route) : null;
+            if ($read !== null) {
+                $routes[] = $read;
+            }
+        }
 
         return new self($name, is_string($data['description'] ?? null) ? $data['description'] : null, $args,
-            is_string($data['title'] ?? null) ? $data['title'] : null, in_array($db, ['no', 'optional', 'required'], true) ? $db : 'no');
+            is_string($data['title'] ?? null) ? $data['title'] : null, in_array($db, ['no', 'optional', 'required'], true) ? $db : 'no', $routes);
     }
 }

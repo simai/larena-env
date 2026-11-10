@@ -21,6 +21,11 @@ final readonly class PanelJobStatus
         // A change the server undoes by itself unless it is kept in time: every timed set command answers its
         // change_id and expires_at in its job's result (the firewall, who reaches the panel, nginx directives).
         public ?\Larena\Env\Firewall\TimedChange $change = null,
+        // A value the server gives once, in the first answer after the job ended (wp:install's administrator password,
+        // simai-env 1.56.0): shown on that screen only, never kept by the panel. Later answers name it in `shown_once`.
+        public ?JobSecret $secret = null,
+        /** @var list<string> */
+        public array $shownOnce = [],
     ) {
     }
 
@@ -54,6 +59,9 @@ final readonly class PanelJobStatus
             createdAt: is_string($data['created_at'] ?? null) ? $data['created_at'] : null,
             actor: is_string($actor) ? $actor : null,
             change: is_array($data['result'] ?? null) ? \Larena\Env\Firewall\TimedChange::fromData($data['result']) : null,
+            secret: is_array($data['result'] ?? null) ? JobSecret::fromData($data['result']) : null,
+            shownOnce: is_array($data['result'] ?? null) && is_array($data['result']['shown_once'] ?? null)
+                ? array_values(array_filter($data['result']['shown_once'], 'is_string')) : [],
         );
     }
 }

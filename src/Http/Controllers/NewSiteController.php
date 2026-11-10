@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Larena\Env\Http\Controllers;
 
+use Larena\Env\Gateway\PanelCommands;
 use Illuminate\Contracts\Translation\Translator;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Http\RedirectResponse;
@@ -40,6 +41,11 @@ final readonly class NewSiteController
     public const string DRAFTS = 'larena_env.new_site_drafts';
     /** The session key that holds, by job, the new site whose daily backup is turned on once the site is made. */
     public const string AFTER_JOB = 'larena_env.after_job';
+    /**
+     * The session key that holds, by domain, what the person gave for the later steps of the site's creation route (a
+     * WordPress title and administrator, a repository): the site's card offers them again at that step. Never a password.
+     */
+    public const string ROUTE_VALUES = 'larena_env.route_values';
 
     public function __construct(
         private ServerOverviewReader $overviews,
@@ -56,8 +62,41 @@ final readonly class NewSiteController
         $overview = $this->overviews->read($actor)->overview;
         $server = $this->serverProfiles($actor, $overview);
         $profiles = $server === null ? self::PROFILES : array_keys($server);
+        $kind = in_array($request->query('profile'), $profiles, true) ? (string) $request->query('profile') : ($profiles[0] ?? 'static');
+        // The ways each kind is made (simai-env 1.56.0), where the server lists them: a kind none of whose ways the panel
+        // can lead now is shown with the reason, never as a link.
+        $allows = static fn (string $command): bool => $overview?->capabilities?->allows($command) === true;
+        $routed = $server !== null && array_filter($server, static fn (\Larena\Env\Server\SiteProfile $profile): bool => $profile->routes !== []) !== [];
+        $routes = null;
+        $route = null;
+        $unavailable = [];
+        if ($routed) {
+            foreach ($server as $name => $profile) {
+                if (array_filter($profile->routes, static fn (\Larena\Env\Server\SiteRoute $one): bool => $one->blockedBy($allows) === null) === []) {
+                    $unavailable[$name] = $this->text('routes.unavailable.profile');
+                }
+            }
+            if (isset($unavailable[$kind])) {
+                $kind = array_values(array_diff($profiles, array_keys($unavailable)))[0] ?? $kind;
+            }
+            $routes = $this->routeChoices($kind, $server[$kind] ?? null, $allows);
+            $asked = $request->query('route');
+            $open = array_values(array_filter($routes, static fn (array $one): bool => $one['available']));
+            foreach ($open as $one) {
+                if ($one['id'] === $asked) {
+                    $route = $one['id'];
+                }
+            }
+            $route ??= $open[0]['id'] ?? null;
+        }
 
         return $this->views->make('larena-env::admin.new-site', [
+            // The ways the chosen kind is made, the one chosen and the fields it asks (null from a server without routes).
+            'routes' => $routes,
+            'route' => $route,
+            'routeFields' => $route === null ? [] : $this->routeFields($server[$kind]->route($route), $server[$kind], $overview),
+            'routeFiles' => $route === null ? [] : $this->routeFiles($server[$kind]->route($route)),
+            'unavailable' => $unavailable,
             'profiles' => $profiles,
             'phpProfiles' => self::PHP_PROFILES,
             // The server's own kinds (Panel plan 5.5): what each is called and which fields it asks.
@@ -66,14 +105,17 @@ final readonly class NewSiteController
             // Only the whole server chooses whose the site is; a person's own site is theirs.
             'owners' => $actor->owner === null ? ($overview->owners ?? []) : null,
             'old' => self::input($request->all(), $actor, $server),
+            // A route's fields as the person left them (a refusal brings them back in the address).
+            'routeOld' => self::strings($request->query()),
             // What it runs is chosen first; the form then asks only what that kind takes.
-            'kind' => in_array($request->query('profile'), $profiles, true) ? (string) $request->query('profile') : ($profiles[0] ?? 'static'),
+            'kind' => $kind,
             // A new site gets its daily backup by default (Panel plan 4.1), where the server's gateway can set one.
             'dailyBackup' => $this->schedules($overview) ? self::dailyBackup(self::strings($request->all())) : null,
             'notice' => $request->session()->get('larena_env_notice'),
             // The chosen kind's fields in the Framework property view, over its port (NewSitePropertyViewPort); the
             // plain form below stays for a page without it.
-            'propertyView' => ['port' => route('larena.env.admin.sites.port', [], false), 'scope' => \Larena\Env\Admin\NewSitePropertyViewPort::SCOPE],
+            'propertyView' => ['port' => route('larena.env.admin.sites.port', [], false), 'scope' => \Larena\Env\Admin\NewSitePropertyViewPort::SCOPE,
+                'collection' => \Larena\Env\Admin\NewSitePropertyViewPort::COLLECTION.$kind.($route !== null ? '.'.$route : '')],
         ]);
     }
 
@@ -158,9 +200,21 @@ final readonly class NewSiteController
         $overview = $this->overviews->read($actor)->overview;
         $server = $this->serverProfiles($actor, $overview);
         $input = self::withBackup(self::input($raw, $actor, $server), $raw, $overview, $server);
+        $route = self::routeOf($raw, $server);
+        $later = $route === null ? [] : self::laterValues($raw, $route);
+        $wrong = $route === null ? null : self::wrongLater($raw, $route);
+        if ($wrong !== null) {
+            return $this->backWith($request, $this->text('routes.invalid', ['field' => $this->inputLabel($wrong, null)]), $input + ['route' => $route->id]);
+        }
         $result = $this->operations->planCommand($actor, 'site:add', $input);
         if ($result->plan === null) {
-            return $this->back($request, $result->reason ?? 'answer_shape_invalid', $input);
+            return $this->back($request, $result->reason ?? 'answer_shape_invalid', $input + ($route === null ? [] : ['route' => $route->id]));
+        }
+        $then = [];
+        foreach ($route->steps ?? [] as $step) {
+            if ($step['command'] !== 'site:add') {
+                $then[] = $this->stepLabel($step);
+            }
         }
 
         return $this->views->make('larena-env::admin.plan', [
@@ -170,10 +224,12 @@ final readonly class NewSiteController
             'source' => $result->source,
             'plan' => $result->plan,
             'runUrl' => route('larena.env.admin.sites.run', [], false),
-            'cancelUrl' => route('larena.env.admin.sites.new', [], false).(isset($input['profile']) ? '?profile='.$input['profile'] : ''),
-            'hidden' => $input + ['daily-backup' => self::dailyBackup($raw) ? 'yes' : 'no'],
-            'then' => $this->followsWithSchedule($raw, $overview, $input)
-                ? [(string) $this->translator->get('larena-env::admin.new_site.daily_backup_after')] : [],
+            'cancelUrl' => route('larena.env.admin.sites.new', [], false).(isset($input['profile']) ? '?profile='.$input['profile'] : '').($route !== null ? '&route='.$route->id : ''),
+            'hidden' => $input + ['daily-backup' => self::dailyBackup($raw) ? 'yes' : 'no'] + ($route === null ? [] : ['route' => $route->id]) + $later,
+            'then' => array_merge($then === [] ? [] : [$this->text('routes.then', ['steps' => implode(' → ', $then)])],
+                $this->followsWithSchedule($raw, $overview, $input) ? [(string) $this->translator->get('larena-env::admin.new_site.daily_backup_after')] : []),
+            // What the site asks of the server: its memory and, for a copy, the disk (simai-env 1.56.0).
+            'resources' => $result->plan->resources,
         ]);
     }
 
@@ -184,9 +240,17 @@ final readonly class NewSiteController
         $server = $this->serverProfiles($actor, $overview);
         $raw = self::strings($request->all());
         $input = self::withBackup(self::input($raw, $actor, $server), $raw, $overview, $server);
+        $route = self::routeOf($raw, $server);
+        if ($route !== null && self::wrongLater($raw, $route) !== null) {
+            return $this->back($request, 'invalid_argument', $input + ['route' => $route->id]);
+        }
         $started = $this->operations->startCommand($actor, 'site:add', $input);
         if ($started->jobId === null) {
-            return $this->back($request, $started->reason ?? 'answer_shape_invalid', $input);
+            return $this->back($request, $started->reason ?? 'answer_shape_invalid', $input + ($route === null ? [] : ['route' => $route->id]));
+        }
+        // What the later steps of the route take, offered again on the site's card at that step.
+        if ($route !== null && isset($input['domain'])) {
+            $request->session()->put(self::ROUTE_VALUES.'.'.strtolower($input['domain']), ['route' => $route->id] + self::laterValues($raw, $route));
         }
 
         // The site's daily backup is turned on when its job has made it (ServerJobController), as the plan said.
@@ -261,6 +325,10 @@ final readonly class NewSiteController
      */
     private static function input(array $raw, PanelActor $actor, ?array $server = null): array
     {
+        $route = self::routeOf($raw, $server);
+        if ($route !== null) {
+            return self::routeInput($raw, $actor, $route);
+        }
         $input = [];
         foreach (self::FIELDS as $field) {
             $value = $raw[$field] ?? null;
@@ -285,6 +353,188 @@ final readonly class NewSiteController
         }
 
         return $input;
+    }
+
+    /**
+     * The route a form names, when the server lists it for the form's kind and it is one the server makes now.
+     *
+     * @param array<string, string> $raw
+     * @param array<string, \Larena\Env\Server\SiteProfile>|null $server
+     */
+    public static function routeOf(array $raw, ?array $server): ?\Larena\Env\Server\SiteRoute
+    {
+        $route = isset($raw['route'], $raw['profile']) ? ($server[$raw['profile']] ?? null)?->route($raw['route']) : null;
+
+        return $route !== null && $route->available ? $route : null;
+    }
+
+    /**
+     * site:add's arguments of a route: the inputs site:add takes, the fixed arguments of the route's first step (the
+     * Bitrix installer or restore.php) and, from the whole server only, the owner.
+     *
+     * @param array<string, string> $raw
+     * @return array<string, string>
+     */
+    private static function routeInput(array $raw, PanelActor $actor, \Larena\Env\Server\SiteRoute $route): array
+    {
+        $input = ['profile' => $raw['profile']];
+        $names = ['domain'];
+        foreach ($route->inputs as $one) {
+            if (in_array($one['kind'], \Larena\Env\Server\SiteRoute::ASKED, true) && PanelCommands::accepts('site:add', $one['name'])) {
+                $names[] = $one['name'];
+            }
+        }
+        foreach (array_unique($names) as $name) {
+            $value = trim($raw[$name] ?? '');
+            if ($value !== '') {
+                $input[$name] = $value;
+            }
+        }
+        $input += $route->addArguments();
+        if (in_array('create-db', $names, true) && ($input['create-db'] ?? null) !== 'yes') {
+            unset($input['db-engine']);
+        }
+        $owner = trim($raw['owner'] ?? '');
+        if ($actor->owner === null && $owner !== '') {
+            $input['owner'] = $owner;
+        }
+
+        return isset($input['domain']) ? ['domain' => $input['domain']] + $input : $input;
+    }
+
+    /**
+     * The values of the route's later steps (a WordPress title, a repository): kept for that step, never sent to site:add.
+     *
+     * @param array<string, string> $raw
+     * @return array<string, string>
+     */
+    public static function laterValues(array $raw, \Larena\Env\Server\SiteRoute $route): array
+    {
+        $values = [];
+        foreach ($route->inputs as $one) {
+            $value = trim($raw[$one['name']] ?? '');
+            if ($value !== '' && in_array($one['kind'], \Larena\Env\Server\SiteRoute::ASKED, true) && !PanelCommands::accepts('site:add', $one['name'])
+                && $route->stepTaking($one['name']) !== null) {
+                $values[$one['name']] = $value;
+            }
+        }
+
+        return $values;
+    }
+
+    /**
+     * The first later-step input that is missing although required, or that its step's command would refuse; null when
+     * they all would pass. Said under its name before site:add is planned.
+     *
+     * @param array<string, string> $raw
+     */
+    public static function wrongLater(array $raw, \Larena\Env\Server\SiteRoute $route): ?string
+    {
+        foreach ($route->inputs as $one) {
+            $command = $route->stepTaking($one['name']);
+            if ($command === null || PanelCommands::accepts('site:add', $one['name']) || !in_array($one['kind'], \Larena\Env\Server\SiteRoute::ASKED, true)) {
+                continue;
+            }
+            $value = trim($raw[$one['name']] ?? '');
+            if (($value === '' && $one['required']) || ($value !== '' && !PanelCommands::valid($command, $one['name'], $value))) {
+                return $one['name'];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * The ways a kind is made, each with its words, whether the panel can lead it now and why not, and its steps.
+     *
+     * @param callable(string): bool $allows
+     * @return list<array{id: string, label: string, hint: string, available: bool, reason: ?string, steps: list<string>}>
+     */
+    private function routeChoices(string $kind, ?\Larena\Env\Server\SiteProfile $profile, callable $allows): array
+    {
+        $choices = [];
+        foreach ($profile->routes ?? [] as $route) {
+            $blocked = $route->blockedBy($allows);
+            $choices[] = ['id' => $route->id, 'label' => $this->known('routes.names.'.$route->id, $route->title),
+                'hint' => $this->known('routes.hints.'.$kind.'_'.$route->id, $route->title),
+                'available' => $blocked === null, 'reason' => $blocked === null ? null : $this->text('routes.unavailable.'.$blocked),
+                'steps' => array_map(fn (array $step): string => $this->stepLabel($step)
+                    .(\Larena\Env\Server\SiteRoute::led($step, $allows) ? '' : ' — '.$this->text('routes.outside')), $route->steps)];
+        }
+
+        return $choices;
+    }
+
+    /**
+     * The fields a route asks on the form: its texts, choices and addresses, each with the step that takes it.
+     *
+     * @return list<array{name: string, kind: string, label: string, required: bool, values: list<array{value: string, label: string}>, default: ?string, later: bool}>
+     */
+    private function routeFields(?\Larena\Env\Server\SiteRoute $route, \Larena\Env\Server\SiteProfile $profile, ?\Larena\Env\Server\ServerOverview $overview): array
+    {
+        $fields = [];
+        foreach ($route->inputs ?? [] as $one) {
+            if ($one['name'] === 'domain' || !in_array($one['kind'], \Larena\Env\Server\SiteRoute::ASKED, true)
+                // An input of a step the panel does not lead (a Git repository) is given where that step is done.
+                || (!PanelCommands::accepts('site:add', $one['name']) && $route->stepTaking($one['name']) === null)) {
+                continue;
+            }
+            $values = $one['values'] ?? ($one['name'] === 'php' ? ($overview->phpVersions ?? []) : []);
+            $fields[] = ['name' => $one['name'], 'kind' => $one['kind'] === 'choice' && $values !== [] ? 'choice' : $one['kind'], 'label' => $this->inputLabel($one['name'], $profile),
+                'required' => $one['required'], 'default' => $one['default'],
+                'values' => array_map(fn (string $value): array => ['value' => $value, 'label' => $this->known('routes.values.'.$value, $value)], $values),
+                'later' => !PanelCommands::accepts('site:add', $one['name'])];
+        }
+
+        return $fields;
+    }
+
+    /**
+     * The files a route puts on the server after the site is made (a backup archive, a dump): said on the form, asked
+     * at their step on the site's card.
+     *
+     * @return list<string>
+     */
+    private function routeFiles(?\Larena\Env\Server\SiteRoute $route): array
+    {
+        $files = [];
+        foreach ($route->inputs ?? [] as $one) {
+            if ($one['kind'] === 'file_on_server') {
+                $files[] = $this->inputLabel($one['name'], null);
+            }
+        }
+
+        return $files;
+    }
+
+    /** @param array{command: string, url_from: ?string, title: string} $step */
+    private function stepLabel(array $step): string
+    {
+        return $this->known('routes.steps.'.\Larena\Env\Admin\RouteWords::stepKey($step['command'], $step['url_from']), $step['title']);
+    }
+
+    private function inputLabel(string $name, ?\Larena\Env\Server\SiteProfile $profile): string
+    {
+        return $this->known('routes.inputs.'.\Larena\Env\Admin\RouteWords::inputKey($name), $name);
+    }
+
+    /** @param array<string, string> $replace */
+    private function text(string $key, array $replace = []): string
+    {
+        return (string) $this->translator->get('larena-env::admin.'.$key, $replace);
+    }
+
+    private function known(string $key, string $fallback): string
+    {
+        $line = $this->text($key);
+
+        return $line !== 'larena-env::admin.'.$key ? $line : $fallback;
+    }
+
+    /** @param array<string, string> $input */
+    private function backWith(Request $request, string $text, array $input): RedirectResponse
+    {
+        return NoticeRedirect::to($request, route('larena.env.admin.sites.new', [], false).'?'.http_build_query($input), $text);
     }
 
     /**

@@ -29,6 +29,26 @@
             @if (($change ?? null) !== null)
                 @include('larena-env::admin.partials.timed-change', ['change' => $change, 'canKeep' => $canKeep ?? false, 'now' => $now ?? new \DateTimeImmutable(), 'changeDomain' => $status->args['domain'] ?? null])
             @endif
+            {{-- WordPress's administrator (wp:install, simai-env 1.56.0): the server gives the password in this one answer and
+                 keeps no copy; the panel keeps none either. Later answers only say it was shown. --}}
+            @if ($status->secret !== null)
+                <div class="larena-panel larena-panel-padded m-y-2" role="alert" data-env-job-secret>
+                    <h3 class="m-top-0 text-medium">{{ __('larena-env::admin.routes.password.title') }}</h3>
+                    <p>{{ __('larena-env::admin.routes.password.save_now') }}</p>
+                    <dl class="m-0" style="display: block;" data-env-facts>
+                        <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.routes.password.user') }}</dt><dd class="m-0 min-w-0 text-end mono">{{ $status->secret->user }}</dd></div>
+                        <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.routes.password.password') }}</dt><dd class="m-0 min-w-0 text-end mono" style="overflow-wrap: anywhere;" data-env-job-password>{{ $status->secret->password }}</dd></div>
+                    </dl>
+                    @if ($status->secret->loginUrl !== null)
+                        <p><a href="{{ $status->secret->loginUrl }}" target="_blank" rel="noopener noreferrer" class="larena-button" data-env-job-login>{{ __('larena-env::admin.routes.password.login') }}</a></p>
+                    @endif
+                </div>
+            @elseif (in_array('admin_password', $status->shownOnce, true))
+                <p role="note" data-env-job-secret-shown>{{ __('larena-env::admin.routes.password.shown') }}</p>
+            @endif
+            @if ($status->state->isOver() && $status->command === 'site:add' && is_string($status->args['domain'] ?? null) && $status->state->value === 'succeeded')
+                <p><a href="{{ route('larena.env.admin.site', ['domain' => $status->args['domain']], false) }}" class="larena-button" data-env-job-next-site>{{ __('larena-env::admin.routes.to_site') }}</a></p>
+            @endif
             <dl class="m-0" style="display: block;" data-env-facts>
                 <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.plan.command') }}</dt><dd class="m-0 min-w-0 text-end">{{ $status->command }}</dd></div>
                 <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.job.started_at') }}</dt><dd class="m-0 min-w-0 text-end">{{ \Larena\Env\Server\Moment::human($status->createdAt) }}</dd></div>

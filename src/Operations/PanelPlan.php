@@ -27,6 +27,8 @@ final readonly class PanelPlan
         public ?UpdatePlan $update = null,
         public ?SystemUpdates $system = null,
         public ?PlanCheck $check = null,
+        // What a new site or a restored copy asks of the server (site:add, bitrix:restore-ready, simai-env 1.56.0).
+        public ?PlanResources $resources = null,
     ) {
     }
 
@@ -69,6 +71,7 @@ final readonly class PanelPlan
             update: is_array($data['update'] ?? null) ? UpdatePlan::fromData($data['update']) : null,
             system: $command === 'software:update' && is_array($data['update'] ?? null) ? SystemUpdates::fromData($data['update']) : null,
             check: $command === 'site:check-fix' && is_array($data['check'] ?? null) ? PlanCheck::fromData($data['check']) : null,
+            resources: is_array($data['resources'] ?? null) ? PlanResources::fromData($data['resources'], is_array($data['archive'] ?? null) ? $data['archive'] : null) : null,
         );
     }
 }
