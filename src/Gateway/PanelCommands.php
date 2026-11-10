@@ -80,6 +80,10 @@ final class PanelCommands
     private const string WP_TITLE = '/\A(?![-\s])[^\x00-\x1f\x7f]{1,200}\z/Du';
     private const string WP_USER = '/\A[A-Za-z0-9][A-Za-z0-9._@-]{0,59}\z/D';
     private const string WP_LOCALE = '/\A[a-z]{2,3}(?:_[A-Z]{2})?\z/D';
+    // A release from Git (site:deploy, the Laravel repository route of simai-env 1.56.2): the repository by https or as
+    // git@host:path, and the branch, tag or commit, as the gateway takes them (GIT_URL, GIT_REF).
+    private const string GIT_URL = '/\A(?:https:\/\/[A-Za-z0-9.-]{1,253}(?::[0-9]{1,5})?\/[A-Za-z0-9._~\/-]{1,300}|git@[A-Za-z0-9.-]{1,253}:[A-Za-z0-9._~\/-]{1,300})\z/D';
+    private const string GIT_REF = '/\A[A-Za-z0-9_][A-Za-z0-9._\/-]{0,199}\z/D';
     // The server's security (simai-env 1.45.0–1.47.0): what security:fix puts right, the protection levels, and the
     // requests one address may send a second (2–1000) and at once (10–10000).
     private const string SECURITY_FIX = '/\A(?:auto_updates|fail2ban|ssh_password|antivirus)\z/D';
@@ -275,6 +279,11 @@ final class PanelCommands
             'required' => ['domain', 'files', 'dump'], 'since' => '1.56.0', 'kind' => self::ACTION],
         'wp:finalize' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => '1.56.0', 'kind' => self::ACTION],
         'laravel:finalize' => ['args' => ['domain' => self::DOMAIN, 'migrate' => self::YES_NO], 'required' => ['domain'], 'since' => '1.56.0', 'kind' => self::ACTION],
+        // A release deployed from Git, the deploy step of the Laravel repository route (simai-env 1.56.2's route; the gateway
+        // has allowed it since 1.22.0). The gateway takes a git ref or an attached archive; the panel sends no archive yet,
+        // so it asks the repository and its ref both, as the gateway wants them together.
+        'site:deploy' => ['args' => ['domain' => self::DOMAIN, 'git' => self::GIT_URL, 'ref' => self::GIT_REF], 'required' => ['domain', 'git', 'ref'],
+            'since' => '1.22.0', 'kind' => self::ACTION],
         // A timed change kept by the person who made it (the firewall, the panel's access, nginx directives): without the
         // confirmation in time, the server puts the previous one back by itself.
         'change:confirm' => ['args' => ['change_id' => self::CHANGE_ID], 'required' => ['change_id'], 'since' => '1.35.0', 'kind' => self::ACTION],

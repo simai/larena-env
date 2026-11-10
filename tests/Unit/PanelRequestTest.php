@@ -41,11 +41,16 @@ env_assert(str_contains($empty, '"args":{}'), 'Empty args stay an object, the ga
 env_assert(preg_match('/\Apanel-[a-f0-9]{24}\z/', PanelRequest::read($actor, 'self:describe')->requestId) === 1, 'A generated id fits the gateway\'s pattern.');
 env_assert(PanelRequest::read($actor, 'self:describe')->requestId !== PanelRequest::read($actor, 'self:describe')->requestId, 'Each request has its own id.');
 
-// Deploys, removals, other owners' keys and anything else are outside this package's table, whatever is sent.
-foreach (['site:deploy', 'site:remove', 'owner:remove', 'owner:add-key', 'self:bootstrap', 'nonsense', ''] as $command) {
+// Removals, other owners' keys and anything else are outside this package's table, whatever is sent.
+foreach (['site:remove', 'owner:remove', 'owner:add-key', 'self:bootstrap', 'nonsense', ''] as $command) {
     env_assert(env_refusal(static fn () => new PanelRequest('r', $actor, $command, ['domain' => 'example.com'])) === 'not_allowed', "This package may not ask for {$command}.");
 }
 // The actions and job commands of the screens are allowed, and only an action is ever confirmed.
+// A release from Git (the Laravel repository route, simai-env 1.56.2): the repository and its ref together, never an archive.
+env_assert(env_refusal(static fn () => new PanelRequest('r', $actor, 'site:deploy', ['domain' => 'example.com', 'git' => 'https://github.com/example/app', 'ref' => 'main'], true)) === null, 'A deploy from Git.');
+foreach ([['git' => 'https://github.com/example/app'], ['ref' => 'main'], [], ['git' => 'ext::sh -c id', 'ref' => 'main'], ['git' => 'https://github.com/example/app', 'ref' => '-x']] as $bad) {
+    env_assert(env_refusal(static fn () => new PanelRequest('r', $actor, 'site:deploy', ['domain' => 'example.com'] + $bad)) === 'invalid_argument', 'A deploy without both, or unsafe: '.json_encode($bad));
+}
 env_assert(env_refusal(static fn () => new PanelRequest('r', $actor, 'ssl:renew', ['domain' => 'example.com'])) === null, 'An action may be planned.');
 env_assert(env_refusal(static fn () => new PanelRequest('r', $actor, 'ssl:renew', ['domain' => 'example.com'], true)) === null, 'And confirmed.');
 env_assert(env_refusal(static fn () => new PanelRequest('r', $actor, 'job:cancel', ['job_id' => str_repeat('a', 24)])) === null, 'A job may be followed.');

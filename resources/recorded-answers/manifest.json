@@ -144,14 +144,14 @@
       "recorded_from": "simai-env v1.56.1, testing/fixtures/panel/plan.bitrix-finalize.json"
     },
     "plan.bitrix-restore-ready-source.json": {
-      "sha256": "55a669df8a9fd53f4d27dc7fbc1442a6641d05b73dc0c56ff136957500db07db",
+      "sha256": "03697e8342ee2ae0bf667164eaf3f81cc715f6f8e9c6274230f21e2cc314c67b",
       "status": "ok",
-      "recorded_from": "simai-env v1.56.1, testing/fixtures/panel/plan.bitrix-restore-ready-source.json"
+      "recorded_from": "simai-env v1.56.2, testing/fixtures/panel/plan.bitrix-restore-ready-source.json"
     },
     "plan.bitrix-restore-ready.json": {
-      "sha256": "6246c40304e0df103605a5fe5c10506c1d7b576846ef22f9a6ded71a3c826ceb",
+      "sha256": "1cd212f7f44133929892c09e352958244400b7185c52bdf1b5aafe7f8cbb6f27",
       "status": "ok",
-      "recorded_from": "simai-env v1.56.1, testing/fixtures/panel/plan.bitrix-restore-ready.json"
+      "recorded_from": "simai-env v1.56.2, testing/fixtures/panel/plan.bitrix-restore-ready.json"
     },
     "plan.change-confirm.json": {
       "sha256": "00bfdb7f542d7d2acd746b60d58e3d47c707aaa3bc8f499f336520699da26e57",
@@ -200,6 +200,11 @@
     "plan.firewall-unblock.json": {
       "sha256": "87eff278c962bdc378c293a099b668b6b3106829723a8b94688714aea9a3b033",
       "status": "ok"
+    },
+    "plan.laravel-finalize.json": {
+      "sha256": "f349a661619da1fab80ca95a232065d0f02b5342b743897a4583328fd5d8dd38",
+      "status": "ok",
+      "recorded_from": "simai-env v1.56.2, testing/fixtures/panel/plan.laravel-finalize.json"
     },
     "plan.owner-block.json": {
       "sha256": "6db96e1f58d3b95912c28a2d0bbab9700bbbbd96745d4fcff475eb05efe0cafe",
@@ -266,29 +271,29 @@
       "status": "ok"
     },
     "plan.site-add-bitrix.json": {
-      "sha256": "05b26084f4175d9d95699f6989a06e064529d17db4a3cab42e03e40c1ff01dd8",
+      "sha256": "6a508722cf050fe099bace1c50d0f81c3707122cfd5b5ac06e70f4f4806ba376",
       "status": "ok",
-      "recorded_from": "simai-env v1.56.1, testing/fixtures/panel/plan.site-add-bitrix.json"
+      "recorded_from": "simai-env v1.56.2, testing/fixtures/panel/plan.site-add-bitrix.json"
     },
     "plan.site-add-laravel.json": {
-      "sha256": "2f83d5548e93c31c5d948c49a08c1030d02d606bbcd75c7a504d12a90ea79445",
+      "sha256": "d2d3f32f82b6491f3133df78eea3dd3e9707c20519859bbf1cc7297600c7c254",
       "status": "ok",
-      "recorded_from": "simai-env v1.56.1, testing/fixtures/panel/plan.site-add-laravel.json"
+      "recorded_from": "simai-env v1.56.2, testing/fixtures/panel/plan.site-add-laravel.json"
     },
     "plan.site-add-no-backup.json": {
-      "sha256": "a675709c15595a0c778ed375bef54dfab8b7782f5d933c1fd797489e0ff67ed4",
+      "sha256": "474d701fe8308c30a1e8a2bfe3a520e4e2a400dbe051061286aad5bf58f111f6",
       "status": "ok",
-      "recorded_from": "simai-env v1.56.1, testing/fixtures/panel/plan.site-add-no-backup.json"
+      "recorded_from": "simai-env v1.56.2, testing/fixtures/panel/plan.site-add-no-backup.json"
     },
     "plan.site-add-proxy.json": {
-      "sha256": "ca8695d1e596db7e89fd79909e0a69bf6742acca8b12e3bd6e8e62dd419bb5c2",
+      "sha256": "d838c2bebaec010e71e4316a80c0329fecb9a2401f48b329fa7f1800560365df",
       "status": "ok",
-      "recorded_from": "simai-env v1.56.1, testing/fixtures/panel/plan.site-add-proxy.json"
+      "recorded_from": "simai-env v1.56.2, testing/fixtures/panel/plan.site-add-proxy.json"
     },
     "plan.site-add.json": {
-      "sha256": "d7f0303a7ce4da173466553fa00f71aeda7e19feacff7241772f068806cf48ab",
+      "sha256": "baa416bcace9fcb1a52002eadb06774303efd1b2f5e21a8dd5a2e83c4859f6c6",
       "status": "ok",
-      "recorded_from": "simai-env v1.56.1, testing/fixtures/panel/plan.site-add.json"
+      "recorded_from": "simai-env v1.56.2, testing/fixtures/panel/plan.site-add.json"
     },
     "plan.site-apache.json": {
       "sha256": "cdee61dff8c801f23ca5c3254139c1adba6f3ebe60503df797ebebd98ab95539",
@@ -408,14 +413,14 @@
       "status": "refused"
     },
     "refused.not-enough-disk.json": {
-      "sha256": "e6390e058de9921166b5fdd05a8ad321e0adc7c8d6cae8a93d5db03d86b6f327",
+      "sha256": "79c9d68ca4dbde3d2e5fa73c3b379682224074f8aebce040f8c1f21e2dc7e92b",
       "status": "refused",
-      "recorded_from": "simai-env v1.56.1, testing/fixtures/panel/refused.not-enough-disk.json"
+      "recorded_from": "simai-env v1.56.2, testing/fixtures/panel/refused.not-enough-disk.json"
     },
     "refused.not-enough-ram.json": {
-      "sha256": "26d2eaa793f1633f83b3ca235da80990caed30a35582243fb851cb3b9ae6cae3",
+      "sha256": "b829fcbcb3eaa7bee15a4c6b029822204a420e8c68aaab9b8937b559e4536485",
       "status": "refused",
-      "recorded_from": "simai-env v1.56.1, testing/fixtures/panel/refused.not-enough-ram.json"
+      "recorded_from": "simai-env v1.56.2, testing/fixtures/panel/refused.not-enough-ram.json"
     },
     "refused.owner-admin-only.alerts-channel.json": {
       "sha256": "d07d9bafcccd3aee7d100e1f42c0232d456737355b6d042365be124d2dc8a94a",
@@ -516,9 +521,9 @@
       "recorded_from": "simai-env v1.56.1, testing/fixtures/panel/refused.profile-disabled.json"
     },
     "refused.source-invalid.json": {
-      "sha256": "c19807930a8de8779006911a9ee7105718cbaea06dad6bb886ba4c3a904262a8",
+      "sha256": "0b6794b75d02d2fb6c881c326ee6b6e997523f44ff35ceb42150cbdda7044bd7",
       "status": "refused",
-      "recorded_from": "simai-env v1.56.1, testing/fixtures/panel/refused.source-invalid.json"
+      "recorded_from": "simai-env v1.56.2, testing/fixtures/panel/refused.source-invalid.json"
     },
     "refused.unknown-access.json": {
       "sha256": "e9c2caf336bbc12cde2d25bf1a3325959f164b7e1b868235cab69fbfde1d1270",
@@ -534,9 +539,9 @@
       "status": "refused"
     },
     "refused.url-invalid.json": {
-      "sha256": "ce4e77360625769619d9d5751d44a57fd629cc19b1d9ae676436a7d3af22323c",
+      "sha256": "63e087e85f5f031ef758867d6b57ed81ef537e1a5f705464ac8d0164e659fa25",
       "status": "refused",
-      "recorded_from": "simai-env v1.56.1, testing/fixtures/panel/refused.url-invalid.json"
+      "recorded_from": "simai-env v1.56.2, testing/fixtures/panel/refused.url-invalid.json"
     },
     "security-files.json": {
       "sha256": "7f8f39322604c63d003b7eb3f63c1fc16732d23451eaa2a79e191e7e938c9459",
@@ -583,14 +588,14 @@
       "status": "ok"
     },
     "self-profiles.json": {
-      "sha256": "75a337326913aca9ca82ed53583ef620eb96decbc54d66cee353408b086f673d",
+      "sha256": "24ff4b1c10d5fd3ec7c8068f57903c5522cd094cbe57a46d2595872eca32e11f",
       "status": "ok",
-      "recorded_from": "simai-env v1.56.1, testing/fixtures/panel/self-profiles.json"
+      "recorded_from": "simai-env v1.56.2, testing/fixtures/panel/self-profiles.json"
     },
     "self-profiles.owner-demo.json": {
-      "sha256": "f4d20f0092f597c7040e747ea9bed33711ba3c8fc9093f74703f38a7a4fbc70c",
+      "sha256": "94261a17831639c9691d2dff5b6d02fd8adb7bb78adb96c12096faad0e554d0e",
       "status": "ok",
-      "recorded_from": "simai-env v1.56.1, testing/fixtures/panel/self-profiles.owner-demo.json"
+      "recorded_from": "simai-env v1.56.2, testing/fixtures/panel/self-profiles.owner-demo.json"
     },
     "self-update-plan.env.json": {
       "sha256": "757eb5c682ae897cf110020f83de9fff915f866bf1857627e981a2cdcd10aa38",
@@ -698,6 +703,16 @@
       "status": "ok",
       "recorded_from": "simai-env v1.56.1, testing/fixtures/panel/site-status.demo-bitrix.test.validate.json"
     },
+    "site-status.demo-laravel.test.configure.json": {
+      "sha256": "42afe0441d0bce06bf33219bc38f136ebfd85235c0a7d8ef4b571f05ad45f217",
+      "status": "ok",
+      "recorded_from": "simai-env v1.56.2, testing/fixtures/panel/site-status.demo-laravel.test.configure.json"
+    },
+    "site-status.demo-laravel.test.deploy.json": {
+      "sha256": "d4843a12480679abc54bd7be3de1420d87360d322b4cc90cb8cadf797ddf90fb",
+      "status": "ok",
+      "recorded_from": "simai-env v1.56.2, testing/fixtures/panel/site-status.demo-laravel.test.deploy.json"
+    },
     "site-status.demo-owned.test.json": {
       "sha256": "5a56fd606e9ff2f4f535d0bd0f590b84fe3c6b35487d359d45920da7af4a0ef4",
       "status": "ok",
@@ -714,9 +729,39 @@
       "recorded_from": "simai-env v1.56.1, testing/fixtures/panel/site-status.demo-redirect.test.json"
     },
     "site-status.demo-static.test.json": {
-      "sha256": "23f5fcb425c2ff4feda662bd1a5b9cfa846dedb6265bd3a18fa32507aafb079a",
+      "sha256": "a85a8f22e6540d00175438f3d009ab23a34c95958c653a441b0008bdc1924bbd",
       "status": "ok",
-      "recorded_from": "simai-env v1.56.1, testing/fixtures/panel/site-status.demo-static.test.json"
+      "recorded_from": "simai-env v1.56.2, testing/fixtures/panel/site-status.demo-static.test.json"
+    },
+    "site-status.demo-wp-copy.test.finalize.json": {
+      "sha256": "1da171ca81bcba5c60b9832e91e6c5f4b8ff0d8c5ee2339358968f3dad99c713",
+      "status": "ok",
+      "recorded_from": "simai-env v1.56.2, testing/fixtures/panel/site-status.demo-wp-copy.test.finalize.json"
+    },
+    "site-status.demo-wp-copy.test.restore-done.json": {
+      "sha256": "f39d4f7ff7f050889a06163f3f43e4a4eb33b86a4f0ffd7abe8313f382bfd182",
+      "status": "ok",
+      "recorded_from": "simai-env v1.56.2, testing/fixtures/panel/site-status.demo-wp-copy.test.restore-done.json"
+    },
+    "site-status.demo-wp-copy.test.restore-install.json": {
+      "sha256": "6935acc3e03f67552c71cb84a88175a960e194b7e3b63f152e2c590c92fb751d",
+      "status": "ok",
+      "recorded_from": "simai-env v1.56.2, testing/fixtures/panel/site-status.demo-wp-copy.test.restore-install.json"
+    },
+    "site-status.demo-wp-copy.test.upload.json": {
+      "sha256": "0aa83e2d11d33f3f969f460bcd20e9eadc571887739420ac8f683d5bce4c173a",
+      "status": "ok",
+      "recorded_from": "simai-env v1.56.2, testing/fixtures/panel/site-status.demo-wp-copy.test.upload.json"
+    },
+    "site-status.demo-wp.test.done.json": {
+      "sha256": "3510fc7878014b00ed8da2d5039364fac2941fdee285984373ae820b6a020a39",
+      "status": "ok",
+      "recorded_from": "simai-env v1.56.2, testing/fixtures/panel/site-status.demo-wp.test.done.json"
+    },
+    "site-status.demo-wp.test.prepare.json": {
+      "sha256": "3cfc6eb0bf54c122f9cbccb523bd6c5a009401586b00c960d3ffd1309dd4423d",
+      "status": "ok",
+      "recorded_from": "simai-env v1.56.2, testing/fixtures/panel/site-status.demo-wp.test.prepare.json"
     },
     "software-list.json": {
       "sha256": "58e64ae27f387e091da592feaae10986dbc96c06a0f1d6f5cfda09eee2da0772",

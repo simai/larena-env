@@ -113,6 +113,22 @@ final readonly class RecordedAnswersGateway implements PanelGateway
 
             return $this->replay($request, $file);
         }
+        // A release from Git (site:deploy, the Laravel repository route of simai-env 1.56.2): the set holds the plan of one
+        // repository and ref for one site; any other is missing, never answered with that one's.
+        if ($request->command === 'site:deploy' && !$request->confirm) {
+            $plan = $this->document('plan.site-deploy-git.json');
+            $recorded = is_array($plan) && is_array($plan['data']['args'] ?? null) ? $plan['data']['args'] : null;
+            $asked = $request->args;
+            if ($recorded !== null) {
+                ksort($recorded);
+                ksort($asked);
+            }
+            if (is_array($plan) && $recorded !== $asked) {
+                return $this->unavailable($request, PanelReason::RECORDING_MISSING);
+            }
+
+            return $this->replay($request, 'plan.site-deploy-git.json');
+        }
         // A kind the server has switched off (node on the recording's server) is refused before a plan.
         if ($request->command === 'site:add' && ($request->args['profile'] ?? null) === 'node') {
             return $this->replay($request, 'refused.profile-disabled.json');

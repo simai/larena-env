@@ -245,6 +245,12 @@ final readonly class SiteAdminController
         if ($operation !== null && !$capabilities->allows($operation->command())) {
             $operation = null;
         }
+        // A deploy is led from Git only, where the kind's own route deploys from a repository (Laravel, simai-env 1.56.2);
+        // a static release's archive the panel does not send, so that step stays said as done outside the panel.
+        if ($operation === SiteOperation::SiteDeploy
+            && array_filter($profile->routes ?? [], static fn (\Larena\Env\Server\SiteRoute $one): bool => $one->deploysFromGit()) === []) {
+            $operation = null;
+        }
         $kept = $request->hasSession() ? $request->session()->get(NewSiteController::ROUTE_VALUES.'.'.strtolower($site->domain)) : null;
 
         return [
@@ -255,7 +261,7 @@ final readonly class SiteAdminController
             'stepText' => $known('routes.at.'.$status->step, $status->step),
             'nextText' => $status->next === null ? null : $known('routes.steps.'.\Larena\Env\Admin\RouteWords::stepKey($status->next, $status->restoreUrl !== null ? 'restore_url' : 'installer_url'), $status->next),
             'openUrl' => $status->openUrl(),
-            // A step the panel does not lead here (a deploy from Git): said, and done outside the panel.
+            // A step the panel does not lead here (a release archive): said, and done outside the panel.
             'outside' => $status->next !== null && !in_array($status->next, ['open_url', 'file:upload', 'cron:add'], true) && $operation === null,
             // A step done in another section of the card: the files of the site, its scheduled jobs.
             'tab' => match ($status->next) {'file:upload' => 'files', 'cron:add' => 'cron', default => null},

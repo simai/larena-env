@@ -52,6 +52,9 @@ enum SiteOperation: string
     case WordpressRestoreReady = 'wordpress-restore-ready';
     case WordpressFinalize = 'wordpress-finalize';
     case LaravelFinalize = 'laravel-finalize';
+    // The deploy step of the Laravel repository route (simai-env 1.56.2): a release from Git, the repository and its ref as
+    // the person gave them when the site was made. A release archive (the static repository route) the panel does not send.
+    case SiteDeploy = 'deploy';
 
     public function command(): string
     {
@@ -87,6 +90,7 @@ enum SiteOperation: string
             self::WordpressRestoreReady => 'wp:restore-ready',
             self::WordpressFinalize => 'wp:finalize',
             self::LaravelFinalize => 'laravel:finalize',
+            self::SiteDeploy => 'site:deploy',
         };
     }
 
@@ -101,7 +105,7 @@ enum SiteOperation: string
             self::Rollback => 'releases',
             self::SftpCreate, self::SftpAddKey, self::SftpDisable, self::SftpEnable, self::SftpRemove => 'access',
             self::CheckFix, self::BitrixRestoreReady, self::BitrixFinalize, self::WordpressInstall, self::WordpressRestoreReady,
-            self::WordpressFinalize, self::LaravelFinalize => 'overview',
+            self::WordpressFinalize, self::LaravelFinalize, self::SiteDeploy => 'overview',
         };
     }
 
@@ -138,6 +142,7 @@ enum SiteOperation: string
             self::WordpressInstall => ['title', 'admin-user', 'admin-email', 'locale'],
             self::WordpressRestoreReady => ['files', 'dump'],
             self::LaravelFinalize => ['migrate'],
+            self::SiteDeploy => ['git', 'ref'],
             default => [],
         };
     }
@@ -188,7 +193,7 @@ enum SiteOperation: string
      */
     public const array ROUTE_STEPS = ['bitrix:restore-ready' => self::BitrixRestoreReady, 'bitrix:finalize' => self::BitrixFinalize,
         'wp:install' => self::WordpressInstall, 'wp:restore-ready' => self::WordpressRestoreReady, 'wp:finalize' => self::WordpressFinalize,
-        'laravel:finalize' => self::LaravelFinalize];
+        'laravel:finalize' => self::LaravelFinalize, 'site:deploy' => self::SiteDeploy];
 
     public function isRouteStep(): bool
     {

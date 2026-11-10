@@ -2,7 +2,18 @@
 
 ## Unreleased
 
-Nothing since 0.4.5.
+- The Laravel repository route as simai-env 1.56.2 (set 33) has it: made, deployed, finished, checked
+  (`site:add` → `site:deploy` → `laravel:finalize` → `site:doctor`). The deploy step is no longer «outside the panel»:
+  «Создать сайт» asks the Git repository and its ref for it, and the site's card offers «Выложить приложение» with
+  them through plan, confirmation and a job, as the other steps of a route. `site:deploy` joins the command table
+  (since 1.22.0) with the repository and the ref, both required: a release archive is not sent, so the static
+  repository route stays greyed and its deploy step on the card stays said as done outside the panel. No new block,
+  screen or component: the step uses the card's existing «Создание сайта» block and its form.
+- What a route's next step also puts right is said in words (`wordpress.config-perms`, `laravel.app-key`).
+- Recorded answers: the files set 33 changed or added are ENV's recordings of simai-env v1.56.2 (`recorded_from`):
+  the plans and refusals of `site:add` and `bitrix:restore-ready`, `self:profiles`, `site:status` of each step of the
+  WordPress new and restore routes and of the Laravel deploy and configure steps, and the plan of `laravel:finalize`.
+  The recorded gateway answers the `site:deploy` plan only for the repository and ref the set holds.
 
 ## 0.4.5 — built 2026-11-10, on the local stand, not released (waits for the owner's acceptance)
 

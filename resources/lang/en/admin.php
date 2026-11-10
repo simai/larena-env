@@ -355,6 +355,9 @@ return [
             'bitrix_sef_fallback' => 'Bitrix page address handling',
             'bitrix_static_gzip' => 'Compression of styles and scripts',
             'bitrix_static_cache' => 'Caching of styles, scripts and images',
+            // What a route's next step also puts right (site:status `pending`, simai-env 1.56.2).
+            'wordpress_config_perms' => 'Permissions of wp-config.php',
+            'laravel_app_key' => 'The application key (APP_KEY)',
         ],
         // The server's checks by their title (simai-env site:doctor), as a person reads them; an unknown one is shown as it is.
         'checks' => [

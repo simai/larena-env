@@ -196,7 +196,7 @@ env_assert(NewSiteController::groupsOf('laravel', null) === ['php', 'database'] 
 env_assert(count($extras->profiles($owner) ?? []) === 7, 'An owner sees the kinds too: they make sites in their space.');
 env_assert($operations->planCommand($admin, 'site:add', ['domain' => 'demo-proxy.test', 'profile' => 'proxy', 'upstream-port' => '3000', 'websockets' => 'yes'])->plan?->args['upstream-port'] === '3000'
     && $operations->planCommand($admin, 'site:add', ['domain' => 'new-bitrix.test', 'profile' => 'bitrix', 'bitrix-files' => 'setup'])->plan?->args['profile'] === 'bitrix',
-    'An app on a port and a 1C-Bitrix site are planned (the 1.56.1 recording of the Bitrix plan holds the domain and the kind).');
+    'An app on a port and a 1C-Bitrix site are planned (the 1.56.2 recording of the Bitrix plan holds the domain and the kind).');
 
 // A site's scheduled jobs (5.4): its own, added, turned off and on, removed; its runs, the newest first; an owner's own sites only.
 $jobs = $extras->cronJobs($admin, 'demo-owned.test');

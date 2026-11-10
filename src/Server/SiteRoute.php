@@ -106,7 +106,7 @@ final readonly class SiteRoute
     /**
      * Why the panel cannot lead this route, or null when it can: the server plans it only; bytes sent with a step (the
      * archive of a static release) the panel does not send; or this server does not let the panel make the site. A later
-     * step the panel does not lead (a deploy from Git) is done outside it and said so; it does not stop the route.
+     * step the panel does not lead on this server is done outside it and said so; it does not stop the route.
      *
      * @param callable(string): bool $allows whether this server's gateway allows a command
      */
@@ -122,6 +122,15 @@ final readonly class SiteRoute
         }
 
         return $allows('site:add') ? null : 'command';
+    }
+
+    /**
+     * Whether the route deploys a release from Git (the Laravel repository route, simai-env 1.56.2): it asks the repository
+     * and has a site:deploy step. A route deploying an archive sent with the step does not.
+     */
+    public function deploysFromGit(): bool
+    {
+        return in_array('git', array_column($this->inputs, 'name'), true) && in_array('site:deploy', array_column($this->steps, 'command'), true);
     }
 
     /**

@@ -2,12 +2,13 @@
 
 declare(strict_types=1);
 
-// «Создать сайт» by the server's routes (simai-env 1.56.1): self:profiles names the ways each kind is made (new, restore,
+// «Создать сайт» by the server's routes (simai-env 1.56.1-1.56.2): self:profiles names the ways each kind is made (new, restore,
 // repo) with their inputs and steps; the form asks what the chosen way takes, the plan says what the site needs of the
 // server (resources), and the site's card follows it with site:status, offering the next step through the plan
-// (bitrix:restore-ready, bitrix:finalize, wp:install, wp:restore-ready, wp:finalize, laravel:finalize). WordPress's
-// administrator password is shown once and kept nowhere. The answers are ENV's recordings (simai-env v1.56.1,
-// testing/fixtures/panel, marked `recorded_from`); a server without routes or site:status shows the screens as before.
+// (bitrix:restore-ready, bitrix:finalize, wp:install, wp:restore-ready, wp:finalize, site:deploy from Git, laravel:finalize).
+// WordPress's administrator password is shown once and kept nowhere. The answers are ENV's recordings (simai-env v1.56.1 and
+// v1.56.2's set 33, testing/fixtures/panel, marked `recorded_from`); a server without routes or site:status shows the
+// screens as before.
 
 use Illuminate\Cache\ArrayStore;
 use Illuminate\Cache\Repository;
@@ -83,13 +84,23 @@ $recorded = new RecordedAnswersGateway(env_recorded_path());
 $admin = new PanelActor('admin@stand.test');
 $document = static fn (string $file): array => json_decode(env_recorded_bytes($file), true, 64, JSON_THROW_ON_ERROR);
 
-// The answers are ENV's recordings of simai-env v1.56.1: the set says where each comes from, and each matches its digest.
+// The answers are ENV's recordings of simai-env v1.56.1 and, for those set 33 changed or added, v1.56.2: the set says where
+// each comes from, and each matches its digest.
 $manifest = $document('manifest.json');
-$copied = array_keys(array_filter($manifest['files'], static fn (array $file): bool => str_starts_with((string) ($file['recorded_from'] ?? ''), 'simai-env v1.56.1, ')));
-env_assert(count($copied) === 39, 'Thirty-nine answers of simai-env v1.56.1: '.count($copied));
-foreach ($copied as $file) {
-    env_assert($manifest['files'][$file]['recorded_from'] === 'simai-env v1.56.1, testing/fixtures/panel/'.$file
-        && hash_equals((string) $manifest['files'][$file]['sha256'], hash('sha256', env_recorded_bytes($file))), "{$file} is ENV's recording.");
+$from = static fn (string $release): array => array_keys(array_filter($manifest['files'],
+    static fn (array $file): bool => str_starts_with((string) ($file['recorded_from'] ?? ''), "simai-env v{$release}, ")));
+env_assert(count($from('1.56.1')) === 25 && count($from('1.56.2')) === 23, 'Twenty-five answers of v1.56.1, twenty-three of v1.56.2: '.count($from('1.56.1')).', '.count($from('1.56.2')));
+$copied = [...$from('1.56.1'), ...$from('1.56.2')];
+foreach (['1.56.1', '1.56.2'] as $release) {
+    foreach ($from($release) as $file) {
+        env_assert($manifest['files'][$file]['recorded_from'] === "simai-env v{$release}, testing/fixtures/panel/".$file
+            && hash_equals((string) $manifest['files'][$file]['sha256'], hash('sha256', env_recorded_bytes($file))), "{$file} is ENV's recording.");
+    }
+}
+foreach (['site-status.demo-wp.test.prepare.json', 'site-status.demo-wp.test.done.json', 'site-status.demo-wp-copy.test.upload.json',
+    'site-status.demo-wp-copy.test.restore-install.json', 'site-status.demo-wp-copy.test.restore-done.json', 'site-status.demo-wp-copy.test.finalize.json',
+    'site-status.demo-laravel.test.deploy.json', 'site-status.demo-laravel.test.configure.json', 'plan.laravel-finalize.json', 'self-profiles.json'] as $file) {
+    env_assert(in_array($file, $from('1.56.2'), true), "{$file} is set 33's.");
 }
 foreach (['self-profiles.json', 'site-status.demo-php.test.json', 'plan.wp-install.json', 'job-wp-install-status.json', 'refused.not-enough-ram.json',
     'refused.profile-disabled.json', 'refused.source-invalid.json', 'refused.url-invalid.json', 'refused.not-enough-disk.json', 'plan.bitrix-restore-ready-source.json'] as $file) {
@@ -98,21 +109,26 @@ foreach (['self-profiles.json', 'site-status.demo-php.test.json', 'plan.wp-insta
 env_assert(!str_contains(env_recorded_bytes('job-wp-install-status.json'), '"admin_password": "') || str_contains(env_recorded_bytes('job-wp-install-status.json'), 'fixture-password-not-real'),
     'The recorded password is a placeholder, never a real one.');
 
-// The commands: two reads, six actions; a value the gateway would refuse never leaves.
+// The commands: two reads, seven actions; a value the gateway would refuse never leaves.
 foreach (['site:status' => [PanelCommands::READ, '1.56.0'], 'wp:status' => [PanelCommands::READ, '1.56.0'], 'bitrix:restore-ready' => [PanelCommands::ACTION, '1.55.0'],
     'bitrix:finalize' => [PanelCommands::ACTION, '1.55.0'], 'wp:install' => [PanelCommands::ACTION, '1.56.0'], 'wp:restore-ready' => [PanelCommands::ACTION, '1.56.0'],
-    'wp:finalize' => [PanelCommands::ACTION, '1.56.0'], 'laravel:finalize' => [PanelCommands::ACTION, '1.56.0']] as $command => [$kind, $since]) {
+    'wp:finalize' => [PanelCommands::ACTION, '1.56.0'], 'laravel:finalize' => [PanelCommands::ACTION, '1.56.0'], 'site:deploy' => [PanelCommands::ACTION, '1.22.0']] as $command => [$kind, $since]) {
     env_assert(PanelCommands::kind($command) === $kind && PanelCommands::since($command) === $since, "{$command}: {$kind} since {$since}.");
 }
 env_assert(PanelCommands::argumentSince('bitrix:restore-ready', 'source') === '1.56.0' && PanelCommands::argumentSince('bitrix:restore-ready', 'url') === '1.56.0'
-    && PanelCommands::kind('site:deploy') === null, 'A folder or an address since 1.56.0; a deploy is still not the panel\'s.');
+    && PanelCommands::accepts('site:deploy', 'git') && PanelCommands::accepts('site:deploy', 'ref') && !PanelCommands::accepts('site:deploy', 'archive'),
+    'A folder or an address since 1.56.0; a deploy from Git, never an archive.');
+PanelCommands::check('site:deploy', ['domain' => 'demo-laravel.test', 'git' => 'https://github.com/example/app', 'ref' => 'main'], true);
+PanelCommands::check('site:deploy', ['domain' => 'demo-laravel.test', 'git' => 'git@github.com:example/app.git', 'ref' => 'v1.0.0'], true);
 PanelCommands::check('wp:install', ['domain' => 'demo-wp.test', 'title' => 'Demo WordPress', 'admin-user' => 'admin', 'admin-email' => 'admin@stand.test', 'locale' => 'ru_RU'], true);
 PanelCommands::check('bitrix:restore-ready', ['domain' => 'demo-bitrix.test', 'source' => 'upload/backup'], true);
 PanelCommands::check('bitrix:restore-ready', ['domain' => 'demo-bitrix.test', 'url' => 'https://files.example.com/demo_20260101_full_abc.tar.gz?sig=1'], true);
 foreach ([['wp:install', ['title' => '-rf', 'admin-user' => 'a', 'admin-email' => 'a@b.cd']], ['wp:install', ['title' => 'T', 'admin-user' => 'a b', 'admin-email' => 'a@b.cd']],
     ['wp:install', ['title' => 'T']], ['bitrix:restore-ready', ['source' => '../etc']], ['bitrix:restore-ready', ['source' => '/etc']],
     ['bitrix:restore-ready', ['url' => 'http://files.example.com/a.tar.gz']], ['bitrix:restore-ready', ['url' => 'https://files.example.com/a.zip']],
-    ['wp:restore-ready', ['files' => '../copy.tar.gz', 'dump' => 'd.sql']], ['laravel:finalize', ['migrate' => 'maybe']]] as [$command, $bad]) {
+    ['wp:restore-ready', ['files' => '../copy.tar.gz', 'dump' => 'd.sql']], ['laravel:finalize', ['migrate' => 'maybe']],
+    ['site:deploy', ['git' => 'https://github.com/example/app']], ['site:deploy', ['ref' => 'main']], ['site:deploy', ['git' => 'ext::sh -c id', 'ref' => 'main']],
+    ['site:deploy', ['git' => 'http://github.com/example/app', 'ref' => 'main']], ['site:deploy', ['git' => 'https://github.com/example/app', 'ref' => '-main']]] as [$command, $bad]) {
     try {
         PanelCommands::check($command, $bad + ['domain' => 'demo.test']);
         env_assert(false, "Never leaves: {$command} ".json_encode($bad));
@@ -143,10 +159,13 @@ env_assert($profiles['generic']->route('restore')?->blockedBy($all) === 'planned
     'Planned, an archive the panel does not send, a server that does not let the panel make sites.');
 $wordpressNew = $profiles['wordpress']->route('new');
 env_assert($wordpressNew instanceof SiteRoute && $wordpressNew->stepTaking('title') === 'wp:install' && $wordpressNew->stepTaking('php') === null
-    && $profiles['laravel']->route('repo')?->stepTaking('git') === null && !SiteRoute::led(['command' => 'site:deploy'], $all) && SiteRoute::led(['command' => 'open_url'], static fn (): bool => false),
-    'A later input belongs to the step that takes it; a deploy from Git is done outside the panel.');
+    && SiteRoute::led(['command' => 'site:deploy'], $all) && SiteRoute::led(['command' => 'open_url'], static fn (): bool => false),
+    'A later input belongs to the step that takes it: the repository and its ref to the deploy, which the panel leads.');
+$laravelRepo = $profiles['laravel']->route('repo');
+env_assert($laravelRepo instanceof SiteRoute && array_column($laravelRepo->steps, 'command') === ['site:add', 'site:deploy', 'laravel:finalize', 'site:doctor']
+    && $laravelRepo->stepTaking('git') === 'site:deploy' && $laravelRepo->stepTaking('ref') === 'site:deploy' && $laravelRepo->deploysFromGit() && $profiles['static']->route('repo')?->deploysFromGit() === false, 'Laravel from Git: made, deployed, finished, checked; a static release is an archive.');
 
-// A server answering as simai-env 1.56.1: the recorded set (1.49.0) with the new commands listed; the profiles as recorded
+// A server answering as simai-env 1.56.2: the recorded set (1.49.0) with the new commands listed; the profiles as recorded
 // or without their routes (an older server); a site's state on its route chosen per test.
 $listed = ['site:status', 'wp:status', 'bitrix:restore-ready', 'bitrix:finalize', 'wp:install', 'wp:restore-ready', 'wp:finalize', 'laravel:finalize'];
 final class ServingGateway implements PanelGateway
@@ -165,10 +184,11 @@ final class ServingGateway implements PanelGateway
         if (isset($this->answers[$request->command.' '.$domain])) {
             return PanelAnswer::fromDocument($request->requestId, $this->answers[$request->command.' '.$domain]);
         }
-        if ($request->command === 'site:describe' && in_array($domain, ['demo-bitrix.test', 'demo-wp.test', 'demo-app.test'], true)) {
+        $kinds = ['demo-bitrix.test' => 'bitrix', 'demo-wp.test' => 'wordpress', 'demo-wp-copy.test' => 'wordpress', 'demo-laravel.test' => 'laravel'];
+        if ($request->command === 'site:describe' && isset($kinds[$domain])) {
             $document = json_decode(env_recorded_bytes('site-describe.demo-php.test.json'), true, 64, JSON_THROW_ON_ERROR);
             $document['data']['domain'] = $domain;
-            $document['data']['profile'] = ['demo-bitrix.test' => 'bitrix', 'demo-wp.test' => 'wordpress', 'demo-app.test' => 'laravel'][$domain];
+            $document['data']['profile'] = $kinds[$domain];
 
             return PanelAnswer::fromDocument($request->requestId, $document);
         }
@@ -189,7 +209,7 @@ final class ServingGateway implements PanelGateway
             return $this->inner->ask($request);
         }
         $document = json_decode(env_recorded_bytes('self-describe.json'), true, 64, JSON_THROW_ON_ERROR);
-        $document['data']['simai_env']['version'] = '1.56.1';
+        $document['data']['simai_env']['version'] = '1.56.2';
         $document['data']['gate']['commands'] = array_merge($document['data']['gate']['commands'], $this->lists);
 
         return PanelAnswer::fromDocument($request->requestId, $document);
@@ -271,8 +291,9 @@ env_assert(str_contains($generic, 'data-env-route-unavailable="restore"') && str
 $static = (string) $newSite($current)->create($asking('/admin/server/sites/new?profile=static&route=repo'))->render();
 env_assert(str_contains($static, 'data-env-route-unavailable="repo"') && str_contains($static, 'The panel cannot send this archive yet.'), 'A release archive is not the panel\'s yet.');
 $laravel = (string) $newSite($current)->create($asking('/admin/server/sites/new?profile=laravel'))->render();
-env_assert(str_contains($laravel, '<li>Deploy the application — outside the panel (SSH or SFTP)</li>') && !str_contains($laravel, 'data-env-route-field="git"')
-    && str_contains($laravel, 'data-env-route-field="db-engine"'), 'Laravel: the deploy step is said as done outside the panel; its repository is not asked here.');
+env_assert(str_contains($laravel, '<li>Deploy the application</li>') && !str_contains($laravel, 'outside the panel') && str_contains($laravel, 'data-env-route-field="git" data-env-route-later')
+    && str_contains($laravel, 'data-env-route-field="ref" data-env-route-later') && str_contains($laravel, 'data-env-route-field="db-engine"'),
+    'Laravel: the repository and its ref asked now for the deploy step the panel leads: '.$laravel);
 // A kind none of whose ways can be made now is shown with the reason, never as a link.
 $noRedirect = new ServingGateway($recorded, $listed, true, static function (array $document): array {
     foreach ($document['data']['profiles'] as $index => $profile) {
@@ -402,24 +423,75 @@ $olderSource = $card($siteCard(new class ($bitrixAt('prepare')) implements Panel
 env_assert(str_contains($olderSource, 'data-env-site-route-step="bitrix-restore-ready"') && !str_contains($olderSource, 'data-env-site-route-field'), 'A 1.55 server: the archive in the root only.');
 $finishing = $card($siteCard($bitrixAt('finalize')), 'demo-bitrix.test');
 env_assert(str_contains($finishing, 'name="operation" value="bitrix-finalize"') && str_contains($finishing, '>Finish the Bitrix setup</button>'), 'The setup finished through its plan.');
-// WordPress waiting for its install (wp:status prepare, said as site:status does): the values given at creation offered again.
-$wpGateway = new ServingGateway($recorded, $listed);
-$wpGateway->answers['site:status demo-wp.test'] = ['schema' => 'simai-panel-answer/1', 'request_id' => 'x', 'status' => 'ok', 'kind' => 'result',
-    'data' => ['schema' => 'simai-site-status/1', 'domain' => 'demo-wp.test', 'profile' => 'wordpress', 'route' => 'new'] + array_intersect_key($document('wp-status.prepare.json')['data'],
-        ['step' => 1, 'next' => 1, 'pending' => 1]) + ['restore_url' => null, 'installer_url' => null]];
-$wpCard = $card($siteCard($wpGateway), 'demo-wp.test', $session);
-env_assert(str_contains($wpCard, 'name="operation" value="wordpress-install"') && str_contains($wpCard, 'name="title"') && str_contains($wpCard, 'value="Demo WordPress"')
-    && str_contains($wpCard, 'value="admin@stand.test"') && str_contains($wpCard, 'current="1"'), 'WordPress\'s install, its values offered again: '.$wpCard);
-// A Laravel application without its key: laravel:finalize, with the migrations.
-$appGateway = new ServingGateway($recorded, $listed);
-$appGateway->answers['site:status demo-app.test'] = ['schema' => 'simai-panel-answer/1', 'request_id' => 'x', 'status' => 'ok', 'kind' => 'result', 'data' => ['schema' => 'simai-site-status/1',
-    'domain' => 'demo-app.test', 'profile' => 'laravel', 'route' => 'repo', 'step' => 'configure', 'next' => 'laravel:finalize', 'restore_url' => null, 'installer_url' => null, 'pending' => []]];
-$appCard = $card($siteCard($appGateway), 'demo-app.test');
-env_assert(str_contains($appCard, 'name="operation" value="laravel-finalize"') && str_contains($appCard, 'name="migrate" value="yes" checked') && str_contains($appCard, 'Now: the application waits for its key.'),
+// A site's state on its route as ENV recorded it (set 33), one site:status per step.
+$at = static function (string $domain, string $step) use ($recorded, $listed, $document): ServingGateway {
+    $gateway = new ServingGateway($recorded, $listed);
+    $gateway->answers["site:status {$domain}"] = $document("site-status.{$domain}.{$step}.json");
+
+    return $gateway;
+};
+// WordPress waiting for its install: the values given at creation offered again; once installed, the site is ready.
+$wpCard = $card($siteCard($at('demo-wp.test', 'prepare')), 'demo-wp.test', $session);
+env_assert(str_contains($wpCard, 'data-env-site-route="none" data-env-site-step="prepare"') && str_contains($wpCard, 'name="operation" value="wordpress-install"')
+    && str_contains($wpCard, 'name="title"') && str_contains($wpCard, 'value="Demo WordPress"') && str_contains($wpCard, 'value="admin@stand.test"'),
+    'WordPress\'s install, its values offered again: '.$wpCard);
+$wpDone = $card($siteCard($at('demo-wp.test', 'done')), 'demo-wp.test');
+env_assert(str_contains($wpDone, 'data-env-site-route-done>The site is ready.') && !str_contains($wpDone, 'name="operation"'), 'WordPress installed: ready: '.$wpDone);
+// A WordPress copy: its files first, then the restore from what the server found, the setup finished, and ready.
+$wpUpload = $card($siteCard($at('demo-wp-copy.test', 'upload')), 'demo-wp-copy.test');
+env_assert(str_contains($wpUpload, 'data-env-site-step="upload"') && str_contains($wpUpload, 'data-env-site-route-tab="files"') && !str_contains($wpUpload, 'data-env-site-route-outside'),
+    'The copy\'s files go to the site\'s folder: '.$wpUpload);
+$wpRestore = $card($siteCard($at('demo-wp-copy.test', 'restore-install')), 'demo-wp-copy.test');
+env_assert(str_contains($wpRestore, 'data-env-site-step="install"') && str_contains($wpRestore, 'name="operation" value="wordpress-restore-ready"')
+    && str_contains($wpRestore, 'data-env-site-route-field="files"') && str_contains($wpRestore, 'data-env-site-route-field="dump"'), 'The copy restored through its plan: '.$wpRestore);
+$wpFinal = $card($siteCard($at('demo-wp-copy.test', 'finalize')), 'demo-wp-copy.test');
+env_assert(str_contains($wpFinal, 'name="operation" value="wordpress-finalize"') && str_contains($wpFinal, 'data-env-site-route-pending>The next step also puts right: Permissions of wp-config.php.')
+    && str_contains($wpFinal, 'current="3"'),
+    'The copy\'s setup finished, with what is left: '.$wpFinal);
+env_assert(str_contains($card($siteCard($at('demo-wp-copy.test', 'restore-done')), 'demo-wp-copy.test'), 'data-env-site-route-done'), 'The copy is ready.');
+// Laravel from Git: made with the repository and its ref kept for the deploy, deployed through its plan, then finished.
+$appSession = new Store('panel', new ArraySessionHandler(10));
+$appForm = ['domain' => 'demo-laravel.test', 'profile' => 'laravel', 'route' => 'repo', 'php' => '8.3', 'git' => 'https://github.com/example/app', 'ref' => 'main'];
+$wrongRepo = $asking('/admin/server/sites/new/plan', 'POST', ['git' => 'ext::sh -c id'] + $appForm);
+env_assert($newSite($current)->plan($wrongRepo) instanceof RedirectResponse && $notice($wrongRepo) === 'Check the field «Git repository (https)».', 'A repository the gateway would refuse: '.$notice($wrongRepo));
+$noRef = $asking('/admin/server/sites/new/plan', 'POST', ['ref' => ''] + $appForm);
+env_assert($newSite($current)->plan($noRef) instanceof RedirectResponse && $notice($noRef) === 'Check the field «Branch, tag or commit».', 'A repository without its ref: '.$notice($noRef));
+$appPlan = $newSite($current)->plan($asking('/admin/server/sites/new/plan', 'POST', $appForm, $appSession));
+env_assert($appPlan instanceof \Illuminate\View\View && ($appPlan->getData()['hidden']['git'] ?? null) === 'https://github.com/example/app'
+    && str_contains((string) $appPlan->render(), 'data-env-plan-then>Then: Deploy the application → Finish the setup → Check the site.</p>'), 'Laravel is planned with its later steps.');
+$newSite($current)->run($asking('/admin/server/sites/new/run', 'POST', $appPlan->getData()['hidden'], $appSession));
+env_assert($appSession->get(NewSiteController::ROUTE_VALUES.'.demo-laravel.test') === ['route' => 'repo', 'git' => 'https://github.com/example/app', 'ref' => 'main'],
+    'The repository and its ref wait for the deploy.');
+$deploying = $card($siteCard($at('demo-laravel.test', 'deploy')), 'demo-laravel.test', $appSession);
+env_assert(str_contains($deploying, 'data-env-site-step="deploy"') && str_contains($deploying, 'name="operation" value="deploy"')
+    && str_contains($deploying, 'type="url" id="env-route-git" name="git"') && str_contains($deploying, 'value="https://github.com/example/app"') && str_contains($deploying, 'value="main"')
+    && str_contains($deploying, '>Deploy the application</button>') && !str_contains($deploying, 'data-env-site-route-outside'), 'The deploy from Git through its plan, its values offered again: '.$deploying);
+$deployPlan = $siteCard($current)->plan($asking('/admin/server/sites/demo-static.test/plan', 'POST', ['operation' => 'deploy', 'git' => 'https://github.com/example/site', 'ref' => 'v1.0.0']), 'demo-static.test');
+env_assert($deployPlan instanceof \Illuminate\View\View && $deployPlan->getData()['plan']->command === 'site:deploy'
+    && $deployPlan->getData()['plan']->args === ['domain' => 'demo-static.test', 'git' => 'https://github.com/example/site', 'ref' => 'v1.0.0']
+    && $deployPlan->getData()['hidden'] === ['operation' => 'deploy', 'git' => 'https://github.com/example/site', 'ref' => 'v1.0.0'], 'The recorded deploy is planned.');
+$deployRun = $siteCard($current)->run($asking('/admin/server/sites/demo-static.test/run', 'POST', $deployPlan->getData()['hidden']), 'demo-static.test');
+env_assert(str_contains($deployRun->getTargetUrl(), 'larena.env.admin.job/'), 'Confirmed, the deploy is a job: '.$deployRun->getTargetUrl());
+$otherRepo = $asking('/admin/server/sites/demo-laravel.test/plan', 'POST', ['operation' => 'deploy', 'git' => 'https://github.com/example/app', 'ref' => 'main']);
+env_assert($siteCard($current)->plan($otherRepo, 'demo-laravel.test') instanceof RedirectResponse && $notice($otherRepo) !== '', 'A deploy the set holds no plan of is not answered with another\'s.');
+$noArchive = $asking('/admin/server/sites/demo-laravel.test/plan', 'POST', ['operation' => 'deploy', 'git' => 'https://github.com/example/app']);
+env_assert($siteCard($current)->plan($noArchive, 'demo-laravel.test') instanceof RedirectResponse && $notice($noArchive) === $lines['reasons']['invalid_argument'],
+    'A repository without its ref never leaves: '.$notice($noArchive));
+// A static release waits for its archive: the panel sends none, so the step is said as done outside it.
+$staticAt = new ServingGateway($recorded, $listed);
+$staticAt->answers['site:status demo-static.test'] = $document('site-status.demo-static.test.json');
+$staticAt->answers['site:status demo-static.test']['data'] = ['step' => 'prepare', 'next' => 'site:deploy', 'route' => 'none'] + $staticAt->answers['site:status demo-static.test']['data'];
+$staticWaits = $card($siteCard($staticAt), 'demo-static.test');
+env_assert(str_contains($staticWaits, 'data-env-site-route-outside') && !str_contains($staticWaits, 'value="deploy"'), 'A release archive stays outside the panel: '.$staticWaits);
+// Deployed, the application waits for its key: laravel:finalize, with the migrations.
+$appCard = $card($siteCard($at('demo-laravel.test', 'configure')), 'demo-laravel.test');
+env_assert(str_contains($appCard, 'data-env-site-route="installed" data-env-site-step="configure"') && str_contains($appCard, 'name="operation" value="laravel-finalize"')
+    && str_contains($appCard, 'name="migrate" value="yes" checked') && str_contains($appCard, 'Now: the application waits for its key.')
+    && str_contains($appCard, 'data-env-site-route-pending>The next step also puts right: The application key (APP_KEY).'),
     'Laravel finished through its plan: '.$appCard);
-$appGateway->answers['site:status demo-app.test']['data']['step'] = 'deploy';
-$appGateway->answers['site:status demo-app.test']['data']['next'] = 'site:deploy';
-env_assert(str_contains($card($siteCard($appGateway), 'demo-app.test'), 'data-env-site-route-outside'), 'A deploy is said as done outside the panel.');
+$finalize = $siteCard($current)->plan($asking('/admin/server/sites/demo-laravel.test/plan', 'POST', ['operation' => 'laravel-finalize', 'migrate' => 'yes']), 'demo-laravel.test');
+env_assert($finalize instanceof \Illuminate\View\View && $finalize->getData()['plan']->command === 'laravel:finalize' && $finalize->getData()['plan']->target === 'demo-laravel.test',
+    'laravel:finalize is planned as recorded.');
 // An older server (the set's own 1.49.0, no site:status): the overview as before.
 env_assert($card($siteCard(new ServingGateway($recorded, null)), 'demo-php.test') === '', 'No block, no refusal on an older server.');
 $olderPage = (string) $siteCard(new ServingGateway($recorded, null))->show($asking('/admin/server/sites/demo-php.test'), 'demo-php.test')->render();
