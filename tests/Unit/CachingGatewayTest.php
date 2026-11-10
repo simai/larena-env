@@ -375,4 +375,54 @@ env_assert((new CachingPanelGateway($batching, $changeWarmCache, 30, 600))->warm
 $warmKept = array_filter($changeWarm->seconds(), static fn (string $key): bool => str_starts_with($key, 'larena-env:gateway:') && strlen($key) === strlen('larena-env:gateway:') + 40, ARRAY_FILTER_USE_KEY);
 env_assert(array_values($warmKept) === [30], 'A warmed slow read is kept half a minute while a job may be changing the server: '.json_encode($changeWarm->seconds()));
 
+// A server too busy to answer (test server 2026-11-10: a nightly backup made every call take 4-9 s): a page shows what
+// the server last said, not «data unavailable»; a read it never answered still fails; a refusal is never covered.
+$busy = new class () implements PanelGateway {
+    public bool $silent = false;
+    public bool $refuse = false;
+    public int $asked = 0;
+
+    public function ask(PanelRequest $request): PanelAnswer
+    {
+        $this->asked++;
+        if ($this->refuse) {
+            return PanelAnswer::refused($request->requestId, 'not_allowed');
+        }
+
+        return $this->silent ? PanelAnswer::failed($request->requestId, 'gateway_process_failed')
+            : PanelAnswer::fromDocument($request->requestId, ['status' => 'ok', 'kind' => 'result', 'data' => ['site' => $request->args['domain'] ?? '']]);
+    }
+
+    public function source(): string
+    {
+        return 'ssh';
+    }
+};
+$busyCache = new Repository(new ArrayStore());
+// ttl 0: the short-lived answer is gone at once, as after its half minute.
+$said = (new CachingPanelGateway($busy, $busyCache, 0))->ask(PanelRequest::read($admin, 'site:describe', ['domain' => 'storage.test']));
+$busy->silent = true;
+$last = (new CachingPanelGateway($busy, $busyCache, 0))->ask(PanelRequest::read($admin, 'site:describe', ['domain' => 'storage.test']));
+env_assert($last->status === PanelAnswerStatus::Ok && $last->data === ['site' => 'storage.test'] && $last->receivedAt === $said->receivedAt && $busy->asked === 2,
+    'A silent server: the page shows the last answer with its time.');
+env_assert(is_int(CachingPanelGateway::silentSince($busyCache)), 'The silence is still noted, so the alert bar says so.');
+$down = (new CachingPanelGateway($busy, $busyCache, 0))->ask(PanelRequest::read($admin, 'site:describe', ['domain' => 'storage.test']));
+env_assert($down->status === PanelAnswerStatus::Ok && $busy->asked === 2, 'While the server is marked down, the last answer without a wait.');
+$never = (new CachingPanelGateway($busy, $busyCache, 0))->ask(PanelRequest::read($admin, 'site:describe', ['domain' => 'other.test']));
+env_assert($never->reason === 'gateway_process_failed', 'A read the server never answered still says it is unavailable.');
+$others = (new CachingPanelGateway($busy, $busyCache, 0))->ask(PanelRequest::read($owner, 'site:describe', ['domain' => 'storage.test']));
+env_assert($others->reason === 'gateway_process_failed', 'Never another person\'s last answer.');
+$busyCache->forget('larena-env:gateway:down');
+$busy->silent = false;
+$busy->refuse = true;
+$refused = (new CachingPanelGateway($busy, $busyCache, 0))->ask(PanelRequest::read($admin, 'site:describe', ['domain' => 'storage.test']));
+env_assert($refused->status === PanelAnswerStatus::Refused, 'A refusal is said, never covered by an old answer.');
+$busy->refuse = false;
+$busy->silent = true;
+$busyGateway = new CachingPanelGateway($busy, $busyCache, 0);
+$busyGateway->forgetAll();
+$busyCache->forget('larena-env:gateway:down');
+$afterAction = (new CachingPanelGateway($busy, $busyCache, 0))->ask(PanelRequest::read($admin, 'site:describe', ['domain' => 'storage.test']));
+env_assert($afterAction->reason === 'gateway_process_failed', 'After an action the state before it is not shown as the server\'s.');
+
 echo "CachingGatewayTest passed.\n";

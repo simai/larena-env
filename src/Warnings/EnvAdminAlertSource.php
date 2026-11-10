@@ -14,6 +14,7 @@ use Larena\Admin\Alerts\AdminAlertAction;
 use Larena\Admin\Alerts\AdminAlertLevel;
 use Larena\Admin\Contracts\AdminAlertSource;
 use Larena\Env\Gateway\PanelActor;
+use Larena\Env\Gateway\PanelReason;
 use Larena\Env\Gateway\PanelRefused;
 use Larena\Env\Http\Controllers\UpdateController;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
@@ -88,6 +89,11 @@ final readonly class EnvAdminAlertSource implements AdminAlertSource
         $canAcknowledge = $this->authorizer?->authorize($request, 'env.sites.operate')->isAllowed() ?? false;
         $back = $request->getRequestUri();
         $alerts = [];
+        // The pages show what the server last said while it is silent (test server 2026-11-10): the red line still says
+        // since when, so nobody takes the old answers for the current ones.
+        if ($this->silentSince !== null && ($this->silentSince)() !== null) {
+            $alerts[] = $this->unanswered(PanelReason::UNANSWERED);
+        }
         foreach ($warnings as $warning) {
             if ($warning->state === 'acked' || $warning->state === 'resolved') {
                 continue;

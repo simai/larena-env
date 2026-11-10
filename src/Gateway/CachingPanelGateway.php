@@ -74,6 +74,16 @@ final class CachingPanelGateway implements PanelGateway, PanelFileGateway
 
     private const int SILENT_SECONDS = 900;
 
+    /**
+     * The last good answer of each kept read, beside the short-lived one: when the server does not answer (a nightly
+     * backup on a small server made every call take 4-9 s, test server 2026-11-10), a page shows what the server last
+     * said instead of «data unavailable», and the alert bar says since when the server is silent and that the pages may
+     * be out of date. Keyed by the same generation, so an action made through the panel never shows the state before it.
+     */
+    private const string LAST_GOOD = 'larena-env:gateway:last-good:';
+
+    public const int LAST_GOOD_SECONDS = 86400;
+
     /** The reason the gateway gives when it did not answer at all. */
     private const string UNANSWERED = PanelReason::UNANSWERED;
 
@@ -125,7 +135,7 @@ final class CachingPanelGateway implements PanelGateway, PanelFileGateway
             return $this->asked[$key] = $kept;
         }
         if ($this->flag(self::DOWN)) {
-            return PanelAnswer::failed($request->requestId, self::UNANSWERED);
+            return $this->lastGood($key) ?? PanelAnswer::failed($request->requestId, self::UNANSWERED);
         }
         $answer = $this->inner->ask($request);
         $this->note($answer);
@@ -133,6 +143,8 @@ final class CachingPanelGateway implements PanelGateway, PanelFileGateway
         if ($answer->status === PanelAnswerStatus::Ok) {
             $this->asked[$key] = $answer;
             $this->write($key, $answer, $this->ttlFor($request->command, $this->ttl));
+        } elseif ($answer->reason === self::UNANSWERED && ($last = $this->lastGood($key)) !== null) {
+            return $this->asked[$key] = $last;
         }
 
         return $answer;
@@ -151,7 +163,7 @@ final class CachingPanelGateway implements PanelGateway, PanelFileGateway
         $this->remember($request);
         // A silent server is not asked again on a click: the person waits once, not on every «Обновить».
         if ($this->flag(self::DOWN)) {
-            return PanelAnswer::failed($request->requestId, self::UNANSWERED);
+            return $this->lastGood($key) ?? PanelAnswer::failed($request->requestId, self::UNANSWERED);
         }
         $answer = $this->inner->ask($request);
         $this->note($answer);
@@ -160,6 +172,9 @@ final class CachingPanelGateway implements PanelGateway, PanelFileGateway
             $this->write($key, $answer, $this->ttlFor($request->command, $this->ttl));
         } else {
             unset($this->asked[$key]);
+            if ($answer->reason === self::UNANSWERED && ($last = $this->lastGood($key)) !== null) {
+                return $last;
+            }
         }
 
         return $answer;
@@ -527,8 +542,18 @@ final class CachingPanelGateway implements PanelGateway, PanelFileGateway
     {
         try {
             $this->cache->put($key, serialize($answer), $ttl);
+            // A log's answer says when it was read (receivedAt), so an old one is shown with its time.
+            if ($answer->status === PanelAnswerStatus::Ok) {
+                $this->cache->put(self::LAST_GOOD.$key, serialize($answer), self::LAST_GOOD_SECONDS);
+            }
         } catch (Throwable) {
             // Not kept: the next screen asks the server.
         }
+    }
+
+    /** What the server last said to this read, while it is silent; null when it never answered it (or a day ago). */
+    private function lastGood(string $key): ?PanelAnswer
+    {
+        return $this->read(self::LAST_GOOD.$key);
     }
 }

@@ -180,4 +180,15 @@ $otherwise = new class () implements \Larena\Env\Contracts\PanelGateway {
 $odd = (new EnvAdminAlertSource($resolver, new ServerOverviewReader($otherwise), new SiteExtrasReader($otherwise), $translator))->alerts($as(new PanelActor('admin@example.com')))[0]->text;
 env_assert(str_contains($odd, 'the panel could not reach the server') && !str_contains($odd, 'gateway_answer_invalid'), 'Any other reason in general words: '.$odd);
 
+// The pages show the server's last answers while it is silent (test server 2026-11-10): the red line comes first, the
+// warnings of those last answers after it.
+$stale = new EnvAdminAlertSource($resolver, new ServerOverviewReader($gateway), new SiteExtrasReader($gateway), $translator, null, null, ['panel.localhost'], static fn (): int => $firstSilent);
+$staleSaid = $stale->alerts($as(new PanelActor('admin@example.com')));
+env_assert(count($staleSaid) > 1 && $staleSaid[0]->id === 'env:server-unanswered' && str_contains($staleSaid[0]->text, 'since 02.01.2026 03:07 UTC')
+    && count(array_filter($staleSaid, static fn (AdminAlert $alert): bool => $alert->id === 'env:server-unanswered')) === 1,
+    'Silent with answers to show: the red line once, then the warnings: '.json_encode(array_map(static fn (AdminAlert $alert): string => $alert->id, $staleSaid)));
+$answering = new EnvAdminAlertSource($resolver, new ServerOverviewReader($gateway), new SiteExtrasReader($gateway), $translator, null, null, ['panel.localhost'], static fn (): ?int => null);
+env_assert(array_filter($answering->alerts($as(new PanelActor('admin@example.com'))), static fn (AdminAlert $alert): bool => $alert->id === 'env:server-unanswered') === [],
+    'An answering server: no red line.');
+
 echo "EnvAlertSourceTest passed.\n";
