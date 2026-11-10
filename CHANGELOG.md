@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- The rules of a site's profile in «Проверка» (simai-env 1.55.1): a rule the server's check names (`key`) says what
+  the server found and «с <когда>» it does not pass, in the same list as the other checks; where the server offers a
+  fix and lists `site:check-fix`, «Исправить…» opens the server's plan (which names the rule, what was found and what
+  the server would do) and the confirmation starts a job, as every site action. The rules that pass are counted as
+  before, their list under «Пройденные правила профиля». A refusal is said in words («Уже исправлено», «Такой проверки
+  у сайта нет») and makes the kept check stale, so the page shows the server's state as it is. `site:check-state` and
+  `site:check-fix` join the command table; `SiteChecks` prepares the block's rows. A server without rules or without
+  `site:check-fix` shows the block as before. The answers are ENV's recordings of simai-env v1.55.1 (`recorded_from`).
 - A site's names (owner decision 2026-11-07, simai-env 1.53.0): «Домены и HTTPS» gets «Имена сайта», one row per
   name with its kind (основное / дополнительное / все поддомены), whether it shows the site or redirects to the main
   domain, whether its DNS points here and whether the certificate covers it; «Добавить имя» (redirect and the DNS check

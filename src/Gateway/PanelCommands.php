@@ -68,6 +68,8 @@ final class PanelCommands
     private const string S3_KEY = '/\A[A-Za-z0-9\/+=._-]{8,256}\z/D';
     private const string KEEP_DAYS = '/\A(?:[1-9]|[1-8][0-9]|90)\z/D';
     private const string STAMP = '/\A[0-9]{8}-[0-9]{6}\z/D';
+    // A profile rule of a site's check by its stable id, as site:doctor names it in `fix` (simai-env 1.55.1): bitrix.db-charset.
+    private const string CHECK_ID = '/\A[a-z0-9][a-z0-9._-]{0,63}\z/D';
     private const string PERIOD = '/\A(?:hour|6h|day|week|month)\z/D';
     // The server's security (simai-env 1.45.0–1.47.0): what security:fix puts right, the protection levels, and the
     // requests one address may send a second (2–1000) and at once (10–10000).
@@ -247,6 +249,10 @@ final class PanelCommands
         'site:name-add' => ['args' => ['domain' => self::DOMAIN, 'name' => self::DOMAIN, 'mode' => self::NAME_MODE, 'check-dns' => self::YES_NO],
             'required' => ['domain', 'name'], 'since' => '1.53.0', 'kind' => self::ACTION],
         'site:name-remove' => ['args' => ['domain' => self::DOMAIN, 'name' => self::DOMAIN], 'required' => ['domain', 'name'], 'since' => '1.53.0', 'kind' => self::ACTION],
+        // A profile rule of the site's check (simai-env 1.55.1): its state alone, and the fix the server offers for it,
+        // planned and confirmed as every action; refused with unknown_check or, for a rule that passes, check_ok.
+        'site:check-state' => ['args' => ['domain' => self::DOMAIN, 'id' => self::CHECK_ID], 'required' => ['domain', 'id'], 'since' => '1.55.1', 'kind' => self::READ],
+        'site:check-fix' => ['args' => ['domain' => self::DOMAIN, 'id' => self::CHECK_ID], 'required' => ['domain', 'id'], 'since' => '1.55.1', 'kind' => self::ACTION],
         // A timed change kept by the person who made it (the firewall, the panel's access, nginx directives): without the
         // confirmation in time, the server puts the previous one back by itself.
         'change:confirm' => ['args' => ['change_id' => self::CHANGE_ID], 'required' => ['change_id'], 'since' => '1.35.0', 'kind' => self::ACTION],
@@ -367,6 +373,12 @@ final class PanelCommands
     public static function names(): array
     {
         return array_keys(self::COMMANDS);
+    }
+
+    /** Whether the text is a profile rule's id as the gateway takes it: a fix is offered only for one that would leave. */
+    public static function isCheckId(string $id): bool
+    {
+        return preg_match(self::CHECK_ID, $id) === 1;
     }
 
     /** `read`, `action` or `job`; null for a command this package may not send. */

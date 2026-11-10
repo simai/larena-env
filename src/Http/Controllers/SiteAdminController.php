@@ -176,7 +176,10 @@ final readonly class SiteAdminController
             // Whether a certificate may be checked through DNS: the server keeps a Cloudflare token (simai-env 1.36.0).
             'dnsCertificates' => $ask('ssl:dns-status', 'domains') && $this->extras->dnsCertificates($actor)?->configured === true,
             'tabOperations' => array_values(array_filter($operations, static fn (SiteOperation $operation): bool => $operation->tab() === $tab
-                && !in_array($operation, SiteOperation::NAMES, true))),
+                && !in_array($operation, SiteOperation::NAMES, true) && !in_array($operation, SiteOperation::CHECKS, true))),
+            // The fix of a profile's rule that does not pass (simai-env 1.55.1), offered on the rule's own row of «Проверка»
+            // only where the server lists site:check-fix; an older server shows the block as before.
+            'checkFixes' => $capabilities->allows(SiteOperation::CheckFix->command()),
             // The site's names (simai-env 1.53.0): the block is there only where the server lists site:names, so an older
             // server shows the tab as before, without a refusal; adding and removing go through the plan as every action.
             'siteNames' => $siteNames,
@@ -358,6 +361,7 @@ final readonly class SiteAdminController
             'cancelUrl' => route('larena.env.admin.site', ['domain' => $domain], false).'?tab='.$operation->tab(),
             'hidden' => ['operation' => $operation->value] + $input,
             'replaces' => $this->replaces($actor, $operation, $domain, $input['backup'] ?? null),
+            'check' => $result->plan->check,
         ]);
     }
 

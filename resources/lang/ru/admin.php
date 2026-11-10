@@ -220,6 +220,7 @@ return [
         'apache-off' => 'Вернуть только nginx',
         'name-add' => 'Добавить имя сайту',
         'name-remove' => 'Убрать имя сайта',
+        'check-fix' => 'Исправить замечание проверки',
     ],
     'plan' => [
         'title' => 'Подтверждение — Larena Panel',
@@ -308,6 +309,9 @@ return [
         'unknown_cron_job' => 'У этого сайта нет такого задания: возможно, его уже удалили.',
         'cron_jobs_full' => 'У сайта уже 50 заданий — больше сервер не хранит. Сначала удалите ненужное.',
         'unknown_change' => 'Сервер больше не ждёт этого изменения: его уже оставили или отменили.',
+        // A fix of a check's rule (simai-env 1.55.1): the rule passes already, or the site has no such rule.
+        'check_ok' => 'Уже исправлено.',
+        'unknown_check' => 'Такой проверки у сайта нет.',
     ],
     'doctor' => [
         'title' => 'Проверка',
@@ -316,6 +320,27 @@ return [
         'summary' => 'Требуют внимания: :count; пройдено: :passed.',
         'warn' => 'Предупреждение',
         'fail' => 'Проблема',
+        // A rule of the site's profile (simai-env 1.55.1): since when it does not pass, the fix the server offers, the
+        // rules that pass under the count, and what the server found, said before its plan.
+        'since' => 'с :time',
+        'fix' => 'Исправить…',
+        'passed_rules' => 'Пройденные правила профиля: :count',
+        'found' => 'Сейчас: :detail',
+        // The profile's rules by their key (bitrix.db-charset), as a person reads them; an unknown one keeps the server's title.
+        'rules' => [
+            'bitrix_ownership' => 'Файлы сайта, принадлежащие root',
+            'bitrix_docroot_leftovers' => 'Файлы восстановления Битрикс в папке сайта',
+            'bitrix_dot_default' => 'Папки .default Битрикс открываются посетителям',
+            'bitrix_db_session_modes' => 'Режимы работы MySQL для Битрикс',
+            'bitrix_db_charset' => 'Кодировка базы данных по умолчанию',
+            'bitrix_timezone' => 'Часовой пояс PHP',
+            'bitrix_opcache' => 'Настройки ускорителя PHP (OPcache) для Битрикс',
+            'php_fpm_graceful_reload' => 'Перезагрузка PHP не обрывает запросы',
+            'bitrix_upload_limit' => 'Предел размера загружаемых файлов',
+            'bitrix_sef_fallback' => 'Обработка адресов страниц Битрикс',
+            'bitrix_static_gzip' => 'Сжатие стилей и скриптов',
+            'bitrix_static_cache' => 'Кеширование стилей, скриптов и картинок',
+        ],
         // The server's checks by their title (simai-env site:doctor), as a person reads them; an unknown one is shown as it is.
         'checks' => [
             'env_permissions' => 'Права на файл .env',
@@ -354,6 +379,7 @@ return [
             'nginx' => 'веб-сервер',
             'php' => 'PHP',
             'profile' => 'сайт',
+            'rules' => 'правила профиля',
             'ssl' => 'HTTPS',
         ],
     ],

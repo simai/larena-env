@@ -87,6 +87,18 @@ final readonly class RecordedAnswersGateway implements PanelGateway
             }
         }
 
+        // A rule of a site's check (simai-env 1.55.1) is answered as the server would from the site's recorded check: a
+        // rule the check does not offer a fix for is unknown, one that passes is already fixed; the set holds the state of
+        // one rule and the plan of another, and any other is missing, never answered with theirs.
+        if (in_array($request->command, ['site:check-state', 'site:check-fix'], true) && is_string($domain) && is_string($request->args['id'] ?? null)) {
+            $file = $this->checkFile($request, $domain, $request->args['id']);
+            if ($file === null) {
+                return $this->unavailable($request, PanelReason::RECORDING_MISSING);
+            }
+
+            return $this->replay($request, $file);
+        }
+
         $answer = $this->replay($request, $this->fileFor($request, $domain));
         // The set holds one job; a question about another one is missing, never answered with this one's.
         $recordedJob = is_string($answer->data['job_id'] ?? null) ? $answer->data['job_id'] : null;
@@ -96,6 +108,35 @@ final readonly class RecordedAnswersGateway implements PanelGateway
         }
 
         return $answer;
+    }
+
+    /** The recorded answer about one rule of a site's check; null when the set holds none for this rule. */
+    private function checkFile(PanelRequest $request, string $domain, string $id): ?string
+    {
+        $doctor = $this->document("site-doctor.{$domain}.json");
+        $status = null;
+        foreach (is_array($doctor) && is_array($doctor['data']['checks'] ?? null) ? $doctor['data']['checks'] : [] as $check) {
+            if (is_array($check) && ($check['fix'] ?? null) === $id) {
+                $status = $check['status'] ?? null;
+            }
+        }
+        if ($status === null) {
+            return 'refused.unknown-check.json';
+        }
+        if ($request->command === 'site:check-state') {
+            $state = $this->document('site-check-state.'.str_replace('.', '-', $id).'.json');
+
+            return is_array($state) ? 'site-check-state.'.str_replace('.', '-', $id).'.json' : null;
+        }
+        if ($status === 'PASS') {
+            return 'refused.check-ok.json';
+        }
+        $plan = $this->document('plan.site-check-fix.json');
+        if (!is_array($plan) || ($plan['data']['args'] ?? null) !== ['domain' => $domain, 'id' => $id]) {
+            return null;
+        }
+
+        return $request->confirm ? 'job-site-check-fix.json' : 'plan.site-check-fix.json';
     }
 
     private function fileFor(PanelRequest $request, ?string $domain): string

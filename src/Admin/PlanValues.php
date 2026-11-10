@@ -21,13 +21,14 @@ final class PlanValues
 
     /**
      * @param array<string, string> $args
+     * @param list<string> $without the values the plan says in its own words above (a check's id, said by its title)
      * @return list<array{name: string, label: string, value: string}>
      */
-    public static function of(array $args, ?string $target): array
+    public static function of(array $args, ?string $target, array $without = []): array
     {
         $rows = [];
         foreach ($args as $name => $value) {
-            if ($name === 'domain' && $value === $target) {
+            if (($name === 'domain' && $value === $target) || in_array($name, $without, true)) {
                 continue;
             }
             $rows[] = ['name' => $name, 'label' => in_array($name, self::NAMED, true) ? self::text('fields.'.$name) ?? $name : $name, 'value' => match ($value) {

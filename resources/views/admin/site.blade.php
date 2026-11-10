@@ -65,14 +65,37 @@
                 @else
                     <p>{{ __('larena-env::admin.doctor.summary', ['count' => (string) count($doctor->problems), 'passed' => (string) $doctor->passed]) }}</p>
                     <ul class="m-0 p-0" style="list-style: none;">
-                        @foreach ($doctor->problems as $problem)
-                            <li class="flex flex-wrap items-cross-center g-1 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-problem="{{ $problem['status'] }}">
-                                <sf-badge appearance="tonal" status="{{ str_contains(strtolower($problem['status']), 'fail') || str_contains(strtolower($problem['status']), 'err') ? 'error' : 'warning' }}" text="{{ __('larena-env::admin.doctor.'.strtolower($problem['status'])) }}"></sf-badge>
-                                <span class="grow min-w-0" style="overflow-wrap: anywhere;" data-env-check="{{ $problem['title'] }}">{{ \Larena\Env\Server\SiteDoctor::checkText($problem['title']) }}</span>
-                                <span class="text-small color-on-surface-variant">{{ \Larena\Env\Server\SiteDoctor::areaText($problem['area']) }}</span>
+                        {{-- A rule of the site's profile (simai-env 1.55.1) says what the server found and since when, and where
+                             the server offers a fix, «Исправить…» opens its plan; other checks are one line as before. --}}
+                        @foreach (\Larena\Env\Admin\SiteChecks::problems($doctor, $checkFixes ?? false) as $problem)
+                            <li class="flex flex-wrap items-cross-center g-1 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-problem="{{ $problem['status'] }}"@if ($problem['key'] !== null) data-env-rule="{{ $problem['key'] }}"@endif>
+                                <sf-badge appearance="tonal" status="{{ $problem['tone'] }}" text="{{ __($problem['label']) }}"></sf-badge>
+                                <span class="grow min-w-0" style="overflow-wrap: anywhere;" data-env-check="{{ $problem['title'] }}">{{ $problem['text'] }}@if ($problem['detail'] !== null || $problem['since'] !== null)<span class="text-small color-on-surface-variant" style="display: block;" data-env-check-detail>{{ $problem['detail'] }}{{ $problem['detail'] !== null && $problem['since'] !== null ? ' · ' : '' }}{{ $problem['since'] !== null ? __('larena-env::admin.doctor.since', ['time' => $problem['since']]) : '' }}</span>@endif</span>
+                                <span class="text-small color-on-surface-variant">{{ $problem['area'] }}</span>
+                                @if ($problem['fix'] !== null)
+                                    <form method="post" action="{{ route('larena.env.admin.site.plan', ['domain' => $domain], false) }}" class="m-0" data-env-check-fix="{{ $problem['fix'] }}">
+                                        @csrf
+                                        <input type="hidden" name="operation" value="{{ \Larena\Env\Operations\SiteOperation::CheckFix->value }}">
+                                        <input type="hidden" name="id" value="{{ $problem['fix'] }}">
+                                        <button type="submit" class="larena-button larena-control-floor">{{ __('larena-env::admin.doctor.fix') }}</button>
+                                    </form>
+                                @endif
                             </li>
                         @endforeach
                     </ul>
+                @endif
+                @if (\Larena\Env\Admin\SiteChecks::passed($doctor) !== [])
+                    <details class="m-t-1" data-env-rules-passed>
+                        <summary class="larena-control-floor" style="cursor: pointer; display: flex; align-items: center;">{{ __('larena-env::admin.doctor.passed_rules', ['count' => (string) count(\Larena\Env\Admin\SiteChecks::passed($doctor))]) }}</summary>
+                        <ul class="m-0 p-0" style="list-style: none;">
+                            @foreach (\Larena\Env\Admin\SiteChecks::passed($doctor) as $rule)
+                                <li class="flex flex-wrap items-cross-center g-1 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-rule="{{ $rule['key'] }}" data-env-rule-state="{{ $rule['status'] }}">
+                                    <span class="grow min-w-0" style="overflow-wrap: anywhere;">{{ $rule['text'] }}</span>
+                                    <span class="text-small color-on-surface-variant" style="overflow-wrap: anywhere;">{{ $rule['detail'] }}</span>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </details>
                 @endif
             </section>
         @elseif ($tab === 'domains')

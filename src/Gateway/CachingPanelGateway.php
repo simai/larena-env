@@ -43,6 +43,12 @@ final class CachingPanelGateway implements PanelGateway, PanelFileGateway
      */
     public const array NOT_WARMED = ['logs:nginx'];
 
+    /**
+     * The refusals that say the page the person acted on is out of date (a check's rule already fixed, or gone): the
+     * kept answers are stale, so the page that says it in words also shows the server's state as it is now.
+     */
+    private const array OUTDATED = ['check_ok', 'unknown_check'];
+
     private const string GENERATION = 'larena-env:gateway:generation';
 
     /** The reads pages asked lately, by person: what the warm-up asks again (simai-env 1.52.0 era, ENV 2026-11-07). */
@@ -116,7 +122,8 @@ final class CachingPanelGateway implements PanelGateway, PanelFileGateway
     {
         if (!self::keeps($request)) {
             $answer = $this->inner->ask($request);
-            if ($request->confirm || PanelCommands::kind($request->command) === PanelCommands::JOB) {
+            if ($request->confirm || PanelCommands::kind($request->command) === PanelCommands::JOB
+                || ($answer->status === PanelAnswerStatus::Refused && in_array($answer->reason, self::OUTDATED, true))) {
                 $this->forgetAll();
             }
             if ($request->confirm) {

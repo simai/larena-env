@@ -21,6 +21,16 @@
             <h3 class="m-top-2 m-bottom-1 text-medium">{{ __('larena-env::admin.software.overview.packages') }}</h3>
             @include('larena-env::admin.partials.system-updates', ['system' => $system])
         @endif
+        {{-- The rule of the site's check a fix puts right: what the server found and what it would do, in its own words. --}}
+        @if (($check ?? null) !== null)
+            <h3 class="m-top-2 m-bottom-1 text-medium" data-env-plan-check="{{ $check->id }}">{{ \Larena\Env\Server\SiteDoctor::checkText($check->title, $check->id) }}</h3>
+            @if ($check->detail !== null)
+                <p class="color-on-surface-variant" data-env-plan-check-detail>{{ __('larena-env::admin.doctor.found', ['detail' => $check->detail]) }}</p>
+            @endif
+            @if ($check->plan !== null)
+                <p data-env-plan-check-plan>{{ $check->plan }}</p>
+            @endif
+        @endif
         @foreach ($then ?? [] as $after)
             <p data-env-plan-then>{{ $after }}</p>
         @endforeach
@@ -28,7 +38,7 @@
              audit, COPY-02). --}}
         <dl class="m-0" style="display: block;" data-env-facts>
             <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.plan.target') }}</dt><dd class="m-0 min-w-0 text-end">{{ $plan->target ?? $target }}</dd></div>
-            @foreach (\Larena\Env\Admin\PlanValues::of($plan->args, $plan->target ?? $target) as $row)
+            @foreach (\Larena\Env\Admin\PlanValues::of($plan->args, $plan->target ?? $target, ($check ?? null) !== null ? ['id'] : []) as $row)
                 <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-plan-argument="{{ $row['name'] }}"><dt class="color-on-surface-variant">{{ $row['label'] }}</dt><dd class="m-0 min-w-0 text-end" style="overflow-wrap: anywhere;">{{ $row['value'] }}</dd></div>
             @endforeach
         </dl>

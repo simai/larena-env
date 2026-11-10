@@ -220,6 +220,7 @@ return [
         'apache-off' => 'Back to nginx only',
         'name-add' => 'Add a name to the site',
         'name-remove' => 'Remove a name from the site',
+        'check-fix' => 'Fix a check finding',
     ],
     'plan' => [
         'title' => 'Confirm — Larena Panel',
@@ -308,6 +309,9 @@ return [
         'unknown_cron_job' => 'This site has no such job: it may have been removed already.',
         'cron_jobs_full' => 'This site already has 50 scheduled jobs, the most the server keeps. Remove one you no longer need first.',
         'unknown_change' => 'The server no longer waits for this change: it was kept or undone already.',
+        // A fix of a check's rule (simai-env 1.55.1): the rule passes already, or the site has no such rule.
+        'check_ok' => 'Already fixed.',
+        'unknown_check' => 'This site has no such check.',
     ],
     'doctor' => [
         'title' => 'Check',
@@ -316,6 +320,27 @@ return [
         'summary' => ':count need attention; :passed passed.',
         'warn' => 'Warning',
         'fail' => 'Problem',
+        // A rule of the site's profile (simai-env 1.55.1): since when it does not pass, the fix the server offers, the
+        // rules that pass under the count, and what the server found, said before its plan.
+        'since' => 'since :time',
+        'fix' => 'Fix…',
+        'passed_rules' => 'Profile rules that pass: :count',
+        'found' => 'Now: :detail',
+        // The profile's rules by their key (bitrix.db-charset), as a person reads them; an unknown one keeps the server's title.
+        'rules' => [
+            'bitrix_ownership' => 'Site files owned by root',
+            'bitrix_docroot_leftovers' => 'Bitrix restore files in the site\'s folder',
+            'bitrix_dot_default' => 'Bitrix .default folders are served to visitors',
+            'bitrix_db_session_modes' => 'MySQL modes for Bitrix',
+            'bitrix_db_charset' => 'Default charset of the database',
+            'bitrix_timezone' => 'PHP time zone',
+            'bitrix_opcache' => 'PHP accelerator (OPcache) settings for Bitrix',
+            'php_fpm_graceful_reload' => 'A PHP reload lets requests finish',
+            'bitrix_upload_limit' => 'Upload size limit',
+            'bitrix_sef_fallback' => 'Bitrix page address handling',
+            'bitrix_static_gzip' => 'Compression of styles and scripts',
+            'bitrix_static_cache' => 'Caching of styles, scripts and images',
+        ],
         // The server's checks by their title (simai-env site:doctor), as a person reads them; an unknown one is shown as it is.
         'checks' => [
             'env_permissions' => '.env permissions',
@@ -354,6 +379,7 @@ return [
             'nginx' => 'web server',
             'php' => 'PHP',
             'profile' => 'site',
+            'rules' => 'profile rules',
             'ssl' => 'HTTPS',
         ],
     ],

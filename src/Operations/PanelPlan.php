@@ -15,6 +15,7 @@ final readonly class PanelPlan
      * @param array<string, string> $args
      * @param ?UpdatePlan $update what a safe update would change (self:update's plan carries it, simai-env 1.32.0)
      * @param ?SystemUpdates $system the packages a system update would install (software:update's plan, simai-env 1.38.0)
+     * @param ?PlanCheck $check the rule of a site's check a fix would put right (site:check-fix's plan, simai-env 1.55.1)
      */
     public function __construct(
         public string $command,
@@ -25,6 +26,7 @@ final readonly class PanelPlan
         public ?string $lock,
         public ?UpdatePlan $update = null,
         public ?SystemUpdates $system = null,
+        public ?PlanCheck $check = null,
     ) {
     }
 
@@ -66,6 +68,7 @@ final readonly class PanelPlan
             lock: is_string($data['lock'] ?? null) ? $data['lock'] : null,
             update: is_array($data['update'] ?? null) ? UpdatePlan::fromData($data['update']) : null,
             system: $command === 'software:update' && is_array($data['update'] ?? null) ? SystemUpdates::fromData($data['update']) : null,
+            check: $command === 'site:check-fix' && is_array($data['check'] ?? null) ? PlanCheck::fromData($data['check']) : null,
         );
     }
 }

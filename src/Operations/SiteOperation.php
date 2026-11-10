@@ -43,6 +43,8 @@ enum SiteOperation: string
     // A site's extra name, such as www, added or removed (simai-env 1.53.0).
     case NameAdd = 'name-add';
     case NameRemove = 'name-remove';
+    // The fix the server offers for a profile rule of the site's check that did not pass (simai-env 1.55.1).
+    case CheckFix = 'check-fix';
 
     public function command(): string
     {
@@ -71,6 +73,7 @@ enum SiteOperation: string
             self::ApacheOn, self::ApacheOff => 'site:apache',
             self::NameAdd => 'site:name-add',
             self::NameRemove => 'site:name-remove',
+            self::CheckFix => 'site:check-fix',
         };
     }
 
@@ -84,6 +87,7 @@ enum SiteOperation: string
             self::Backup, self::BackupRestoreDatabase, self::BackupExtractFiles, self::BackupVerify, self::BackupSchedule => 'backups',
             self::Rollback => 'releases',
             self::SftpCreate, self::SftpAddKey, self::SftpDisable, self::SftpEnable, self::SftpRemove => 'access',
+            self::CheckFix => 'overview',
         };
     }
 
@@ -113,6 +117,8 @@ enum SiteOperation: string
             // `name` is here a host name of the site, `mode` serve or redirect, `check-dns` yes or no.
             self::NameAdd => ['name', 'mode', 'check-dns'],
             self::NameRemove => ['name'],
+            // `id` is the rule's fix id, as the site's check names it.
+            self::CheckFix => ['id'],
             default => [],
         };
     }
@@ -153,6 +159,9 @@ enum SiteOperation: string
      * buttons leaves them out.
      */
     public const array NAMES = [self::NameAdd, self::NameRemove];
+
+    /** The fix of a check's rule: the «Проверка» block offers it on the rule's own row, never among the tab's buttons. */
+    public const array CHECKS = [self::CheckFix];
 
     /** The actions of the system level alone: a site's owner is not offered them (the server refuses them too). */
     public const array SYSTEM_ONLY = [self::ApacheOn, self::ApacheOff];

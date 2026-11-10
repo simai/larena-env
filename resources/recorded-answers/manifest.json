@@ -53,6 +53,16 @@
       "sha256": "56bb0b566ec62d7a03a739c22df70d5820bd9df346beb8a886332a02e50ff833",
       "status": "ok"
     },
+    "job-site-check-fix-status.json": {
+      "sha256": "628fdae7a45c541d7d9c019d3a5ecc85292d1fe3babd821351b0e25938e03c5e",
+      "status": "ok",
+      "recorded_from": "simai-env v1.55.1, testing/fixtures/panel/job-site-check-fix-status.json"
+    },
+    "job-site-check-fix.json": {
+      "sha256": "9e74f122e044b82d6e5cd4911f9e4eb33feedbe499be028e256031af00354719",
+      "status": "ok",
+      "recorded_from": "simai-env v1.55.1, testing/fixtures/panel/job-site-check-fix.json"
+    },
     "job-start.json": {
       "sha256": "f92776ebb15fa0ce0cc62cd922ccf1fba7f316aa5ac12dd9b1496c3d0a8cbb97",
       "status": "ok"
@@ -249,6 +259,11 @@
       "sha256": "cdee61dff8c801f23ca5c3254139c1adba6f3ebe60503df797ebebd98ab95539",
       "status": "ok"
     },
+    "plan.site-check-fix.json": {
+      "sha256": "d0bc24166f424aec415c3897396ca83b945129d2e49dc2004d2af86a317e3913",
+      "status": "ok",
+      "recorded_from": "simai-env v1.55.1, testing/fixtures/panel/plan.site-check-fix.json"
+    },
     "plan.site-db-rotate.json": {
       "sha256": "4aee0d8a00a05d8b77beb33eeebc735f7af8b6ea2e382dacdbc1389a029c1ba7",
       "status": "ok"
@@ -302,6 +317,11 @@
     "plan.ssl-letsencrypt-dns.json": {
       "sha256": "ac44376db53a4ecd758b5de36d49a6a9017d45db71a7fb7b12a490f31a8c0510",
       "status": "ok"
+    },
+    "refused.check-ok.json": {
+      "sha256": "805fd48205ac89fbb4cb7719083cc1771da3650aa5a680f739cde3623ff6019a",
+      "status": "refused",
+      "recorded_from": "simai-env v1.55.1, testing/fixtures/panel/refused.check-ok.json"
     },
     "refused.invalid-argument.access-password.json": {
       "sha256": "efd5b5c01a5f8e1091212a9fbf298027caed8ba17871beab40863f939246464d",
@@ -424,6 +444,11 @@
       "sha256": "e9c2caf336bbc12cde2d25bf1a3325959f164b7e1b868235cab69fbfde1d1270",
       "status": "refused"
     },
+    "refused.unknown-check.json": {
+      "sha256": "a765156f107c03a98ad434ba46313a45230b3ae97642a1609c300f06a390710e",
+      "status": "refused",
+      "recorded_from": "simai-env v1.55.1, testing/fixtures/panel/refused.unknown-check.json"
+    },
     "refused.unknown-cron-job.json": {
       "sha256": "2c273b42bd61c131f39e65becd564bf4f7cfe5e6dd787d1880132ef2dae4ea25",
       "status": "refused"
@@ -496,6 +521,11 @@
       "sha256": "285b3a587cad5fe8d5b834d938486b9826ac83b9fea7b2890c512e942520d722",
       "status": "ok"
     },
+    "site-check-state.bitrix-db-charset.json": {
+      "sha256": "0bf24a6efa0dd2b01b7e468ad819f5f3b9751f79fbc88aa87e550640e8ec246d",
+      "status": "ok",
+      "recorded_from": "simai-env v1.55.1, testing/fixtures/panel/site-check-state.bitrix-db-charset.json"
+    },
     "site-describe.demo-owned.test.json": {
       "sha256": "174e28951d1cae47005c0955b3a4f89f384b75c976034a6857bf2fef419d753b",
       "status": "ok"
@@ -511,6 +541,11 @@
     "site-describe.demo-static.test.json": {
       "sha256": "43aed5bf8dc20ddff6ae0d01889f0e30e12e9e606afd56cd2f2c179cf1948939",
       "status": "ok"
+    },
+    "site-doctor.demo-bitrix.test.json": {
+      "sha256": "85be19ad29ee9864471ec414727f2216c11abacca850b3557a3ecfc3750e4ad3",
+      "status": "ok",
+      "recorded_from": "simai-env v1.55.1, testing/fixtures/panel/site-doctor.demo-bitrix.test.json"
     },
     "site-doctor.demo-owned.test.json": {
       "sha256": "7165b7d8b4712af47624c01abebdae2090bd5d149b5c931bf32d5629c15b7ab4",
