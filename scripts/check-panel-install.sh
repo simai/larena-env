@@ -293,7 +293,8 @@ assert status == 200 and "data-env-new-owner" in wizard, "the wizard, with whose
 assert re.search(r'name="daily-backup" value="yes" data-env-new-daily-backup\s+checked', wizard), "a new site gets its daily backup by default"
 # The kinds from the server (self:profiles, simai-env 1.33.0): with 1C-Bitrix and an app on a port.
 for kind in ("static", "generic", "laravel", "wordpress", "node", "redirect", "bitrix", "proxy"):
-    assert 'data-env-profile-hint="' + kind + '"' in wizard, ("each kind says what it is", kind)
+    # A kind the server turned off (simai-env 1.56.1: node is profile_disabled) is greyed with its reason instead.
+    assert ('data-env-profile-hint="' + kind + '"' in wizard or 'data-env-profile-unavailable="' + kind + '"' in wizard), ("each kind says what it is", kind)
 assert 'data-env-new-profile="static"' in wizard and 'data-env-field=' not in wizard, "a static site asks for no PHP, database or target"
 _, laravel = get("/admin/server/sites/new?profile=laravel")
 assert 'data-env-new-profile="laravel"' in laravel and all('data-env-field="' + field + '"' in laravel for field in ("php", "database", "engine")) and 'data-env-field="redirect"' not in laravel, "Laravel asks for PHP and a database"
