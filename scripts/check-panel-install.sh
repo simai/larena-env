@@ -37,11 +37,14 @@ failed() {
 }
 
 mkdir -p "$APP" "$WORK/packages/env"
-(cd "$ENV_REPO/assembly" && git ls-files -co --exclude-standard . | tar -cf - -T -) | tar -xf - -C "$APP"
+# Through files, not pipes: a reading tar that stops at the end marker fails the writer with «Write error».
+(cd "$ENV_REPO/assembly" && git ls-files -co --exclude-standard . | tar -cf "$WORK/assembly.tar" -T -)
+tar -xf "$WORK/assembly.tar" -C "$APP"; rm -f "$WORK/assembly.tar"
 # The same parts of larena/env the release build takes (scripts/build-panel-archive.sh, ENV_PATHS), so a part the
 # release would leave out fails here too.
 eval "$(grep '^ENV_PATHS=' "$ENV_REPO/scripts/build-panel-archive.sh")"
-(cd "$ENV_REPO" && tar -cf - "${ENV_PATHS[@]}") | tar -xf - -C "$WORK/packages/env"
+(cd "$ENV_REPO" && tar -cf "$WORK/env.tar" "${ENV_PATHS[@]}")
+tar -xf "$WORK/env.tar" -C "$WORK/packages/env"; rm -f "$WORK/env.tar"
 git -C "$WORK/packages/env" init -q -b main && git -C "$WORK/packages/env" add -A && git -C "$WORK/packages/env" -c user.name=check -c user.email=check@example.test commit -qm check
 
 # The other packages at their workspace HEAD, on a branch main, so that dev-main names them.
@@ -292,21 +295,24 @@ status, wizard = get("/admin/server/sites/new")
 assert status == 200 and "data-env-new-owner" in wizard, "the wizard, with whose the site is"
 assert re.search(r'name="daily-backup" value="yes" data-env-new-daily-backup\s+checked', wizard), "a new site gets its daily backup by default"
 # The kinds from the server (self:profiles, simai-env 1.33.0): with 1C-Bitrix and an app on a port.
-for kind in ("static", "generic", "laravel", "wordpress", "node", "redirect", "bitrix", "proxy"):
-    # A kind the server turned off (simai-env 1.56.1: node is profile_disabled) is greyed with its reason instead.
+# simai-env 1.56.1 lists no node kind (turned off on the server); a kind it lists but the panel cannot lead is greyed.
+for kind in ("static", "generic", "laravel", "wordpress", "redirect", "bitrix", "proxy"):
     assert ('data-env-profile-hint="' + kind + '"' in wizard or 'data-env-profile-unavailable="' + kind + '"' in wizard), ("each kind says what it is", kind)
 assert 'data-env-new-profile="static"' in wizard and 'data-env-field=' not in wizard, "a static site asks for no PHP, database or target"
 _, laravel = get("/admin/server/sites/new?profile=laravel")
-assert 'data-env-new-profile="laravel"' in laravel and all('data-env-field="' + field + '"' in laravel for field in ("php", "database", "engine")) and 'data-env-field="redirect"' not in laravel, "Laravel asks for PHP and a database"
+# simai-env 1.56.1: a kind with routes asks what its route takes (PHP, the database engine), with the route's steps.
+assert 'data-env-new-profile="laravel"' in laravel and ((all('data-env-route-field="' + field + '"' in laravel for field in ("php", "db-engine")) and "data-env-route-steps=" in laravel)
+    or all('data-env-field="' + field + '"' in laravel for field in ("php", "database", "engine"))) and 'data-env-field="redirect"' not in laravel, "Laravel asks for PHP and a database"
 _, redirect = get("/admin/server/sites/new?profile=redirect")
-assert 'data-env-field="redirect"' in redirect and 'data-env-field="php"' not in redirect, "a redirect asks only where to"
+assert ('data-env-field="redirect"' in redirect or 'data-env-route-field="redirect-to"' in redirect) and 'data-env-field="php"' not in redirect and 'data-env-route-field="php"' not in redirect, "a redirect asks only where to"
 _, proxy = get("/admin/server/sites/new?profile=proxy")
-assert 'data-env-field="proxy"' in proxy and 'name="upstream-port"' in proxy and 'data-env-field="php"' not in proxy and "data-env-new-daily-backup" not in proxy, "an app on a port asks for the port only"
+assert ('data-env-field="proxy"' in proxy or 'data-env-route-field="upstream-port"' in proxy) and 'name="upstream-port"' in proxy and 'data-env-field="php"' not in proxy and 'data-env-route-field="php"' not in proxy and "data-env-new-daily-backup" not in proxy, "an app on a port asks for the port only"
 _, proxied = post("/admin/server/sites/new/plan", {"_token": form_token(proxy), "domain": "demo-proxy.test", "profile": "proxy", "upstream-port": "3000", "websockets": "yes"})
 assert 'data-env-plan="site:add"' in proxied and 'name="upstream-port" value="3000"' in proxied, "an app on a port is planned"
 # The same fields in the Framework property view, over the new site's port: record.create plans site:add and leads to
 # the plan screen, which is the one the form shows.
-assert '<sf-view-properties collection="env.new_site.laravel" mode="create"' in laravel and "data-larena-record-fallback" in laravel, "the property view, the form its fallback"
+# With routes (simai-env 1.56.1) the collection names the chosen way too: env.new_site.laravel.<route>.
+assert re.search(r'<sf-view-properties collection="env\.new_site\.laravel(\.[a-z-]+)?" mode="create"', laravel) and "data-larena-record-fallback" in laravel, "the property view, the form its fallback"
 def port(payload):
     request = urllib.request.Request(base + "/admin/server/sites/new/port", data=json.dumps(payload).encode(),
         headers={"Content-Type": "application/json", "Accept": "application/json", "X-CSRF-TOKEN": csrf})
@@ -328,8 +334,9 @@ assert 'data-env-plan="site:add"' in drafted and 'name="profile" value="laravel"
 wrong = port({"scope_ref": "scope:server", "intent": "record.create", "payload": {"collection": "env.new_site.proxy", "values": {"domain": "a.test", "upstream_port": 443}}})
 assert wrong.get("answer") == "refused" and "upstream_port" in wrong.get("errors", {}), ("port 443 said under the port", wrong)
 _, bitrix = get("/admin/server/sites/new?profile=bitrix")
-assert 'data-env-field="bitrix-files"' in bitrix and 'data-env-field="php"' in bitrix and 'data-env-field="database"' in bitrix, "1C-Bitrix asks PHP, a database and its installer"
-_, bitrixed = post("/admin/server/sites/new/plan", {"_token": form_token(bitrix), "domain": "demo-bitrix.test", "profile": "bitrix", "php": "8.3", "create-db": "yes", "bitrix-files": "setup"})
+# simai-env 1.56.1: 1C-Bitrix offers two ways (new, restore from a copy); the new one asks PHP and plans the installer.
+assert 'data-env-route="new"' in bitrix and 'data-env-route="restore"' in bitrix and 'data-env-route-field="php"' in bitrix, "1C-Bitrix asks PHP, a database and its installer"
+_, bitrixed = post("/admin/server/sites/new/plan", {"_token": form_token(bitrix), "domain": "demo-bitrix.test", "profile": "bitrix", "route": "new", "php": "8.3"})
 assert 'data-env-plan="site:add"' in bitrixed and 'name="bitrix-files" value="setup"' in bitrixed, "a 1C-Bitrix site is planned with its installer"
 _, planned = post("/admin/server/sites/new/plan", {"_token": form_token(wizard), "domain": "new.test", "profile": "static", "daily-backup": "yes"})
 # simai-env 1.30.0 makes the daily backup with the site: no backup:data-schedule after it.
