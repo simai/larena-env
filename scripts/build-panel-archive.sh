@@ -41,13 +41,18 @@ mkdir -p "$APP" "$ENV_SOURCE" "$TOOLS" "$OUTPUT"
 ENV_PATHS=(src config database resources routes composer.json module.yaml access.yaml audit.yaml LICENSE NOTICE)
 # The assembly's top-level entries but vendor/ and .env, named one by one: a tar --exclude=./vendor also drops
 # lang/vendor, the panel's own words over the packages'.
-(cd "${ENV_REPO}/assembly" && find . -mindepth 1 -maxdepth 1 ! -name vendor ! -name .env -print0 | xargs -0 tar -cf -) | tar -xf - -C "$APP"
+# Through files, not pipes (here and below): the reading tar stops at the end marker and the writer's padding then fails with
+# «Write error» under pipefail once the assembly reaches a certain size (2026-11-10, composer.lock of 0.4.4).
+(cd "${ENV_REPO}/assembly" && find . -mindepth 1 -maxdepth 1 ! -name vendor ! -name .env -print0 | xargs -0 tar -cf "${WORK}/assembly.tar")
+tar -xf "${WORK}/assembly.tar" -C "$APP"; rm -f "${WORK}/assembly.tar"
 [[ -f "${APP}/lang/vendor/larena-auth/ru/auth.php" ]] || { echo "the panel's own words (lang/vendor) are missing from the build" >&2; exit 1; }
 [[ -f "${APP}/lang/vendor/larena-auth/ru/auth.php" ]] || { echo "the panel's lang overrides are missing from the build" >&2; exit 1; }
 if [[ "$DIRTY" == yes ]]; then
-  (cd "$ENV_REPO" && tar -cf - "${ENV_PATHS[@]}") | tar -xf - -C "$ENV_SOURCE"
+  (cd "$ENV_REPO" && tar -cf "${WORK}/env.tar" "${ENV_PATHS[@]}")
+  tar -xf "${WORK}/env.tar" -C "$ENV_SOURCE"; rm -f "${WORK}/env.tar"
 else
-  git -C "$ENV_REPO" archive HEAD -- "${ENV_PATHS[@]}" | tar -xf - -C "$ENV_SOURCE"
+  git -C "$ENV_REPO" archive -o "${WORK}/env.tar" HEAD -- "${ENV_PATHS[@]}"
+  tar -xf "${WORK}/env.tar" -C "$ENV_SOURCE"; rm -f "${WORK}/env.tar"
 fi
 
 echo "[panel] composer install (exact revisions from the lock)"
@@ -73,7 +78,8 @@ php -r '
 ' "${ENV_REPO}/assembly/build.json" "$APP"
 
 echo "[panel] Framework assets (Root's scripts at ${ROOT_REVISION:0:12})"
-git -C "$ROOT_CHECKOUT" archive "$ROOT_REVISION" -- scripts release/developer-alpha-manifest.json | tar -xf - -C "$TOOLS"
+git -C "$ROOT_CHECKOUT" archive -o "${WORK}/root-tools.tar" "$ROOT_REVISION" -- scripts release/developer-alpha-manifest.json
+tar -xf "${WORK}/root-tools.tar" -C "$TOOLS"; rm -f "${WORK}/root-tools.tar"
 ln -s "${APP}/vendor" "${TOOLS}/vendor"
 php "${TOOLS}/scripts/sync-runtime-assets.php" --entry="$APP" --release-manifest=release/developer-alpha-manifest.json --json >"${WORK}/assets.json"
 BUNDLE=$(php -r 'echo json_decode(file_get_contents($argv[1]), true, 16, JSON_THROW_ON_ERROR)["runtime"]["bundle_id"];' "${WORK}/assets.json")
