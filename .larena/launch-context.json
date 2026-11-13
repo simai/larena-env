@@ -99,7 +99,8 @@
     "resources/views/admin/software-php.blade.php",
     "src/Http/Controllers/SoftwarePhpController.php",
     "src/Software/",
-    "tests/Unit/EnvBootTest.php"
+    "tests/Unit/EnvBootTest.php",
+    "docs/product/licensing-and-cloud.md"
   ],
   "forbidden_files": [
     "../*"
