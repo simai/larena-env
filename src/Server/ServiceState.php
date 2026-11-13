@@ -16,4 +16,10 @@ final readonly class ServiceState
     {
         return $this->state === 'active';
     }
+
+    /** The server's description does not say whether a service starts with the server, so none is said unused. */
+    public function isUnused(): bool
+    {
+        return false;
+    }
 }

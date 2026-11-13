@@ -58,9 +58,11 @@ final readonly class ServicesController
 
         return $this->views->make('larena-env::admin.services', [
             'source' => $read->source,
-            // A stopped service first: it is what a person opens the screen for.
-            'services' => [...array_values(array_filter($services, static fn (HostService $service): bool => !$service->isActive())),
-                ...array_values(array_filter($services, static fn (HostService $service): bool => $service->isActive()))],
+            // A stopped service first: it is what a person opens the screen for; then the running ones, and last those
+            // not used on this server (block 4, DATA-02).
+            'services' => [...array_values(array_filter($services, static fn (HostService $service): bool => !$service->isActive() && !$service->isUnused())),
+                ...array_values(array_filter($services, static fn (HostService $service): bool => $service->isActive())),
+                ...array_values(array_filter($services, static fn (HostService $service): bool => $service->isUnused()))],
             'reasonText' => $read->reason === null ? null : $this->reasonText($read->reason),
             // Each action only where the server lists it and the person may change the server.
             'allows' => [

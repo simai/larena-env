@@ -16,6 +16,9 @@ final class PanelEnvironment
         'APP_NAME' => 'Larena Panel',
         'APP_ENV' => 'production',
         'APP_DEBUG' => 'false',
+        // The panel speaks Russian first (audit block 4, 2026-11-13): the sign-in form and a new account's language.
+        'APP_LOCALE' => 'ru',
+        'APP_FALLBACK_LOCALE' => 'en',
         'DB_CONNECTION' => 'mysql',
         'SESSION_DRIVER' => 'file',
         'CACHE_STORE' => 'file',

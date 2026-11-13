@@ -1,5 +1,5 @@
 {{-- The server's plan for the step's change, in the panel's words; the server's own terms under «Подробнее». Nothing
-     changes until «Применить». --}}
+     changes until «Выполнить». --}}
 <p class="m-0" data-env-setup-plan="{{ $plan->command }}">{{ __('larena-env::admin.setup.review') }}</p>
 <dl class="m-0" style="display: block;" data-env-facts>
     @foreach (\Larena\Env\Admin\PlanValues::of($plan->args, $plan->target) as $row)
@@ -12,6 +12,6 @@
 <details data-env-plan-server>
     <summary class="color-primary" style="cursor: pointer;">{{ __('larena-env::admin.more') }}</summary>
     <p>{{ $plan->description }}</p>
-    <p class="m-0 color-on-surface-variant">{{ $plan->effects }}</p>
+    <p class="m-0 color-on-surface-variant">{{ \Larena\Env\Admin\PlanValues::effects($plan->effects) }}</p>
 </details>
 <div><sf-button appearance="link" text="{{ __('larena-env::admin.setup.edit') }}" native-type="submit" name="wizard-action" value="edit" data-env-setup-edit></sf-button></div>

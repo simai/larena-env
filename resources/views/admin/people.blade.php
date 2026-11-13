@@ -14,6 +14,13 @@
         <div class="p-2 p-bottom-1">
             <h2 id="env-people" class="m-0 text-2">{{ __('larena-env::admin.people.list') }}</h2>
             <div class="m-0 m-top-1 color-on-surface-variant m-bottom-1">@include('larena-env::admin.partials.explanation', ['text' => __('larena-env::admin.people.explain')])</div>
+            {{-- A second person in three steps, in order (block 4): the role on «Пользователи», a workspace here, then the tie. --}}
+            <h3 class="m-0 m-top-1 text-medium" id="env-people-steps">{{ __('larena-env::admin.people.steps_title') }}</h3>
+            <ol class="m-0 m-top-1 m-bottom-1" aria-labelledby="env-people-steps" data-env-people-steps>
+                @foreach ([0, 1, 2] as $number)
+                    <li>{{ __('larena-env::admin.people.steps.'.$number) }}</li>
+                @endforeach
+            </ol>
             @if ($reasonText !== null)
                 <p class="m-0 m-top-1 color-error" role="alert">{{ $reasonText }}</p>
             @endif
@@ -62,7 +69,7 @@
     @if ($owners !== [])
         <section class="larena-panel" style="margin: 0 0 1rem;" aria-labelledby="env-owners" data-env-owners>
             <div class="p-2 p-bottom-1">
-                <h2 id="env-owners" class="m-0 text-2">{{ __('larena-env::admin.people.navigation') }}</h2>
+                <h2 id="env-owners" class="m-0 text-2">{{ __('larena-env::admin.people.spaces') }}</h2>
                 @if ($canBlock ?? false)
                     <div class="m-0 m-top-1 color-on-surface-variant m-bottom-1">@include('larena-env::admin.partials.explanation', ['text' => __('larena-env::admin.people.block_explain')])</div>
                 @endif

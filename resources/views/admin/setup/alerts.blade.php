@@ -12,6 +12,15 @@
             options="{{ json_encode([['value' => 'telegram', 'text' => __('larena-env::admin.alerts.kinds.telegram')], ['value' => 'webhook', 'text' => __('larena-env::admin.alerts.kinds.webhook')]], JSON_UNESCAPED_UNICODE) }}"></sf-dropdown>
         <sf-input name="target" label="{{ __('larena-env::admin.alerts.target') }}" default-value="{{ is_string($channel['target'] ?? null) ? $channel['target'] : '' }}" autocomplete="off" required></sf-input>
         <sf-input name="token" label="{{ __('larena-env::admin.alerts.token') }}" input-type="password" autocomplete="off" hint="{{ __('larena-env::admin.alerts.token_help') }}"></sf-input>
+        {{-- How to make a Telegram bot and find the chat's number, in three short steps (block 4). --}}
+        <details data-env-setup-howto="alerts">
+            <summary class="color-primary" style="cursor: pointer;">{{ __('larena-env::admin.setup.alerts.howto') }}</summary>
+            <ol class="m-0 m-t-1">
+                @foreach ([0, 1, 2] as $number)
+                    <li>{{ __('larena-env::admin.setup.alerts.howto_steps.'.$number) }}</li>
+                @endforeach
+            </ol>
+        </details>
     @elseif ($state === 'done')
         <div class="flex flex-wrap g-2">
             @if ($canTest)

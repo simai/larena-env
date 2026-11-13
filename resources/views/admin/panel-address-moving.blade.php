@@ -1,6 +1,6 @@
 @extends('larena-admin::layouts.app')
 
-@section('title', __('larena-env::admin.panel_address.moving_title'))
+@section('title', __('larena-env::admin.tab_title', ['title' => __('larena-env::admin.panel_address.moving_title')]))
 @section('heading', __('larena-env::admin.panel_address.moving_title'))
 @section('eyebrow', __('larena-env::admin.panel_address.title'))
 

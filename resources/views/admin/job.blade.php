@@ -50,11 +50,18 @@
                 <p><a href="{{ route('larena.env.admin.site', ['domain' => $status->args['domain']], false) }}" class="larena-button" data-env-job-next-site>{{ __('larena-env::admin.routes.to_site') }}</a></p>
             @endif
             <dl class="m-0" style="display: block;" data-env-facts>
-                <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.plan.command') }}</dt><dd class="m-0 min-w-0 text-end">{{ $status->command }}</dd></div>
                 <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.job.started_at') }}</dt><dd class="m-0 min-w-0 text-end">{{ \Larena\Env\Server\Moment::human($status->createdAt) }}</dd></div>
-                <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.job.started_by') }}</dt><dd class="m-0 min-w-0 text-end">{{ $status->actor ?? '—' }}</dd></div>
-                <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.job.exit_code') }}</dt><dd class="m-0 min-w-0 text-end">{{ $status->exitCode ?? '—' }}</dd></div>
+                <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.job.started_by') }}</dt><dd class="m-0 min-w-0 text-end" data-env-job-started-by="{{ $startedBy ?? '' }}">{{ ($startedBy ?? null) !== null ? __('larena-env::admin.job.started_by_'.$startedBy) : '—' }}</dd></div>
             </dl>
+            {{-- The server's command and its exit code are for a specialist (block 4, texts for a newcomer): the state above
+                 already says «Готово» or «Не получилось». --}}
+            <details class="m-y-2" data-env-job-server>
+                <summary class="color-primary" style="cursor: pointer;">{{ __('larena-env::admin.more') }}</summary>
+                <dl class="m-0" style="display: block;" data-env-facts>
+                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.plan.command') }}</dt><dd class="m-0 min-w-0 text-end mono">{{ $status->command }}</dd></div>
+                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.job.exit_code') }}</dt><dd class="m-0 min-w-0 text-end">{{ $status->exitCode ?? '—' }}</dd></div>
+                </dl>
+            </details>
             @if (! $status->state->isOver() && ($updating ?? null) !== null)
                 <p data-env-job-not-cancellable>{{ __('larena-env::admin.update.not_cancellable') }}</p>
             @elseif (! $status->state->isOver())
@@ -70,7 +77,15 @@
             @if ($log === null)
                 <p>{{ $reasonText ?? __('larena-env::admin.job.no_log') }}</p>
             @else
-                <pre data-env-job-log-lines tabindex="0" style="max-width: 100%; overflow-x: auto;">{{ implode("\n", $log->lines) }}</pre>
+                {{-- Once it went well the server's own lines are for a specialist (block 4): folded, open while it runs or after a failure. --}}
+                @if ($status->state->value === 'succeeded')
+                    <details data-env-job-log-folded>
+                        <summary class="color-primary" style="cursor: pointer;">{{ __('larena-env::admin.job.log_details') }}</summary>
+                        <pre data-env-job-log-lines tabindex="0" style="max-width: 100%; overflow-x: auto;">{{ implode("\n", $log->lines) }}</pre>
+                    </details>
+                @else
+                    <pre data-env-job-log-lines tabindex="0" style="max-width: 100%; overflow-x: auto;">{{ implode("\n", $log->lines) }}</pre>
+                @endif
                 @if (! $status->state->isOver())
                     <p><a href="{{ route('larena.env.admin.job', ['job' => $status->jobId], false) }}?after={{ $log->next }}">{{ __('larena-env::admin.job.more') }}</a></p>
                 @endif

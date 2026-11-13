@@ -233,10 +233,15 @@ env_assert(SiteOperation::DatabaseExport->command() === 'backup:data' && SiteOpe
     === ['domain' => 'demo-php.test', 'db' => 'yes', 'files' => 'no'], 'A database dump is a backup without the files.');
 env_assert(str_contains($php, 'data-env-operation="php-version"') && preg_match('/<option value="8\.3"\s+selected\s*>/', $php) === 1, 'PHP offers the server\'s versions, the current one chosen.');
 env_assert(!str_contains($php, 'data-env-operation="queue-restart"'), 'And nothing the site cannot be asked for.');
+// A plan's arguments and values in words (block 4): a kind, a database, a language, never the server's names.
+$words = \Larena\Env\Admin\PlanValues::of(['domain' => 'new.test', 'profile' => 'wordpress', 'create-db' => 'yes', 'db-engine' => 'mysql', 'locale' => 'en_US', 'admin-user' => 'admin'], 'new.test');
+env_assert(array_column($words, 'label') === ['Kind of site', 'Create a database', 'Database type', 'Site language', 'Administrator login']
+    && array_column($words, 'value') === ['WordPress', 'Yes', 'MySQL', 'English', 'admin'] && \Larena\Env\Admin\PlanValues::effects('write') === 'changes files and settings on the server',
+    'A plan says its arguments and values in words: '.json_encode($words));
 $logged = $screen(['site' => $site, 'tab' => 'log', 'log' => \Larena\Env\Server\SiteLogView::of($log->log), 'logReadAt' => '12:34:56']);
 env_assert(str_contains($logged, 'data-env-log-read="12:34:56"') && str_contains($logged, 'Read at 12:34:56 UTC')
     && str_contains($logged, 'name="fresh" value="1"'), 'The log says when it was read and offers to read it again.');
-env_assert(str_contains($logged, 'Visitor errors (4xx)') && !str_contains($logged, '>4xx<'), 'The answers\' groups are named in words, the codes kept beside them.');
+env_assert(str_contains($logged, 'Visitor errors') && !str_contains($logged, '(4xx)') && !str_contains($logged, '>4xx<'), 'The answers\' groups are named in words only, without the codes (block 4, texts for a newcomer).');
 env_assert(str_contains($logged, 'data-env-log="access"') && str_contains($logged, 'data-env-log-filter') && str_contains($logged, 'name="tab" value="log"'), 'The log keeps its tab and can be narrowed.');
 env_assert(str_contains($logged, 'data-env-log-row="200"') && str_contains($logged, 'GET /') && !str_contains($logged, '<code>127.0.0.1'), 'A request line is read into its parts, not repeated.');
 

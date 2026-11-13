@@ -116,8 +116,8 @@
                     @foreach ($services ?? $overview->services as $service)
                         <li class="flex items-cross-center content-main-between g-2 p-x-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-service="{{ $service->name }}">
                             <span class="truncate" title="{{ $service->name }}">{{ \Larena\Env\Server\HostService::label($service->name) }}</span>
-                            <sf-badge status="{{ $service->isActive() ? 'success' : 'error' }}" appearance="tonal"
-                                text="{{ $service->isActive() ? __('larena-env::admin.services.running') : __('larena-env::admin.services.stopped') }}"></sf-badge>
+                            <sf-badge status="{{ $service->isActive() ? 'success' : ($service->isUnused() ? 'neutral' : 'error') }}" appearance="tonal" @if ($service->isUnused()) data-env-service-unused @endif
+                                text="{{ $service->isActive() ? __('larena-env::admin.services.running') : ($service->isUnused() ? __('larena-env::admin.services.unused') : __('larena-env::admin.services.stopped')) }}"></sf-badge>
                         </li>
                     @endforeach
                 </ul>

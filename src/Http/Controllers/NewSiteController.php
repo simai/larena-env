@@ -62,6 +62,10 @@ final readonly class NewSiteController
         $overview = $this->overviews->read($actor)->overview;
         $server = $this->serverProfiles($actor, $overview);
         $profiles = $server === null ? self::PROFILES : array_keys($server);
+        // WordPress first and chosen by default (audit block 4): the site a newcomer most often makes.
+        if (in_array('wordpress', $profiles, true)) {
+            $profiles = ['wordpress', ...array_values(array_diff($profiles, ['wordpress']))];
+        }
         $kind = in_array($request->query('profile'), $profiles, true) ? (string) $request->query('profile') : ($profiles[0] ?? 'static');
         // The ways each kind is made (simai-env 1.56.0), where the server lists them: a kind none of whose ways the panel
         // can lead now is shown with the reason, never as a link.
@@ -102,6 +106,8 @@ final readonly class NewSiteController
             // The server's own kinds (Panel plan 5.5): what each is called and which fields it asks.
             'serverProfiles' => $server === null ? null : $this->described($server),
             'phpVersions' => $overview->phpVersions ?? [],
+            // Where the domain must lead, with the server's real address (block 4, texts for a newcomer).
+            'serverIp' => $this->extras?->serverIp($actor, $overview?->capabilities),
             // Only the whole server chooses whose the site is; a person's own site is theirs.
             'owners' => $actor->owner === null ? ($overview->owners ?? []) : null,
             'old' => self::input($request->all(), $actor, $server),
@@ -455,6 +461,10 @@ final readonly class NewSiteController
         $choices = [];
         foreach ($profile->routes ?? [] as $route) {
             $blocked = $route->blockedBy($allows);
+            // A way only a later panel can send (its archive) is not offered at all: nothing the person can do about it.
+            if ($blocked === 'upload') {
+                continue;
+            }
             $choices[] = ['id' => $route->id, 'label' => $this->known('routes.names.'.$route->id, $route->title),
                 'hint' => $this->known('routes.hints.'.$kind.'_'.$route->id, $route->title),
                 'available' => $blocked === null, 'reason' => $blocked === null ? null : $this->text('routes.unavailable.'.$blocked),

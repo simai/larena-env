@@ -175,6 +175,12 @@ enum SiteOperation: string
         };
     }
 
+    /**
+     * A certificate's rarely needed choices, in the order the form asks them (block 4, texts for a newcomer): they stand
+     * together under «Подробнее», all off, the first opening the fold.
+     */
+    public const array MORE = ['hsts', 'staging', 'challenge', 'wildcard'];
+
     /** The fields asked only where the server keeps a DNS token for certificates: without one a DNS check fails. */
     public const array DNS_FIELDS = ['challenge', 'wildcard'];
 

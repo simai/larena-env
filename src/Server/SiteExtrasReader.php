@@ -217,6 +217,20 @@ final readonly class SiteExtrasReader
         return $data === null ? null : \Larena\Env\Panel\PanelAddress::fromData($data);
     }
 
+    /**
+     * The server's address a domain must lead to (block 4, texts for a newcomer): the one the panel itself answers on
+     * (panel:address), where the server lists it; null otherwise, and the screen says «the server's address» in words.
+     */
+    public function serverIp(PanelActor $actor, ?\Larena\Env\Gateway\PanelCapabilities $capabilities): ?string
+    {
+        if ($capabilities?->allows('panel:address') !== true) {
+            return null;
+        }
+        $ip = $this->panelAddress($actor)?->ip;
+
+        return is_string($ip) && filter_var($ip, FILTER_VALIDATE_IP) !== false ? $ip : null;
+    }
+
     /** Access for AI assistants over MCP (simai-mcp-status/1, simai-env 1.49.0), the administrator's. */
     public function mcp(PanelActor $actor): ?\Larena\Env\Security\McpStatus
     {

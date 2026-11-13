@@ -1,6 +1,6 @@
 @extends('larena-admin::layouts.app')
 
-@section('title', __('larena-env::admin.panel_access.title'))
+@section('title', __('larena-env::admin.tab_title', ['title' => __('larena-env::admin.panel_access.title')]))
 @section('heading', __('larena-env::admin.panel_access.title'))
 @section('eyebrow', __('larena-env::admin.eyebrow'))
 @section('description', __('larena-env::admin.panel_access.description'))
@@ -44,7 +44,8 @@
                     @csrf
                     <input type="hidden" name="op" value="domain">
                     <h3 class="text-1">{{ __('larena-env::admin.panel_address.attach') }}</h3>
-                    <p class="color-on-surface-variant">{{ __('larena-env::admin.panel_address.dns_hint', ['ip' => $panelAddress->ip ?? '—']) }}</p>
+                    <p data-env-domain-point>{{ $panelAddress->ip !== null ? __('larena-env::admin.point_domain.ip', ['ip' => $panelAddress->ip]) : __('larena-env::admin.point_domain.unknown') }}</p>
+                    <p class="color-on-surface-variant">{{ __('larena-env::admin.panel_address.dns_hint') }}</p>
                     <div class="flex flex-wrap g-2 items-cross-end">
                         <label class="grow" style="flex-basis: 14rem;"><span style="font-weight: 600; display: block;">{{ __('larena-env::admin.panel_address.domain') }}</span>
                             <input type="text" name="domain" required class="larena-input larena-control-floor" style="inline-size: 100%;" placeholder="panel.example.com" autocomplete="off"></label>

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "7bebd19849a6dc425071e86ae89fb712",
+    "content-hash": "13ab1ecb4fe370d1cea2d98a3f6ca0e5",
     "packages": [
         {
             "name": "brick/math",
@@ -1415,12 +1415,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:simai/larena-access.git",
-                "reference": "8053f9dc4ed782da2d44fbeb86a1074eee77dd47"
+                "reference": "635f227ab0f8888b2eababef7562063c0b6e7e24"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-access/zipball/8053f9dc4ed782da2d44fbeb86a1074eee77dd47",
-                "reference": "8053f9dc4ed782da2d44fbeb86a1074eee77dd47",
+                "url": "https://api.github.com/repos/simai/larena-access/zipball/635f227ab0f8888b2eababef7562063c0b6e7e24",
+                "reference": "635f227ab0f8888b2eababef7562063c0b6e7e24",
                 "shasum": ""
             },
             "require": {
@@ -1565,7 +1565,7 @@
                 }
             ],
             "description": "Larena Access: Operation permissions, target providers, query scopes and explainable access decisions.",
-            "time": "2026-11-09T13:05:27+00:00"
+            "time": "2026-11-10T16:12:28+00:00"
         },
         {
             "name": "larena/admin",
@@ -1573,12 +1573,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:simai/larena-admin.git",
-                "reference": "a3172a2569d58874e71ab8e65e4914b6de9a4122"
+                "reference": "b4fb8ab972bdec760803f0bdd5e4c5f6c5e697dd"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-admin/zipball/a3172a2569d58874e71ab8e65e4914b6de9a4122",
-                "reference": "a3172a2569d58874e71ab8e65e4914b6de9a4122",
+                "url": "https://api.github.com/repos/simai/larena-admin/zipball/b4fb8ab972bdec760803f0bdd5e4c5f6c5e697dd",
+                "reference": "b4fb8ab972bdec760803f0bdd5e4c5f6c5e697dd",
                 "shasum": ""
             },
             "require": {
@@ -1799,7 +1799,7 @@
                 }
             ],
             "description": "Larena Admin: Object-based, permission-aware administration platform for package contributions, screens, actions and diagnostics.",
-            "time": "2026-11-09T12:58:49+00:00"
+            "time": "2026-11-13T11:35:15+00:00"
         },
         {
             "name": "larena/audit",
@@ -1917,12 +1917,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:simai/larena-auth.git",
-                "reference": "dffb03db7ec2fed72e29695cd2b9052daf9757b5"
+                "reference": "e36d00b837ee3eaef59eab695dbe03912a4fcef2"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-auth/zipball/dffb03db7ec2fed72e29695cd2b9052daf9757b5",
-                "reference": "dffb03db7ec2fed72e29695cd2b9052daf9757b5",
+                "url": "https://api.github.com/repos/simai/larena-auth/zipball/e36d00b837ee3eaef59eab695dbe03912a4fcef2",
+                "reference": "e36d00b837ee3eaef59eab695dbe03912a4fcef2",
                 "shasum": ""
             },
             "require": {
@@ -2026,7 +2026,7 @@
                 }
             ],
             "description": "Larena Auth package: entry subject resolution, authentication methods, sessions, MFA and token channel boundaries.",
-            "time": "2026-11-08T15:25:16+00:00"
+            "time": "2026-11-10T16:13:10+00:00"
         },
         {
             "name": "larena/core",
@@ -2397,7 +2397,9 @@
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/SiteObjectMenuTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/CachingGatewayTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/ServerSetupTest.php",
-                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/SiteNamesTest.php"
+                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/SiteNamesTest.php",
+                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/SiteChecksTest.php",
+                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/SiteRoutesTest.php"
                 ],
                 "test:unit": [
                     "@test"
@@ -2910,12 +2912,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/simai/larena-ui.git",
-                "reference": "670e5cd545d642eee360cfe0f0fb80e1f73c0729"
+                "reference": "eced1374ad57ddfa4a9934a0c8a8e253b62380d5"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-ui/zipball/670e5cd545d642eee360cfe0f0fb80e1f73c0729",
-                "reference": "670e5cd545d642eee360cfe0f0fb80e1f73c0729",
+                "url": "https://api.github.com/repos/simai/larena-ui/zipball/eced1374ad57ddfa4a9934a0c8a8e253b62380d5",
+                "reference": "eced1374ad57ddfa4a9934a0c8a8e253b62380d5",
                 "shasum": ""
             },
             "require": {
@@ -3056,10 +3058,10 @@
             ],
             "description": "Larena UI: Universal UI/frontend package for Larena smart components, backend-first rendering, hydration, design packs, UI asset graph, component registry, playground and frontend behavior contracts.",
             "support": {
-                "source": "https://github.com/simai/larena-ui/tree/larena-7a2900066a50",
+                "source": "https://github.com/simai/larena-ui/tree/main",
                 "issues": "https://github.com/simai/larena-ui/issues"
             },
-            "time": "2026-11-09T12:57:15+00:00"
+            "time": "2026-11-13T11:34:36+00:00"
         },
         {
             "name": "league/commonmark",

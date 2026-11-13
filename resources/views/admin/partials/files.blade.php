@@ -117,7 +117,6 @@
                                 <th scope="col" style="padding-inline: .625rem;">{{ __('larena-env::admin.files.name') }}</th>
                                 <th scope="col" style="padding-inline: .625rem; white-space: nowrap;">{{ __('larena-env::admin.files.size') }}</th>
                                 <th scope="col" style="padding-inline: .625rem; white-space: nowrap;">{{ __('larena-env::admin.files.changed') }}</th>
-                                <th scope="col" style="padding-inline: .625rem; white-space: nowrap;">{{ __('larena-env::admin.files.mode') }}</th>
                                 <th scope="col" style="padding-inline: .625rem;"><span class="larena-visually-hidden">{{ __('larena-env::admin.files.actions') }}</span></th>
                             </tr>
                         </thead>
@@ -138,7 +137,6 @@
                                     </td>
                                     <td data-label="{{ __('larena-env::admin.files.size') }}" style="padding-inline: .625rem; white-space: nowrap;">{{ $entry->type === 'file' ? \Larena\Env\Server\Bytes::human($entry->size) : '—' }}</td>
                                     <td data-label="{{ __('larena-env::admin.files.changed') }}" style="padding-inline: .625rem; min-width: 6.5rem;">{{ \Larena\Env\Server\Moment::human($entry->mtime) }}</td>
-                                    <td data-label="{{ __('larena-env::admin.files.mode') }}" style="padding-inline: .625rem; white-space: nowrap;"><code>{{ $entry->mode ?? '—' }}</code></td>
                                     <td data-label="{{ __('larena-env::admin.files.actions') }}" style="padding-inline: .625rem;">
                                         <div class="flex flex-wrap items-cross-center g-x-1" style="white-space: nowrap;">
                                             @if ($entry->type === 'file' && $files['allows']['download'])
@@ -148,6 +146,8 @@
                                                 <details data-env-file-actions>
                                                     <summary class="flex items-cross-center p-x-1 larena-control-floor" style="cursor: pointer;" aria-label="{{ __('larena-env::admin.files.more_of', ['name' => $entry->name]) }}">{{ __('larena-env::admin.files.more') }}</summary>
                                                     <div class="flex flex-column g-1 p-y-1" style="min-width: min(18rem, 80vw); white-space: normal;">
+                                                        {{-- The access rights are for a specialist: here, not as a column (audit block 4). --}}
+                                                        <span class="text-small color-on-surface-variant" data-env-file-mode>{{ __('larena-env::admin.files.mode') }}: <code>{{ $entry->mode ?? '—' }}</code></span>
                                                         @if ($files['allows']['rename'])
                                                             <form method="post" action="{{ route('larena.env.admin.site.files.plan', ['domain' => $domain], false) }}" class="flex flex-wrap items-cross-end g-1 m-0" data-env-files-op="rename">
                                                                 @csrf

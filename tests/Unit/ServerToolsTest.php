@@ -286,6 +286,10 @@ $all = $servicesPage(['services' => [...$services, new \Larena\Env\Server\HostSe
 env_assert(str_contains($all, 'data-env-service="nginx"') && substr_count($all, 'data-env-service-op="restart"') === 5 && substr_count($all, 'data-env-service-op="reload"') === 2
     && str_contains($all, 'data-env-service-state="failed"') && str_contains($all, 'role="alert"') && str_contains($all, 'data-env-service-disabled')
     && substr_count($all, 'data-env-service-since') === 4, 'Each service, its state, restart, and a reread only where it can: '.$all);
+// A service off and not started with the server is not used (block 4, DATA-02): grey «Not used», no alert, not counted.
+$unused = $servicesPage(['services' => [...$services, new \Larena\Env\Server\HostService('postgresql', 'inactive', 'disabled', null, false)]]);
+env_assert(str_contains($unused, 'data-env-service-unused') && str_contains($unused, 'Not used') && !str_contains($unused, 'role="alert"')
+    && str_contains($unused, 'All 4 running'), 'A service not used is grey, never red: '.$unused);
 $readOnly = $servicesPage(['allows' => ['restart' => false, 'reload' => false, 'log' => false]]);
 env_assert(str_contains($readOnly, 'data-env-services-unsupported') && !str_contains($readOnly, 'data-env-service-op') && !str_contains($readOnly, 'data-env-service-log-link'), 'A server without them: the state only.');
 env_assert(str_contains($servicesPage(['logOf' => 'nginx', 'log' => ['line <b>']]), 'line &lt;b&gt;'), 'The journal, escaped.');
@@ -453,7 +457,7 @@ $two = new \Larena\Env\Software\PhpVersions('8.3', [...$php->versions, new \Lare
 $page = $phpPage(['php' => $two]);
 env_assert(str_contains($page, 'data-env-php-version="8.3"') && str_contains($page, 'data-env-php-version="8.4"') && substr_count($page, 'data-env-php-op="remove"') === 1
     && substr_count($page, 'data-env-php-op="update"') === 2 && str_contains($page, 'data-env-php-updates="1"') && str_contains($page, 'data-env-php-native')
-    && str_contains($page, 'PHP-FPM is stopped') && str_contains($page, '<option value="8.5">') && str_contains($page, 'data-env-php-op="install"'),
+    && str_contains($page, 'PHP is stopped') && !str_contains($page, 'PHP-FPM is stopped') && str_contains($page, '<option value="8.5">') && str_contains($page, 'data-env-php-op="install"'),
     'Each version, its sites and fixes, removal only where free, and the install form: '.$page);
 env_assert(str_contains($phpPage([]), 'data-env-php-installable="none"'), 'Nothing left to install, said in words.');
 $readOnlyPhp = $phpPage(['allows' => ['install' => false, 'update' => false, 'remove' => false, 'extension' => false]]);
@@ -745,5 +749,12 @@ $offsite = new \ReflectionMethod(\Larena\Env\Server\SiteDetails::class, 'offsite
 env_assert($offsite->invoke(null, ['at' => '2026-11-06T02:05:00Z', 'ok' => false, 'storage' => 'yandex', 'backup' => '20261106-020000', 'error' => 'timeout'])
     === ['at' => '2026-11-06T02:05:00Z', 'ok' => false, 'storage' => 'yandex', 'backup' => '20261106-020000', 'error' => 'timeout'] && $offsite->invoke(null, null) === null,
     'A site\'s last copy away from the server.');
+
+// Who started a job, in words (block 4): this person, another person, the server; never the account's reference.
+$me = new \Larena\Env\Gateway\PanelActor('user:admin_identity:1');
+env_assert(\Larena\Env\Http\Controllers\ServerJobController::startedBy('user:admin_identity:1', $me) === 'you'
+    && \Larena\Env\Http\Controllers\ServerJobController::startedBy('user:admin_identity:2', $me) === 'other'
+    && \Larena\Env\Http\Controllers\ServerJobController::startedBy('cron', $me) === 'server'
+    && \Larena\Env\Http\Controllers\ServerJobController::startedBy(null, $me) === null, 'A job\'s starter is said in words.');
 
 echo "ServerToolsTest passed.\n";

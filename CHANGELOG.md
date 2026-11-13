@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+- Block 4 of the audit, texts for a newcomer (no new screen or component):
+  - the plan of «Создать сайт» names every argument and value in words (WordPress, MySQL, «Английский»), the job
+    screen keeps the command and the exit code under «Подробнее», a job that went well folds the server's lines under
+    «Что делал сервер», and «Начал» says «Вы» instead of the account's reference;
+  - one sentence on the domain with the server's real address (new site, «Домены и HTTPS», the wizard, panel access);
+  - the certificate: staging, HSTS, subdomains and the check method under «Подробнее» and off; its mail is filled with
+    the signed-in person's own (read from the identity), so it may stay empty;
+  - after «Сайт готов» the next step is «Включить HTTPS», and «Получить сертификат» stands beside «Сайт отдаётся без
+    сертификата»;
+  - «Чей сайт» and «Владельцы сайтов» explain the choice and the three steps; «роль» and «рабочее место» are kept apart;
+  - an unused service is grey «Не используется», not red, and does not count as down;
+  - the wizard: short instructions for the Telegram bot and chat number and for the storage keys, no «смените порт»;
+  - the dictionary: «Журнал» in one sense, «По умолчанию (рекомендуем)», nginx/PHP-FPM/0644 under «Подробнее», every
+    tab titled «… — Larena Panel», the WordPress cron check named in Russian;
+  - the panel speaks Russian by default (APP_LOCALE ru, the browser's language still wins), WordPress first and chosen
+    on «Новый сайт», its language ru_RU by default, the way only a later panel could send («Из репозитория» for static
+    files) is not offered, a file's access rights moved from a column to the row's «Ещё».
+- The assembly builds on Root 1c420422 (Framework ui-7fb26d395af2 + pro-db490626ba74): on Root d1dfc17a the new-site form
+  asked the property-view port 1.18 that the Pro of that pair did not have, and showed no fields.
+
 - The Laravel repository route as simai-env 1.56.2 (set 33) has it: made, deployed, finished, checked
   (`site:add` → `site:deploy` → `laravel:finalize` → `site:doctor`). The deploy step is no longer «outside the panel»:
   «Создать сайт» asks the Git repository and its ref for it, and the site's card offers «Выложить приложение» with

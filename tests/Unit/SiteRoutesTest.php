@@ -289,7 +289,9 @@ $generic = (string) $newSite($current)->create($asking('/admin/server/sites/new?
 env_assert(str_contains($generic, 'data-env-route-unavailable="restore"') && str_contains($generic, 'Not on this server yet.') && preg_match('/data-env-route="new"\s+aria-current="true"/', $generic) === 1
     && !str_contains($generic, 'data-env-route="restore"'), 'A planned way is greyed with its reason and never chosen.');
 $static = (string) $newSite($current)->create($asking('/admin/server/sites/new?profile=static&route=repo'))->render();
-env_assert(str_contains($static, 'data-env-route-unavailable="repo"') && str_contains($static, 'The panel cannot send this archive yet.'), 'A release archive is not the panel\'s yet.');
+env_assert(!str_contains($static, 'data-env-route-unavailable="repo"') && !str_contains($static, 'data-env-route="repo"') && !str_contains($static, 'The panel cannot send this archive yet.'), 'A way only a later panel can send is not offered at all.');
+$first = (string) $newSite($current)->create($asking('/admin/server/sites/new'))->render();
+env_assert(preg_match('/data-env-profile="wordpress"\s+aria-current="true"/', $first) === 1 && strpos($first, 'data-env-profile="wordpress"') < strpos($first, 'data-env-profile="static"'), 'WordPress comes first and is chosen by default.');
 $laravel = (string) $newSite($current)->create($asking('/admin/server/sites/new?profile=laravel'))->render();
 env_assert(str_contains($laravel, '<li>Deploy the application</li>') && !str_contains($laravel, 'outside the panel') && str_contains($laravel, 'data-env-route-field="git" data-env-route-later')
     && str_contains($laravel, 'data-env-route-field="ref" data-env-route-later') && str_contains($laravel, 'data-env-route-field="db-engine"'),
@@ -306,7 +308,7 @@ $noRedirect = new ServingGateway($recorded, $listed, true, static function (arra
 });
 $kinds = (string) $newSite($noRedirect)->create($asking('/admin/server/sites/new?profile=redirect'))->render();
 env_assert(str_contains($kinds, 'data-env-profile-unavailable="redirect"') && !str_contains($kinds, 'data-env-profile="redirect"') && str_contains($kinds, 'None of its ways can be made')
-    && preg_match('/data-env-profile="static"\s+aria-current="true"/', $kinds) === 1, 'An unavailable kind: its reason; the first available one is chosen.');
+    && preg_match('/data-env-profile="wordpress"\s+aria-current="true"/', $kinds) === 1, 'An unavailable kind: its reason; the first available one is chosen.');
 
 // An older server (no routes in self:profiles): the screen as it was, with nothing refused.
 $older = new ServingGateway($recorded, null, false);

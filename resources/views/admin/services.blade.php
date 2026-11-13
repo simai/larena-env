@@ -1,6 +1,6 @@
 @extends('larena-admin::layouts.app')
 
-@section('title', __('larena-env::admin.services.title'))
+@section('title', __('larena-env::admin.tab_title', ['title' => __('larena-env::admin.services.title')]))
 @section('heading', __('larena-env::admin.services.title'))
 @section('eyebrow', __('larena-env::admin.eyebrow'))
 @section('description', __('larena-env::admin.services.description'))
@@ -15,8 +15,8 @@
             <div class="flex flex-wrap items-cross-center content-main-between g-1 p-2 p-bottom-1">
                 <h2 id="env-services" class="sr-only">{{ __('larena-env::admin.services.list') }}</h2>
                 @if ($services !== [])
-                    <sf-badge data-env-services-summary status="{{ count(array_filter($services, static fn ($service): bool => !$service->isActive())) === 0 ? 'success' : 'error' }}" appearance="tonal"
-                        text="{{ count(array_filter($services, static fn ($service): bool => !$service->isActive())) === 0 ? __('larena-env::admin.services.all_running', ['total' => (string) count($services)]) : __('larena-env::admin.services.some_stopped', ['stopped' => (string) count(array_filter($services, static fn ($service): bool => !$service->isActive())), 'total' => (string) count($services)]) }}"></sf-badge>
+                    <sf-badge data-env-services-summary status="{{ count(array_filter($services, static fn ($service): bool => !$service->isActive() && !$service->isUnused())) === 0 ? 'success' : 'error' }}" appearance="tonal"
+                        text="{{ count(array_filter($services, static fn ($service): bool => !$service->isActive() && !$service->isUnused())) === 0 ? __('larena-env::admin.services.all_running', ['total' => (string) count(array_filter($services, static fn ($service): bool => !$service->isUnused()))]) : __('larena-env::admin.services.some_stopped', ['stopped' => (string) count(array_filter($services, static fn ($service): bool => !$service->isActive() && !$service->isUnused())), 'total' => (string) count(array_filter($services, static fn ($service): bool => !$service->isUnused()))]) }}"></sf-badge>
                 @endif
             </div>
             @if ($services === [])
@@ -32,8 +32,10 @@
                             <div class="grow min-w-0" style="flex-basis: 12rem;">
                                 <div class="flex flex-wrap items-cross-center g-1">
                                     <span style="overflow-wrap: anywhere;" title="{{ $service->name }}">{{ \Larena\Env\Server\HostService::label($service->name) }}</span>
-                                    <sf-badge status="{{ $service->isActive() ? 'success' : 'error' }}" appearance="tonal" @if (!$service->isActive()) role="alert" @endif
-                                        text="{{ $service->isActive() ? __('larena-env::admin.services.running') : __('larena-env::admin.services.stopped') }}"></sf-badge>
+                                    {{-- A service not used on this server is grey, not the red of a stopped one (block 4, DATA-02). --}}
+                                    <sf-badge status="{{ $service->isActive() ? 'success' : ($service->isUnused() ? 'neutral' : 'error') }}" appearance="tonal" @if (!$service->isActive() && !$service->isUnused()) role="alert" @endif
+                                        @if ($service->isUnused()) data-env-service-unused @endif
+                                        text="{{ $service->isActive() ? __('larena-env::admin.services.running') : ($service->isUnused() ? __('larena-env::admin.services.unused') : __('larena-env::admin.services.stopped')) }}"></sf-badge>
                                 </div>
                                 @if ($service->since !== null || ($service->enabled !== null && $service->enabled !== 'enabled'))
                                     <div class="color-on-surface-variant text-small">
@@ -52,7 +54,7 @@
                                         @csrf
                                         <input type="hidden" name="op" value="restart">
                                         <input type="hidden" name="name" value="{{ $service->name }}">
-                                        <button type="submit" class="larena-button{{ $service->isActive() ? '' : ' larena-button-primary' }} larena-control-floor">{{ __('larena-env::admin.services.restart') }}</button>
+                                        <button type="submit" class="larena-button{{ $service->isActive() || $service->isUnused() ? '' : ' larena-button-primary' }} larena-control-floor">{{ __('larena-env::admin.services.restart') }}</button>
                                     </form>
                                 @endif
                                 @if ($allows['reload'] && $service->canReload)

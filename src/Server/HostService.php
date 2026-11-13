@@ -24,6 +24,15 @@ final readonly class HostService
         return $this->active === 'active';
     }
 
+    /**
+     * Whether the service is simply not used (block 4; the panel's UX audit, DATA-02): off, not failed, and not started
+     * with the server, as PostgreSQL or Redis on a fresh server. It is said grey, never as a stopped service in red.
+     */
+    public function isUnused(): bool
+    {
+        return !$this->isActive() && $this->active !== 'failed' && $this->enabled !== null && $this->enabled !== 'enabled';
+    }
+
     /** @param array<array-key, mixed> $data */
     public static function fromData(array $data): ?self
     {

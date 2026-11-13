@@ -8,6 +8,15 @@
 @endif
 @if ($phase === 'form')
     <p class="m-0 color-on-surface-variant">{{ __('larena-env::admin.storages.add_note') }}</p>
+    {{-- Where a storage's keys come from, in three short steps (block 4). --}}
+    <details data-env-setup-howto="backups">
+        <summary class="color-primary" style="cursor: pointer;">{{ __('larena-env::admin.setup.backups.howto') }}</summary>
+        <ol class="m-0 m-t-1">
+            @foreach ([0, 1, 2] as $number)
+                <li>{{ __('larena-env::admin.setup.backups.howto_steps.'.$number) }}</li>
+            @endforeach
+        </ol>
+    </details>
     <sf-dropdown name="provider" label="{{ __('larena-env::admin.storages.fields.provider') }}" value="yandex" required
         options='@json(array_map(static fn (string $one): array => ['value' => $one, 'text' => __('larena-env::admin.storages.providers.'.$one)], array_keys(\Larena\Env\Backup\BackupStorage::PROVIDERS)))'></sf-dropdown>
     <sf-input name="name" label="{{ __('larena-env::admin.storages.fields.name') }}" hint="{{ __('larena-env::admin.storages.fields.name_hint') }}" pattern="[a-z0-9_-]+" autocomplete="off" required></sf-input>

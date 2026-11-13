@@ -55,6 +55,7 @@ env_assert(is_string($key) && str_starts_with($key, 'base64:') && strlen((string
 env_assert(getenv('APP_KEY') === $key, 'And is in use at once.');
 // After sign-in the panel's address decides (the overview for the server's readers), not the sites' screen.
 env_assert(getenv('LARENA_AUTH_ADMIN_REDIRECT') === '/admin', 'Sign-in goes through the panel\'s address.');
+env_assert(getenv('APP_LOCALE') === 'ru', 'The panel speaks Russian unless the browser asks otherwise.');
 foreach (array_keys(PanelEnvironment::DEFAULTS) as $name) {
     env_assert(!preg_match('/(PASS|SECRET|TOKEN|KEY)$/', $name), "No secret among the defaults: {$name}.");
 }

@@ -80,6 +80,11 @@
     @endif
     <section class="larena-panel larena-panel-padded m-top-2" aria-labelledby="env-new-site-fields">
         <h2 id="env-new-site-fields" class="m-top-0 text-2">{{ __('larena-env::admin.new_site.fields_title', ['kind' => ($serverProfiles ?? null) !== null ? $serverProfiles[$kind ?? 'static']['label'] : __('larena-env::admin.new_site.profiles.'.($kind ?? 'static'))]) }}</h2>
+        {{-- Before the site is made: where its domain must lead, with the server's real address (block 4). --}}
+        <p data-env-domain-point>{{ ($serverIp ?? null) !== null ? __('larena-env::admin.point_domain.ip', ['ip' => $serverIp]) : __('larena-env::admin.point_domain.unknown') }}</p>
+        @if (($owners ?? null) !== null && $owners !== [])
+            <p class="color-on-surface-variant" data-env-new-owner-explain>{{ __('larena-env::admin.new_site.owner_explain') }}</p>
+        @endif
         {{-- The fields the chosen kind asks, in the Framework property view over the new site's port: record.create plans
              the site and leads to that plan. The plain form is the view's fallback, hidden once the view has read its fields. --}}
         <div id="admin-record-view" data-larena-close-url="{{ route('larena.env.admin.index', [], false) }}">

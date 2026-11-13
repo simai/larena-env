@@ -63,6 +63,8 @@ final readonly class ServerJobController
             'updating' => is_string($updating) ? $updating : null,
             'source' => $result->source,
             'status' => $result->status,
+            // Who started it, in words (block 4): «Вы» for this person, never the account's internal reference.
+            'startedBy' => self::startedBy($result->status?->actor, $actor),
             'log' => $result->log,
             'refused' => $result->refused,
             // A job the server does not know is said as not found, like a site, not as the server's refusal (critics 2026-11-07).
@@ -142,5 +144,18 @@ final readonly class ServerJobController
         $line = (string) $this->translator->get($key);
 
         return $line !== $key ? $line : (string) $this->translator->get('larena-env::admin.reasons.unknown', ['reason' => $reason]);
+    }
+
+    /** Who started a job, as a key of job.started_by_*: this person, another person of the panel, or the server itself. */
+    public static function startedBy(?string $started, PanelActor $actor): ?string
+    {
+        if ($started === null || $started === '') {
+            return null;
+        }
+        if ($started === $actor->user || $started === $actor->impersonatedBy) {
+            return 'you';
+        }
+
+        return str_starts_with($started, 'user:') ? 'other' : 'server';
     }
 }

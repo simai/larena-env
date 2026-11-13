@@ -163,6 +163,8 @@ final readonly class SiteAdminController
             'nginxAllows' => ['save' => $capabilities->allows('site:nginx-custom'),
                 'keep' => $capabilities->allows('change:confirm')],
             'siteDns' => $site !== null && $tab === 'domains' ? $this->dns?->forSite($domain) : null,
+            // Where the domain must lead, said with the server's real address beside a missing certificate (block 4).
+            'serverIp' => $site !== null && $tab === 'domains' && $site->certificate === null ? $this->extras->serverIp($actor, $capabilities) : null,
             // The site's own scheduled jobs (Panel plan 5.4), and the runs of one of them when it is opened.
             'cron' => $site !== null && $tab === 'cron' ? $this->cronTab($request, $actor, $domain, $capabilities) : null,
             'wholeServer' => $actor->owner === null,
@@ -175,6 +177,8 @@ final readonly class SiteAdminController
             'backupState' => $site !== null && $tab === 'backups' ? $this->backupState($actor, $site, $overview, $capabilities) : null,
             'canAcknowledge' => $capabilities->allows('self:alerts-ack') && $this->canOperate($request),
             'capabilities' => $capabilities,
+            // The signed-in person's email: a certificate's mail goes there when its field is left empty (block 4).
+            'personEmail' => $tab === 'domains' ? self::personEmail($request) : null,
             // Whether a certificate may be checked through DNS: the server keeps a Cloudflare token (simai-env 1.36.0).
             'dnsCertificates' => $ask('ssl:dns-status', 'domains') && $this->extras->dnsCertificates($actor)?->configured === true,
             'tabOperations' => array_values(array_filter($operations, static fn (SiteOperation $operation): bool => $operation->tab() === $tab
@@ -268,7 +272,8 @@ final readonly class SiteAdminController
             'operation' => $operation,
             'fields' => $operation === null ? [] : array_values(array_filter($operation->fields(), static fn (string $field): bool => $capabilities->takes($operation->command(), $field))),
             // What the person gave when the site was made (a WordPress title, a repository), offered again at its step.
-            'values' => is_array($kept) ? array_filter($kept, 'is_string') : [],
+            // WordPress's language follows the panel's (block 4): ru_RU for a person reading Russian, unless they typed one.
+            'values' => (is_array($kept) ? array_filter($kept, 'is_string') : []) + ($operation === SiteOperation::WordpressInstall && str_starts_with($this->translator->getLocale(), 'ru') ? ['locale' => 'ru_RU'] : []),
             'copies' => $operation === SiteOperation::WordpressRestoreReady && $capabilities->allows('wp:status') ? $this->routes->wordpressCopies($actor, $site->domain) : null,
             'pending' => array_map(static fn (string $item): string => \Larena\Env\Server\SiteDoctor::checkText($item, $item), $status->pending),
         ];
@@ -503,8 +508,32 @@ final readonly class SiteAdminController
                 $input[$field] = $value;
             }
         }
+        // A certificate's email is optional on the form (block 4): left empty, the signed-in person's own is sent.
+        if ($operation === SiteOperation::CertificateIssue && !isset($input['email']) && self::personEmail($request) !== null) {
+            $input['email'] = (string) self::personEmail($request);
+        }
 
         return $input;
+    }
+
+    /** The signed-in person's email, where their account has a valid one. */
+    public static function personEmail(Request $request): ?string
+    {
+        $user = $request->user();
+        $email = is_object($user) ? ($user->email ?? null) : null;
+        // A panel account signs in through larena/auth, not Laravel's user: its email is on its identity, read the way the
+        // admin reads the person's name (PersistentAdminIdentityLabelResolver); no admin identity, no email.
+        $subject = (string) $request->attributes->get('larena_access_actor', '');
+        if (!is_string($email) && preg_match('/\Auser:admin_identity:([1-9][0-9]*)\z/D', $subject, $matches) === 1) {
+            try {
+                $email = \Illuminate\Container\Container::getInstance()->make('db')->connection()
+                    ->table('larena_admin_identities')->where('id', (int) $matches[1])->value('email');
+            } catch (\Throwable) {
+                $email = null;
+            }
+        }
+
+        return is_string($email) && filter_var($email, FILTER_VALIDATE_EMAIL) !== false ? $email : null;
     }
 
 

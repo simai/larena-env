@@ -66,8 +66,8 @@
             <p>{{ $plan->description }}</p>
             <dl class="m-0" style="display: block;" data-env-facts>
                 <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.plan.command') }}</dt><dd class="m-0 min-w-0 text-end mono">{{ $plan->command }}</dd></div>
-                <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.plan.effects') }}</dt><dd class="m-0 min-w-0 text-end">{{ $plan->effects }}</dd></div>
-                <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.plan.lock') }}</dt><dd class="m-0 min-w-0 text-end">{{ $plan->lock ?? '—' }}</dd></div>
+                <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.plan.effects') }}</dt><dd class="m-0 min-w-0 text-end">{{ \Larena\Env\Admin\PlanValues::effects($plan->effects) }}</dd></div>
+                <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.plan.lock') }}</dt><dd class="m-0 min-w-0 text-end">{{ \Larena\Env\Admin\PlanValues::lock($plan->lock) }}</dd></div>
             </dl>
         </details>
         <form method="post" action="{{ $runUrl }}" data-env-confirm="{{ $plan->command }}">

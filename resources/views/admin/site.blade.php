@@ -67,6 +67,11 @@
                     @endif
                     @if ($siteRoute['status']->step === 'done')
                         <p data-env-site-route-done>{{ __('larena-env::admin.routes.done') }}</p>
+                        {{-- The site is made; without a certificate the next step is HTTPS, in «Домены и HTTPS» (block 4). --}}
+                        @if ($site->certificate === null && in_array('domains', $tabs, true))
+                            <p data-env-site-route-https>{{ __('larena-env::admin.routes.https_next') }}</p>
+                            <p><a href="{{ route('larena.env.admin.site', ['domain' => $domain], false) }}?tab=domains" class="larena-button larena-button-primary" data-env-site-route-https-go>{{ __('larena-env::admin.routes.https_go') }}</a></p>
+                        @endif
                     @else
                         <p data-env-site-route-at>{{ __('larena-env::admin.routes.now', ['step' => $siteRoute['stepText']]) }}</p>
                         @if ($siteRoute['nextText'] !== null)
@@ -166,6 +171,13 @@
                 <h2 id="env-site-certificate" class="text-2">{{ __('larena-env::admin.certificate.title') }}</h2>
                 @if ($site->certificate === null)
                     <p>{{ __('larena-env::admin.certificate.none') }}</p>
+                    {{-- Where the domain must lead, and the certificate right here: the same action as among the tab's
+                         buttons below, opening its side panel (block 4, texts for a newcomer). --}}
+                    <p data-env-domain-point>{{ ($serverIp ?? null) !== null ? __('larena-env::admin.point_domain.ip', ['ip' => $serverIp]) : __('larena-env::admin.point_domain.unknown') }}</p>
+                    @if (in_array(\Larena\Env\Operations\SiteOperation::CertificateIssue, $tabOperations, true))
+                        <p>{{ __('larena-env::admin.certificate.get_now') }}</p>
+                        <p><button type="button" class="larena-button larena-button-primary" data-sf-modal-open="env-op-{{ \Larena\Env\Operations\SiteOperation::CertificateIssue->value }}" data-env-certificate-get>{{ __('larena-env::admin.operations.certificate-issue') }}</button></p>
+                    @endif
                 @else
                     <dl class="m-0" style="display: block;" data-env-facts>
                         <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.certificate.names') }}</dt><dd class="m-0 min-w-0 text-end">{{ implode(', ', $site->certificate->names) }}</dd></div>
@@ -449,6 +461,12 @@
                         <input type="hidden" name="operation" value="{{ $operation->value }}">
                         @foreach (($capabilities ?? null) === null ? $operation->fields() : $operation->fieldsOn($capabilities) as $field)
                             @continue(!($dnsCertificates ?? false) && in_array($field, \Larena\Env\Operations\SiteOperation::DNS_FIELDS, true))
+                            {{-- A certificate's rarely needed choices (HSTS, a test certificate, the way the domain is checked,
+                                 every subdomain) stand together under «Подробнее», all off (block 4); they close after the loop. --}}
+                            @if ($field === \Larena\Env\Operations\SiteOperation::MORE[0] && $operation === \Larena\Env\Operations\SiteOperation::CertificateIssue)
+                                <details class="m-y-1" data-env-certificate-more>
+                                <summary class="color-primary" style="cursor: pointer;">{{ __('larena-env::admin.more') }}</summary>
+                            @endif
                             @if (in_array($field, \Larena\Env\Operations\SiteOperation::SWITCHES, true))
                                 <div class="larena-field" data-env-switch="{{ $field }}">
                                     <input type="hidden" name="{{ $field }}" value="no">
@@ -456,13 +474,20 @@
                                         <input type="checkbox" id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}" value="yes" @if (\Larena\Env\Operations\SiteOperation::switchedOn($field, $site)) checked @endif @if ($field === 'verify') data-env-verify-field @endif>
                                         <span>{{ __('larena-env::admin.fields.'.$field) }}</span>
                                     </label>
+                                    @if (in_array($field, ['hsts', 'staging'], true))
+                                        <p class="m-0 text-small color-on-surface-variant" @if ($field === 'staging') role="note" @endif data-env-switch-hint="{{ $field }}">{{ __('larena-env::admin.fields.'.$field.'_hint') }}</p>
+                                    @endif
                                 </div>
                                 @continue
                             @endif
                             <div class="larena-field">
                                 <label for="env-{{ $operation->value }}-{{ $field }}">{{ __('larena-env::admin.fields.'.$field) }}</label>
                                 @if ($field === 'email')
-                                    <input type="email" id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}" required>
+                                    {{-- Optional: the person's own email is sent when the field is left empty (block 4). --}}
+                                    <input type="email" id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}" value="{{ $personEmail ?? '' }}" @if (($personEmail ?? null) === null) required @endif>
+                                    @if (($personEmail ?? null) !== null)
+                                        <p class="m-0 text-small color-on-surface-variant">{{ __('larena-env::admin.fields.email_hint') }}</p>
+                                    @endif
                                 @elseif ($field === 'php')
                                     <select id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}" required>
                                         @foreach ($phpVersions as $version)
@@ -511,6 +536,9 @@
                                 @endif
                             </div>
                         @endforeach
+                        @if ($operation === \Larena\Env\Operations\SiteOperation::CertificateIssue && in_array(\Larena\Env\Operations\SiteOperation::MORE[0], ($capabilities ?? null) === null ? $operation->fields() : $operation->fieldsOn($capabilities), true))
+                            </details>
+                        @endif
                         @if ($operation === \Larena\Env\Operations\SiteOperation::BackupRestoreDatabase)
                             <p data-env-restore-note>{{ __('larena-env::admin.backups.restore_note') }}</p>
                         @elseif ($operation === \Larena\Env\Operations\SiteOperation::BackupExtractFiles)
