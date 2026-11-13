@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.4.6 — released 2026-11-13 (the owner: release without his stand check, q-8b1ae2df54)
+
+Replaces 0.4.5, whose new-site form showed no fields. Needs simai-env 1.56.2 for the Laravel deploy step.
 
 - Block 4 of the audit, texts for a newcomer (no new screen or component):
   - the plan of «Создать сайт» names every argument and value in words (WordPress, MySQL, «Английский»), the job
@@ -35,7 +37,7 @@
   WordPress new and restore routes and of the Laravel deploy and configure steps, and the plan of `laravel:finalize`.
   The recorded gateway answers the `site:deploy` plan only for the repository and ref the set holds.
 
-## 0.4.5 — built 2026-11-10, on the local stand, not released (waits for the owner's acceptance)
+## 0.4.5 — released 2026-11-10 (its new-site form showed no fields; replaced by 0.4.6)
 
 - «Создать сайт» by the server's routes (simai-env 1.56.1): a kind of site offers its ways (new site, restore from a
   copy, …) with their steps; a way the server marks unavailable, or one that needs an upload from the computer, is
