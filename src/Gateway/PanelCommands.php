@@ -30,6 +30,9 @@ final class PanelCommands
     private const string ENGINE = '/\A(?:mysql|pgsql)\z/D';
     private const string ORIGIN = '/\Ahttps?:\/\/[A-Za-z0-9.-]{1,253}(?::[0-9]{1,5})?\z/D';
     private const string CODE = '/\A30[1278]\z/D';
+    // A redirect of a site's own path (simai-env 1.22.0): from a path of the site, to a path of it or another address.
+    private const string URL_PATH = '/\A\/[A-Za-z0-9._~\/%-]{0,500}\z/D';
+    private const string REDIRECT_TO = '/\A(?:\/|https?:\/\/[A-Za-z0-9.-]{1,253}(?::[0-9]{1,5})?\/?)[A-Za-z0-9._~\/%?&=+-]{0,500}\z/D';
     private const string KEEP_DROP = '/\A(?:keep|drop)\z/D';
     private const string PUBKEY = '/\A(?:ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp(?:256|384|521)|sk-ssh-ed25519@openssh\.com) [A-Za-z0-9+\/]{20,8192}={0,3}(?: [ -~]{0,200})?\z/D';
     private const string BACKUP = '/\A[A-Za-z0-9][A-Za-z0-9._-]{0,63}\z/D';
@@ -177,6 +180,16 @@ final class PanelCommands
         'owner:block' => ['args' => ['name' => self::OWNER], 'required' => ['name'], 'since' => '1.27.0', 'kind' => self::ACTION],
         'owner:unblock' => ['args' => ['name' => self::OWNER], 'required' => ['name'], 'since' => '1.27.0', 'kind' => self::ACTION],
         'site:db-create' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => '1.22.0', 'kind' => self::ACTION],
+        // What the panel can take away (audit block 5, A2), each planned and confirmed as every action: a site with its files
+        // and database by choice, a site's database, a path redirect, a workspace without sites; and a key for a workspace.
+        'site:remove' => ['args' => ['domain' => self::DOMAIN, 'remove-files' => self::YES_NO, 'drop-db' => self::YES_NO, 'drop-db-user' => self::YES_NO],
+            'required' => ['domain'], 'since' => '1.22.0', 'kind' => self::ACTION],
+        'site:db-drop' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => '1.22.0', 'kind' => self::ACTION],
+        'site:redirect-add' => ['args' => ['domain' => self::DOMAIN, 'from' => self::URL_PATH, 'to' => self::REDIRECT_TO, 'code' => self::CODE],
+            'required' => ['domain', 'from', 'to'], 'since' => '1.22.0', 'kind' => self::ACTION],
+        'site:redirect-remove' => ['args' => ['domain' => self::DOMAIN, 'from' => self::URL_PATH], 'required' => ['domain', 'from'], 'since' => '1.22.0', 'kind' => self::ACTION],
+        'owner:remove' => ['args' => ['name' => self::OWNER], 'required' => ['name'], 'since' => '1.22.0', 'kind' => self::ACTION],
+        'owner:add-key' => ['args' => ['name' => self::OWNER, 'pubkey' => self::PUBKEY], 'required' => ['name', 'pubkey'], 'since' => '1.22.0', 'kind' => self::ACTION],
         // Panel plan stage 3 (simai-env 1.28.0): restore, check and schedule backups, PHP's extensions and php.ini, the
         // server's load (administrator only), the databases and a new database password.
         'backup:data-restore' => ['args' => ['domain' => self::DOMAIN, 'backup' => self::BACKUP, 'db' => self::YES_NO, 'files' => self::YES_NO],

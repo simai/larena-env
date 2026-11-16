@@ -41,8 +41,8 @@ env_assert(str_contains($empty, '"args":{}'), 'Empty args stay an object, the ga
 env_assert(preg_match('/\Apanel-[a-f0-9]{24}\z/', PanelRequest::read($actor, 'self:describe')->requestId) === 1, 'A generated id fits the gateway\'s pattern.');
 env_assert(PanelRequest::read($actor, 'self:describe')->requestId !== PanelRequest::read($actor, 'self:describe')->requestId, 'Each request has its own id.');
 
-// Removals, other owners' keys and anything else are outside this package's table, whatever is sent.
-foreach (['site:remove', 'owner:remove', 'owner:add-key', 'self:bootstrap', 'nonsense', ''] as $command) {
+// Anything outside this package's table is refused, whatever is sent; removals are in it since audit block 5 (A2).
+foreach (['self:bootstrap', 'site:purge', 'nonsense', ''] as $command) {
     env_assert(env_refusal(static fn () => new PanelRequest('r', $actor, $command, ['domain' => 'example.com'])) === 'not_allowed', "This package may not ask for {$command}.");
 }
 // The actions and job commands of the screens are allowed, and only an action is ever confirmed.

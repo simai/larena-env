@@ -56,8 +56,8 @@
         {{-- What and with which values, in the panel's words; the server's own terms under «Подробнее» (the panel's UX
              audit, COPY-02). --}}
         <dl class="m-0" style="display: block;" data-env-facts>
-            <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.plan.target') }}</dt><dd class="m-0 min-w-0 text-end">{{ $plan->target ?? $target }}</dd></div>
-            @foreach (\Larena\Env\Admin\PlanValues::of($plan->args, $plan->target ?? $target, ($check ?? null) !== null ? ['id'] : []) as $row)
+            <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.plan.target') }}</dt><dd class="m-0 min-w-0 text-end">{{ ($target ?? null) ?: $plan->target }}</dd></div>
+            @foreach (\Larena\Env\Admin\PlanValues::of($plan->args, ($target ?? null) ?: $plan->target, ($check ?? null) !== null ? ['id'] : []) as $row)
                 <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-plan-argument="{{ $row['name'] }}"><dt class="color-on-surface-variant">{{ $row['label'] }}</dt><dd class="m-0 min-w-0 text-end" style="overflow-wrap: anywhere;">{{ $row['value'] }}</dd></div>
             @endforeach
         </dl>
@@ -70,12 +70,15 @@
                 <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.plan.lock') }}</dt><dd class="m-0 min-w-0 text-end">{{ \Larena\Env\Admin\PlanValues::lock($plan->lock) }}</dd></div>
             </dl>
         </details>
-        <form method="post" action="{{ $runUrl }}" data-env-confirm="{{ $plan->command }}">
+        {{-- What takes something away for good (audit block 5, A2) is a danger button and asks once more in the Framework
+             question window (the admin's data-larena-confirm-submit), with the target named. --}}
+        <form method="post" action="{{ $runUrl }}" data-env-confirm="{{ $plan->command }}"
+            @if (\Larena\Env\Admin\PlanValues::destroys($plan->command)) data-larena-confirm-submit="{{ __('larena-env::admin.plan.ask.'.str_replace(':', '-', $plan->command), ['target' => ($target ?? null) ?: $plan->target]) }}" data-larena-confirm-accept="{{ __('larena-env::admin.plan.ask_accept') }}" data-larena-confirm-danger="1" @endif>
             @csrf
             @foreach ($hidden as $field => $value)
                 <input type="hidden" name="{{ $field }}" value="{{ $value }}">
             @endforeach
-            <button type="submit" class="larena-button larena-button-primary">{{ __('larena-env::admin.plan.confirm') }}</button>
+            <button type="submit" class="larena-button {{ \Larena\Env\Admin\PlanValues::destroys($plan->command) ? 'larena-button-danger' : 'larena-button-primary' }}">{{ \Larena\Env\Admin\PlanValues::destroys($plan->command) ? __('larena-env::admin.plan.confirm_remove') : __('larena-env::admin.plan.confirm') }}</button>
         </form>
         <p><a href="{{ $cancelUrl }}">{{ __('larena-env::admin.plan.cancel') }}</a></p>
     </section>

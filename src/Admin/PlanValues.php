@@ -14,14 +14,25 @@ final class PlanValues
 {
     /** The values a form of the panel names (`fields.*`); others keep the server's name. */
     public const array NAMED = ['verify', 'email', 'redirect', 'hsts', 'staging', 'challenge', 'wildcard', 'db', 'files', 'php',
-        'backup', 'time', 'keep', 'enabled', 'name', 'value', 'login', 'pubkey'];
+        'backup', 'time', 'keep', 'enabled', 'name', 'value', 'login', 'pubkey', 'remove-files', 'drop-db', 'drop-db-user'];
+
+    /**
+     * The commands that take something away for good (audit block 5, A2): the plan's «Выполнить» is a danger button and
+     * asks once more in the Framework question window.
+     */
+    public const array DESTRUCTIVE = ['site:remove', 'site:db-drop', 'owner:remove'];
+
+    public static function destroys(string $command): bool
+    {
+        return in_array($command, self::DESTRUCTIVE, true);
+    }
 
     /** The arguments the plan's own dictionary names (`plan.args.*`), the route's later fields among them. */
     public const array ARGS = ['domain', 'profile', 'route', 'owner', 'create-db', 'db-engine', 'admin-user', 'admin-email', 'locale', 'git', 'ref',
         'title', 'source', 'url', 'mode', 'daily-backup', 'bitrix-files', 'redirect-to', 'redirect-code', 'redirect-path', 'upstream-port',
         'upstream-path', 'websockets', 'check-dns', 'migrate', 'id', 'path', 'to', 'port', 'proto', 'action', 'address', 'allow', 'countries',
         'from', 'kind', 'target', 'token', 'provider', 'set', 'schedule', 'command', 'content', 'ttl', 'security-only', 'enable', 'check', 'dump',
-        'archive', 'by', 'change_id', 'expect-sha256', 'remove', 'ip-access'];
+        'archive', 'by', 'change_id', 'expect-sha256', 'remove', 'ip-access', 'code'];
 
     /** The values said in words, by argument: the dictionary they are in and the values it has. */
     private const array VALUES = [
@@ -30,6 +41,7 @@ final class PlanValues
         'bitrix-files' => ['new_site.bitrix_files_choices.', ['none', 'setup', 'restore']],
         'route' => ['routes.names.', ['new', 'restore', 'repo', 'installed', 'none']],
         'redirect-code' => ['routes.values.', ['301', '302', '307', '308']],
+        'code' => ['routes.values.', ['301', '302', '307', '308']],
         'redirect-path' => ['routes.values.', ['keep', 'drop']],
         'locale' => ['plan.values.locale.', ['ru_RU', 'en_US', 'en_GB', 'de_DE', 'fr_FR', 'es_ES', 'it_IT', 'uk', 'kk', 'be']],
         'challenge' => ['plan.values.challenge.', ['http', 'dns']],

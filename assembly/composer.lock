@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "13ab1ecb4fe370d1cea2d98a3f6ca0e5",
+    "content-hash": "880290788e9a6bde67db06b9106202b7",
     "packages": [
         {
             "name": "brick/math",
@@ -1573,12 +1573,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:simai/larena-admin.git",
-                "reference": "b4fb8ab972bdec760803f0bdd5e4c5f6c5e697dd"
+                "reference": "8366f81ff04a7c45a802e1901e0a63cd7b377db6"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-admin/zipball/b4fb8ab972bdec760803f0bdd5e4c5f6c5e697dd",
-                "reference": "b4fb8ab972bdec760803f0bdd5e4c5f6c5e697dd",
+                "url": "https://api.github.com/repos/simai/larena-admin/zipball/8366f81ff04a7c45a802e1901e0a63cd7b377db6",
+                "reference": "8366f81ff04a7c45a802e1901e0a63cd7b377db6",
                 "shasum": ""
             },
             "require": {
@@ -1799,7 +1799,7 @@
                 }
             ],
             "description": "Larena Admin: Object-based, permission-aware administration platform for package contributions, screens, actions and diagnostics.",
-            "time": "2026-11-13T11:35:15+00:00"
+            "time": "2026-11-16T09:20:39+00:00"
         },
         {
             "name": "larena/audit",
@@ -1917,12 +1917,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:simai/larena-auth.git",
-                "reference": "e36d00b837ee3eaef59eab695dbe03912a4fcef2"
+                "reference": "225dfadfbd52fd911e3d2a2195d768eadf87270d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-auth/zipball/e36d00b837ee3eaef59eab695dbe03912a4fcef2",
-                "reference": "e36d00b837ee3eaef59eab695dbe03912a4fcef2",
+                "url": "https://api.github.com/repos/simai/larena-auth/zipball/225dfadfbd52fd911e3d2a2195d768eadf87270d",
+                "reference": "225dfadfbd52fd911e3d2a2195d768eadf87270d",
                 "shasum": ""
             },
             "require": {
@@ -2026,7 +2026,7 @@
                 }
             ],
             "description": "Larena Auth package: entry subject resolution, authentication methods, sessions, MFA and token channel boundaries.",
-            "time": "2026-11-10T16:13:10+00:00"
+            "time": "2026-11-16T09:28:12+00:00"
         },
         {
             "name": "larena/core",

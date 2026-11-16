@@ -27,14 +27,18 @@ $user = 'admin@stand.test';
 env_assert(PanelCommands::kind('site:describe') === PanelCommands::READ, 'A read.');
 env_assert(PanelCommands::kind('backup:data') === PanelCommands::ACTION, 'An action.');
 env_assert(PanelCommands::kind('job:status') === PanelCommands::JOB, 'A job command.');
-env_assert(PanelCommands::kind('site:remove') === null && PanelCommands::kind('self:bootstrap') === null, 'Commands this package may not send.');
+env_assert(PanelCommands::kind('self:bootstrap') === null && PanelCommands::kind('site:purge') === null, 'Commands this package may not send.');
+// What the panel takes away (audit block 5, A2): actions, planned and confirmed as every action.
+foreach (['site:remove', 'site:db-drop', 'site:redirect-add', 'site:redirect-remove', 'owner:remove', 'owner:add-key'] as $command) {
+    env_assert(PanelCommands::kind($command) === PanelCommands::ACTION && PanelCommands::since($command) === '1.22.0', "{$command} is an action of simai-env 1.22.0.");
+}
 // 23 of the card, a new site and the owners; 1 of a site's nginx directives (1.41.0) and the confirmation of a timed change (stage 6);
 // 3 of the server's alerts (simai-env 1.31.0); the safe update (simai-env 1.32.0); 2 of the services, 4 of a site's scheduled
 // jobs, 4 of the firewall and the panel's access (stage 5); the DNS token for certificates (simai-env 1.36.0); 4 of the server's
 // PHP versions (simai-env 1.37.0); 3 of the server's software (1.38.0); 7 of a site's files (1.39.0–1.40.0); Apache for a PHP site (1.42.0);
 // a program removed (1.43.0); 8 of the server's security (1.45.0–1.47.0); the fix of a rule of a site's check (1.55.1); 6 steps of a site's creation route (1.55.0–1.56.0);
-// the deploy from Git of the Laravel repository route (simai-env 1.56.2).
-env_assert(count(PanelCommands::actions()) === 88, 'The card\'s actions, a new site, the owners, the nginx directives, the alerts, the update, the services, the jobs, the firewall, the DNS token, PHP, the server\'s software, the files, the security, the countries, the MCP keys, the backup storages and the panel\'s address.');
+// the deploy from Git of the Laravel repository route (simai-env 1.56.2); 6 removals, redirects and a workspace's key (audit block 5, A2).
+env_assert(count(PanelCommands::actions()) === 94, 'The card\'s actions, a new site, the owners, the nginx directives, the alerts, the update, the services, the jobs, the firewall, the DNS token, PHP, the server\'s software, the files, the security, the countries, the MCP keys, the backup storages and the panel\'s address.');
 // The addresses that reach the panel are the one list an argument may be; nothing else takes a list.
 try {
     PanelCommands::check('file:remove', ['domain' => 'demo-php.test', 'path' => ['public']]);
@@ -110,7 +114,7 @@ $capabilities = (new \Larena\Env\Server\ServerOverviewReader($gateway))->read(ne
 env_assert($capabilities instanceof \Larena\Env\Gateway\PanelCapabilities, 'The server says what its gateway has.');
 $offered = array_map(static fn (SiteOperation $operation): string => $operation->value, SiteOperation::offeredFor($site, $capabilities));
 env_assert($offered === ['certificate-issue', 'backup', 'backup-restore-database', 'backup-extract-files', 'backup-verify', 'backup-schedule', 'php-version',
-    'php-setting', 'php-setting-remove', 'database-password', 'database-export', 'sftp-create', 'sftp-add-key', 'sftp-disable', 'sftp-enable', 'sftp-remove', 'apache-on'],
+    'php-setting', 'php-setting-remove', 'database-password', 'database-export', 'sftp-create', 'sftp-add-key', 'sftp-disable', 'sftp-enable', 'sftp-remove', 'apache-on', 'site-remove', 'database-drop', 'redirect-add', 'redirect-remove'],
     'Without a certificate, a previous release, workers or a service; with 1.28.0\'s backups, php.ini and database, 1.30.0\'s SFTP and 1.42.0\'s Apache: '.implode(',', $offered));
 // Apache behind nginx (simai-env 1.42.0): a PHP site nginx serves is offered Apache, one Apache serves nginx alone again,
 // a site that is not PHP neither; the switch fixes `enable`, and the system level's alone.

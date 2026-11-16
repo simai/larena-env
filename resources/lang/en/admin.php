@@ -216,6 +216,14 @@ return [
         'value' => 'Value',
         'login' => 'Login',
         'pubkey' => 'SSH public key',
+        'remove-files' => 'Remove the site\'s files too',
+        'drop-db' => 'Remove the database too',
+        'drop-db-user' => 'Remove the database user too',
+        'from' => 'From (a path of the site)',
+        'from_placeholder' => '/old-page',
+        'to' => 'To',
+        'to_placeholder' => '/new-page or https://example.com/',
+        'code' => 'Kind of redirect',
     ],
     'operations' => [
         'title' => 'Actions',
@@ -254,6 +262,14 @@ return [
         'wordpress-finalize' => 'Finish the WordPress setup',
         'laravel-finalize' => 'Finish the Laravel setup',
         'deploy' => 'Deploy the application',
+        // What a site's card can take away (audit block 5, A2).
+        'site-remove' => 'Remove the site',
+        'database-drop' => 'Remove the database',
+        'redirect-add' => 'Add a redirect',
+        'redirect-remove' => 'Remove a redirect',
+        'site_remove_note' => 'The site stops opening; its settings and certificate are removed. Its files and database go only if you tick them above; what is not ticked stays on the server. A removal cannot be undone — make a backup first.',
+        'database_drop_note' => 'The database and all its data are removed; the site no longer sees them. This cannot be undone — make a backup first.',
+        'redirect_remove_note' => 'Give the path the site redirects from now, for example /old-page.',
     ],
     'plan' => [
         'title' => 'Confirm — Larena Panel',
@@ -265,6 +281,14 @@ return [
         'lock' => 'Holds',
         'confirm' => 'Run it',
         'cancel' => 'Do not run it',
+        // A removal asks once more in the Framework question window (audit block 5, A2).
+        'confirm_remove' => 'Remove',
+        'ask_accept' => 'Remove',
+        'ask' => [
+            'site-remove' => 'Remove the site :target? This cannot be undone.',
+            'site-db-drop' => 'Remove the database of :target? This cannot be undone.',
+            'owner-remove' => 'Remove the workspace :target? This cannot be undone.',
+        ],
         'replaces' => 'What is replaced',
         'replaces_database' => 'The database of :domain is replaced by the one in the backup of :time (:size). The server first saves the current database as an ordinary backup, so this can be undone.',
         'replaces_files' => 'Nothing is replaced: the files of the backup of :time (:size) are unpacked beside :domain for review.',
@@ -282,7 +306,7 @@ return [
             'provider' => 'Where DNS is kept', 'set' => 'Level', 'schedule' => 'Schedule', 'command' => 'Command', 'content' => 'Content',
             'ttl' => 'Record lifetime', 'security-only' => 'Security updates only', 'enable' => 'Turn on', 'check' => 'Check',
             'dump' => 'Database dump', 'archive' => 'Archive', 'by' => 'By', 'change_id' => 'Change', 'expect-sha256' => 'Checksum',
-            'remove' => 'Remove', 'ip-access' => 'Sign-in by the server address',
+            'remove' => 'Remove', 'ip-access' => 'Sign-in by the server address', 'code' => 'Kind of redirect',
         ],
         'values' => [
             'locale' => ['ru_RU' => 'Russian', 'en_US' => 'English', 'en_GB' => 'English (United Kingdom)', 'de_DE' => 'German', 'fr_FR' => 'French',
@@ -743,6 +767,8 @@ return [
         'block' => 'Block the workspace',
         'unblock' => 'Unblock the workspace',
         'block_explain' => 'A blocked workspace keeps its sites serving; SSH, SFTP and every request in its name stop.',
+        'remove' => 'Remove the workspace',
+        'add_key' => 'Add an SSH key',
         'disk' => 'sites take :size',
     ],
     'acting' => [

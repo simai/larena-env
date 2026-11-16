@@ -94,6 +94,33 @@
                                 <button type="submit" class="larena-button larena-control-floor">{{ __('larena-env::admin.people.'.(in_array($owner, $blockedOwners ?? [], true) ? 'unblock' : 'block')) }}</button>
                             </form>
                         @endif
+                        {{-- A key for SSH, and removing a workspace without sites (audit block 5, A2): planned and confirmed as
+                             every action; the removal is a danger button and asks once more on the plan. --}}
+                        @if ($canAddKey ?? false)
+                            <button type="button" class="larena-button larena-control-floor" data-sf-modal-open="env-owner-key-{{ $owner }}" data-env-owner-add-key="{{ $owner }}">{{ __('larena-env::admin.people.add_key') }}</button>
+                            <sf-modal id="env-owner-key-{{ $owner }}" position="inline-end" width="28rem" heading="{{ __('larena-env::admin.people.add_key') }}">
+                                <form method="post" action="{{ route('larena.env.admin.people.owners.plan', [], false) }}" class="larena-form m-0" style="padding: 0; box-shadow: none; background: none; border: 0; border-radius: 0;">
+                                    @csrf
+                                    <input type="hidden" name="action" value="add-key">
+                                    <input type="hidden" name="name" value="{{ $owner }}">
+                                    <div class="larena-field">
+                                        <label for="env-owner-key-{{ $owner }}-pubkey">{{ __('larena-env::admin.fields.pubkey') }}</label>
+                                        <textarea id="env-owner-key-{{ $owner }}-pubkey" name="pubkey" rows="3" required></textarea>
+                                    </div>
+                                    <div class="larena-form-actions">
+                                        <button type="submit" class="larena-button">{{ __('larena-env::admin.operations.plan') }}</button>
+                                    </div>
+                                </form>
+                            </sf-modal>
+                        @endif
+                        @if (($canRemove ?? false) && ($ownerSites[$owner] ?? 0) === 0)
+                            <form method="post" action="{{ route('larena.env.admin.people.owners.plan', [], false) }}" class="m-0" data-env-owner-remove="{{ $owner }}">
+                                @csrf
+                                <input type="hidden" name="action" value="remove">
+                                <input type="hidden" name="name" value="{{ $owner }}">
+                                <button type="submit" class="larena-button larena-button-danger larena-control-floor">{{ __('larena-env::admin.people.remove') }}</button>
+                            </form>
+                        @endif
                     </li>
                 @endforeach
             </ul>

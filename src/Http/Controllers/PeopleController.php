@@ -65,6 +65,10 @@ final readonly class PeopleController
             'ownerDisk' => $result->overview->ownerDiskBytes ?? [],
             // Blocking a space is offered where the server's gateway has it (simai-env 1.27.0).
             'canBlock' => $capabilities?->allows('owner:block') === true,
+            // A workspace without sites can be removed, and any workspace given a key for SSH (audit block 5, A2).
+            'canRemove' => $capabilities?->allows('owner:remove') === true,
+            'canAddKey' => $capabilities?->allows('owner:add-key') === true,
+            'ownerSites' => self::sitesByOwner($result->overview->sites ?? []),
             'source' => $result->source,
             'reasonText' => $result->reason === null ? null : $this->reasonText($result->reason),
             'notice' => $request->session()->get('larena_env_notice'),
@@ -122,9 +126,29 @@ final readonly class PeopleController
         return new RedirectResponse(route('larena.env.admin.people', [], false));
     }
 
-    /** The owner actions of this screen: a new space, blocking one and unblocking it. */
-    private const array OWNER_ACTIONS = ['create' => 'owner:create', 'block' => 'owner:block', 'unblock' => 'owner:unblock'];
-    private const array OWNER_HEADINGS = ['create' => 'new_owner', 'block' => 'block', 'unblock' => 'unblock'];
+    /** The owner actions of this screen: a new space, blocking one and unblocking it, removing an empty one, a key for one. */
+    private const array OWNER_ACTIONS = ['create' => 'owner:create', 'block' => 'owner:block', 'unblock' => 'owner:unblock',
+        'remove' => 'owner:remove', 'add-key' => 'owner:add-key'];
+    private const array OWNER_HEADINGS = ['create' => 'new_owner', 'block' => 'block', 'unblock' => 'unblock', 'remove' => 'remove', 'add-key' => 'add_key'];
+
+    /**
+     * How many sites each workspace has, so the screen offers removing only one without sites (the server refuses the rest).
+     *
+     * @param list<\Larena\Env\Server\SiteSummary> $sites
+     *
+     * @return array<string, int>
+     */
+    public static function sitesByOwner(array $sites): array
+    {
+        $count = [];
+        foreach ($sites as $site) {
+            if ($site->owner !== null) {
+                $count[$site->owner] = ($count[$site->owner] ?? 0) + 1;
+            }
+        }
+
+        return $count;
+    }
 
     /** A new owner of the server, a space for people to work in, or blocking one: planned, and run on confirmation. */
     public function planOwner(Request $request): mixed
@@ -171,7 +195,7 @@ final readonly class PeopleController
     private static function ownerInput(Request $request, string $action = 'create'): array
     {
         $input = [];
-        foreach ($action === 'create' ? ['name', 'pubkey'] : ['name'] as $field) {
+        foreach (in_array($action, ['create', 'add-key'], true) ? ['name', 'pubkey'] : ['name'] as $field) {
             $value = $request->input($field);
             if (is_string($value) && trim($value) !== '') {
                 $input[$field] = trim($value);

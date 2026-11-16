@@ -55,6 +55,12 @@ enum SiteOperation: string
     // The deploy step of the Laravel repository route (simai-env 1.56.2): a release from Git, the repository and its ref as
     // the person gave them when the site was made. A release archive (the static repository route) the panel does not send.
     case SiteDeploy = 'deploy';
+    // What a site's card can take away (audit block 5, A2): the site itself, with its files and database by choice, its
+    // database alone, and a redirect of one of its paths, added or removed.
+    case SiteRemove = 'site-remove';
+    case DatabaseDrop = 'database-drop';
+    case RedirectAdd = 'redirect-add';
+    case RedirectRemove = 'redirect-remove';
 
     public function command(): string
     {
@@ -91,6 +97,10 @@ enum SiteOperation: string
             self::WordpressFinalize => 'wp:finalize',
             self::LaravelFinalize => 'laravel:finalize',
             self::SiteDeploy => 'site:deploy',
+            self::SiteRemove => 'site:remove',
+            self::DatabaseDrop => 'site:db-drop',
+            self::RedirectAdd => 'site:redirect-add',
+            self::RedirectRemove => 'site:redirect-remove',
         };
     }
 
@@ -98,14 +108,14 @@ enum SiteOperation: string
     public function tab(): string
     {
         return match ($this) {
-            self::CertificateIssue, self::CertificateRenew, self::NameAdd, self::NameRemove => 'domains',
+            self::CertificateIssue, self::CertificateRenew, self::NameAdd, self::NameRemove, self::RedirectAdd, self::RedirectRemove => 'domains',
             self::PhpVersion, self::PhpSetting, self::PhpSettingRemove, self::ServiceRestart, self::QueueRestart, self::ApacheOn, self::ApacheOff => 'php',
-            self::DatabaseCreate, self::DatabasePassword, self::DatabaseExport => 'database',
+            self::DatabaseCreate, self::DatabasePassword, self::DatabaseExport, self::DatabaseDrop => 'database',
             self::Backup, self::BackupRestoreDatabase, self::BackupExtractFiles, self::BackupVerify, self::BackupSchedule => 'backups',
             self::Rollback => 'releases',
             self::SftpCreate, self::SftpAddKey, self::SftpDisable, self::SftpEnable, self::SftpRemove => 'access',
             self::CheckFix, self::BitrixRestoreReady, self::BitrixFinalize, self::WordpressInstall, self::WordpressRestoreReady,
-            self::WordpressFinalize, self::LaravelFinalize, self::SiteDeploy => 'overview',
+            self::WordpressFinalize, self::LaravelFinalize, self::SiteDeploy, self::SiteRemove => 'overview',
         };
     }
 
@@ -143,6 +153,11 @@ enum SiteOperation: string
             self::WordpressRestoreReady => ['files', 'dump'],
             self::LaravelFinalize => ['migrate'],
             self::SiteDeploy => ['git', 'ref'],
+            // The site's files and its database go only when the person ticks them; unticked, the server keeps them.
+            self::SiteRemove => ['remove-files', 'drop-db', 'drop-db-user'],
+            // `from` a path of the site, `to` a path of it or another address, `code` the kind of redirect.
+            self::RedirectAdd => ['from', 'to', 'code'],
+            self::RedirectRemove => ['from'],
             default => [],
         };
     }
@@ -161,7 +176,19 @@ enum SiteOperation: string
      * The yes-or-no fields, asked as one tick each (the panel's UX audit): the box shows what the server would do
      * anyway, so a person reads a plain choice instead of «как решит сервер»; an unticked box sends no.
      */
-    public const array SWITCHES = ['db', 'files', 'redirect', 'hsts', 'staging', 'wildcard', 'enabled', 'verify', 'check-dns', 'migrate'];
+    public const array SWITCHES = ['db', 'files', 'redirect', 'hsts', 'staging', 'wildcard', 'enabled', 'verify', 'check-dns', 'migrate',
+        'remove-files', 'drop-db', 'drop-db-user'];
+
+    /**
+     * The actions that take something away for good: their button and their confirmation say so (a danger button), and
+     * the plan's «Выполнить» asks once more in the Framework question window.
+     */
+    public const array DESTRUCTIVE = [self::SiteRemove, self::DatabaseDrop];
+
+    public function destroys(): bool
+    {
+        return in_array($this, self::DESTRUCTIVE, true);
+    }
 
     /** Whether a yes-or-no field starts ticked for this site. */
     public static function switchedOn(string $field, ?\Larena\Env\Server\SiteDetails $site): bool
@@ -255,6 +282,7 @@ enum SiteOperation: string
             // The server keeps the password of a WordPress or Bitrix site in the site's own config: it refuses to change it.
             self::DatabasePassword => $site->databaseEngine !== null && !in_array($site->profile, ['wordpress', 'bitrix'], true),
             self::DatabaseExport => $site->databaseEngine !== null,
+            self::DatabaseDrop => $site->databaseEngine !== null,
             // Apache serves PHP profiles only; the switch offers the other way from what the server says serves the site.
             self::ApacheOn => in_array($site->profile, SiteDetails::APACHE_PROFILES, true) && $site->webServer === 'nginx',
             self::ApacheOff => in_array($site->profile, SiteDetails::APACHE_PROFILES, true) && $site->webServer === 'apache',

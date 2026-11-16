@@ -450,7 +450,7 @@
                 <div class="flex flex-wrap g-1" data-env-operation-buttons>
                     @foreach ($tabOperations as $operation)
                         @continue(!$operation->namesSite() && ($sftpChoices[$operation->value] ?? []) === [])
-                        <button type="button" class="larena-button" data-sf-modal-open="env-op-{{ $operation->value }}" data-env-operation-open="{{ $operation->value }}">{{ __('larena-env::admin.operations.'.$operation->value) }}</button>
+                        <button type="button" class="larena-button @if ($operation->destroys()) larena-button-danger @endif" data-sf-modal-open="env-op-{{ $operation->value }}" data-env-operation-open="{{ $operation->value }}">{{ __('larena-env::admin.operations.'.$operation->value) }}</button>
                     @endforeach
                 </div>
                 @foreach ($tabOperations as $operation)
@@ -461,6 +461,8 @@
                         <input type="hidden" name="operation" value="{{ $operation->value }}">
                         @foreach (($capabilities ?? null) === null ? $operation->fields() : $operation->fieldsOn($capabilities) as $field)
                             @continue(!($dnsCertificates ?? false) && in_array($field, \Larena\Env\Operations\SiteOperation::DNS_FIELDS, true))
+                            {{-- A site without a database has none to drop with it. --}}
+                            @continue(in_array($field, ['drop-db', 'drop-db-user'], true) && $site->databaseEngine === null)
                             {{-- A certificate's rarely needed choices (HSTS, a test certificate, the way the domain is checked,
                                  every subdomain) stand together under «Подробнее», all off (block 4); they close after the loop. --}}
                             @if ($field === \Larena\Env\Operations\SiteOperation::MORE[0] && $operation === \Larena\Env\Operations\SiteOperation::CertificateIssue)
@@ -523,6 +525,14 @@
                                     <p id="env-{{ $operation->value }}-{{ $field }}-hint" class="m-0 text-small color-on-surface-variant">{{ __('larena-env::admin.fields.challenge_hint') }}</p>
                                 @elseif ($field === 'keep')
                                     <input type="number" id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}" min="1" max="90" value="{{ $site->backupSchedule?->keep ?? '7' }}">
+                                @elseif ($field === 'code')
+                                    <select id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}">
+                                        @foreach (['301', '302', '307', '308'] as $code)
+                                            <option value="{{ $code }}">{{ __('larena-env::admin.routes.values.'.$code) }}</option>
+                                        @endforeach
+                                    </select>
+                                @elseif (in_array($field, ['from', 'to'], true))
+                                    <input type="text" id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}" required maxlength="500" placeholder="{{ __('larena-env::admin.fields.'.$field.'_placeholder') }}" autocomplete="off">
                                 @elseif (in_array($field, ['login', 'name', 'value'], true))
                                     <input type="text" id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}" @if ($field !== 'value') required @endif maxlength="128">
                                 @else
@@ -547,6 +557,12 @@
                             <p class="m-0" data-env-apache-note>{{ __('larena-env::admin.runtime.apache_on_note') }}</p>
                         @elseif ($operation === \Larena\Env\Operations\SiteOperation::ApacheOff)
                             <p class="m-0" data-env-apache-note>{{ __('larena-env::admin.runtime.apache_off_note') }}</p>
+                        @elseif ($operation === \Larena\Env\Operations\SiteOperation::SiteRemove)
+                            <p class="m-0" role="note" data-env-remove-note>{{ __('larena-env::admin.operations.site_remove_note') }}</p>
+                        @elseif ($operation === \Larena\Env\Operations\SiteOperation::DatabaseDrop)
+                            <p class="m-0" role="note" data-env-remove-note>{{ __('larena-env::admin.operations.database_drop_note') }}</p>
+                        @elseif ($operation === \Larena\Env\Operations\SiteOperation::RedirectRemove)
+                            <p class="m-0 text-small color-on-surface-variant" data-env-redirect-note>{{ __('larena-env::admin.operations.redirect_remove_note') }}</p>
                         @endif
                         <div class="larena-form-actions">
                             <button type="submit" class="larena-button">{{ __('larena-env::admin.operations.plan') }}</button>

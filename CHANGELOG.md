@@ -6,6 +6,12 @@
   the server (`batch`): a site opened cold 2.4 s → 0.9 s; the list of sites asks ahead the cards of its first six sites
   after the list has gone to the browser, so the step from the list into a site is 0.2 s; a read is kept a minute
   instead of half a minute; the panel's own background check is no longer warmed every minute for nobody.
+- What the panel can take away (audit block 5, A2; commands of simai-env 1.22.0, planned and confirmed as every action,
+  no new screen): «Удалить сайт» on the site's overview, its files, database and database user only when ticked, with a
+  warning; «Удалить базу данных» on «База данных»; a redirect of a site's path added or removed on «Домены и HTTPS»;
+  on «Люди» a workspace without sites removed and a key for SSH added to a workspace. A removal is a danger button and its
+  plan's «Удалить» asks once more in the Framework question window (sf-confirm), the target named. The server does not
+  list a site's redirects to the panel yet: removing one asks for its path.
 
 ## 0.4.6 — released 2026-11-13 (the owner: release without his stand check, q-8b1ae2df54)
 

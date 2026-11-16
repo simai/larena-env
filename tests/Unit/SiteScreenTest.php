@@ -345,6 +345,46 @@ env_assert(str_contains($blocking, 'data-env-owner="acme" data-env-owner-blocked
     && str_contains($blocking, 'name="action" value="block"'), 'A blocked space offers unblocking, the other blocking.');
 env_assert(!str_contains($spaces(['canBlock' => false]), 'name="action" value="block"'), 'No blocking where the server\'s gateway has none.');
 
+// What the panel takes away (audit block 5, A2). A workspace without sites is offered removal, a danger button; any
+// workspace a key for SSH; neither where the server's gateway has none.
+$removing = $spaces(['canRemove' => true, 'canAddKey' => true, 'ownerSites' => ['demo' => 2]]);
+env_assert(str_contains($removing, 'data-env-owner-remove="acme"') && !str_contains($removing, 'data-env-owner-remove="demo"')
+    && preg_match('#data-env-owner-remove="acme">\s*<input type="hidden" name="_token" value="test">\s*<input type="hidden" name="action" value="remove">#', $removing) === 1
+    && str_contains($removing, 'larena-button-danger'), 'Only a workspace without sites is removed, by a danger button.');
+env_assert(str_contains($removing, 'data-env-owner-add-key="demo"') && str_contains($removing, 'name="action" value="add-key"')
+    && str_contains($removing, 'name="pubkey"'), 'A key for any workspace, asked in a side panel.');
+env_assert(!str_contains($spaces([]), 'data-env-owner-remove') && !str_contains($spaces([]), 'data-env-owner-add-key'), 'Neither without the server\'s commands.');
+env_assert(\Larena\Env\Http\Controllers\PeopleController::sitesByOwner([
+    new \Larena\Env\Server\SiteSummary('a.test', 'static', 'none', 'none', 'demo', null, null, null),
+    new \Larena\Env\Server\SiteSummary('b.test', 'static', 'none', 'none', 'demo', null, null, null),
+    new \Larena\Env\Server\SiteSummary('c.test', 'static', 'none', 'none', null, null, null, null),
+]) === ['demo' => 2], 'Sites counted by workspace.');
+
+// A removal on the site's card: a danger button with a warning, the database's ticks only where there is one; the plan's
+// «Remove» is a danger button that asks once more in the Framework question window, with the site named.
+$removeTab = $screen(['site' => $site, 'tabOperations' => [SiteOperation::SiteRemove], 'tab' => 'overview']);
+env_assert(str_contains($removeTab, 'data-env-operation-open="site-remove"') && str_contains($removeTab, 'larena-button-danger')
+    && str_contains($removeTab, 'data-env-remove-note') && str_contains($removeTab, 'data-env-switch="remove-files"'), 'Removing a site: a danger button, the files by choice, the warning.');
+env_assert(str_contains($removeTab, 'data-env-switch="drop-db"') === ($site->databaseEngine !== null), 'The database is offered with it only where the site has one.');
+env_assert(!preg_match('#id="env-site-remove-remove-files"[^>]*checked#', $removeTab), 'Nothing is removed unless ticked.');
+$redirectTab = $screen(['site' => $site, 'tabOperations' => [SiteOperation::RedirectAdd, SiteOperation::RedirectRemove], 'tab' => 'domains']);
+env_assert(str_contains($redirectTab, 'name="from"') && str_contains($redirectTab, 'name="to"') && str_contains($redirectTab, '<option value="308">')
+    && str_contains($redirectTab, 'data-env-redirect-note') && !str_contains($redirectTab, 'larena-button-danger'), 'A redirect: from, to and its kind; not a danger.');
+env_assert(SiteOperation::SiteRemove->arguments('demo-php.test', ['remove-files' => 'yes', 'drop-db' => 'no', 'other' => 'x'])
+    === ['domain' => 'demo-php.test', 'remove-files' => 'yes', 'drop-db' => 'no'], 'The removal sends what the form ticks.');
+$removal = new PanelPlan('site:remove', ['domain' => 'demo-php.test', 'remove-files' => 'yes'], 'demo-php.test', 'Removes the site.', 'delete', 'site');
+$removePlanned = $factory->make('larena-env::admin.plan', ['heading' => 'Remove', 'eyebrow' => 'demo-php.test', 'target' => 'demo-php.test',
+    'source' => 'recorded', 'plan' => $removal, 'runUrl' => '/run', 'cancelUrl' => '/cancel', 'hidden' => ['operation' => 'site-remove']])->render();
+env_assert(str_contains($removePlanned, 'data-larena-confirm-submit="'.str_replace(':target', 'demo-php.test', $text('plan.ask.site-remove')).'"')
+    && str_contains($removePlanned, 'data-larena-confirm-danger="1"') && str_contains($removePlanned, 'larena-button-danger')
+    && str_contains($removePlanned, 'data-env-plan-argument="remove-files"'), 'The removal\'s plan asks once more, a danger button.');
+$ownerRemoval = new PanelPlan('owner:remove', ['name' => 'a2tmp'], 'host', 'Removes the owner.', 'delete', 'host');
+$ownerPlanned = $factory->make('larena-env::admin.plan', ['heading' => 'Remove', 'eyebrow' => 'a2tmp', 'target' => 'a2tmp',
+    'source' => 'recorded', 'plan' => $ownerRemoval, 'runUrl' => '/run', 'cancelUrl' => '/cancel', 'hidden' => ['action' => 'remove', 'name' => 'a2tmp']])->render();
+env_assert(str_contains($ownerPlanned, str_replace(':target', 'a2tmp', $text('plan.ask.owner-remove'))) && !str_contains($ownerPlanned, '>host<'),
+    'The question and the plan name the workspace, not the server\'s word for its target (stand, 2026-11-16).');
+env_assert(!str_contains($planned, 'data-larena-confirm-submit') && !str_contains($planned, 'larena-button-danger'), 'Other plans run on one press.');
+
 // The DNS tab (Panel plan, stage 7): how to connect when nothing is, where the domain points, the records and the plan.
 $dnsZone = new \Larena\Env\Dns\DnsZone(str_repeat('a', 32), 'demo-php.test', 'active', ['#dns_records:edit']);
 $dnsRecords = [new \Larena\Env\Dns\DnsRecord(str_repeat('1', 32), 'A', 'demo-php.test', '198.51.100.7', 1)];

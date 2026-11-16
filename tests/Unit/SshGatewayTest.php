@@ -115,7 +115,8 @@ env_assert($untouched->recorded() === [], 'Nothing ran.');
 $manifest = (new SshGatewayAdapter($target))->manifest();
 env_assert($manifest->commands === [...PanelCommands::names(), 'batch'] && $manifest->protocol === 'simai-panel' && $manifest->protocolVersion === 1, 'The adapter declares the protocol and the commands.');
 env_assert($manifest->allows('ssl:renew') && $manifest->allows('job:status'), 'The screens\' own commands pass the runner.');
-env_assert(!$manifest->allows('site:remove') && !$manifest->allows('owner:remove'), 'Removals do not.');
+env_assert(!$manifest->allows('self:bootstrap') && !$manifest->allows('site:purge'), 'Commands outside the table do not.');
+env_assert($manifest->allows('site:remove') && $manifest->allows('owner:remove'), 'Removals do, planned and confirmed (audit block 5, A2).');
 env_assert($manifest->allows('site:deploy'), 'A deploy from Git does, the step of the Laravel repository route (simai-env 1.56.2).');
 
 // The target refuses what could become an option or leave the configured form.
