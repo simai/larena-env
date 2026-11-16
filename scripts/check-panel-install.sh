@@ -86,6 +86,8 @@ DB_CONNECTION=sqlite
 DB_DATABASE=${APP}/database/database.sqlite
 LARENA_ENV_GATEWAY=recorded
 SIMAI_PANEL_SETUP_TOKEN=${TOKEN}
+# The panel speaks Russian by default since 0.4.6; this check reads the English words.
+APP_LOCALE=en
 ENV
 echo "== migrate" >>"$LOG"
 (cd "$APP" && php artisan package:discover && php artisan migrate --force && php artisan migrate --force && php artisan larena:env:area) >>"$LOG" 2>&1 || failed "migrate"
@@ -298,7 +300,10 @@ assert re.search(r'name="daily-backup" value="yes" data-env-new-daily-backup\s+c
 # simai-env 1.56.1 lists no node kind (turned off on the server); a kind it lists but the panel cannot lead is greyed.
 for kind in ("static", "generic", "laravel", "wordpress", "redirect", "bitrix", "proxy"):
     assert ('data-env-profile-hint="' + kind + '"' in wizard or 'data-env-profile-unavailable="' + kind + '"' in wizard), ("each kind says what it is", kind)
-assert 'data-env-new-profile="static"' in wizard and 'data-env-field=' not in wizard, "a static site asks for no PHP, database or target"
+# Panel 0.4.6 (audit block 4): the wizard opens on WordPress, the kind most people come for.
+assert 'data-env-new-profile="wordpress"' in wizard, "the wizard opens on WordPress"
+_, static = get("/admin/server/sites/new?profile=static")
+assert 'data-env-new-profile="static"' in static and 'data-env-field=' not in static, "a static site asks for no PHP, database or target"
 _, laravel = get("/admin/server/sites/new?profile=laravel")
 # simai-env 1.56.1: a kind with routes asks what its route takes (PHP, the database engine), with the route's steps.
 assert 'data-env-new-profile="laravel"' in laravel and ((all('data-env-route-field="' + field + '"' in laravel for field in ("php", "db-engine")) and "data-env-route-steps=" in laravel)
@@ -449,7 +454,7 @@ _, home = post("/admin/login", {"_token": form_token(login), "email": "staff@exa
 status, sites = get("/admin/server")
 assert status == 200 and "demo-owned.test" in sites and "demo-php.test" not in sites, "the person sees their own owner's sites"
 status, other = get("/admin/server/sites/demo-php.test")
-assert "another owner" in other, "another owner's site is refused by the server"
+assert "another workspace" in other, "another owner's site is refused by the server"
 for path in ("/admin/server/people", "/admin/server/overview", "/admin/server/dns", "/admin/server/dns/connection", "/admin/server/alerts/channel",
         "/admin/server/update"):
     try:
@@ -510,7 +515,7 @@ assert 'data-env-plan="cron:job-add"' in adding and 'name="args[schedule]" value
 _, wrong = post("/admin/server/sites/demo-owned.test/cron/plan", {"_token": form_token(own_cron), "op": "add", "preset": "custom", "custom": "61 * * * *", "command": "x"})
 assert 'data-env-plan=' not in wrong and "data-env-cron" in wrong, "a minute past 59 is refused before any plan"
 _, other = post("/admin/server/sites/demo-php.test/cron/plan", {"_token": form_token(own_cron), "op": "add", "preset": "daily", "custom": "", "command": "x"})
-assert 'data-env-plan=' not in other and "This site belongs to another owner." in other, "not another owner's site"
+assert 'data-env-plan=' not in other and "This site is in another workspace." in other, "not another owner's site"
 print("both levels checked")
 PY
 python3 - "$APP/database/database.sqlite" <<'PY' >>"$LOG" 2>&1 || failed "audit"
