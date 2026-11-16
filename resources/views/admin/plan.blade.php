@@ -72,8 +72,7 @@
         </details>
         {{-- What takes something away for good (audit block 5, A2) is a danger button and asks once more in the Framework
              question window (the admin's data-larena-confirm-submit), with the target named. --}}
-        <form method="post" action="{{ $runUrl }}" data-env-confirm="{{ $plan->command }}"
-            @if (\Larena\Env\Admin\PlanValues::destroys($plan->command)) data-larena-confirm-submit="{{ __('larena-env::admin.plan.ask.'.str_replace(':', '-', $plan->command), ['target' => ($target ?? null) ?: $plan->target]) }}" data-larena-confirm-accept="{{ __('larena-env::admin.plan.ask_accept') }}" data-larena-confirm-danger="1" @endif>
+        <form method="post" action="{{ $runUrl }}" data-env-confirm="{{ $plan->command }}"@if (\Larena\Env\Admin\PlanValues::destroys($plan->command)) data-larena-confirm-submit="{{ __('larena-env::admin.plan.ask.'.str_replace(':', '-', $plan->command), ['target' => ($target ?? null) ?: $plan->target]) }}" data-larena-confirm-accept="{{ __('larena-env::admin.plan.ask_accept') }}" data-larena-confirm-danger="1" @endif>
             @csrf
             @foreach ($hidden as $field => $value)
                 <input type="hidden" name="{{ $field }}" value="{{ $value }}">
