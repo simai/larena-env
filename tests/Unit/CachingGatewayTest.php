@@ -196,6 +196,8 @@ $visit->ask(PanelRequest::read($admin, 'firewall:status'));
 $visit->ask(PanelRequest::read($admin, 'service:log', ['name' => 'nginx']));
 $visit->ask(PanelRequest::read($owner, 'self:describe'));
 $visit->ask(PanelRequest::read(new PanelActor('admin@example.com', null, 'root@example.com'), 'self:describe'));
+// The panel's own background check reads for nobody's page: never warmed again.
+$visit->ask(PanelRequest::read(new PanelActor('panel:env-check'), 'self:alerts'));
 $batching->clear();
 env_assert((new CachingPanelGateway($batching, $warmCache, 30))->warm() === 0, 'Fresh answers are not asked again.');
 $age = static function (Repository $cache, int $seconds): void {

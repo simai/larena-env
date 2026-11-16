@@ -41,6 +41,9 @@ final readonly class ServerAdminController
     ) {
     }
 
+    /** How many sites of the list have their cards asked ahead (four reads each, twelve in one call of the server). */
+    private const int WARMED_SITES = 6;
+
     public function index(Request $request): mixed
     {
         return $this->offerSetup($request) ?? $this->page($request, 'sites');
@@ -91,6 +94,20 @@ final readonly class ServerAdminController
         // system level reads it, and it also tells whether a disk is running out.
         if ($section === 'overview' && $actor->owner === null && $this->gateway instanceof \Larena\Env\Gateway\CachingPanelGateway) {
             $this->gateway->prefetch($this->overviewReads($actor, $overview, $request));
+        }
+        // The list of sites asks ahead, once the list has gone to the browser, what the first sites' cards read: the step
+        // from the list into a site then finds it kept (speed review 2026-11-16, under 0.5 s warm).
+        if ($section === 'sites' && $overview !== null && $this->gateway instanceof \Larena\Env\Gateway\CachingPanelGateway) {
+            $gateway = $this->gateway;
+            $capabilities = $overview->capabilities ?? \Larena\Env\Gateway\PanelCapabilities::none();
+            $reads = [];
+            foreach (array_slice($overview->sites, 0, self::WARMED_SITES) as $site) {
+                array_push($reads, ...SiteAdminController::cardReads($actor, $site->domain, 'overview', $capabilities));
+            }
+            $app = \Illuminate\Container\Container::getInstance();
+            if ($reads !== [] && $app instanceof \Illuminate\Contracts\Foundation\Application) {
+                $app->terminating(static function () use ($gateway, $reads): void { $gateway->prefetch($reads); });
+            }
         }
         $metrics = $section === 'overview' && $actor->owner === null && $overview?->capabilities?->allows('self:metrics') === true ? $this->extras?->metrics($actor) : null;
         $now = PanelWarnings::now();

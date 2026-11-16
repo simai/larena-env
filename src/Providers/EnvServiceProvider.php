@@ -51,7 +51,7 @@ final class EnvServiceProvider extends ServiceProvider
                 static fn (): ProcessExecutor => $app->make(ProcessExecutor::class),
             );
             // The server's state is kept for a short while, so moving between screens does not wait for it again.
-            $ttl = (int) $config->get('larena-env.gateway.cache_seconds', 30);
+            $ttl = (int) $config->get('larena-env.gateway.cache_seconds', 60);
 
             return $ttl > 0 && $app->bound('cache')
                 ? new \Larena\Env\Gateway\CachingPanelGateway($gateway, $app->make('cache')->store(), $ttl, (int) $config->get('larena-env.gateway.slow_cache_seconds', 600))

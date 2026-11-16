@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Speed (audit block 5, A1; measured on the stand, simai-env 1.56.4): a site's card asks its four reads in one call of
+  the server (`batch`): a site opened cold 2.4 s → 0.9 s; the list of sites asks ahead the cards of its first six sites
+  after the list has gone to the browser, so the step from the list into a site is 0.2 s; a read is kept a minute
+  instead of half a minute; the panel's own background check is no longer warmed every minute for nobody.
+
 ## 0.4.6 — released 2026-11-13 (the owner: release without his stand check, q-8b1ae2df54)
 
 Replaces 0.4.5, whose new-site form showed no fields. Needs simai-env 1.56.2 for the Laravel deploy step.

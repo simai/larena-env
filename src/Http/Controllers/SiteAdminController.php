@@ -15,6 +15,7 @@ use Larena\Env\Http\Support\NoticeRedirect;
 use Larena\Env\Operations\PanelOperations;
 use Larena\Env\Gateway\PanelActor;
 use Larena\Env\Gateway\PanelCapabilities;
+use Larena\Env\Gateway\PanelRequest;
 use Larena\Env\Operations\SiteOperation;
 use Larena\Env\Server\Moment;
 use Larena\Env\Server\ServerOverviewReader;
@@ -70,6 +71,7 @@ final readonly class SiteAdminController
         private ?\Larena\Env\Server\SiteNamesReader $names = null,
         private ?\Larena\Env\Server\SiteRouteReader $routes = null,
         private ?\Larena\Env\Server\SiteExtrasReader $profiles = null,
+        private ?\Larena\Env\Contracts\PanelGateway $gateway = null,
     ) {
     }
 
@@ -88,6 +90,30 @@ final readonly class SiteAdminController
                 && (!in_array($site?->profile, self::FORWARDING, true) || in_array($name, self::FORWARDING_TABS, true))));
     }
 
+    /**
+     * The reads a site's card makes on opening a section: what the site is, and on its overview its check, where it
+     * stands on its creation route and the server's kinds of sites. The list of sites asks them ahead for the sites it
+     * shows, so the step from the list into a site finds them kept.
+     *
+     * @return list<PanelRequest>
+     */
+    public static function cardReads(PanelActor $actor, string $domain, string $tab, PanelCapabilities $capabilities): array
+    {
+        $reads = $capabilities->allows('site:describe') ? [PanelRequest::read($actor, 'site:describe', ['domain' => $domain])] : [];
+        if ($tab === 'overview') {
+            foreach (['site:doctor', 'site:status'] as $command) {
+                if ($capabilities->allows($command)) {
+                    $reads[] = PanelRequest::read($actor, $command, ['domain' => $domain]);
+                }
+            }
+            if ($capabilities->allows('site:status') && $capabilities->allows('self:profiles')) {
+                $reads[] = PanelRequest::read($actor, 'self:profiles');
+            }
+        }
+
+        return $reads;
+    }
+
     public static function section(mixed $asked): string
     {
         $asked = is_string($asked) ? $asked : '';
@@ -104,6 +130,13 @@ final readonly class SiteAdminController
     public function show(Request $request, string $domain): mixed
     {
         $actor = ResolvePanelActor::of($request);
+        // The card's own reads in one call of the server (simai-env `batch`) before the card asks them one by one: four
+        // starts of simai-env, 1.7 s, become one, 0.8 s (speed review 2026-11-16). The capabilities come from the kept
+        // overview; a read already kept is not asked again.
+        if ($this->gateway instanceof \Larena\Env\Gateway\CachingPanelGateway) {
+            $known = $this->overviews->read($actor)->overview->capabilities ?? PanelCapabilities::none();
+            $this->gateway->prefetch(self::cardReads($actor, $domain, self::section($request->query('tab')) ?: self::TABS[0], $known));
+        }
         $result = $this->sites->read($actor, $domain);
         $site = $result->site;
         // What this server's gateway allows, and its PHP versions: the card offers only what will not be refused.
@@ -127,7 +160,7 @@ final readonly class SiteAdminController
         // Each tab asks the gateway only for what it shows.
         // A search goes to the server, which looks through far more lines than are shown, when its release can.
         $match = $search !== '' && preg_match('/\A[ -~]{1,200}\z/D', $search) === 1 && $capabilities->searchesLogs() ? $search : null;
-        // «Обновить» reads the server again past the half minute the panel keeps a log's answer (critics 2026-11-07).
+        // «Обновить» reads the server again past the minute the panel keeps a log's answer (critics 2026-11-07).
         $log = $site === null || $tab !== 'log' ? null : $this->sites->log($actor, $domain, $kind, $lines, $match, $request->query('fresh') === '1');
         $doctor = $site === null || $tab !== 'overview' ? null : $this->sites->doctor($actor, $domain);
         $operations = $site === null ? [] : SiteOperation::offeredFor($site, $capabilities);

@@ -439,7 +439,10 @@ final class CachingPanelGateway implements PanelGateway, PanelFileGateway
      */
     private function remember(PanelRequest $request): void
     {
-        if ($request->actor->impersonatedBy !== null || in_array($request->command, self::NOT_WARMED, true)) {
+        // The panel's own background reads (larena:env-check, every five minutes) are not a person looking at a page: warming
+        // them every minute only asked the server again for nobody (speed review 2026-11-16).
+        if ($request->actor->impersonatedBy !== null || in_array($request->command, self::NOT_WARMED, true)
+            || str_starts_with($request->actor->user, 'panel:')) {
             return;
         }
         $args = $request->args;

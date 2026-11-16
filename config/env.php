@@ -10,8 +10,9 @@ return [
         // Anything else, or an incomplete target: the screen says it is not configured.
         'driver' => getenv('LARENA_ENV_GATEWAY') ?: 'sudo',
         // How long a read of the server's state is kept, in seconds; 0 asks the server on every screen. Any confirmed
-        // action or a look at a job makes the kept answers stale at once.
-        'cache_seconds' => (int) (getenv('LARENA_ENV_GATEWAY_CACHE_SECONDS') === false ? 30 : getenv('LARENA_ENV_GATEWAY_CACHE_SECONDS')),
+        // action or a look at a job makes the kept answers stale at once. A minute (speed review 2026-11-16): the warm-up runs
+        // every minute, so a page opened again within it is answered from the kept answer.
+        'cache_seconds' => (int) (getenv('LARENA_ENV_GATEWAY_CACHE_SECONDS') === false ? 60 : getenv('LARENA_ENV_GATEWAY_CACHE_SECONDS')),
         // The slow reads that change only through an action (the programs, PHP, the update's plan): seconds on the
         // server each, kept longer (CachingPanelGateway::SLOW). Never shorter than cache_seconds.
         'slow_cache_seconds' => (int) (getenv('LARENA_ENV_GATEWAY_SLOW_CACHE_SECONDS') === false ? 600 : getenv('LARENA_ENV_GATEWAY_SLOW_CACHE_SECONDS')),

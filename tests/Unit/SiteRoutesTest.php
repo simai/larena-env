@@ -626,4 +626,14 @@ foreach (['new-site.blade.php', 'site.blade.php', 'plan.blade.php', 'job.blade.p
     env_assert(!str_contains($source, '{!!') && preg_match('/<style\b|<script\b|@php\b/i', $source) !== 1, "{$view} prints nothing raw and holds no script.");
 }
 
+// The card's reads asked ahead in one call (speed review 2026-11-16): what the site is everywhere, its check, route and the
+// server's kinds on the overview only; nothing the server does not list.
+$all = \Larena\Env\Gateway\PanelCapabilities::fromHostDescription(['simai_env' => ['version' => '1.56.4'], 'gate' => ['commands' => ['site:describe', 'site:doctor', 'site:status', 'self:profiles']]]);
+$card = static fn (string $tab, $capabilities): array => array_map(static fn ($read): string => $read->command.' '.json_encode($read->args),
+    \Larena\Env\Http\Controllers\SiteAdminController::cardReads(new PanelActor('admin@example.com'), 'demo-php.test', $tab, $capabilities));
+env_assert($card('overview', $all) === ['site:describe {"domain":"demo-php.test"}', 'site:doctor {"domain":"demo-php.test"}', 'site:status {"domain":"demo-php.test"}', 'self:profiles []'], json_encode($card('overview', $all)));
+env_assert($card('files', $all) === ['site:describe {"domain":"demo-php.test"}'], 'Another section asks only what the site is.');
+$noRoute = \Larena\Env\Gateway\PanelCapabilities::fromHostDescription(['simai_env' => ['version' => '1.56.4'], 'gate' => ['commands' => ['site:describe', 'site:doctor']]]);
+env_assert($card('overview', $noRoute) === ['site:describe {"domain":"demo-php.test"}', 'site:doctor {"domain":"demo-php.test"}'], 'A server without routes is not asked for them.');
+
 echo "SiteRoutesTest passed.\n";
