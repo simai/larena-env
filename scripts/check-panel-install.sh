@@ -391,10 +391,17 @@ fake = sys.argv[3] + "/fake-files"
 with open(sys.argv[5] + "/.env", "a") as dotenv:
     dotenv.write("LARENA_ENV_RECORDED_FILES=" + fake + "\n")
 def confirm_fields(html):
-    form = re.search(r'<form method="post" action="([^"]+)" data-env-confirm="[^"]*">(.*?)</form>', html, re.S)
+    # The admin's «Действие с планом» (larena/admin AdminPlannedAction): the question window and the run form beside it.
+    form = re.search(r'<form\b([^>]*\bdata-larena-action-run\b[^>]*)>(.*?)</form>', html, re.S)
     assert form, "a plan with its confirmation"
-    fields = {html_lib.unescape(n): html_lib.unescape(v) for n, v in re.findall(r'<input type="hidden" name="([^"]+)" value="([^"]*)">', form.group(2))}
-    return html_lib.unescape(form.group(1)), fields
+    action = re.search(r'\baction="([^"]+)"', form.group(1))
+    assert action, "the confirmation says where it runs"
+    fields = {}
+    for tag in re.findall(r'<input\b[^>]*>', form.group(2)):
+        name, value = re.search(r'\bname="([^"]+)"', tag), re.search(r'\bvalue="([^"]*)"', tag)
+        if 'type="hidden"' in tag and name:
+            fields[html_lib.unescape(name.group(1))] = html_lib.unescape(value.group(1) if value else "")
+    return html_lib.unescape(action.group(1)), fields
 def plan_and_run(path, fields):
     _, planned = post(path, fields)
     action, hidden = confirm_fields(planned)
