@@ -70,7 +70,7 @@
                         {{-- The site is made; without a certificate the next step is HTTPS, in «Домены и HTTPS» (block 4). --}}
                         @if ($site->certificate === null && in_array('domains', $tabs, true))
                             <p data-env-site-route-https>{{ __('larena-env::admin.routes.https_next') }}</p>
-                            <p><a href="{{ route('larena.env.admin.site', ['domain' => $domain], false) }}?tab=domains" class="larena-button larena-button-primary" data-env-site-route-https-go>{{ __('larena-env::admin.routes.https_go') }}</a></p>
+                            <p><a href="{{ route('larena.env.admin.site', ['domain' => $domain], false) }}?tab=domains&amp;action={{ \Larena\Env\Operations\SiteOperation::CertificateIssue->value }}" class="larena-button larena-button-primary" data-env-site-route-https-go>{{ __('larena-env::admin.routes.https_go') }}</a></p>
                         @endif
                     @else
                         <p data-env-site-route-at>{{ __('larena-env::admin.routes.now', ['step' => $siteRoute['stepText']]) }}</p>
@@ -455,8 +455,12 @@
                 </div>
                 @foreach ($tabOperations as $operation)
                     @continue(!$operation->namesSite() && ($sftpChoices[$operation->value] ?? []) === [])
-                    <sf-modal id="env-op-{{ $operation->value }}" position="inline-end" width="28rem" heading="{{ __('larena-env::admin.operations.'.$operation->value) }}">
-                    <form method="post" action="{{ route('larena.env.admin.site.plan', ['domain' => $domain], false) }}" class="larena-form m-0" style="padding: 0; box-shadow: none; background: none; border: 0; border-radius: 0;" data-env-operation="{{ $operation->value }}">
+                    {{-- «Действие с планом» (larena/admin AdminPlannedAction): the form, its plan, the question and the run stay in this
+                         side panel over the site (0 page loads, one question); its holder stays, the panel takes its content once.
+                         An action with nothing to fill asks its question at once; ?action=<code> opens it with the page (PX-15). --}}
+                    <sf-modal id="env-op-{{ $operation->value }}" position="inline-end" width="28rem" heading="{{ __('larena-env::admin.operations.'.$operation->value) }}" @if (($openAction ?? null) === $operation->value) autoload @endif>
+                    <div data-larena-action-host>
+                    <form method="post" action="{{ route('larena.env.admin.site.plan', ['domain' => $domain], false) }}" class="larena-form m-0" style="padding: 0; box-shadow: none; background: none; border: 0; border-radius: 0;" data-env-operation="{{ $operation->value }}" data-larena-action-form @if ($operation->asksNothing(($capabilities ?? null) === null ? null : $capabilities, ($personEmail ?? null) !== null)) data-larena-action-auto @endif>
                         @csrf
                         <input type="hidden" name="operation" value="{{ $operation->value }}">
                         @foreach (($capabilities ?? null) === null ? $operation->fields() : $operation->fieldsOn($capabilities) as $field)
@@ -572,6 +576,7 @@
                             <button type="submit" class="larena-button">{{ __('larena-env::admin.operations.plan') }}</button>
                         </div>
                     </form>
+                    </div>
                     </sf-modal>
                 @endforeach
             </section>

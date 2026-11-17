@@ -190,6 +190,21 @@ enum SiteOperation: string
         return in_array($this, self::DESTRUCTIVE, true);
     }
 
+    /**
+     * Whether the action has nothing to fill before its plan (the admin's «Действие с планом» asks its question at once):
+     * only ticks, which the question offers as its choices; a certificate too once the person's email is known (its
+     * rarer choices keep the server's defaults).
+     */
+    public function asksNothing(?PanelCapabilities $capabilities = null, bool $emailKnown = false): bool
+    {
+        $fields = $capabilities === null ? $this->fields() : $this->fieldsOn($capabilities);
+        if ($this === self::CertificateIssue) {
+            return $emailKnown;
+        }
+
+        return array_diff($fields, self::SWITCHES) === [];
+    }
+
     /** Whether a yes-or-no field starts ticked for this site. */
     public static function switchedOn(string $field, ?\Larena\Env\Server\SiteDetails $site): bool
     {

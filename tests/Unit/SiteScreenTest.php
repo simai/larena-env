@@ -57,6 +57,11 @@ function csrf_field(): string
     return '<input type="hidden" name="_token" value="test">';
 }
 
+function csrf_token(): string
+{
+    return 'test';
+}
+
 $gateway = new RecordedAnswersGateway(env_recorded_path());
 $reader = new SiteDetailsReader($gateway);
 $user = 'admin@stand.test';
@@ -172,8 +177,8 @@ $older = \Larena\Env\Gateway\PanelCapabilities::fromHostDescription(['simai_env'
 $backups = $screen(['site' => $site, 'tab' => 'backups', 'tabOperations' => $onTab('backups', $older)]);
 env_assert(str_contains($backups, 'data-env-backup="20261106-005720"') && str_contains($backups, '4.3 KB') && str_contains($backups, 'data-env-operation="backup"'), 'The backups and «Back up now».');
 env_assert(!str_contains($backups, 'data-env-operation="backup-restore-database"'), 'No restore while the server\'s gateway has none.');
-env_assert(str_contains($backups, 'data-sf-modal-open="env-op-backup"') && preg_match('/<sf-modal id="env-op-backup" position="inline-end"[^>]*>\s*<form[^>]*data-env-operation="backup"/', $backups) === 1,
-    'An action is a button that opens its fields in a side panel.');
+env_assert(str_contains($backups, 'data-sf-modal-open="env-op-backup"') && preg_match('/<sf-modal id="env-op-backup" position="inline-end"[^>]*>\s*<div data-larena-action-host>\s*<form[^>]*data-env-operation="backup"[^>]*data-larena-action-form/', $backups) === 1,
+    'An action is a button that opens its fields in a side panel, where its plan and run stay («Действие с планом»).');
 $more = \Larena\Env\Gateway\PanelCapabilities::fromHostDescription(['simai_env' => ['version' => '1.27.0'], 'gate' => ['commands' => ['backup:data', 'backup:data-restore', 'backup:data-schedule', 'site:db-rotate', 'site:php-ini-set', 'access:create-project', 'access:disable']]]);
 $restore = $screen(['site' => $site, 'tab' => 'backups', 'tabOperations' => $onTab('backups', $more)]);
 env_assert(str_contains($restore, 'data-env-operation="backup-restore-database"') && str_contains($restore, 'data-env-operation="backup-extract-files"')
@@ -276,12 +281,15 @@ env_assert($plan instanceof PanelPlan, 'The plan reads.');
 $planned = $factory->make('larena-env::admin.plan', ['heading' => 'Back up now', 'eyebrow' => 'demo-owned.test', 'target' => 'demo-owned.test',
     'source' => 'recorded', 'plan' => $plan, 'runUrl' => '/admin/server/sites/demo-owned.test/run', 'cancelUrl' => '/admin/server/sites/demo-owned.test',
     'hidden' => ['operation' => 'backup', 'db' => 'no']])->render();
-env_assert(str_contains($planned, 'data-env-plan="backup:data"') && str_contains($planned, 'data-env-plan-argument="db"'), 'The plan is shown in full.');
+// «Действие с планом» (larena/admin AdminPlannedAction): one question window, the plan's ticks as its choices.
+env_assert(str_contains($planned, 'data-env-plan="backup:data"') && str_contains($planned, '<sf-confirm') && str_contains($planned, 'appearance="window"')
+    && str_contains($planned, 'data-larena-action-option="db"') && !preg_match('/data-larena-action-option="db"[^>]*checked/', $planned)
+    && str_contains($planned, '<!--larena-action-->'), 'The plan is one question window; the tick is its choice, as the form sent it.');
 env_assert(\Larena\Env\Admin\PlanValues::of(['domain' => 'a.test', 'db' => 'yes', 'php' => '8.3'], 'a.test') === [
     ['name' => 'db', 'label' => 'Include the database', 'value' => 'Yes'], ['name' => 'php', 'label' => 'PHP version', 'value' => '8.3'],
-] && str_contains($planned, 'data-env-plan-server'), 'The plan\'s values in the panel\'s words, the server\'s terms under «more».');
-env_assert(str_contains($planned, 'data-env-confirm="backup:data"') && str_contains($planned, 'name="db" value="no"')
-    && str_contains($planned, 'name="operation" value="backup"'), 'The confirmation carries the same values.');
+] && str_contains($planned, 'data-larena-action-more') && substr_count($planned, '<details') === 1, 'The plan\'s values in the panel\'s words, the server\'s terms under one «more».');
+env_assert(str_contains($planned, 'data-env-confirm="backup:data"') && str_contains($planned, 'data-larena-action-run')
+    && str_contains($planned, 'name="operation" value="backup"') && str_contains($planned, 'data-larena-action-replan'), 'The confirmation carries the same values; a changed tick plans again.');
 env_assert(str_contains($planned, 'data-env-source="recorded"'), 'Recorded answers are marked as recorded.');
 env_assert(!str_contains($planned, 'data-env-plan-replaces') && !str_contains($planned, 'data-env-plan-then'), 'A backup replaces nothing and needs nothing after.');
 // A restore says what it replaces, and a new site what follows it (Panel plan 4.1, 4.2).
@@ -330,7 +338,19 @@ env_assert(!str_contains($done, 'data-env-job-cancel') && !str_contains($done, '
 
 $running = new PanelJobStatus('000000000000000000000000', JobState::Running, 'ssl:renew', ['domain' => 'demo-php.test'], null, '2026-01-01T00:00:00Z', $user);
 $live = $job(['status' => $running, 'log' => new PanelJobLog('000000000000000000000000', JobState::Running, ['working'], 1)]);
-env_assert(str_contains($live, 'data-env-job-cancel') && str_contains($live, 'after=1'), 'A running job can be stopped and read on.');
+// A running job follows itself (a live region, PX-7) and asks before it stops, saying what stays done (PX-9).
+env_assert(str_contains($live, 'data-env-job-cancel') && str_contains($live, 'data-larena-live="/admin/server/larena.env.admin.job/000000000000000000000000"')
+    && str_contains($live, 'data-larena-confirm-submit="'.$text('job.cancel_ask').'"') && str_contains($live, '<sf-progress-bar indeterminate')
+    && !str_contains($live, 'after=1') && !str_contains($live, 'data-larena-action-outcome'), 'A running job follows itself and asks before it stops.');
+// Its end says what became, the next step and the local time; who started it is the journal's (PX-6).
+env_assert(str_contains($done, 'data-larena-action-outcome="000000000000000000000000"') && str_contains($done, 'data-larena-action-status="success"')
+    && !str_contains($done, 'data-larena-live=') && !str_contains($done, 'data-env-job-started-by') && str_contains($done, '<!--larena-action-->'),
+    'A finished job says its end once and stops reading itself.');
+$removed = $job(['status' => new PanelJobStatus('000000000000000000000000', JobState::Succeeded, 'site:remove', ['domain' => 'demo-php.test'], 0, '2026-01-01T00:00:00Z', $user),
+    'log' => new PanelJobLog('000000000000000000000000', JobState::Succeeded, ['ok'], 1)]);
+env_assert(str_contains($removed, '>'.str_replace(':domain', 'demo-php.test', $text('job.done.site-remove')).'</h2>')
+    && str_contains($removed, 'data-larena-action-next="/admin/server/larena.env.admin.index"') && str_contains($removed, 'data-larena-action-leave=')
+    && str_contains($removed, '<sf-time datetime="2026-01-01T00:00:00+00:00"'), 'A removed site: said in words, the list next, the time in the reader\'s own zone.');
 
 $hostile = new PanelJobStatus('000000000000000000000000', JobState::Failed, '<img src=x onerror=alert(1)>', [], 1, null, null);
 $escaped = $job(['status' => $hostile, 'log' => new PanelJobLog('000000000000000000000000', JobState::Failed, ['<script>alert(1)</script>'], 1)]);
@@ -373,30 +393,25 @@ env_assert(str_contains($redirectTab, 'name="from"') && str_contains($redirectTa
 env_assert(SiteOperation::SiteRemove->arguments('demo-php.test', ['remove-files' => 'yes', 'drop-db' => 'no', 'other' => 'x'])
     === ['domain' => 'demo-php.test', 'remove-files' => 'yes', 'drop-db' => 'no'], 'The removal sends what the form ticks.');
 $removal = new PanelPlan('site:remove', ['domain' => 'demo-php.test', 'remove-files' => 'yes'], 'demo-php.test', 'Removes the site.', 'delete', 'site');
-$removePlanned = $factory->make('larena-env::admin.plan', ['heading' => 'Remove', 'eyebrow' => 'demo-php.test', 'target' => 'demo-php.test',
-    'source' => 'recorded', 'plan' => $removal, 'runUrl' => '/run', 'cancelUrl' => '/cancel', 'hidden' => ['operation' => 'site-remove']])->render();
-env_assert(str_contains($removePlanned, 'data-larena-confirm-submit="'.str_replace([':target', ':with'], ['demo-php.test', $text('plan.with.files')], $text('plan.ask_remove_with')).'"')
-    && str_contains($removePlanned, 'data-larena-confirm-danger="1"') && str_contains($removePlanned, 'larena-button-danger')
-    && str_contains($removePlanned, 'data-env-plan-argument="remove-files"'), 'The removal\'s plan asks once more, a danger button.');
-// What goes with the site is said on the question and the button (audit msg-15f90f9f); the site alone keeps the short words.
-$removeWith = static fn (array $args): string => $factory->make('larena-env::admin.plan', ['heading' => 'Remove', 'eyebrow' => 'demo-php.test', 'target' => 'demo-php.test',
-    'source' => 'recorded', 'plan' => new PanelPlan('site:remove', ['domain' => 'demo-php.test'] + $args, 'demo-php.test', 'Removes the site.', 'delete', 'site'),
-    'runUrl' => '/run', 'cancelUrl' => '/cancel', 'hidden' => ['operation' => 'site-remove']])->render();
-$everything = $removeWith(['remove-files' => 'yes', 'drop-db' => 'yes']);
-env_assert(str_contains($everything, 'data-env-removes-with="files_db"') && str_contains($everything, '>'.str_replace(':with', $text('plan.with.files_db'), $text('plan.confirm_remove_with')).'</button>')
-    && str_contains($everything, str_replace([':target', ':with'], ['demo-php.test', $text('plan.with.files_db')], $text('plan.ask_remove_with'))), 'Files and database ticked: said on the button and the question.');
-$alone = $removeWith(['remove-files' => 'no', 'drop-db' => 'no']);
-env_assert(!str_contains($alone, 'data-env-removes-with') && str_contains($alone, '>'.$text('plan.confirm_remove').'</button>')
-    && str_contains($alone, str_replace(':target', 'demo-php.test', $text('plan.ask.site-remove'))), 'The site alone: the short question.');
+$removePlanned = $factory->make('larena-env::admin.plan', ['heading' => 'Remove the site', 'eyebrow' => 'demo-php.test', 'target' => 'demo-php.test',
+    'source' => 'recorded', 'plan' => $removal, 'runUrl' => '/run', 'cancelUrl' => '/cancel', 'hidden' => ['operation' => 'site-remove', 'remove-files' => 'yes', 'drop-db' => 'no']])->render();
+// One question for a removal (PX-3): the site named, a danger answer, the name typed, the deciding sentence on the plate, what goes in words.
+env_assert(str_contains($removePlanned, 'question="'.str_replace(':target', 'demo-php.test', strstr($text('plan.ask.site-remove'), '?', true)).'?"')
+    && str_contains($removePlanned, 'status="danger"') && str_contains($removePlanned, 'require="demo-php.test"')
+    && str_contains($removePlanned, 'consequence="'.$text('plan.consequence.site-remove').'"') && str_contains($removePlanned, 'accept-text="Remove the site"')
+    && str_contains($removePlanned, '>'.$text('plan.said.site-remove.remove-files.label').'</dt><dd class="m-0 min-w-0 text-end text-break">'.$text('plan.said.site-remove.remove-files.yes').'</dd>')
+    && str_contains($removePlanned, '>'.$text('plan.said.site-remove.drop-db.no').'</dd>')
+    && preg_match('/data-larena-action-option="remove-files"[^>]*checked/', $removePlanned) === 1 && !str_contains($removePlanned, 'data-larena-confirm-submit'),
+    'The removal asks once, in words, with the name typed.');
 env_assert(\Larena\Env\Admin\PlanValues::removesWith('site:remove', ['drop-db' => 'yes']) === 'db'
     && \Larena\Env\Admin\PlanValues::removesWith('site:db-drop', ['drop-db' => 'yes']) === null, 'Only a site\'s removal says what goes with it.');
 env_assert(str_contains($removeTab, 'data-env-remove-backup') && str_contains($removeTab, '?tab=backups'), '«Make a backup first» leads to the backups tab.');
 $ownerRemoval = new PanelPlan('owner:remove', ['name' => 'a2tmp'], 'host', 'Removes the owner.', 'delete', 'host');
 $ownerPlanned = $factory->make('larena-env::admin.plan', ['heading' => 'Remove', 'eyebrow' => 'a2tmp', 'target' => 'a2tmp',
     'source' => 'recorded', 'plan' => $ownerRemoval, 'runUrl' => '/run', 'cancelUrl' => '/cancel', 'hidden' => ['action' => 'remove', 'name' => 'a2tmp']])->render();
-env_assert(str_contains($ownerPlanned, str_replace(':target', 'a2tmp', $text('plan.ask.owner-remove'))) && !str_contains($ownerPlanned, '>host<'),
+env_assert(str_contains($ownerPlanned, str_replace(':target', 'a2tmp', strstr($text('plan.ask.owner-remove'), '?', true))) && !str_contains($ownerPlanned, '>host<'),
     'The question and the plan name the workspace, not the server\'s word for its target (stand, 2026-11-16).');
-env_assert(!str_contains($planned, 'data-larena-confirm-submit') && !str_contains($planned, 'larena-button-danger'), 'Other plans run on one press.');
+env_assert(!str_contains($planned, 'status="danger"') && !str_contains($planned, 'require=') && !str_contains($planned, 'consequence='), 'Other plans: one plain question, no name to type.');
 
 // The DNS tab (Panel plan, stage 7): how to connect when nothing is, where the domain points, the records and the plan.
 $dnsZone = new \Larena\Env\Dns\DnsZone(str_repeat('a', 32), 'demo-php.test', 'active', ['#dns_records:edit']);

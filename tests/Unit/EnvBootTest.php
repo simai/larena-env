@@ -131,7 +131,10 @@ foreach (['src', 'routes', 'config'] as $directory) {
 }
 sort($adminNames);
 env_assert($adminNames === [
+    // «Действие с планом» (larena/admin AdminPlannedAction): the panel's plan and its end in the admin's part.
+    'src/Admin/JobOutcome.php',
     'src/Admin/NewSitePropertyViewPort.php',
+    'src/Admin/PlanAction.php',
     'src/Admin/ServerSitesPage.php',
     'src/Admin/SiteObjectMenu.php',
     'src/Http/Controllers/ServerAdminController.php',

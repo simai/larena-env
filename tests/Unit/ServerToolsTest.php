@@ -61,6 +61,11 @@ function csrf_field(): string
     return '<input type="hidden" name="_token" value="test">';
 }
 
+function csrf_token(): string
+{
+    return 'test';
+}
+
 $admin = new PanelActor('admin@example.com');
 $owner = new PanelActor('staff@example.com', 'demo');
 $refusedWith = static function (callable $make): ?string {

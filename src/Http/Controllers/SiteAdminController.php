@@ -245,6 +245,8 @@ final readonly class SiteAdminController
             'logReadAt' => $log?->readAt === null ? null : gmdate('H:i:s', $log->readAt),
             'logReasonText' => $log === null || $log->reason === null ? null : $this->reasonText($log->reason),
             'notice' => $request->session()->get('larena_env_notice'),
+            // ?action=<code> opens that action's side panel with the page (a next step that leads to an action, PX-15).
+            'openAction' => is_string($request->query('action')) ? $request->query('action') : null,
         ]);
     }
 
@@ -474,7 +476,29 @@ final readonly class SiteAdminController
             'check' => $result->plan->check,
             'resources' => $result->plan->resources,
             'then' => $operation === SiteOperation::WordpressInstall ? [(string) $this->translator->get('larena-env::admin.routes.password_once')] : [],
+            'warnings' => $this->knownWarnings($actor, $operation, $domain, $input),
         ]);
+    }
+
+    /**
+     * What the panel already knows would stop the action, said in its plan (PX-14): a certificate checked through the site
+     * is not issued while the domain points to another server, so the confirmation waits until it is put right.
+     *
+     * @param array<string, string> $input
+     * @return list<array{text: string, blocking: bool}>
+     */
+    private function knownWarnings(PanelActor $actor, SiteOperation $operation, string $domain, array $input): array
+    {
+        if ($operation !== SiteOperation::CertificateIssue || ($input['challenge'] ?? 'http') === 'dns' || $this->names === null) {
+            return [];
+        }
+        foreach ($this->names->read($actor, $domain)->names->names ?? [] as $name) {
+            if ($name->kind === \Larena\Env\Server\SiteName::PRIMARY && $name->pointsHere === false) {
+                return [['text' => (string) $this->translator->get('larena-env::admin.plan.warnings.domain_elsewhere', ['domain' => $domain]), 'blocking' => true]];
+            }
+        }
+
+        return [];
     }
 
     /**

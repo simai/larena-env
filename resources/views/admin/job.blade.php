@@ -8,6 +8,11 @@
 @section('content')
     @include('larena-env::admin.partials.notes')
 
+    {{-- The run of «Действие с планом» (larena/admin AdminPlannedAction): after the confirmation the side panel over the site
+         shows this part in place (X-Larena-Fragment: action); it reads itself again while the job runs (a live region) and,
+         once over, says what became and the next step, which the admin also says in the corner. This address stays for the
+         journal and the notifications. --}}
+    {{ \Larena\Admin\Runtime\AdminPlannedAction::open('env-job') }}
     @if ($status === null && ($updating ?? null) !== null && ! $refused)
         {{-- An update replaces the gate and the panel while its job runs: the server may not answer for a moment. --}}
         <section class="larena-panel larena-panel-padded" data-env-job-restarting="{{ $updating }}" role="status">
@@ -21,8 +26,15 @@
             <p>{{ ($missing ?? false) ? __('larena-env::admin.job.missing') : $reasonText }}</p>
         </section>
     @else
+        {{ \Larena\Env\Admin\JobOutcome::live($status, route('larena.env.admin.job', ['job' => $status->jobId], false)) }}
         <section class="larena-panel larena-panel-padded" data-env-job="{{ $status->jobId }}" data-env-job-state="{{ $status->state->value }}" aria-labelledby="env-job">
-            <h2 id="env-job" class="text-2">{{ __('larena-env::admin.job.states.'.$status->state->value) }}</h2>
+            {{-- What became, in words (PX-6): «Сайт demo.test удалён», not «Готово» with who started it. --}}
+            <h2 id="env-job" class="text-2">{{ $status->state->isOver() ? \Larena\Env\Admin\JobOutcome::heading($status) : __('larena-env::admin.job.states.running') }}</h2>
+            @if (! $status->state->isOver())
+                {{-- No steps from the server yet: a bar without a per cent (until the Framework's sf-progress-run, PX-7). --}}
+                <sf-progress-bar indeterminate label="{{ __('larena-env::admin.job.states.running') }}"></sf-progress-bar>
+                <p class="m-top-1" data-env-job-running>{{ __('larena-env::admin.job.running') }}</p>
+            @endif
             @if (($configFailed ?? null) !== null)
                 <p role="alert" data-env-job-config-failed="{{ $configFailed }}">{{ __('larena-env::admin.services.config_failed', ['name' => $configFailed]) }}</p>
             @endif
@@ -30,67 +42,67 @@
                 @include('larena-env::admin.partials.timed-change', ['change' => $change, 'canKeep' => $canKeep ?? false, 'now' => $now ?? new \DateTimeImmutable(), 'changeDomain' => $status->args['domain'] ?? null])
             @endif
             {{-- WordPress's administrator (wp:install, simai-env 1.56.0): the server gives the password in this one answer and
-                 keeps no copy; the panel keeps none either. Later answers only say it was shown. --}}
+                 keeps no copy; the panel keeps none either. Later answers only say it was shown. Copied with one press; the
+                 side panel asks before it closes over it (data-larena-action-keep). --}}
             @if ($status->secret !== null)
-                <div class="larena-panel larena-panel-padded m-y-2" role="alert" data-env-job-secret>
+                <div class="larena-panel larena-panel-padded m-y-2" role="alert" data-env-job-secret data-larena-action-keep="{{ __('larena-env::admin.job.secret_keep') }}">
                     <h3 class="m-top-0 text-medium">{{ __('larena-env::admin.routes.password.title') }}</h3>
                     <p>{{ __('larena-env::admin.routes.password.save_now') }}</p>
                     <dl class="m-0" style="display: block;" data-env-facts>
                         <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.routes.password.user') }}</dt><dd class="m-0 min-w-0 text-end mono">{{ $status->secret->user }}</dd></div>
                         <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.routes.password.password') }}</dt><dd class="m-0 min-w-0 text-end mono" style="overflow-wrap: anywhere;" data-env-job-password>{{ $status->secret->password }}</dd></div>
                     </dl>
-                    @if ($status->secret->loginUrl !== null)
-                        <p><a href="{{ $status->secret->loginUrl }}" target="_blank" rel="noopener noreferrer" class="larena-button" data-env-job-login>{{ __('larena-env::admin.routes.password.login') }}</a></p>
-                    @endif
+                    <p class="flex flex-wrap g-1 m-top-1">
+                        <sf-button-copy value="{{ $status->secret->password }}" text="{{ __('larena-env::admin.job.copy_password') }}" label="{{ __('larena-env::admin.job.copy_password') }}" appearance="outline" data-env-job-copy></sf-button-copy>
+                        @if ($status->secret->loginUrl !== null)
+                            <a href="{{ $status->secret->loginUrl }}" target="_blank" rel="noopener noreferrer" class="larena-button" data-env-job-login>{{ __('larena-env::admin.routes.password.login') }}</a>
+                        @endif
+                    </p>
                 </div>
             @elseif (in_array('admin_password', $status->shownOnce, true))
                 <p role="note" data-env-job-secret-shown>{{ __('larena-env::admin.routes.password.shown') }}</p>
             @endif
             @if ($status->state->isOver() && $status->command === 'site:add' && is_string($status->args['domain'] ?? null) && $status->state->value === 'succeeded')
                 <p><a href="{{ route('larena.env.admin.site', ['domain' => $status->args['domain']], false) }}" class="larena-button" data-env-job-next-site>{{ __('larena-env::admin.routes.to_site') }}</a></p>
+            @elseif ($status->state->isOver() && \Larena\Env\Admin\JobOutcome::next($status) !== null)
+                {{-- The next step (PX-6, PX-15): the list after a removal, the site over https, HTTPS after WordPress. --}}
+                <p><a href="{{ \Larena\Env\Admin\JobOutcome::next($status)[0] }}" class="larena-button {{ $status->state->value === 'succeeded' ? 'larena-button-primary' : '' }}" data-env-job-next>{{ \Larena\Env\Admin\JobOutcome::next($status)[1] }}</a></p>
             @endif
             <dl class="m-0" style="display: block;" data-env-facts>
-                <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.job.started_at') }}</dt><dd class="m-0 min-w-0 text-end">{{ \Larena\Env\Server\Moment::human($status->createdAt) }}</dd></div>
-                <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.job.started_by') }}</dt><dd class="m-0 min-w-0 text-end" data-env-job-started-by="{{ $startedBy ?? '' }}">{{ ($startedBy ?? null) !== null ? __('larena-env::admin.job.started_by_'.$startedBy) : '—' }}</dd></div>
+                {{-- The reader's own time (PX-6), the full moment on hover; who started it is the journal's. --}}
+                <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.job.started_at') }}</dt><dd class="m-0 min-w-0 text-end" data-env-job-started>@if (\Larena\Env\Server\Moment::iso($status->createdAt) !== null)<sf-time datetime="{{ \Larena\Env\Server\Moment::iso($status->createdAt) }}" format="datetime"></sf-time>@else{{ \Larena\Env\Server\Moment::human($status->createdAt) }}@endif</dd></div>
             </dl>
-            {{-- The server's command and its exit code are for a specialist (block 4, texts for a newcomer): the state above
-                 already says «Готово» or «Не получилось». --}}
-            <details class="m-y-2" data-env-job-server>
+            {{-- One «Подробнее» for a specialist (PX-8): the server's command, its exit code and what it printed; open after a
+                 failure, folded otherwise. --}}
+            <details class="m-y-2" data-env-job-server @if ($status->state->value === 'failed') open @endif>
                 <summary class="color-primary" style="cursor: pointer;">{{ __('larena-env::admin.more') }}</summary>
                 <dl class="m-0" style="display: block;" data-env-facts>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.plan.command') }}</dt><dd class="m-0 min-w-0 text-end mono">{{ $status->command }}</dd></div>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.job.exit_code') }}</dt><dd class="m-0 min-w-0 text-end">{{ $status->exitCode ?? '—' }}</dd></div>
                 </dl>
+                <div data-env-job-log>
+                    <h3 class="m-top-2 m-bottom-1 text-medium">{{ __('larena-env::admin.job.log_details') }}</h3>
+                    @if ($log === null)
+                        <p>{{ $reasonText ?? __('larena-env::admin.job.no_log') }}</p>
+                    @else
+                        <pre data-env-job-log-lines tabindex="0" style="max-width: 100%; overflow-x: auto;">{{ implode("\n", $log->lines) }}</pre>
+                    @endif
+                </div>
             </details>
             @if (! $status->state->isOver() && ($updating ?? null) !== null)
                 <p data-env-job-not-cancellable>{{ __('larena-env::admin.update.not_cancellable') }}</p>
             @elseif (! $status->state->isOver())
-                <form method="post" action="{{ route('larena.env.admin.job.cancel', ['job' => $status->jobId], false) }}" data-env-job-cancel>
+                {{-- Stopping asks once and says what stays done (PX-9); in the side panel it stays in place. --}}
+                <form method="post" action="{{ route('larena.env.admin.job.cancel', ['job' => $status->jobId], false) }}" data-env-job-cancel data-larena-action-form
+                    data-larena-confirm-submit="{{ __('larena-env::admin.job.cancel_ask') }}" data-larena-confirm-accept="{{ __('larena-env::admin.job.cancel') }}" data-larena-confirm-danger="1">
                     @csrf
                     <button type="submit" class="larena-button">{{ __('larena-env::admin.job.cancel') }}</button>
                 </form>
             @endif
+            {{ \Larena\Env\Admin\JobOutcome::mark($status) }}
         </section>
-
-        <section class="larena-panel larena-panel-padded" data-env-job-log aria-labelledby="env-job-log">
-            <h2 id="env-job-log" class="text-2">{{ __('larena-env::admin.job.log') }}</h2>
-            @if ($log === null)
-                <p>{{ $reasonText ?? __('larena-env::admin.job.no_log') }}</p>
-            @else
-                {{-- Once it went well the server's own lines are for a specialist (block 4): folded, open while it runs or after a failure. --}}
-                @if ($status->state->value === 'succeeded')
-                    <details data-env-job-log-folded>
-                        <summary class="color-primary" style="cursor: pointer;">{{ __('larena-env::admin.job.log_details') }}</summary>
-                        <pre data-env-job-log-lines tabindex="0" style="max-width: 100%; overflow-x: auto;">{{ implode("\n", $log->lines) }}</pre>
-                    </details>
-                @else
-                    <pre data-env-job-log-lines tabindex="0" style="max-width: 100%; overflow-x: auto;">{{ implode("\n", $log->lines) }}</pre>
-                @endif
-                @if (! $status->state->isOver())
-                    <p><a href="{{ route('larena.env.admin.job', ['job' => $status->jobId], false) }}?after={{ $log->next }}">{{ __('larena-env::admin.job.more') }}</a></p>
-                @endif
-            @endif
-        </section>
+        {{ \Larena\Env\Admin\JobOutcome::liveEnd() }}
     @endif
+    {{ \Larena\Admin\Runtime\AdminPlannedAction::close() }}
     <p><a href="{{ route('larena.env.admin.index', [], false) }}">{{ __('larena-env::admin.site.back') }}</a></p>
 @endsection

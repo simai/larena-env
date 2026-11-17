@@ -273,6 +273,30 @@ return [
         'redirect_remove_note' => 'Give the path the site redirects from now, for example /old-page.',
     ],
     'plan' => [
+        // «Действие с планом» (larena/admin AdminPlannedAction): the question, the plate's deciding sentence, the plan in words.
+        'title_of' => ':action — Larena Panel',
+        'ask_do' => ':action for :target?',
+        'consequence' => [
+            'site-remove' => 'The site cannot be brought back. If you still need it, make a backup first.',
+            'site-db-drop' => 'The database cannot be brought back. If you still need the data, make a backup first.',
+            'owner-remove' => 'The workspace cannot be brought back.',
+        ],
+        'said' => [
+            'site-remove' => [
+                'site' => ['label' => 'Site', 'value' => 'stops opening'],
+                'config' => ['label' => 'Settings and certificate', 'value' => 'are removed'],
+                'remove-files' => ['label' => 'Site files', 'yes' => 'are removed', 'no' => 'stay on the server'],
+                'drop-db' => ['label' => 'Database', 'yes' => 'is removed', 'no' => 'stays'],
+                'drop-db-user' => ['label' => 'Database user', 'yes' => 'is removed', 'no' => 'stays'],
+            ],
+            'site-db-drop' => [
+                'db' => ['label' => 'The site\'s database', 'value' => 'is removed with all its data'],
+                'site' => ['label' => 'Site', 'value' => 'stays, but no longer sees the database'],
+            ],
+        ],
+        'warnings' => [
+            'domain_elsewhere' => 'The domain :domain points to another server now: no certificate is issued for it. Point the domain to this server («Domains and HTTPS») and try again.',
+        ],
         'title' => 'Confirm — Larena Panel',
         'description' => 'Nothing has run yet.',
         'heading' => 'What this would do',
@@ -328,6 +352,27 @@ return [
         'locks' => ['host' => 'the whole server: other actions wait', 'site' => 'this site: other actions on it wait', 'none' => 'nothing'],
     ],
     'job' => [
+        // The end of an action in words and its next step («Действие с планом», PX-6): what became, then where to go.
+        'done' => [
+            'site-remove' => 'The site :domain is removed',
+            'site-db-drop' => 'The database of :domain is removed',
+            'site-redirect-add' => 'The redirect is added',
+            'site-redirect-remove' => 'The redirect is removed',
+            'ssl-letsencrypt' => 'HTTPS is on for :domain',
+            'wp-install' => 'WordPress is installed',
+            'other' => 'Done',
+        ],
+        'failed_text' => 'What the server did is under «Details».',
+        'next' => [
+            'sites' => 'To the sites',
+            'site' => 'To the site',
+            'open_site' => 'Open the site',
+            'https' => 'Turn on HTTPS',
+        ],
+        'running' => 'The server runs the action. This part updates itself.',
+        'cancel_ask' => 'Stop the action? What the server has already done stays done.',
+        'secret_keep' => 'Close without saving the password? It is shown only once.',
+        'copy_password' => 'Copy the password',
         'title' => 'Job — Larena Panel',
         'heading' => 'The action',
         'description' => 'The server runs it; this screen shows where it stands.',

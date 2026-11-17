@@ -60,6 +60,11 @@ function csrf_field(): string
     return '<input type="hidden" name="_token" value="test">';
 }
 
+function csrf_token(): string
+{
+    return 'test';
+}
+
 // Both languages have the same keys.
 $russian = require dirname(__DIR__, 2).'/resources/lang/ru/admin.php';
 $flatten = static fn (array $tree): array => array_keys(Illuminate\Support\Arr::dot($tree));

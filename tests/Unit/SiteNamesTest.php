@@ -73,6 +73,11 @@ function csrf_field(): string
     return '<input type="hidden" name="_token" value="test">';
 }
 
+function csrf_token(): string
+{
+    return 'test';
+}
+
 $recorded = new RecordedAnswersGateway(env_recorded_path());
 $admin = new PanelActor('admin@stand.test');
 $owner = new PanelActor('demo@stand.test', 'demo');

@@ -48,6 +48,22 @@ final class Moment
         return $time->setTimezone(new DateTimeZone('UTC'))->format('d.m.Y H:i').' UTC';
     }
 
+    /**
+     * The moment as ISO 8601 with its offset, for the Framework's sf-time to say it in the reader's own time (PX-6), or
+     * null when the server wrote none or not a time.
+     */
+    public static function iso(?string $value): ?string
+    {
+        if ($value === null || trim($value) === '') {
+            return null;
+        }
+        try {
+            return (new DateTimeImmutable($value, new DateTimeZone('UTC')))->format(DATE_ATOM);
+        } catch (Exception) {
+            return null;
+        }
+    }
+
     /** The same, shorter where a column is narrow: this year's date without its year, «05.11 03:30 UTC». */
     public static function short(?string $value, ?int $year = null): string
     {

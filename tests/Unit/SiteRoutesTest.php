@@ -80,6 +80,11 @@ function csrf_field(): string
     return '<input type="hidden" name="_token" value="test">';
 }
 
+function csrf_token(): string
+{
+    return 'test';
+}
+
 $recorded = new RecordedAnswersGateway(env_recorded_path());
 $admin = new PanelActor('admin@stand.test');
 $document = static fn (string $file): array => json_decode(env_recorded_bytes($file), true, 64, JSON_THROW_ON_ERROR);
