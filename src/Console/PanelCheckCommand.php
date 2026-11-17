@@ -57,6 +57,9 @@ final class PanelCheckCommand extends Command
 
             return self::FAILURE;
         }
+        // The menu's rows read the same description: kept for the pages, which then do not ask the server for it again.
+        $store = $container->bound('cache') ? $container->make('cache')->store() : null;
+        \Larena\Env\Navigation\ListedCommands::keep($store instanceof \Illuminate\Contracts\Cache\Repository ? $store : null, $overview->capabilities);
         $ownHost = parse_url((string) $config->get('app.url'), PHP_URL_HOST);
         $overview = $overview->withoutSites(is_string($ownHost) ? [$ownHost] : []);
         // A server that keeps its own load history (simai-env 1.31.0) is not sampled again; an older one is.

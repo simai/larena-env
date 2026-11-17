@@ -220,6 +220,16 @@ $annas = $inbox->list('test:anna');
 env_assert($annas->total === 1 && $annas->items[0]->source === 'env:warning:backup_failed' && $annas->items[0]->href === '/admin/server/sites/demo-owned.test?tab=backups'
     && $annas->items[0]->title === 'The last backup of demo-owned.test failed.', 'The space\'s person hears of the server\'s alert.');
 env_assert($connection->table(MetricSamples::TABLE)->count() === 0, 'The server keeps the load; the panel does not.');
+// The check keeps what the server lists for the menu, so a page does not ask the server's description a second time.
+$menuCache = new \Illuminate\Cache\Repository(new \Illuminate\Cache\ArrayStore());
+$container->instance('cache', new class ($menuCache) {
+    public function __construct(private \Illuminate\Cache\Repository $store) {}
+    public function store(): \Illuminate\Cache\Repository { return $this->store; }
+});
+$run($alerting);
+$listed = $menuCache->get('larena-env.listed-commands');
+env_assert(is_array($listed) && array_keys($listed) === \Larena\Env\Navigation\ListedCommands::COMMANDS, 'The check keeps the menu\'s commands.');
+$container->forgetInstance('cache');
 env_assert(str_contains($run($alerting), 'new or reminded: 0, notifications: 0'), 'An open alert is not told again, even a day on.');
 $stated = static fn (string $state): \Larena\Env\Contracts\PanelGateway => new class($alerting, $state) implements \Larena\Env\Contracts\PanelGateway {
     public function __construct(private RecordedAnswersGateway $inner, private string $state) {}

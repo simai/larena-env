@@ -27,6 +27,50 @@ final class PlanValues
         return in_array($command, self::DESTRUCTIVE, true);
     }
 
+    /**
+     * What a site's removal takes with it, by the ticks the plan carries (audit msg-15f90f9f): `files_db`, `files`, `db`,
+     * or null for the site alone and for any other command. The question and the button say it in words.
+     *
+     * @param array<string, string> $args
+     */
+    public static function removesWith(string $command, array $args): ?string
+    {
+        if ($command !== 'site:remove') {
+            return null;
+        }
+        $files = ($args['remove-files'] ?? 'no') === 'yes';
+        $db = ($args['drop-db'] ?? 'no') === 'yes';
+
+        return $files && $db ? 'files_db' : ($files ? 'files' : ($db ? 'db' : null));
+    }
+
+    /**
+     * The question a removal asks once more, its target named and, for a site, what goes with it.
+     *
+     * @param array<string, string> $args
+     */
+    public static function question(string $command, array $args, string $target): string
+    {
+        $with = self::removesWith($command, $args);
+
+        return $with === null
+            ? self::text('plan.ask.'.str_replace(':', '-', $command), ['target' => $target]) ?? $command
+            : self::text('plan.ask_remove_with', ['target' => $target, 'with' => self::text('plan.with.'.$with) ?? $with]) ?? $command;
+    }
+
+    /**
+     * The words of the plan's button: «Выполнить», or for a removal «Удалить», with what goes with a site.
+     *
+     * @param array<string, string> $args
+     */
+    public static function confirmation(string $command, array $args): string
+    {
+        $with = self::removesWith($command, $args);
+        $key = !self::destroys($command) ? 'plan.confirm' : ($with === null ? 'plan.confirm_remove' : 'plan.confirm_remove_with');
+
+        return self::text($key, $with === null ? [] : ['with' => self::text('plan.with.'.$with) ?? $with]) ?? $key;
+    }
+
     /** The arguments the plan's own dictionary names (`plan.args.*`), the route's later fields among them. */
     public const array ARGS = ['domain', 'profile', 'route', 'owner', 'create-db', 'db-engine', 'admin-user', 'admin-email', 'locale', 'git', 'ref',
         'title', 'source', 'url', 'mode', 'daily-backup', 'bitrix-files', 'redirect-to', 'redirect-code', 'redirect-path', 'upstream-port',
@@ -111,12 +155,13 @@ final class PlanValues
         return $lock === null ? '—' : (in_array($lock, self::LOCKS, true) ? self::text('plan.locks.'.$lock) ?? $lock : $lock);
     }
 
-    private static function text(string $key): ?string
+    /** @param array<string, string> $replace */
+    private static function text(string $key, array $replace = []): ?string
     {
         if (!function_exists('__')) {
             return null;
         }
-        $line = (string) __('larena-env::admin.'.$key);
+        $line = (string) __('larena-env::admin.'.$key, $replace);
 
         return $line !== 'larena-env::admin.'.$key ? $line : null;
     }

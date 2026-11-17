@@ -171,6 +171,73 @@ env_assert($page->ask(PanelRequest::read($admin, 'service:list'))->data === ['ba
 $page->prefetch([PanelRequest::read($admin, 'self:metrics'), PanelRequest::read($admin, 'service:list')]);
 env_assert(count($batching->batches()) === 1, 'What is kept is not asked again.');
 
+// A read another page is prefetching right now is waited for, not asked twice (stand 2026-11-17: the list's warm-up of the
+// first cards and the step into a site two seconds later asked the same reads beside each other).
+$pendingStore = new class () extends ArrayStore {
+    /** @var list<string> the pending marks seen while a batch was asked */
+    public array $marks = [];
+    /** @var array<string, string> the answer another page will keep, by its pending mark, once that mark is looked at */
+    public array $arriving = [];
+
+    public function get($key)
+    {
+        if (isset($this->arriving[$key])) {
+            parent::put(substr($key, strlen('larena-env:gateway:pending:')), $this->arriving[$key], 60);
+            unset($this->arriving[$key]);
+
+            return true;
+        }
+
+        return parent::get($key);
+    }
+
+    /** @return list<string> */
+    public function pending(): array
+    {
+        return array_values(array_filter(array_keys($this->storage), static fn (string $key): bool => str_starts_with($key, 'larena-env:gateway:pending:')));
+    }
+};
+$pendingCache = new Repository($pendingStore);
+$watching = new class ($batching, $pendingStore) implements PanelGateway, \Larena\Env\Contracts\PanelBatchGateway {
+    public function __construct(private readonly object $inner, private readonly object $store)
+    {
+    }
+
+    public function ask(PanelRequest $request): PanelAnswer
+    {
+        return $this->inner->ask($request);
+    }
+
+    public function askAll(array $requests): PanelBatchAnswer
+    {
+        $this->store->marks = $this->store->pending();
+
+        return $this->inner->askAll($requests);
+    }
+
+    public function source(): string
+    {
+        return 'sudo';
+    }
+};
+$batching->clear();
+(new CachingPanelGateway($watching, $pendingCache, 30))->prefetch([PanelRequest::read($admin, 'site:describe', ['domain' => 'p.test']), PanelRequest::read($admin, 'site:doctor', ['domain' => 'p.test'])]);
+env_assert(count($pendingStore->marks) === 2 && $pendingStore->pending() === [], 'Each read is marked pending while it is asked, and the mark goes with the answer.');
+// Another page's prefetch is asking site:status of p.test: its mark is there, its answer comes a moment later. The key of
+// that read is taken from a cache of its own, where it is the only answer kept.
+$probe = new ArrayStore();
+(new CachingPanelGateway($batching, new Repository($probe), 30))->ask(PanelRequest::read($admin, 'site:status', ['domain' => 'p.test']));
+$batching->clear();
+$statusKey = (string) current(array_filter(array_keys((fn (): array => $this->storage)->call($probe)),
+    static fn (string $key): bool => preg_match('/\Alarena-env:gateway:[0-9a-f]{40}\z/', $key) === 1));
+$pendingStore->arriving['larena-env:gateway:pending:'.$statusKey] = serialize(PanelAnswer::fromDocument('other', ['status' => 'ok', 'kind' => 'result', 'data' => ['from' => 'the other page']]));
+$waiter = new CachingPanelGateway($batching, $pendingCache, 30);
+$waiter->prefetch([PanelRequest::read($admin, 'site:status', ['domain' => 'p.test']), PanelRequest::read($admin, 'site:names', ['domain' => 'p.test']),
+    PanelRequest::read($admin, 'site:php-ini-list', ['domain' => 'p.test'])]);
+env_assert($batching->batches() === [['site:names', 'site:php-ini-list']], 'Only what nobody is asking goes to the server: '.json_encode($batching->batches()));
+env_assert($waiter->ask(PanelRequest::read($admin, 'site:status', ['domain' => 'p.test']))->data === ['from' => 'the other page'] && $batching->asked() === [],
+    'The read another page was asking is answered from its answer.');
+
 // The warm-up: what pages asked lately is asked again once it gets old, in one call, and kept longer than a minute.
 $warmStore = new class () extends ArrayStore {
     /** @var array<string, int> */

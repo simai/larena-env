@@ -107,6 +107,21 @@ final class CachingPanelGateway implements PanelGateway, PanelFileGateway
      */
     private const string NO_BATCH = 'larena-env:gateway:no-batch';
 
+    /**
+     * Set on each read a prefetch is asking right now, until its answer is kept: a page that needs the same read meanwhile
+     * waits for that answer instead of asking the server again (stand 2026-11-17: the sites list warms the first cards;
+     * a site opened two seconds later asked its reads a second time beside the warm-up, 1.7-3 s instead of 0.5).
+     */
+    private const string PENDING = 'larena-env:gateway:pending:';
+
+    /** A prefetch that never finished (its process died) holds nobody up for longer than this. */
+    private const int PENDING_SECONDS = 20;
+
+    /** How long a page waits for another's prefetch, in milliseconds, before asking the server itself. */
+    private const int PENDING_WAIT_MS = 8000;
+
+    private const int PENDING_POLL_MS = 100;
+
     /** @var array<string, PanelAnswer> the answers this request already has */
     private array $asked = [];
 
@@ -287,7 +302,24 @@ final class CachingPanelGateway implements PanelGateway, PanelFileGateway
             }
             $missing[$key] = $request;
         }
-        if (count($missing) < 2 || $this->flag(self::DOWN)) {
+        if ($missing === [] || $this->flag(self::DOWN)) {
+            return;
+        }
+        // What another page's prefetch is asking already is waited for, not asked twice.
+        $waiting = array_filter($missing, fn (PanelRequest $request, string $key): bool => $this->flag(self::PENDING.$key), ARRAY_FILTER_USE_BOTH);
+        $missing = array_diff_key($missing, $waiting);
+        $this->askMissing($missing);
+        $this->waitFor(array_keys($waiting));
+    }
+
+    /**
+     * Asks the reads not kept, together by person, and keeps the answers; each is marked pending while it is asked.
+     *
+     * @param array<string, PanelRequest> $missing
+     */
+    private function askMissing(array $missing): void
+    {
+        if (count($missing) < 2) {
             return;
         }
         $byPerson = [];
@@ -299,6 +331,9 @@ final class CachingPanelGateway implements PanelGateway, PanelFileGateway
                 if (count($chunk) < 2) {
                     continue;
                 }
+                foreach (array_keys($chunk) as $key) {
+                    $this->flagFor(self::PENDING.$key, self::PENDING_SECONDS);
+                }
                 $answers = $this->askTogether(array_values($chunk));
                 foreach (array_keys($chunk) as $index => $key) {
                     $answer = $answers[$index];
@@ -306,8 +341,35 @@ final class CachingPanelGateway implements PanelGateway, PanelFileGateway
                         $this->asked[$key] = $answer;
                         $this->write($key, $answer, $this->ttlFor($chunk[$key]->command, $this->ttl));
                     }
+                    $this->unflag(self::PENDING.$key);
                 }
             }
+        }
+    }
+
+    /**
+     * Waits a little for the answers another page's prefetch is getting; what does not come in time, or comes as a
+     * refusal (never kept), the page asks itself as before.
+     *
+     * @param list<string> $keys
+     */
+    private function waitFor(array $keys): void
+    {
+        $deadline = hrtime(true) + self::PENDING_WAIT_MS * 1_000_000;
+        while ($keys !== []) {
+            foreach ($keys as $index => $key) {
+                $kept = $this->read($key);
+                if ($kept !== null) {
+                    $this->asked[$key] = $kept;
+                    unset($keys[$index]);
+                } elseif (!$this->flag(self::PENDING.$key)) {
+                    unset($keys[$index]);
+                }
+            }
+            if ($keys === [] || hrtime(true) >= $deadline) {
+                return;
+            }
+            usleep(self::PENDING_POLL_MS * 1000);
         }
     }
 
@@ -408,6 +470,15 @@ final class CachingPanelGateway implements PanelGateway, PanelFileGateway
             $this->cache->put($key, true, $seconds);
         } catch (Throwable) {
             // Not kept: nothing changes but the waiting.
+        }
+    }
+
+    private function unflag(string $key): void
+    {
+        try {
+            $this->cache->forget($key);
+        } catch (Throwable) {
+            // Not forgotten: it lapses by itself.
         }
     }
 

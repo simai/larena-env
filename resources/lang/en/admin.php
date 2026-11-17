@@ -269,6 +269,7 @@ return [
         'redirect-remove' => 'Remove a redirect',
         'site_remove_note' => 'The site stops opening; its settings and certificate are removed. Its files and database go only if you tick them above; what is not ticked stays on the server. A removal cannot be undone — make a backup first.',
         'database_drop_note' => 'The database and all its data are removed; the site no longer sees them. This cannot be undone — make a backup first.',
+        'make_backup' => 'Make a backup',
         'redirect_remove_note' => 'Give the path the site redirects from now, for example /old-page.',
     ],
     'plan' => [
@@ -283,6 +284,9 @@ return [
         'cancel' => 'Do not run it',
         // A removal asks once more in the Framework question window (audit block 5, A2).
         'confirm_remove' => 'Remove',
+        'confirm_remove_with' => 'Remove :with',
+        'ask_remove_with' => 'Remove the site :target :with? This cannot be undone.',
+        'with' => ['files_db' => 'with its files and database', 'files' => 'with its files', 'db' => 'with its database'],
         'ask_accept' => 'Remove',
         'ask' => [
             'site-remove' => 'Remove the site :target? This cannot be undone.',

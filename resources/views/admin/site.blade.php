@@ -557,10 +557,14 @@
                             <p class="m-0" data-env-apache-note>{{ __('larena-env::admin.runtime.apache_on_note') }}</p>
                         @elseif ($operation === \Larena\Env\Operations\SiteOperation::ApacheOff)
                             <p class="m-0" data-env-apache-note>{{ __('larena-env::admin.runtime.apache_off_note') }}</p>
-                        @elseif ($operation === \Larena\Env\Operations\SiteOperation::SiteRemove)
-                            <p class="m-0" role="note" data-env-remove-note>{{ __('larena-env::admin.operations.site_remove_note') }}</p>
-                        @elseif ($operation === \Larena\Env\Operations\SiteOperation::DatabaseDrop)
-                            <p class="m-0" role="note" data-env-remove-note>{{ __('larena-env::admin.operations.database_drop_note') }}</p>
+                        @elseif (in_array($operation, [\Larena\Env\Operations\SiteOperation::SiteRemove, \Larena\Env\Operations\SiteOperation::DatabaseDrop], true))
+                            {{-- «Сначала сделайте копию» leads to where a copy is made: the site's backups tab, where the server
+                                 can make one (audit msg-15f90f9f). --}}
+                            <p class="m-0" role="note" data-env-remove-note>{{ __('larena-env::admin.operations.'.($operation === \Larena\Env\Operations\SiteOperation::SiteRemove ? 'site_remove_note' : 'database_drop_note')) }}
+                                @if (($capabilities ?? null) === null || $capabilities->allows(\Larena\Env\Operations\SiteOperation::Backup->command()))
+                                    <a href="{{ route('larena.env.admin.site', ['domain' => $domain], false) }}?tab=backups" data-env-remove-backup>{{ __('larena-env::admin.operations.make_backup') }}</a>
+                                @endif
+                            </p>
                         @elseif ($operation === \Larena\Env\Operations\SiteOperation::RedirectRemove)
                             <p class="m-0 text-small color-on-surface-variant" data-env-redirect-note>{{ __('larena-env::admin.operations.redirect_remove_note') }}</p>
                         @endif

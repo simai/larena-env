@@ -375,9 +375,22 @@ env_assert(SiteOperation::SiteRemove->arguments('demo-php.test', ['remove-files'
 $removal = new PanelPlan('site:remove', ['domain' => 'demo-php.test', 'remove-files' => 'yes'], 'demo-php.test', 'Removes the site.', 'delete', 'site');
 $removePlanned = $factory->make('larena-env::admin.plan', ['heading' => 'Remove', 'eyebrow' => 'demo-php.test', 'target' => 'demo-php.test',
     'source' => 'recorded', 'plan' => $removal, 'runUrl' => '/run', 'cancelUrl' => '/cancel', 'hidden' => ['operation' => 'site-remove']])->render();
-env_assert(str_contains($removePlanned, 'data-larena-confirm-submit="'.str_replace(':target', 'demo-php.test', $text('plan.ask.site-remove')).'"')
+env_assert(str_contains($removePlanned, 'data-larena-confirm-submit="'.str_replace([':target', ':with'], ['demo-php.test', $text('plan.with.files')], $text('plan.ask_remove_with')).'"')
     && str_contains($removePlanned, 'data-larena-confirm-danger="1"') && str_contains($removePlanned, 'larena-button-danger')
     && str_contains($removePlanned, 'data-env-plan-argument="remove-files"'), 'The removal\'s plan asks once more, a danger button.');
+// What goes with the site is said on the question and the button (audit msg-15f90f9f); the site alone keeps the short words.
+$removeWith = static fn (array $args): string => $factory->make('larena-env::admin.plan', ['heading' => 'Remove', 'eyebrow' => 'demo-php.test', 'target' => 'demo-php.test',
+    'source' => 'recorded', 'plan' => new PanelPlan('site:remove', ['domain' => 'demo-php.test'] + $args, 'demo-php.test', 'Removes the site.', 'delete', 'site'),
+    'runUrl' => '/run', 'cancelUrl' => '/cancel', 'hidden' => ['operation' => 'site-remove']])->render();
+$everything = $removeWith(['remove-files' => 'yes', 'drop-db' => 'yes']);
+env_assert(str_contains($everything, 'data-env-removes-with="files_db"') && str_contains($everything, '>'.str_replace(':with', $text('plan.with.files_db'), $text('plan.confirm_remove_with')).'</button>')
+    && str_contains($everything, str_replace([':target', ':with'], ['demo-php.test', $text('plan.with.files_db')], $text('plan.ask_remove_with'))), 'Files and database ticked: said on the button and the question.');
+$alone = $removeWith(['remove-files' => 'no', 'drop-db' => 'no']);
+env_assert(!str_contains($alone, 'data-env-removes-with') && str_contains($alone, '>'.$text('plan.confirm_remove').'</button>')
+    && str_contains($alone, str_replace(':target', 'demo-php.test', $text('plan.ask.site-remove'))), 'The site alone: the short question.');
+env_assert(\Larena\Env\Admin\PlanValues::removesWith('site:remove', ['drop-db' => 'yes']) === 'db'
+    && \Larena\Env\Admin\PlanValues::removesWith('site:db-drop', ['drop-db' => 'yes']) === null, 'Only a site\'s removal says what goes with it.');
+env_assert(str_contains($removeTab, 'data-env-remove-backup') && str_contains($removeTab, '?tab=backups'), '«Make a backup first» leads to the backups tab.');
 $ownerRemoval = new PanelPlan('owner:remove', ['name' => 'a2tmp'], 'host', 'Removes the owner.', 'delete', 'host');
 $ownerPlanned = $factory->make('larena-env::admin.plan', ['heading' => 'Remove', 'eyebrow' => 'a2tmp', 'target' => 'a2tmp',
     'source' => 'recorded', 'plan' => $ownerRemoval, 'runUrl' => '/run', 'cancelUrl' => '/cancel', 'hidden' => ['action' => 'remove', 'name' => 'a2tmp']])->render();

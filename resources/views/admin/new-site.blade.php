@@ -32,10 +32,9 @@
                     <li class="flex">
                         <a href="{{ route('larena.env.admin.sites.new', [], false) }}?profile={{ $profile }}" data-env-profile="{{ $profile }}" @if ($profile === ($kind ?? 'static')) aria-current="true" @endif
                             class="grow flex flex-col g-1/2 p-2 radius-2 border-1 border-solid {{ $profile === ($kind ?? 'static') ? 'border-primary bg-primary-container color-on-primary-container' : 'border-outline-variant color-on-surface' }} larena-control-floor"
-                            style="text-decoration: none;">
+                            title="{{ ($serverProfiles ?? null) !== null ? $serverProfiles[$profile]['hint'] : __('larena-env::admin.new_site.profile_hints.'.$profile) }}" style="text-decoration: none;">
                             <strong>{{ ($serverProfiles ?? null) !== null ? $serverProfiles[$profile]['label'] : __('larena-env::admin.new_site.profiles.'.$profile) }}</strong>
-                            <span class="{{ $profile === ($kind ?? 'static') ? '' : 'color-on-surface-variant' }}" data-env-profile-hint="{{ $profile }}"
-                                style="display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">{{ ($serverProfiles ?? null) !== null ? $serverProfiles[$profile]['hint'] : __('larena-env::admin.new_site.profile_hints.'.$profile) }}</span>
+                            <span class="line-clamp-3 {{ $profile === ($kind ?? 'static') ? '' : 'color-on-surface-variant' }}" data-env-profile-hint="{{ $profile }}">{{ ($serverProfiles ?? null) !== null ? $serverProfiles[$profile]['hint'] : __('larena-env::admin.new_site.profile_hints.'.$profile) }}</span>
                         </a>
                     </li>
                 @endforeach
