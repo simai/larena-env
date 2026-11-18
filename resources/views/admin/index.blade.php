@@ -21,8 +21,9 @@
             <p>{{ $reasonText }}</p>
         </section>
     @elseif ($section === 'overview')
-        {{-- «Первые шаги» (owner decision dec-83b7d143b782): the first site first, then the rest of the server's setup;
-             each item opens its own action. The admin draws them; gone once hidden or all done. --}}
+        {{-- «Советы» (owner decisions dec-83b7d143b782, dec-45381ada2c3d): the first site first, the rest of the server's
+             setup, then the advised security fixes; each opens its own action. The admin draws them; gone once hidden or
+             all done. --}}
         @if (function_exists('app') && class_exists(\Larena\Admin\FirstSteps\AdminFirstSteps::class) && app()->bound(\Larena\Admin\FirstSteps\AdminFirstSteps::class))
             {{ app(\Larena\Admin\FirstSteps\AdminFirstSteps::class)->html(request(), 'server') }}
         @endif
@@ -49,45 +50,8 @@
                 <a class="larena-button larena-control-floor" href="{{ route('larena.env.admin.index', [], false) }}" data-env-sites-open>{{ __('larena-env::admin.overview_sites.open') }}</a>
             </section>
         @endif
-        @if (($actions ?? []) !== [])
-            {{-- «Рекомендуемые действия» (owner 2026-11-06): what to do now first, then what is advised, the done ones folded;
-                 each with its one click, which goes through the usual plan and confirmation. --}}
-            <section class="larena-panel larena-panel-padded m-bottom-2" data-env-actions aria-labelledby="env-actions">
-                <h2 id="env-actions" class="m-0 text-2">{{ __('larena-env::admin.actions.title') }}</h2>
-                <p class="m-0 color-on-surface-variant">{{ __('larena-env::admin.actions.summary', ['now' => (string) $actionCounts['now'], 'todo' => (string) $actionCounts['todo'], 'done' => (string) $actionCounts['done']]) }}</p>
-                {{-- The security page counts only its own findings: the overview says which of its items are those (critics of 0.4.1). --}}
-                @if ($actionCounts['other'] ?? false)
-                    <p class="m-0 color-on-surface-variant" data-env-actions-security="{{ $actionCounts['security_now'] }}:{{ $actionCounts['security_todo'] }}">{{ __('larena-env::admin.actions.security_part', ['now' => (string) $actionCounts['security_now'], 'todo' => (string) $actionCounts['security_todo']]) }}</p>
-                @endif
-                {{-- All the urgent ones and at most five advised are in view; the rest folds (critics 2026-11-07). --}}
-                <ul class="m-0 m-t-1 p-0" style="list-style: none;">
-                    @foreach (\Larena\Env\Admin\RecommendedActions::inView($actions) as $item)
-                        @include('larena-env::admin.partials.recommended-action', ['item' => $item])
-                    @endforeach
-                </ul>
-                @if (($folded = \Larena\Env\Admin\RecommendedActions::folded($actions)) !== [])
-                    <details class="m-t-1" data-env-actions-more>
-                        <summary class="larena-control-floor" style="cursor: pointer; display: flex; align-items: center;">{{ __('larena-env::admin.actions.more_list', ['count' => (string) count($folded)]) }}</summary>
-                        <ul class="m-0 p-0" style="list-style: none;">
-                            @foreach ($folded as $item)
-                                @include('larena-env::admin.partials.recommended-action', ['item' => $item])
-                            @endforeach
-                        </ul>
-                    </details>
-                @endif
-                @if ($actionCounts['done'] > 0)
-                    <details class="m-t-1" data-env-actions-done>
-                        <summary class="larena-control-floor" style="cursor: pointer; display: flex; align-items: center;">{{ __('larena-env::admin.actions.done_list', ['count' => (string) $actionCounts['done']]) }}</summary>
-                        <ul class="m-0 p-0" style="list-style: none;">
-                            @foreach ($actions as $item)
-                                @continue($item['state'] !== 'done')
-                                @include('larena-env::admin.partials.recommended-action', ['item' => $item])
-                            @endforeach
-                        </ul>
-                    </details>
-                @endif
-            </section>
-        @endif
+        {{-- «Рекомендуемые действия» are in «Советы» above now (study 2026-11-17, PX-38): the advised fixes there, the
+             urgent ones in the alert bar on every page. --}}
         @if (($updates ?? []) !== [])
             <section class="larena-panel flex flex-wrap items-cross-center g-2 p-2 m-bottom-2" data-env-update-hint role="note" aria-labelledby="env-update-hint">
                 <sf-badge status="info" appearance="tonal" text="{{ __('larena-env::admin.update.hint_title') }}" id="env-update-hint"></sf-badge>

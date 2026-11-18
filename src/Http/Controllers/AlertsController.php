@@ -52,7 +52,7 @@ final readonly class AlertsController
         if ($id === null) {
             return $this->notice($request, $back, 'invalid_argument');
         }
-        // The alert bar's «Отметить, что видели» is one click (owner 2026-11-06): the click is the confirmation.
+        // The alert bar's «Прочитано» is one click (owner 2026-11-06): the click is the confirmation.
         if ($request->isMethod('POST') && $request->expectsJson()) {
             return $this->ackNow($request, $id);
         }
@@ -125,6 +125,8 @@ final readonly class AlertsController
             'supported' => $capabilities?->allows('self:alerts-channel') === true,
             'canTest' => $capabilities?->allows('self:alerts-test') === true,
             'channel' => $alerts?->channel,
+            // «Что слать» (PX-43): offered where the server takes it; only urgent unless the server says otherwise.
+            'canChooseLevels' => $capabilities?->takes('self:alerts-channel', 'levels') === true,
             // The change open in place under the card (study part 8, PX-82).
             'edit' => $request->query('edit') === 'channel' ? 'channel' : null,
             'notice' => $request->session()->get('larena_env_notice'),
@@ -138,6 +140,11 @@ final readonly class AlertsController
             return $this->notice($request, route('larena.env.admin.alerts.channel', [], false), 'invalid_argument');
         }
         [$args, $hidden] = $input;
+        $levels = $this->levels($request);
+        if ($levels !== null) {
+            $args['levels'] = $levels;
+            $hidden['levels'] = $levels;
+        }
         $result = $this->operations->planCommand(ResolvePanelActor::of($request), 'self:alerts-channel', $args);
         if ($result->plan === null) {
             $this->dropToken($request, $hidden['token_ref'] ?? null);
@@ -172,6 +179,10 @@ final readonly class AlertsController
                 return $this->notice($request, route('larena.env.admin.alerts.channel', [], false), 'token_missing');
             }
             $args['token'] = $token;
+        }
+        $levels = $this->levels($request);
+        if ($levels !== null && $args['kind'] !== 'off') {
+            $args['levels'] = $levels;
         }
         $started = $this->operations->startCommand(ResolvePanelActor::of($request), 'self:alerts-channel', $args);
 
@@ -271,6 +282,20 @@ final readonly class AlertsController
         if ($ref !== null) {
             $this->takeToken($request, $ref);
         }
+    }
+
+    /**
+     * «Что слать»: only urgent unless warnings are chosen too; nothing where the server does not take the choice yet
+     * (it is asked of the server's description, so an older server is never sent an argument it refuses).
+     */
+    private function levels(Request $request): ?string
+    {
+        $capabilities = $this->overviews->read(ResolvePanelActor::of($request))->overview?->capabilities;
+        if ($capabilities?->takes('self:alerts-channel', 'levels') !== true) {
+            return null;
+        }
+
+        return $request->input('levels') === 'all' ? 'all' : 'urgent';
     }
 
     private static function alertId(Request $request): ?string

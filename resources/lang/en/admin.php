@@ -799,7 +799,11 @@ return [
         'server_alert' => 'The server says: :message',
         'resolved' => 'Resolved: :message',
         'acked' => 'Seen by :by, :time. The warning goes away by itself once its cause is gone.',
-        'ack' => 'Mark as seen',
+        'ack' => 'Read',
+        'resolutions' => [
+            'site' => 'works again', 'backup' => 'backup made', 'disk' => 'space freed', 'certificate' => 'certificate fine',
+            'swap' => 'memory freed', 'panel' => 'panel reachable again', 'other' => 'resolved',
+        ],
         'from_server' => 'The server checks itself every 5 minutes, even while the panel is closed.',
     ],
     // What a person's notifications call the panel's warnings (the source env:warning:<kind>).
@@ -1230,6 +1234,12 @@ return [
         'reasons' => [
             'not_connected' => 'No DNS provider is connected.',
             'token_invalid' => 'That does not look like an API token.',
+        'levels' => 'What to send',
+        'level_options' => [
+            'urgent' => 'Only urgent: a site does not answer, space runs out, a backup was not made',
+            'all' => 'Urgent and warnings',
+        ],
+        'levels_later' => 'Choosing what to send becomes possible after a simai-env update; until then the server decides.',
             'token_refused' => 'The provider refused the token: it is wrong, expired, or lacks the rights.',
             'token_inactive' => 'The token is not active in the provider.',
             'provider_unreachable' => 'The provider did not answer. Try again in a minute.',

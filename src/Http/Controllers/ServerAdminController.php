@@ -127,6 +127,10 @@ final readonly class ServerAdminController
 
         $updates = $section === 'overview' && $actor->owner === null ? $this->updates($actor, $overview) : [];
         $actions = $section === 'overview' ? $this->actions($request, $actor, $overview, $updates, $text) : [];
+        // «Советы» (study 2026-11-17, PX-38; owner decision dec-45381ada2c3d): the advised security fixes join the memo the
+        // admin draws (PanelFirstSteps reads them here, read once with the overview's batch); what is urgent is the alert
+        // bar's, and the overview no longer has a block of its own for them.
+        $request->attributes->set(\Larena\Env\Admin\PanelFirstSteps::ADVICE, $actions);
 
         return $this->views->make('larena-env::admin.index', [
             'section' => $section,

@@ -30,6 +30,9 @@ final class AlertsCard
             + ($canEdit ? ['action' => ['label' => self::text('card.edit'), 'href' => '?edit=channel#env-alerts-now']] : [])];
         $items[] = ['id' => 'kind', 'label' => self::text('kind'), 'value' => self::text('kinds.'.$kind),
             'status' => $error !== null ? 'error' : ($kind === 'off' ? 'warning' : 'success')] + ($error !== null ? ['hint' => self::text('state_failing')] : []);
+        if (is_string($channel['levels'] ?? null) && $kind !== 'off') {
+            $items[] = ['id' => 'levels', 'label' => self::text('levels'), 'value' => self::text('level_options.'.$channel['levels'])];
+        }
         if (is_string($channel['target_hint'] ?? null)) {
             $items[] = ['id' => 'target', 'label' => self::text('target_hint'), 'value' => $channel['target_hint']];
         }

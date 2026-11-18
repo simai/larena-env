@@ -12,7 +12,7 @@ final readonly class ServerAlerts
 {
     /**
      * @param list<ServerAlert> $alerts
-     * @param array{kind: string, target_hint: ?string, last_sent_at: ?string, last_error: ?string}|null $channel
+     * @param array{kind: string, target_hint: ?string, last_sent_at: ?string, last_error: ?string, levels: ?string}|null $channel
      */
     public function __construct(
         public array $alerts,
@@ -37,7 +37,9 @@ final readonly class ServerAlerts
         return new self(
             $alerts,
             $channel === null ? null : ['kind' => in_array($channel['kind'] ?? null, ['webhook', 'telegram', 'off'], true) ? (string) $channel['kind'] : 'off',
-                'target_hint' => $text('target_hint'), 'last_sent_at' => $text('last_sent_at'), 'last_error' => $text('last_error')],
+                'target_hint' => $text('target_hint'), 'last_sent_at' => $text('last_sent_at'), 'last_error' => $text('last_error'),
+                // What it sends (PX-43), where the server says: only urgent or warnings too.
+                'levels' => in_array($channel['levels'] ?? null, ['urgent', 'all'], true) ? (string) $channel['levels'] : null],
             is_string($data['checked_at'] ?? null) ? $data['checked_at'] : null,
         );
     }

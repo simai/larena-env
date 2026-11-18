@@ -801,7 +801,12 @@ return [
         'server_alert' => 'Сервер сообщает: :message',
         'resolved' => 'Решено: :message',
         'acked' => 'Отмечено: :by, :time. Предупреждение уйдёт само, когда причина исчезнет.',
-        'ack' => 'Отметить, что видели',
+        'ack' => 'Прочитано',
+        // How a problem ended, in the same notification as the problem (study 2026-11-17, PX-40): «… → снова работает».
+        'resolutions' => [
+            'site' => 'снова работает', 'backup' => 'копия сделана', 'disk' => 'место освободилось', 'certificate' => 'сертификат в порядке',
+            'swap' => 'память освободилась', 'panel' => 'панель снова доступна', 'other' => 'решено',
+        ],
         'from_server' => 'Сервер проверяет себя сам каждые 5 минут, даже когда панель закрыта.',
     ],
     // What a person's notifications call the panel's warnings (the source env:warning:<kind>).
@@ -1232,6 +1237,13 @@ return [
         'reasons' => [
             'not_connected' => 'DNS-провайдер не подключён.',
             'token_invalid' => 'Это не похоже на токен API.',
+        // What the server sends (study 2026-11-17, PX-43; owner decision dec-45381ada2c3d: only urgent by default).
+        'levels' => 'Что слать',
+        'level_options' => [
+            'urgent' => 'Только срочное: сайт не отвечает, кончается место, копия не сделана',
+            'all' => 'Срочное и предупреждения',
+        ],
+        'levels_later' => 'Выбрать, что слать, можно будет после обновления simai-env; пока сервер решает сам.',
             'token_refused' => 'Провайдер не принял токен: он неверный, истёк или у него нет прав.',
             'token_inactive' => 'У провайдера этот токен не активен.',
             'provider_unreachable' => 'Провайдер не ответил. Попробуйте через минуту.',

@@ -248,9 +248,13 @@ env_assert($spreadFindings->counts() === ['now' => 1, 'todo' => 1, 'done' => 1] 
     'The same counts on both pages: '.json_encode([$spreadFindings->counts(), $spreadCounts]));
 $counts = \Larena\Env\Admin\RecommendedActions::counts($list);
 $left = $state(['section' => 'overview', 'overview' => $overview, 'actions' => $list, 'actionCounts' => $counts]);
-env_assert(str_contains($left, 'data-env-actions') && str_contains($left, 'data-env-action="security:ssh_password"') && str_contains($left, 'data-env-action-state="now"')
-    && str_contains($left, 'name="check" value="ssh_password"') && str_contains($left, 'data-env-actions-done') && !str_contains($ok, 'data-env-actions')
-    && str_contains($left, 'data-env-actions-security="1:2"'), 'The block on the overview: '.$left);
+// «Советы» replace «Рекомендуемые действия» (study 2026-11-17, PX-38): the overview has no block of its own; the
+// security items that are not urgent go to the admin's memo, urgent ones to the alert bar.
+env_assert(!str_contains($left, 'data-env-actions') && !str_contains($left, 'data-env-action='), 'No block on the overview: '.$left);
+$advice = \Larena\Env\Admin\PanelFirstSteps::advice($list);
+env_assert($advice !== [] && array_filter($advice, static fn ($step): bool => !str_starts_with($step->id, 'env.security')) === []
+    && array_filter($list, static fn (array $item): bool => $item['state'] === 'now' && in_array('env.'.str_replace(':', '.', $item['key']), array_map(static fn ($step): string => $step->id, $advice), true)) === [],
+    'Only not-urgent security items become advice: '.json_encode(array_map(static fn ($step): string => $step->id, $advice)));
 // The sites in one line on the overview (critics of 0.4.1): public names only for HTTPS, 48 hours for a fresh copy.
 $fresh = (new DateTimeImmutable('2026-11-01T12:00:00Z'))->modify('-1 hour')->format('Y-m-d\\TH:i:s\\Z');
 $sitesCount = \Larena\Env\Admin\ServerSitesCount::of([

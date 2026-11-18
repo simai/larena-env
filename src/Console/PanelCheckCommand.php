@@ -26,7 +26,10 @@ use Throwable;
  * The panel's own look at the server every 5 minutes, whether anyone has it open or not (Panel plan 4.5, 4.6): it
  * keeps the load the server measured, and tells people what needs attention through their notifications. The whole
  * server's people hear about everything; a person of the user level about the sites of their own space. A warning is
- * told when it appears and once a day while it lasts (WarningLedger). Without larena/notification it only measures.
+ * told when it appears and once a day while it lasts (WarningLedger), in the same notification; when it ends, that
+ * notification says so itself — «… → снова работает», read on its own — and no second one is added (study 2026-11-17,
+ * PX-40). Each names what it is about (the site, or «Сервер») for the bell's groups. Without larena/notification it
+ * only measures.
  */
 final class PanelCheckCommand extends Command
 {
@@ -73,6 +76,8 @@ final class PanelCheckCommand extends Command
         // A server that keeps its own alerts: each is told when it opens and when it is resolved, never reminded (the
         // server sends them to its own channel too). An older server's warnings are worked out here, reminded daily.
         $alerts = $overview->capabilities?->allows('self:alerts') === true ? $extras->alerts($actor) : null;
+        // The notifications of conditions that ended: closed in place (dedupe key => the kind it was).
+        $ended = [];
         if ($alerts !== null) {
             $sites = array_map(static fn ($site): string => $site->domain, $overview->sites);
             $warnings = [];
@@ -85,10 +90,19 @@ final class PanelCheckCommand extends Command
                 $warnings[] = $alert->state === ServerAlert::RESOLVED
                     ? new PanelWarning(PanelWarnings::RESOLVED, 'success', $warning->domain, $warning->replace, $warning->subject, $alert->id, ServerAlert::RESOLVED)
                     : new PanelWarning($warning->kind, $warning->severity, $warning->domain, $warning->replace, $warning->subject, $alert->id, ServerAlert::OPEN);
+                if ($alert->state === ServerAlert::RESOLVED) {
+                    $ended['env:alert:'.$alert->id.':open'] = $warning->kind;
+                }
             }
-            $due = $ledger->due($warnings, $now, false);
+            // A resolved alert ends its own notification instead of adding one (PX-40).
+            $due = array_values(array_filter($ledger->due($warnings, $now, false),
+                static fn (PanelWarning $warning): bool => $warning->kind !== PanelWarnings::RESOLVED));
         } else {
             $warnings = PanelWarnings::of($overview, $metrics, $now);
+            // What the ledger knew and is no longer seen has ended (WarningLedger forgets it in due()).
+            foreach ($ledger->gone($warnings) as $key => $kind) {
+                $ended['env:'.$key] = $kind;
+            }
             $due = $ledger->due($warnings, $now);
         }
         $inbox = class_exists(NotificationInbox::class) && $container->bound(NotificationInbox::class)
@@ -110,11 +124,12 @@ final class PanelCheckCommand extends Command
                 }
                 $title = (string) $translator->get('larena-env::admin.warnings.'.$warning->kind, \Larena\Env\Warnings\PanelWarnings::replaceFor($warning,
                     static fn (string $key, array $replace): string => (string) $translator->get('larena-env::admin.'.$key, $replace)));
-                // The server's alert names its own message; a resolved one says what cleared.
+                // What it is about: the site, or the server for the bell's group «Сервер».
+                $object = $warning->domain ?? (string) $translator->get('larena-env::admin.warnings.bar_server');
                 foreach (array_unique($recipients) as $recipient) {
                     try {
                         $inbox->record($recipient, $warning->severity, $title, null, 'env:warning:'.$warning->kind,
-                            self::href($warning, (string) $config->get('larena-env.admin.prefix', 'admin/server')), 'env:'.$warning->key());
+                            self::href($warning, (string) $config->get('larena-env.admin.prefix', 'admin/server')), 'env:'.$warning->key(), false, $object);
                         $told++;
                     } catch (Throwable $error) {
                         $this->warn('not told '.$recipient.': '.$error->getMessage());
@@ -122,10 +137,30 @@ final class PanelCheckCommand extends Command
                 }
             }
         }
-        $this->line(sprintf('warnings: %d, new or reminded: %d, notifications: %d, measured: %s, from the server: %s',
-            count($warnings), count($due), $told, $metrics === null ? 'no' : 'yes', $alerts === null ? 'no' : 'yes'));
+        $resolved = 0;
+        if ($inbox instanceof NotificationInbox) {
+            foreach ($ended as $key => $kind) {
+                $resolved += $inbox->resolve($key, (string) $translator->get('larena-env::admin.warnings.resolutions.'.self::resolution($kind)));
+            }
+        }
+        $this->line(sprintf('warnings: %d, new or reminded: %d, notifications: %d, resolved: %d, measured: %s, from the server: %s',
+            count($warnings), count($due), $told, $resolved, $metrics === null ? 'no' : 'yes', $alerts === null ? 'no' : 'yes'));
 
         return self::SUCCESS;
+    }
+
+    /** Which words say how a condition of this kind ended (larena-env::admin.warnings.resolutions.*). */
+    public static function resolution(string $kind): string
+    {
+        return match (true) {
+            in_array($kind, [PanelWarnings::SITE_DOWN, PanelWarnings::SITE_ERROR, PanelWarnings::SITE_UNAVAILABLE], true) => 'site',
+            str_starts_with($kind, 'backup_') => 'backup',
+            in_array($kind, [PanelWarnings::DISK_FULL, PanelWarnings::DISK_ALERT], true) => 'disk',
+            str_starts_with($kind, 'certificate_') => 'certificate',
+            $kind === PanelWarnings::SWAP_FULL => 'swap',
+            $kind === PanelWarnings::PANEL_DOWN => 'panel',
+            default => 'other',
+        };
     }
 
     /** Where the warning is dealt with: the site's card on its tab, or the server's overview (the panel's routes). */

@@ -72,6 +72,7 @@ final class PanelCommands
     // id or @name; the bot's token travels as text and reaches the command as a file, shown as (stored) everywhere.
     private const string ALERT_ID = '/\A[A-Za-z0-9][A-Za-z0-9._-]{0,63}\z/D';
     private const string ALERT_CHANNEL = '/\A(?:webhook|telegram|off)\z/D';
+    private const string ALERT_LEVELS = '/\A(?:urgent|all)\z/D';
     private const string ALERT_TARGET = '/\A(?:https:\/\/[!-~]{1,500}|-?[0-9]{1,20}|@[A-Za-z0-9_]{5,32})\z/D';
     private const string BOT_TOKEN = '/\A[0-9]{5,12}:[A-Za-z0-9_-]{30,64}\z/D';
     // The history's periods: an hour and six hours since simai-env 1.50.0, an older server refuses them.
@@ -230,7 +231,8 @@ final class PanelCommands
         // The server's own watch, also while the panel is closed or down, its channel and its load history (1.31.0).
         'self:alerts' => ['args' => [], 'required' => [], 'since' => '1.31.0', 'kind' => self::READ],
         'self:alerts-ack' => ['args' => ['id' => self::ALERT_ID], 'required' => ['id'], 'since' => '1.31.0', 'kind' => self::ACTION],
-        'self:alerts-channel' => ['args' => ['kind' => self::ALERT_CHANNEL, 'target' => self::ALERT_TARGET, 'token' => self::BOT_TOKEN],
+        // `levels`: what the server sends — only urgent (the default, owner decision dec-45381ada2c3d) or warnings too.
+        'self:alerts-channel' => ['args' => ['kind' => self::ALERT_CHANNEL, 'target' => self::ALERT_TARGET, 'token' => self::BOT_TOKEN, 'levels' => self::ALERT_LEVELS],
             'required' => ['kind'], 'since' => '1.31.0', 'kind' => self::ACTION],
         'self:alerts-test' => ['args' => [], 'required' => [], 'since' => '1.31.0', 'kind' => self::ACTION],
         'self:metrics-history' => ['args' => ['period' => self::PERIOD], 'required' => ['period'], 'since' => '1.31.0', 'kind' => self::READ],
@@ -439,6 +441,9 @@ final class PanelCommands
         // Packing and unpacking without the files with passwords (simai-env 1.62.2).
         'file:archive' => ['without-secrets' => '1.62.2'],
         'file:extract' => ['without-secrets' => '1.62.2'],
+        // What the server sends to its channel (study 2026-11-17, PX-43): asked of ENV in the letter of 2026-11-18; the
+        // release that takes it is ENV's to confirm, until then the panel does not send it.
+        'self:alerts-channel' => ['levels' => '1.63.0'],
     ];
 
     /**

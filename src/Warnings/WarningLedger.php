@@ -23,6 +23,27 @@ final readonly class WarningLedger
     }
 
     /**
+     * The warnings the ledger knows that are not among those seen now: they have ended (key => kind). Read before due(),
+     * which forgets them.
+     *
+     * @param list<PanelWarning> $warnings
+     *
+     * @return array<string, string>
+     */
+    public function gone(array $warnings): array
+    {
+        $seen = array_flip(array_map(static fn (PanelWarning $warning): string => $warning->key(), $warnings));
+        $gone = [];
+        foreach ($this->connection->table(self::TABLE)->get(['warning_key', 'kind']) as $row) {
+            if (!isset($seen[(string) $row->warning_key])) {
+                $gone[(string) $row->warning_key] = (string) $row->kind;
+            }
+        }
+
+        return $gone;
+    }
+
+    /**
      * Keeps the warnings seen now and answers the ones to tell people about.
      *
      * @param list<PanelWarning> $warnings

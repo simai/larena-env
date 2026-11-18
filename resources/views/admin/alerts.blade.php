@@ -27,6 +27,19 @@
                             @endforeach
                         </select>
                     </div>
+                    {{-- What the server sends (PX-43): only urgent by default (owner decision dec-45381ada2c3d). --}}
+                    @if ($canChooseLevels ?? false)
+                        <div class="larena-field">
+                            <label for="env-alerts-levels">{{ __('larena-env::admin.alerts.levels') }}</label>
+                            <select id="env-alerts-levels" name="levels" style="min-height: 44px;" data-env-alerts-levels>
+                                @foreach (['urgent', 'all'] as $level)
+                                    <option value="{{ $level }}" @if (($channel['levels'] ?? 'urgent') === $level) selected @endif>{{ __('larena-env::admin.alerts.level_options.'.$level) }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    @else
+                        <p class="m-0 text-small color-on-surface-variant" data-env-alerts-levels-later>{{ __('larena-env::admin.alerts.levels_later') }}</p>
+                    @endif
                     <div class="larena-field">
                         <label for="env-alerts-target">{{ __('larena-env::admin.alerts.target') }}</label>
                         <input type="text" id="env-alerts-target" name="target" maxlength="500" autocomplete="off" inputmode="url">

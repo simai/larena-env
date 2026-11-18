@@ -146,6 +146,8 @@ final class EnvServiceProvider extends ServiceProvider
             // The panel's warnings in the admin's alert bar on every admin page (owner decision 2026-11-05), where the admin has one.
             if (class_exists(\Larena\Admin\Alerts\AdminAlerts::class)) {
                 $app = $this->app;
+                // The panel watches the server's disks and certificates itself: the CMS's own site checks stay off here.
+                $config->set('larena-admin.alerts.site_checks', false);
                 $this->callAfterResolving(\Larena\Admin\Alerts\AdminAlerts::class, static function (\Larena\Admin\Alerts\AdminAlerts $alerts) use ($app, $config): void {
                     $cache = $app->bound('cache') ? $app->make('cache')->store() : null;
                     $host = parse_url((string) $config->get('app.url'), PHP_URL_HOST);

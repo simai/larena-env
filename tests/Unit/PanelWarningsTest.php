@@ -200,12 +200,19 @@ $run = static function (?\Larena\Env\Contracts\PanelGateway $server = null) use 
 $connection->table(WarningLedger::TABLE)->delete();
 $connection->table(MetricSamples::TABLE)->delete();
 $first = $run();
-env_assert(str_contains($first, 'warnings: 2, new or reminded: 2, notifications: 1, measured: yes, from the server: no'), 'The first check: '.$first);
+env_assert(str_contains($first, 'warnings: 2, new or reminded: 2, notifications: 1, resolved: 0, measured: yes, from the server: no'), 'The first check: '.$first);
 $annas = $inbox->list('test:anna');
 env_assert($annas->total === 1 && $annas->items[0]->source === 'env:warning:backup_none' && $annas->items[0]->href === '/admin/server/sites/demo-owned.test?tab=backups'
     && str_contains($annas->items[0]->title, 'demo-owned.test') && $annas->items[0]->status === 'warning', 'The space\'s person hears about their own site.');
+env_assert($annas->items[0]->object === 'demo-owned.test', 'It names the site it is about, for the bell\'s groups.');
 env_assert($inbox->list('test:boris')->total === 0, 'Another space hears nothing of it.');
 env_assert(str_contains($run(), 'new or reminded: 0, notifications: 0'), 'Five minutes on, nothing is told again.');
+// A warning the panel worked out that is gone ends its own notification (PX-40): no second record, read on its own.
+$known = new WarningLedger($connection);
+$goneOne = $known->gone([]);
+env_assert(isset($goneOne['backup_none:demo-owned.test']) && $goneOne['backup_none:demo-owned.test'] === 'backup_none', 'The ledger says what has ended: '.json_encode($goneOne));
+env_assert(PanelCheckCommand::resolution('site_down') === 'site' && PanelCheckCommand::resolution('backup_failed') === 'backup'
+    && PanelCheckCommand::resolution('certificate_alert') === 'certificate' && PanelCheckCommand::resolution('server_alert') === 'other', 'How each kind ends, in words.');
 env_assert($connection->table(MetricSamples::TABLE)->count() === 2, 'Each check measures the server.');
 
 // A server with its own alerts and load history (simai-env 1.31.0): the check copies its alerts, told once when they open
@@ -215,7 +222,7 @@ $connection->table(MetricSamples::TABLE)->delete();
 $connection->table(\Larena\Notification\Runtime\NotificationInbox::TABLE)->delete();
 $alerting = new RecordedAnswersGateway(env_recorded_path());
 $fromServer = $run($alerting);
-env_assert(str_contains($fromServer, 'warnings: 1, new or reminded: 1, notifications: 1, measured: no, from the server: yes'), 'The server\'s alerts: '.$fromServer);
+env_assert(str_contains($fromServer, 'warnings: 1, new or reminded: 1, notifications: 1, resolved: 0, measured: no, from the server: yes'), 'The server\'s alerts: '.$fromServer);
 $annas = $inbox->list('test:anna');
 env_assert($annas->total === 1 && $annas->items[0]->source === 'env:warning:backup_failed' && $annas->items[0]->href === '/admin/server/sites/demo-owned.test?tab=backups'
     && $annas->items[0]->title === 'The last backup of demo-owned.test failed.', 'The space\'s person hears of the server\'s alert.');
@@ -248,11 +255,13 @@ $stated = static fn (string $state): \Larena\Env\Contracts\PanelGateway => new c
     public function source(): string { return 'recorded'; }
 };
 env_assert(str_contains($run($stated('acked')), 'notifications: 0'), 'Acknowledged is not news.');
-env_assert(str_contains($run($stated('resolved')), 'notifications: 1'), 'Resolved is told once.');
-// The inbox's clock stands still here, so the two notifications share a time: the resolved one is found by its source.
-$resolved = array_values(array_filter($inbox->list('test:anna')->items, static fn ($item): bool => $item->source === 'env:warning:resolved'))[0] ?? null;
-env_assert($resolved !== null && $inbox->list('test:anna')->total === 2 && $resolved->status === 'success' && str_contains($resolved->title, 'demo-owned.test'), 'Resolved, in words.');
-env_assert(str_contains($run($stated('resolved')), 'notifications: 0'), 'And not again.');
+// Resolved ends the same notification (PX-40): nothing new is added, the record says how it ended and is read.
+$endedRun = $run($stated('resolved'));
+env_assert(str_contains($endedRun, 'notifications: 0, resolved: 1'), 'Resolved ends the open notification: '.$endedRun);
+$annas = $inbox->list('test:anna');
+env_assert($annas->total === 1 && $annas->items[0]->resolved() && !$annas->items[0]->unread() && $annas->items[0]->resolution !== null
+    && $annas->items[0]->source === 'env:warning:backup_failed', 'One record: the problem and its end.');
+env_assert(str_contains($run($stated('resolved')), 'notifications: 0, resolved: 0'), 'And not again.');
 
 // The server's alerts in the panel's words: critical is an error, the panel's own being down and a disk are the server's,
 // an owner sees no server-wide one, a site the person does not see is left out, a resolved one is not shown.
@@ -271,7 +280,7 @@ env_assert($kinds($whole) === ['disk_alert:error', 'panel_down:error', 'certific
 env_assert($whole[1]->domain === null && $whole[2]->tab() === 'domains' && $whole[2]->state === 'acked' && !$whole[2]->acknowledgeable()
     && $whole[0]->acknowledgeable() && $whole[2]->ackedBy === 'admin@stand.test', 'Acknowledged ones say by whom; open ones can be acknowledged.');
 env_assert($kinds(PanelWarnings::fromAlerts($alerts, ['a.test'], false)) === ['certificate_alert:warning', 'server_alert:warning'], 'An owner: their sites only.');
-env_assert($alerts->channel === ['kind' => 'telegram', 'target_hint' => 'chat …4567', 'last_sent_at' => null, 'last_error' => 'timeout'], 'The channel, without its token.');
+env_assert($alerts->channel === ['kind' => 'telegram', 'target_hint' => 'chat …4567', 'last_sent_at' => null, 'last_error' => 'timeout', 'levels' => null], 'The channel, without its token.');
 
 // The load the server kept itself: ends at its last point, in percent of the whole.
 $history = MetricHistory::fromServer('day', ['points' => [
