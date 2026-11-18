@@ -121,6 +121,8 @@ $router->middleware(['access:env.sites.operate'])->group(static function ($route
 $router->get('/sites/{domain}', [SiteAdminController::class, 'show'])->where('domain', $domain)->name('larena.env.admin.site');
 // A site's file, handed over once checked (Panel plan 6.2); the server keeps the owner's scope.
 $router->get('/sites/{domain}/files/download', [SiteFilesController::class, 'download'])->where('domain', $domain)->name('larena.env.admin.site.files.download');
+// «Скачать журнал»: the last lines of a site's log as the server wrote them (PX-48).
+$router->get('/sites/{domain}/log/download', [SiteAdminController::class, 'logDownload'])->where('domain', $domain)->name('larena.env.admin.site.log.download');
 $router->get('/jobs/{job}', [ServerJobController::class, 'show'])->where('job', '[a-f0-9]{24}')->name('larena.env.admin.job');
 
 // Everything that changes the server needs its own right, and goes through a plan and a confirmation.

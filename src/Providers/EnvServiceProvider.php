@@ -152,6 +152,18 @@ final class EnvServiceProvider extends ServiceProvider
                     ));
                 });
             }
+            // The server's runs in the admin's «История» (owner decision dec-d9f352569fd1), where the admin has one.
+            if (interface_exists(\Larena\Admin\Contracts\AdminHistorySource::class)) {
+                $app = $this->app;
+                $this->callAfterResolving(\Larena\Admin\History\AdminHistory::class, static function (\Larena\Admin\History\AdminHistory $history) use ($app): void {
+                    $history->register('env', new \Larena\Env\Admin\EnvHistorySource(
+                        $app->make(PanelActorResolver::class),
+                        $app->make(\Larena\Env\Operations\PanelOperations::class),
+                        $app->make(\Illuminate\Contracts\Translation\Translator::class),
+                        $app->bound(\Larena\Admin\Contracts\AdminIdentityLabelResolver::class) ? $app->make(\Larena\Admin\Contracts\AdminIdentityLabelResolver::class) : null,
+                    ));
+                });
+            }
             // «Первые шаги» on the server's overview (owner decision dec-83b7d143b782), where the admin draws them.
             if (interface_exists(\Larena\Admin\Contracts\AdminFirstStepsSource::class)) {
                 $app = $this->app;

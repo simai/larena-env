@@ -106,7 +106,18 @@
     "resources/views/admin/new-site/address.blade.php",
     "resources/views/admin/new-site/review.blade.php",
     "resources/views/admin/new-site/run.blade.php",
-    "resources/views/admin/new-site/done.blade.php"
+    "resources/views/admin/new-site/done.blade.php",
+    "resources/views/admin/services.blade.php",
+    "resources/views/admin/site.blade.php",
+    "src/Http/Controllers/ServerJobController.php",
+    "src/Http/Controllers/ServicesController.php",
+    "src/Http/Controllers/SiteAdminController.php",
+    "src/Providers/EnvServiceProvider.php",
+    "src/Server/SiteLogView.php",
+    "src/Admin/EnvHistorySource.php",
+    "src/Server/ServiceLogView.php",
+    "tests/Support/admin-views/history/log.blade.php",
+    "tests/Unit/HistoryTest.php"
   ],
   "forbidden_files": [
     "../*"

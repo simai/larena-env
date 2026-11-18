@@ -15,9 +15,9 @@ return [
 
     'menu' => [
         'roots' => [
-            // Both levels: the sites a person reaches, the first screen; the audit log.
+            // Both levels: the sites a person reaches, the first screen. «История» (the server's runs and the action
+            // journal, larena/admin) is the menu's last root of its own, by «Уведомления» (owner decision dec-d9f352569fd1).
             'sites' => ['label' => 'larena-env::admin.menu.sites', 'icon' => 'dns', 'level' => 'site', 'kind' => 'row', 'row' => 'env.server'],
-            'journal' => ['label' => 'larena-env::admin.menu.journal', 'icon' => 'history', 'level' => 'site', 'kind' => 'row', 'row' => 'audit.history'],
             // The system level: people, the server, the panel's own settings.
             'users' => ['label' => 'larena-env::admin.menu.users', 'icon' => 'group', 'level' => 'install', 'kind' => 'root'],
             'server' => ['label' => 'larena-env::admin.menu.server', 'icon' => 'memory', 'level' => 'install', 'kind' => 'root'],

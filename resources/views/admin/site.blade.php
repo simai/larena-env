@@ -330,15 +330,18 @@
                 @endif
             </section>
         @elseif ($tab === 'log')
-            <section class="larena-panel larena-panel-padded" data-env-log="{{ $logKind }}" aria-labelledby="env-site-log">
+            {{-- «Журнал сайта» (PX-48): the site's errors first, the reader's own time, 50 rows and «Ещё», the answer as a
+                 badge, the line as the server wrote it on a press, and «Скачать журнал»; the rows are drawn by the
+                 admin's one log viewer (larena-admin::history.log). --}}
+            <section class="larena-panel larena-panel-padded" data-env-log="{{ $logView }}" aria-labelledby="env-site-log">
                 <h2 id="env-site-log" class="text-2">{{ __('larena-env::admin.log.title') }}</h2>
                 <form method="get" action="{{ route('larena.env.admin.site', ['domain' => $domain], false) }}" class="larena-form" data-env-log-filter role="search">
                     <input type="hidden" name="tab" value="log">
                     <div class="larena-field">
                         <label for="env-log-kind">{{ __('larena-env::admin.log.kind') }}</label>
                         <select id="env-log-kind" name="log">
-                            @foreach ($logKinds as $kind)
-                                <option value="{{ $kind }}" @if ($kind === $logKind) selected @endif>{{ __('larena-env::admin.log.'.$kind) }}</option>
+                            @foreach ($logViews as $view)
+                                <option value="{{ $view }}" @if ($view === $logView) selected @endif>{{ __('larena-env::admin.log.views.'.$view) }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -351,7 +354,7 @@
                         <select id="env-log-group" name="group">
                             <option value="">{{ __('larena-env::admin.log.all') }}</option>
                             @foreach ($logGroups as $group)
-                                <option value="{{ $group }}" @if ($group === $logGroup) selected @endif>{{ $logKind === 'error' ? $group : __('larena-env::admin.log.groups.'.$group) }}</option>
+                                <option value="{{ $group }}" @if ($group === $logGroup) selected @endif>{{ $logKind === 'error' ? __('larena-env::admin.log.levels.'.$group) : __('larena-env::admin.log.groups.'.$group) }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -366,52 +369,23 @@
                     <div class="larena-form-actions">
                         <button type="submit" class="larena-button">{{ __('larena-env::admin.log.show') }}</button>
                         <button type="submit" name="fresh" value="1" class="larena-button" data-env-log-refresh>{{ __('larena-env::admin.log.refresh') }}</button>
+                        @if ($log !== null && $log->total > 0)
+                            <a href="{{ $logDownload }}" class="larena-button" download data-env-log-download>{{ __('larena-env::admin.log.download') }}</a>
+                        @endif
                     </div>
                 </form>
-                @if (($logReadAt ?? null) !== null)
-                    <p class="color-on-surface-variant" data-env-log-read="{{ $logReadAt }}">{{ __('larena-env::admin.log.read_at', ['time' => $logReadAt]) }}</p>
-                @endif
                 @if ($log === null)
                     <p>{{ $logReasonText ?? __('larena-env::admin.log.none') }}</p>
                 @elseif ($log->total === 0)
                     <p>{{ __('larena-env::admin.log.empty') }}</p>
+                @elseif ($logRows === [])
+                    <p data-env-log-none>{{ __('larena-env::admin.log.'.($logView === 'problems' ? 'no_problems' : 'nothing_found'), ['total' => (string) $log->total]) }}</p>
                 @else
-                    <p data-env-log-count>{{ __('larena-env::admin.log.count', ['shown' => (string) count($log->rows), 'total' => (string) $log->total]) }}</p>
-                    @if ($log->rows !== [])
-                        <div class="larena-table-scroll">
-                            <table class="larena-table larena-table-stack" data-env-log-rows>
-                                <thead>
-                                    <tr>
-                                        <th scope="col">{{ __('larena-env::admin.log.time') }}</th>
-                                        @if ($logKind === 'error')
-                                            <th scope="col">{{ __('larena-env::admin.log.level') }}</th>
-                                        @else
-                                            <th scope="col">{{ __('larena-env::admin.log.status') }}</th>
-                                            <th scope="col">{{ __('larena-env::admin.log.request') }}</th>
-                                            <th scope="col">{{ __('larena-env::admin.log.address') }}</th>
-                                        @endif
-                                        <th scope="col">{{ __('larena-env::admin.log.'.($logKind === 'error' ? 'message' : 'line')) }}</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach ($log->rows as $row)
-                                        <tr data-env-log-row="{{ $row['status'] ?? $row['level'] ?? 'text' }}">
-                                            <td data-label="{{ __('larena-env::admin.log.time') }}">{{ $row['time'] ?? '—' }}</td>
-                                            @if ($logKind === 'error')
-                                                <td data-label="{{ __('larena-env::admin.log.level') }}">{{ $row['level'] ?? '—' }}</td>
-                                            @else
-                                                <td data-label="{{ __('larena-env::admin.log.status') }}">{{ $row['status'] ?? '—' }}</td>
-                                                <td data-label="{{ __('larena-env::admin.log.request') }}">{{ $row['method'] === null ? '—' : $row['method'].' '.$row['path'] }}</td>
-                                                <td data-label="{{ __('larena-env::admin.log.address') }}">{{ $row['ip'] ?? '—' }}</td>
-                                            @endif
-                                            {{-- A request read into its parts needs no copy of its line; a line in another form, or an error's message, is the line. --}}
-                                            <td data-label="{{ __('larena-env::admin.log.'.($logKind === 'error' ? 'message' : 'line')) }}">@if ($logKind === 'error' || $row['time'] === null)<code>{{ $row['text'] }}</code>@endif</td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-                    @endif
+                    @include('larena-admin::history.log', ['rows' => $logRows, 'label' => __('larena-env::admin.log.title')])
+                    <p class="color-on-surface-variant" data-env-log-count>
+                        {{ __('larena-env::admin.log.count', ['shown' => (string) count($logRows), 'found' => (string) count($log->rows), 'total' => (string) $log->total]) }}
+                        @if ($logMore !== null) · <a href="{{ $logMore }}" data-env-log-more>{{ __('larena-env::admin.log.more') }}</a>@endif
+                    </p>
                 @endif
             </section>
         @elseif ($tab === 'access')

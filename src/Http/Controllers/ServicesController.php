@@ -16,6 +16,7 @@ use Larena\Env\Operations\PanelOperations;
 use Larena\Env\Server\HostService;
 use Larena\Env\Server\ServerOverview;
 use Larena\Env\Server\ServerOverviewReader;
+use Larena\Env\Server\ServiceLogView;
 use Larena\Env\Server\ServiceState;
 use Larena\Env\Server\SiteExtrasReader;
 
@@ -32,7 +33,7 @@ final readonly class ServicesController
     /** What a service's row offers, and the gateway command of each. */
     public const array OPERATIONS = ['restart' => 'service:restart', 'reload' => 'service:reload'];
     /** How many of the journal's last lines are read. */
-    private const int LOG_LINES = 100;
+    private const int LOG_LINES = 500;
 
     public function __construct(
         private PanelOperations $operations,
@@ -54,6 +55,11 @@ final readonly class ServicesController
         $logOf = $request->query('log');
         $log = is_string($logOf) && in_array($logOf, $names, true) && $capabilities?->allows('service:log') === true
             ? $this->extras->serviceLog($actor, $logOf, self::LOG_LINES) : null;
+        // «Журнал службы» (PX-48): errors first, 50 lines and «Ещё 50», the line as written on a press.
+        $logView = $log === null ? null : ServiceLogView::of($log, is_string($request->query('show')) ? $request->query('show') : '',
+            fn (string $tone): string => (string) $this->translator->get('larena-env::admin.services.tones.'.$tone));
+        $shown = max(ServiceLogView::PAGE, min(self::LOG_LINES, (int) $request->query('shown', (string) ServiceLogView::PAGE)));
+        $shown -= $shown % ServiceLogView::PAGE;
         $canOperate = $this->authorizer?->authorize($request, 'env.server.operate')->isAllowed() ?? false;
 
         return $this->views->make('larena-env::admin.services', [
@@ -71,7 +77,10 @@ final readonly class ServicesController
                 'log' => $capabilities?->allows('service:log') === true,
             ],
             'logOf' => is_string($logOf) && in_array($logOf, $names, true) ? $logOf : null,
-            'log' => $log,
+            'log' => $logView,
+            'logRows' => $logView === null ? [] : array_slice($logView->rows, 0, $shown),
+            'logMore' => $logView !== null && count($logView->rows) > $shown ? $request->fullUrlWithQuery(['shown' => $shown + ServiceLogView::PAGE]) : null,
+            'logOther' => $logView === null ? null : $request->fullUrlWithQuery(['show' => $logView->view === 'problems' ? 'all' : 'problems', 'shown' => null]),
             'notice' => $request->session()->get('larena_env_notice'),
         ]);
     }

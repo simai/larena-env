@@ -82,10 +82,21 @@
                 <h2 id="env-service-log" class="m-top-0 text-2">{{ __('larena-env::admin.services.journal_of', ['name' => $logOf]) }}</h2>
                 @if ($log === null)
                     <p class="m-0" role="alert">{{ __('larena-env::admin.services.journal_unreadable') }}</p>
-                @elseif ($log === [])
+                @elseif ($log->total === 0)
                     <p class="m-0 color-on-surface-variant">{{ __('larena-env::admin.services.journal_empty') }}</p>
                 @else
-                    <pre class="m-0 p-1 mono text-small" tabindex="0" style="max-width: 100%; max-height: 32rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere;">{{ implode("\n", $log) }}</pre>
+                    {{-- PX-48: the errors and warnings first, 50 lines and «Ещё», the line as written on a press (larena-admin::history.log). --}}
+                    <p class="m-0 m-bottom-1 color-on-surface-variant" data-env-service-log-view="{{ $log->view }}">
+                        {{ __('larena-env::admin.services.journal_views.'.$log->view, ['count' => (string) $log->problems]) }}
+                        · <a href="{{ $logOther }}#env-service-log" data-env-service-log-other>{{ __('larena-env::admin.services.journal_switch.'.$log->view) }}</a>
+                    </p>
+                    @if ($logRows !== [])
+                        @include('larena-admin::history.log', ['rows' => $logRows, 'label' => __('larena-env::admin.services.journal_of', ['name' => $logOf])])
+                    @endif
+                    <p class="m-0 m-top-1 color-on-surface-variant" data-env-service-log-count>
+                        {{ __('larena-env::admin.services.journal_count', ['shown' => (string) count($logRows), 'total' => (string) $log->total]) }}
+                        @if ($logMore !== null) · <a href="{{ $logMore }}#env-service-log" data-env-service-log-more>{{ __('larena-env::admin.log.more') }}</a>@endif
+                    </p>
                 @endif
             </section>
         @endif

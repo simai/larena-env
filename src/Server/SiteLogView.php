@@ -14,12 +14,21 @@ final readonly class SiteLogView
     /** The status groups of a request log, and the levels of an error log, a person narrows by. */
     public const array STATUS_GROUPS = ['2xx', '3xx', '4xx', '5xx'];
     public const array LEVELS = ['emerg', 'alert', 'crit', 'error', 'warn', 'notice', 'info'];
+    /**
+     * What a person looks at (PX-48): the site's errors first — the requests answered 4xx or 5xx — then every visit and
+     * the web server's own error log. The first two read the request log.
+     */
+    public const array VIEWS = ['problems', 'access', 'error'];
+    /** The rows shown at once, then «Ещё 50». */
+    public const int PAGE = 50;
+    /** The group of `problems`: a request answered with an error. */
+    public const string PROBLEMS = 'problems';
 
     private const string REQUEST = '/\A(?<ip>\S+) \S+ \S+ \[(?<time>[^\]]+)\] "(?<method>[A-Z]+) (?<path>\S+)[^"]*" (?<status>[0-9]{3}) /';
     private const string ERROR = '/\A(?<time>[0-9]{4}\/[0-9]{2}\/[0-9]{2} [0-9:]{8}) \[(?<level>[a-z]+)\] (?<message>.*)\z/s';
 
     /**
-     * @param list<array{time: ?string, ip: ?string, method: ?string, path: ?string, status: ?string, level: ?string, text: string}> $rows
+     * @param list<array{time: ?string, ip: ?string, method: ?string, path: ?string, status: ?string, level: ?string, text: string, raw?: string}> $rows
      */
     public function __construct(public string $kind, public array $rows, public int $total)
     {
@@ -50,9 +59,64 @@ final readonly class SiteLogView
     /** @param array{status: ?string, level: ?string} $row */
     private static function inGroup(array $row, string $kind, string $group): bool
     {
+        if ($group === self::PROBLEMS) {
+            return $kind === 'error' || ($row['status'] !== null && in_array($row['status'][0], ['4', '5'], true));
+        }
+
         return $kind === 'error'
             ? $row['level'] === $group
             : $row['status'] !== null && $row['status'][0] === $group[0];
+    }
+
+    /**
+     * The rows as the admin's log viewer draws them (larena-admin::history.log): the moment in ISO 8601, shown in the
+     * reader's time; the answer or the level as a badge; the request or the message; where it came from; the line as
+     * the server wrote it.
+     *
+     * @param (\Closure(string): string)|null $words a level in words
+     *
+     * @return list<array{at: string, time: string, badge: ?array{text: string, status: string}, title: string, note: string, raw: string}>
+     */
+    public function display(int $limit, ?\Closure $words = null): array
+    {
+        $shown = [];
+        foreach (array_slice($this->rows, 0, max(0, $limit)) as $row) {
+            $badge = $row['status'] !== null ? ['text' => $row['status'], 'status' => self::statusTone($row['status'])]
+                : ($row['level'] !== null ? ['text' => $words === null ? $row['level'] : $words($row['level']), 'status' => self::levelTone($row['level'])] : null);
+            $shown[] = [
+                'at' => self::iso($row['time'], $this->kind) ?? '',
+                'time' => $row['time'] ?? '',
+                'badge' => $badge,
+                'title' => $row['method'] !== null ? $row['method'].' '.$row['path'] : $row['text'],
+                'note' => $row['ip'] ?? '',
+                'raw' => $row['raw'] ?? $row['text'],
+            ];
+        }
+
+        return $shown;
+    }
+
+    /** A log line's moment in ISO 8601 (UTC): nginx writes `17/Nov/2026:10:11:12 +0000` and `2026/11/17 10:11:12` (the server's clock, UTC). */
+    public static function iso(?string $time, string $kind): ?string
+    {
+        if ($time === null) {
+            return null;
+        }
+        $moment = $kind === 'error'
+            ? \DateTimeImmutable::createFromFormat('!Y/m/d H:i:s', $time, new \DateTimeZone('UTC'))
+            : \DateTimeImmutable::createFromFormat('!d/M/Y:H:i:s O', $time);
+
+        return $moment === false ? null : $moment->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d\TH:i:s\Z');
+    }
+
+    private static function statusTone(string $status): string
+    {
+        return match ($status[0]) {'2' => 'success', '3' => 'info', '4' => 'warning', default => 'error'};
+    }
+
+    private static function levelTone(string $level): string
+    {
+        return match ($level) {'emerg', 'alert', 'crit', 'error' => 'error', 'warn' => 'warning', default => 'info'};
     }
 
     /** @return array{time: ?string, ip: ?string, method: ?string, path: ?string, status: ?string, level: ?string, text: string} */
@@ -66,12 +130,12 @@ final readonly class SiteLogView
         return ['time' => null, 'ip' => null, 'method' => null, 'path' => null, 'status' => null, 'level' => null, 'text' => $line];
     }
 
-    /** @return array{time: ?string, ip: ?string, method: ?string, path: ?string, status: ?string, level: ?string, text: string} */
+    /** @return array{time: ?string, ip: ?string, method: ?string, path: ?string, status: ?string, level: ?string, text: string, raw?: string} */
     private static function errorRow(string $line): array
     {
         if (preg_match(self::ERROR, $line, $match) === 1) {
             return ['time' => $match['time'], 'ip' => null, 'method' => null, 'path' => null, 'status' => null, 'level' => $match['level'],
-                'text' => $match['message']];
+                'text' => $match['message'], 'raw' => $line];
         }
 
         return ['time' => null, 'ip' => null, 'method' => null, 'path' => null, 'status' => null, 'level' => null, 'text' => $line];

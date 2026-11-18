@@ -121,6 +121,39 @@ final readonly class SiteAdminController
         return self::MERGED[$asked] ?? $asked;
     }
 
+    /**
+     * «Скачать журнал» (PX-48): the last lines of the site's log as the server wrote them, a text file for a specialist or
+     * a letter to support. The same read as the screen's, the server keeps the owner's scope.
+     */
+    public function logDownload(Request $request, string $domain): mixed
+    {
+        $actor = ResolvePanelActor::of($request);
+        $kind = in_array($request->query('log'), self::LOG_KINDS, true) ? (string) $request->query('log') : 'access';
+        $lines = in_array((int) $request->query('lines'), self::LOG_LINES, true) ? (int) $request->query('lines') : self::LOG_LINES[count(self::LOG_LINES) - 1];
+        $log = $this->sites->log($actor, $domain, $kind, $lines);
+        if ($log->log === null) {
+            return new RedirectResponse(route('larena.env.admin.site', ['domain' => $domain, 'tab' => 'log', 'log' => $kind === 'error' ? 'error' : 'access'], false));
+        }
+        $name = preg_replace('/[^A-Za-z0-9.-]/', '_', $domain).'-'.$kind.'-'.gmdate('Ymd-His').'.log';
+        $body = implode("\n", $log->log->lines);
+
+        return new \Illuminate\Http\Response($body === '' ? '' : $body."\n", 200, [
+            'Content-Type' => 'text/plain; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="'.$name.'"',
+            'Cache-Control' => 'private, no-store',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    }
+
+    /** An error log's level in words: «Ошибка», «Предупреждение»… */
+    private function levelWords(string $level): string
+    {
+        $key = 'larena-env::admin.log.levels.'.$level;
+        $line = (string) $this->translator->get($key);
+
+        return $line !== $key ? $line : $level;
+    }
+
     /** Whether the person may change the server's sites (env.sites.operate), as the routes that change them require. */
     private function canOperate(Request $request): bool
     {
@@ -152,16 +185,22 @@ final readonly class SiteAdminController
         $tab = in_array($asked, $tabs, true) ? $asked : self::TABS[0];
         // A domain the server has no site on is said as such, not as the server's failure (critics 2026-11-07).
         $missing = $site === null && !$result->refused && $this->unknownSite($actor, $domain);
-        $kind = in_array($request->query('log'), self::LOG_KINDS, true) ? (string) $request->query('log') : 'access';
-        $lines = in_array((int) $request->query('lines'), self::LOG_LINES, true) ? (int) $request->query('lines') : self::LOG_LINES[0];
+        // What the log shows (PX-48): the site's errors first, then every visit, then the web server's error log.
+        $logView = in_array($request->query('log'), SiteLogView::VIEWS, true) ? (string) $request->query('log') : SiteLogView::VIEWS[0];
+        $kind = $logView === 'error' ? 'error' : 'access';
+        $lines = in_array((int) $request->query('lines'), self::LOG_LINES, true) ? (int) $request->query('lines')
+            : ($logView === SiteLogView::PROBLEMS ? self::LOG_LINES[count(self::LOG_LINES) - 1] : self::LOG_LINES[0]);
         $search = mb_substr(trim((string) $request->query('q')), 0, 128);
-        $groups = $kind === 'error' ? SiteLogView::LEVELS : SiteLogView::STATUS_GROUPS;
-        $group = in_array($request->query('group'), $groups, true) ? (string) $request->query('group') : '';
+        $groups = $kind === 'error' ? SiteLogView::LEVELS : ($logView === SiteLogView::PROBLEMS ? ['4xx', '5xx'] : SiteLogView::STATUS_GROUPS);
+        $group = in_array($request->query('group'), $groups, true) ? (string) $request->query('group') : ($logView === SiteLogView::PROBLEMS ? SiteLogView::PROBLEMS : '');
+        $logShown = max(SiteLogView::PAGE, min(self::LOG_LINES[count(self::LOG_LINES) - 1], (int) $request->query('shown', (string) SiteLogView::PAGE)));
+        $logShown -= $logShown % SiteLogView::PAGE;
         // Each tab asks the gateway only for what it shows.
         // A search goes to the server, which looks through far more lines than are shown, when its release can.
         $match = $search !== '' && preg_match('/\A[ -~]{1,200}\z/D', $search) === 1 && $capabilities->searchesLogs() ? $search : null;
         // «Обновить» reads the server again past the minute the panel keeps a log's answer (critics 2026-11-07).
         $log = $site === null || $tab !== 'log' ? null : $this->sites->log($actor, $domain, $kind, $lines, $match, $request->query('fresh') === '1');
+        $logRead = $log?->log === null ? null : SiteLogView::of($log->log, $search, $group);
         $doctor = $site === null || $tab !== 'overview' ? null : $this->sites->doctor($actor, $domain);
         $operations = $site === null ? [] : SiteOperation::offeredFor($site, $capabilities);
         // A site's owner is not offered what the system level alone may do (Apache, simai-env 1.42.0).
@@ -235,13 +274,17 @@ final readonly class SiteAdminController
             'reasonText' => $missing ? (string) $this->translator->get('larena-env::admin.site.missing', ['domain' => $domain])
                 : ($result->reason === null ? null : $this->reasonText($result->reason)),
             'logKind' => $kind,
-            'logKinds' => self::LOG_KINDS,
+            'logView' => $logView,
+            'logViews' => SiteLogView::VIEWS,
             'logLines' => $lines,
             'logLineChoices' => self::LOG_LINES,
             'logSearch' => $search,
-            'logGroup' => $group,
+            'logGroup' => $group === SiteLogView::PROBLEMS ? '' : $group,
             'logGroups' => $groups,
-            'log' => $log?->log === null ? null : SiteLogView::of($log->log, $search, $group),
+            'log' => $logRead,
+            'logRows' => $logRead?->display($logShown, fn (string $level): string => $this->levelWords($level)) ?? [],
+            'logMore' => $logRead !== null && count($logRead->rows) > $logShown ? $request->fullUrlWithQuery(['shown' => $logShown + SiteLogView::PAGE]) : null,
+            'logDownload' => route('larena.env.admin.site.log.download', ['domain' => $domain, 'log' => $kind, 'lines' => $lines], false),
             'logReadAt' => $log?->readAt === null ? null : gmdate('H:i:s', $log->readAt),
             'logReasonText' => $log === null || $log->reason === null ? null : $this->reasonText($log->reason),
             'notice' => $request->session()->get('larena_env_notice'),

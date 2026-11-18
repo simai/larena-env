@@ -23,6 +23,8 @@ final readonly class ServerJobController
 {
     /** The server's refusal for a job it has no record of (simai-env's panel gate). */
     public const string UNKNOWN_JOB = 'unknown_job';
+    /** The admin's «История», where a run opens in the side panel (larena/admin). */
+    public const string HISTORY_ROUTE = 'larena.admin.history.index';
 
     public function __construct(
         private PanelOperations $operations,
@@ -30,12 +32,17 @@ final readonly class ServerJobController
         private Translator $translator,
         private ?\Larena\Env\Server\ServerOverviewReader $overviews = null,
         private ?\Larena\Access\Runtime\AccessOperationAuthorizer $authorizer = null,
+        private ?\Illuminate\Routing\Router $router = null,
     ) {
     }
 
     public function show(Request $request, string $job): mixed
     {
         $actor = ResolvePanelActor::of($request);
+        $inHistory = $this->inHistory($request, $job);
+        if ($inHistory !== null) {
+            return $inHistory;
+        }
         $after = (int) $request->query('after', '0');
         $result = $this->operations->view($actor, $job, max(0, $after));
         $followUp = $this->followUp($request, $actor, $job, $result->status);
@@ -144,6 +151,26 @@ final readonly class ServerJobController
         $line = (string) $this->translator->get($key);
 
         return $line !== $key ? $line : (string) $this->translator->get('larena-env::admin.reasons.unknown', ['reason' => $reason]);
+    }
+
+    /**
+     * A run's address opened as a page leads to «История», which opens the run in its side panel (owner decision
+     * dec-d9f352569fd1): before the server is asked anything, so a value the server gives once is not spent on the
+     * redirect. A run's part (asked by the side panel), a page with a notice just left for it, a later page of its
+     * output and an update of the panel itself stay here.
+     */
+    private function inHistory(Request $request, string $job): ?RedirectResponse
+    {
+        if (!$request->isMethod('GET') || $request->headers->has('X-Larena-Fragment') || $request->query->count() > 0
+            || $this->router?->has(self::HISTORY_ROUTE) !== true) {
+            return null;
+        }
+        if ($request->hasSession() && ($request->session()->has('larena_env_notice') || $request->session()->has(UpdateController::JOB.'.'.$job))) {
+            return null;
+        }
+        $address = route('larena.env.admin.job', ['job' => $job], false);
+
+        return new RedirectResponse(route(self::HISTORY_ROUTE, [], false).'?open='.rawurlencode($address));
     }
 
     /** Who started a job, as a key of job.started_by_*: this person, another person of the panel, or the server itself. */

@@ -135,6 +135,8 @@ $screen = static fn (array $data): string => $factory->make('larena-env::admin.s
     'phpSettings' => null, 'phpExtensions' => null, 'databases' => null, 'sftpAccounts' => null, 'capabilities' => null,
     'logKind' => 'access', 'logKinds' => ['access', 'error'], 'logLines' => 200, 'logLineChoices' => [200, 500, 1000], 'logSearch' => '',
     'logGroup' => '', 'logGroups' => \Larena\Env\Server\SiteLogView::STATUS_GROUPS, 'log' => null, 'logReasonText' => null, 'notice' => null,
+    'logView' => 'access', 'logViews' => \Larena\Env\Server\SiteLogView::VIEWS, 'logMore' => null, 'logDownload' => '/admin/server/sites/demo-php.test/log/download?log=access&lines=200',
+    'logRows' => isset($data['log']) && $data['log'] instanceof \Larena\Env\Server\SiteLogView ? $data['log']->display(\Larena\Env\Server\SiteLogView::PAGE) : [],
 ])->render();
 $capabilities = (new \Larena\Env\Server\ServerOverviewReader($gateway))->read(new PanelActor($user))->overview->capabilities;
 $onTab = static fn (string $tab, ?\Larena\Env\Gateway\PanelCapabilities $with = null): array => array_values(array_filter(SiteOperation::offeredFor($site, $with ?? $capabilities), static fn (SiteOperation $operation): bool => $operation->tab() === $tab));
@@ -243,12 +245,14 @@ $words = \Larena\Env\Admin\PlanValues::of(['domain' => 'new.test', 'profile' => 
 env_assert(array_column($words, 'label') === ['Kind of site', 'Create a database', 'Database type', 'Site language', 'Administrator login']
     && array_column($words, 'value') === ['WordPress', 'Yes', 'MySQL', 'English', 'admin'] && \Larena\Env\Admin\PlanValues::effects('write') === 'changes files and settings on the server',
     'A plan says its arguments and values in words: '.json_encode($words));
-$logged = $screen(['site' => $site, 'tab' => 'log', 'log' => \Larena\Env\Server\SiteLogView::of($log->log), 'logReadAt' => '12:34:56']);
-env_assert(str_contains($logged, 'data-env-log-read="12:34:56"') && str_contains($logged, 'Read at 12:34:56 UTC')
-    && str_contains($logged, 'name="fresh" value="1"'), 'The log says when it was read and offers to read it again.');
+$logged = $screen(['site' => $site, 'tab' => 'log', 'log' => \Larena\Env\Server\SiteLogView::of($log->log)]);
+env_assert(str_contains($logged, 'name="fresh" value="1"') && str_contains($logged, 'data-env-log-download') && str_contains($logged, '/log/download?log=access'),
+    'The log offers to read it again and «Скачать журнал» (PX-48).');
 env_assert(str_contains($logged, 'Visitor errors') && !str_contains($logged, '(4xx)') && !str_contains($logged, '>4xx<'), 'The answers\' groups are named in words only, without the codes (block 4, texts for a newcomer).');
+env_assert(str_contains($logged, 'Site errors') && str_contains($logged, 'All visits') && str_contains($logged, 'Web server errors'), 'The log\'s views in words: the site\'s errors first (PX-48).');
 env_assert(str_contains($logged, 'data-env-log="access"') && str_contains($logged, 'data-env-log-filter') && str_contains($logged, 'name="tab" value="log"'), 'The log keeps its tab and can be narrowed.');
-env_assert(str_contains($logged, 'data-env-log-row="200"') && str_contains($logged, 'GET /') && !str_contains($logged, '<code>127.0.0.1'), 'A request line is read into its parts, not repeated.');
+env_assert(str_contains($logged, 'data-larena-log-row="success"') && str_contains($logged, 'GET /') && str_contains($logged, '<sf-time datetime="')
+    && str_contains($logged, 'data-larena-log-raw'), 'A request line: its answer as a badge, the reader\'s time, the line as written on a press (PX-48).');
 
 // The log narrowed: by words, by the answer's group, by an error's level; newest first.
 $tail = new \Larena\Env\Server\NginxLogTail('a.test', 'access', [
@@ -263,6 +267,25 @@ env_assert(count(\Larena\Env\Server\SiteLogView::of($tail, 'FIREFOX')->rows) ===
 $errors = \Larena\Env\Server\SiteLogView::of(new \Larena\Env\Server\NginxLogTail('a.test', 'error', [
     '2026/01/01 00:00:00 [error] 12#12: *1 open() failed', '2026/01/01 00:00:01 [warn] 12#12: something']), '', 'error');
 env_assert(count($errors->rows) === 1 && $errors->rows[0]['level'] === 'error' && $errors->rows[0]['time'] === '2026/01/01 00:00:00', 'Errors by level.');
+// PX-48: the site's errors first — the requests answered 4xx or 5xx; 50 rows; the moment in ISO for the reader's time.
+$problems = \Larena\Env\Server\SiteLogView::of($tail, '', \Larena\Env\Server\SiteLogView::PROBLEMS);
+env_assert(count($problems->rows) === 1 && $problems->rows[0]['status'] === '500', 'The site\'s errors: only the requests answered with an error.');
+$shown = $all->display(2);
+env_assert(count($shown) === 2 && $shown[1]['at'] === '2026-01-01T00:00:02Z' && $shown[1]['badge'] === ['text' => '500', 'status' => 'error']
+    && $shown[1]['title'] === 'POST /form' && $shown[1]['note'] === '1.2.3.5' && str_starts_with($shown[1]['raw'], '1.2.3.5 - - [01/Jan/2026'), 'A row as the log viewer draws it.');
+env_assert($shown[0]['at'] === '' && $shown[0]['badge'] === null && $shown[0]['raw'] === 'not a request line', 'A line in another form: its text, no moment.');
+env_assert(\Larena\Env\Server\SiteLogView::iso('17/Nov/2026:10:11:12 +0300', 'access') === '2026-11-17T07:11:12Z'
+    && \Larena\Env\Server\SiteLogView::iso('2026/11/17 10:11:12', 'error') === '2026-11-17T10:11:12Z' && \Larena\Env\Server\SiteLogView::iso('soon', 'error') === null, 'nginx\'s moments in ISO 8601.');
+$errorRows = $errors->display(50, static fn (string $level): string => strtoupper($level));
+env_assert($errorRows[0]['badge'] === ['text' => 'ERROR', 'status' => 'error'] && $errorRows[0]['title'] === '12#12: *1 open() failed'
+    && $errorRows[0]['raw'] === '2026/01/01 00:00:00 [error] 12#12: *1 open() failed', 'An error line: its level in words, its message, the line as written.');
+$many = \Larena\Env\Server\SiteLogView::of(new \Larena\Env\Server\NginxLogTail('a.test', 'access', array_fill(0, 120, '1.2.3.4 - - [01/Jan/2026:00:00:01 +0000] "GET /x HTTP/1.1" 404 1 "-" "curl"')));
+env_assert(count($many->display(\Larena\Env\Server\SiteLogView::PAGE)) === 50 && count($many->rows) === 120, '50 rows at once of all found.');
+$more = $screen(['site' => $site, 'tab' => 'log', 'log' => $many, 'logMore' => '/admin/server/sites/demo-php.test?tab=log&shown=100']);
+env_assert(substr_count($more, 'data-larena-log-row=') === 50 && str_contains($more, 'data-env-log-more') && str_contains($more, 'Show 50 more'), '«Ещё 50» under the first 50.');
+$quiet = $screen(['site' => $site, 'tab' => 'log', 'logView' => 'problems', 'log' => \Larena\Env\Server\SiteLogView::of(new \Larena\Env\Server\NginxLogTail('a.test', 'access', [
+    '1.2.3.4 - - [01/Jan/2026:00:00:01 +0000] "GET /ok HTTP/1.1" 200 21 "-" "curl"']), '', 'problems')]);
+env_assert(str_contains($quiet, 'data-env-log-none') && str_contains($quiet, 'No errors in the last 1 lines'), 'No errors said in words, not an empty list.');
 $access = $screen(['site' => $site, 'tab' => 'access']);
 env_assert(str_contains($access, 'data-env-access') && str_contains($access, 'site-demo-php-test'), 'Access names the account the site runs as.');
 env_assert(str_contains($backups, 'name="_token"') && substr_count($backups, '<form') === 1, 'Each action is a form of its own, with the session\'s token.');
