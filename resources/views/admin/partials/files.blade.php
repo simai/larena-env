@@ -209,12 +209,19 @@
                                         @endforeach
                                     </select>
                                 </div>
+                                @if (!($files['allows']['secrets'] ?? true))
+                                    {{-- Without the right (q-4997ae4e93, simai-env 1.62.2): the server leaves such files out. --}}
+                                    <p class="m-0 text-small color-on-surface-variant" data-env-files-without-secrets>{{ __('larena-env::admin.files.without_secrets_archive') }}</p>
+                                @endif
                             @else
                                 <div class="larena-field">
                                     <label for="env-files-extract-to">{{ __('larena-env::admin.files.extract_to') }}</label>
                                     <input type="text" id="env-files-extract-to" name="folder" value="{{ $files['path'] }}" required maxlength="1024">
                                 </div>
                                 <label class="flex items-cross-center g-1 text-small"><input type="checkbox" name="overwrite" value="yes" style="width: auto; min-width: 1.25rem; min-height: 1.25rem;"> {{ __('larena-env::admin.files.extract_overwrite') }}</label>
+                                @if (!($files['allows']['secrets'] ?? true))
+                                    <p class="m-0 text-small color-on-surface-variant" data-env-files-without-secrets>{{ __('larena-env::admin.files.without_secrets_extract') }}</p>
+                                @endif
                             @endif
                             <div class="larena-form-actions"><button type="submit" class="larena-button">{{ __('larena-env::admin.operations.plan') }}</button></div>
                         </form>

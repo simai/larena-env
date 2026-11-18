@@ -79,7 +79,7 @@ env_assert(count($overview->withoutSites(['DEMO-php.test'])->sites) === 3 && cou
 env_assert($page->instanceId === 'env-server-sites' && $page->selectable === false && $page->rowWrites === [] && $page->settings, 'The list writes nothing; its rows have «⋯».');
 env_assert($page->rowLinks === ['view' => '/admin/server/sites/__ID__'], 'A row opens the site\'s own screen.');
 // A list of resources (C31, PX-53…PX-58): a dot, the domain over «kind · PHP», the facts that matter, the row's actions.
-env_assert($page->layout === 'list' && $page->quickActions === ['visit', 'backup'], 'A list of resources with «Открыть сайт» and «Сделать копию» in the row.');
+env_assert($page->layout === 'list' && $page->quickActions === ['visit', 'fix', 'backup'], 'A list of resources with «Открыть сайт», «Исправить» and «Сделать копию» in the row.');
 env_assert(array_column($page->columns, 'list', 'key') === ['state' => 'status', 'domain' => 'title', 'profile' => 'supporting', 'php' => 'supporting', 'answers' => 'fact', 'backups' => 'fact', 'certificate' => 'fact'], 'Each column has its place in the row.');
 env_assert($page->rowActions['backup']['href'] === '/admin/server/sites/__ID__?tab=backups&action=backup' && $page->rowActions['visit']['icon'] === 'open_in_new', 'A backup is planned on the site\'s backups; the site opens itself.');
 $ids = array_column($page->rows, 'id');
@@ -100,7 +100,7 @@ $failedPage = ServerSitesPage::of($overview, $text, null, \Larena\Env\Admin\Site
     (array) json_decode((string) file_get_contents(env_recorded_path().'/self-alerts.json'), true)['data'])));
 $failedRow = array_column($failedPage->rows ?? [], null, 'id')['demo-owned.test'];
 env_assert($failedRow['backups']['text'] === $text('sites.list.backup_failed') && $failedRow['backups']['status'] === 'error' && $failedRow['state']['value'] === 'error', 'A failed backup is named and the dot is red.');
-env_assert($failedPage->quickActions === ['visit'] && $failedRow['_actions'] === ['view', 'visit', 'backups', 'domains', 'log'], 'Who may not act on the sites is offered no backup.');
+env_assert($failedPage->quickActions === ['visit', 'fix'] && $failedRow['_actions'] === ['view', 'visit', 'backups', 'domains', 'log'], 'Who may not act on the sites is offered no backup.');
 env_assert(\Larena\Env\Server\Moment::short('2026-01-01T00:00:00Z', 2026) === '01.01 00:00 UTC' && \Larena\Env\Server\Moment::short('2025-01-01T00:00:00Z', 2026) === '01.01.2025 00:00 UTC', 'A backup this year without its year.');
 $at = new DateTimeImmutable('2026-01-05T12:00:00Z');
 env_assert(\Larena\Env\Server\Moment::ago('2026-01-05T11:59:40Z', $at, $text) === $text('ago.now') && \Larena\Env\Server\Moment::ago('2026-01-05T10:00:00Z', $at, $text) === $text('ago.hours', ['count' => '2'])
@@ -119,6 +119,36 @@ env_assert($markedRows['old.ru']['certificate']['status'] === 'error' && $marked
     && $markedRows['old.ru']['backups'] === ['label' => $text('sites.list.backup_fresh', ['ago' => $text('ago.hours', ['count' => '2'])]), 'text' => $text('sites.list.backup_fresh', ['ago' => $text('ago.hours', ['count' => '2'])]),
         'tip' => $text('sites.list.backup_tip', ['time' => \Larena\Env\Server\Moment::human('2026-01-05T10:00:00Z')])], 'A public name without HTTPS is red; a fresh backup says how long ago: '.json_encode($markedRows['old.ru'], JSON_UNESCAPED_UNICODE));
 env_assert($markedRows['down.test']['answers']['text'] === $text('sites.state.down') && $markedRows['down.test']['state'] === ['value' => 'error', 'label' => $text('sites.state.down')], 'A site that does not answer says so.');
+// Each problem of a row leads to where it is fixed (FASTPANEL look §5.2), from what the list holds: no read per row.
+$fixAt = new DateTimeImmutable('2026-01-05T12:00:00Z');
+$troubled = new ServerOverview('now', '1', 'ubuntu', '24.04', [], [], [
+    new \Larena\Env\Server\SiteSummary('plain.ru', 'generic', '8.3', 'none', null, null, null, null, true, answers: 200, answersChecked: true, lastBackup: '2026-01-05T10:00:00Z'),
+    new \Larena\Env\Server\SiteSummary('down.ru', 'generic', '8.3', 'letsencrypt', null, null, null, 60, true, answers: 502, answersChecked: true, lastBackup: '2025-12-01T10:00:00Z'),
+    new \Larena\Env\Server\SiteSummary('paused.ru', 'generic', '8.3', 'letsencrypt', null, null, null, 60, true, answers: 503, answersChecked: true, lastBackup: '2026-01-05T10:00:00Z', suspended: true),
+    new \Larena\Env\Server\SiteSummary('fine.ru', 'generic', '8.3', 'letsencrypt', null, null, null, 60, true, answers: 200, answersChecked: true, lastBackup: '2026-01-05T10:00:00Z'),
+    new \Larena\Env\Server\SiteSummary('old-copy.ru', 'generic', '8.3', 'letsencrypt', null, null, null, 60, true, answers: 200, answersChecked: true, lastBackup: '2025-12-01T10:00:00Z'),
+]);
+$fixPage = ServerSitesPage::of($troubled, $text, $fixAt, [], true);
+$fixRows = array_column($fixPage->rows ?? [], null, 'id');
+env_assert($fixRows['plain.ru']['_actions'] === ['view', 'visit', 'fix', 'backup', 'https', 'backups', 'domains', 'log'], 'No HTTPS: «Исправить» and «Исправить HTTPS»: '.json_encode($fixRows['plain.ru']['_actions']));
+env_assert($fixRows['down.ru']['_actions'] === ['view', 'visit', 'fix', 'backup', 'answers', 'backups', 'domains', 'log'], 'Not answering, old copy: '.json_encode($fixRows['down.ru']['_actions']));
+env_assert($fixRows['paused.ru']['_actions'] === ['view', 'visit', 'fix', 'backup', 'resume', 'backups', 'domains', 'log'], 'Paused: «Снять с паузы», never «не отвечает»: '.json_encode($fixRows['paused.ru']['_actions']));
+env_assert($fixRows['fine.ru']['_actions'] === ['view', 'visit', 'backup', 'backups', 'domains', 'log'], 'All well: nothing to fix.');
+env_assert($fixRows['old-copy.ru']['_actions'] === ['view', 'visit', 'backup', 'backups', 'domains', 'log'], 'Only an old copy: «Сделать копию» is its fix, not said twice.');
+env_assert($fixPage->rowActions['https']['href'] === '/admin/server/sites/__ID__?tab=domains' && $fixPage->rowActions['answers']['href'] === '/admin/server/sites/__ID__?tab=log'
+    && $fixPage->rowActions['resume']['href'] === '/admin/server/sites/__ID__?action=site-resume' && $fixPage->rowActions['fix']['href'] === '/admin/server/sites/__ID__/fix'
+    && $fixPage->rowActions['https']['icon'] === 'lock_open' && $fixPage->rowActions['answers']['icon'] === 'error' && $fixPage->rowActions['resume']['icon'] === 'play_circle',
+    'Each fix with its icon and its place.');
+$viewer = ServerSitesPage::of($troubled, $text, $fixAt, [], false);
+$viewerRows = array_column($viewer->rows ?? [], null, 'id');
+env_assert(!isset($viewer->rowActions['resume']) && $viewerRows['paused.ru']['_actions'] === ['view', 'visit', 'backups', 'domains', 'log']
+    && $viewerRows['old-copy.ru']['_actions'] === ['view', 'visit', 'backups', 'domains', 'log'] && $viewerRows['down.ru']['_actions'] === ['view', 'visit', 'fix', 'answers', 'backups', 'domains', 'log'],
+    'Who may not act is led to look, not offered a change.');
+$summaries = array_column(array_map(static fn ($one): array => ['domain' => $one->domain, 'site' => $one], $troubled->sites), 'site', 'domain');
+$where = static fn (string $domain): string => ServerSitesPage::fixAddress($summaries[$domain], $fixAt, [], $text);
+env_assert($where('plain.ru') === '/admin/server/sites/plain.ru?tab=domains' && $where('down.ru') === '/admin/server/sites/down.ru?tab=log'
+    && $where('paused.ru') === '/admin/server/sites/paused.ru?action=site-resume' && $where('old-copy.ru') === '/admin/server/sites/old-copy.ru?tab=backups&action=backup'
+    && $where('fine.ru') === '/admin/server/sites/fine.ru', '«Исправить» opens the worst problem\'s place.');
 
 // The admin's real presenter draws the list, as the controller asks it to.
 $manager = SmartManager::withDefaults();

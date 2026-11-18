@@ -55,6 +55,7 @@ return [
         // The list of sites as a list of resources (C31, PX-53…PX-58): a dot and its word, the facts said only when they
         // matter, the backup by its own time, the row's own actions.
         'list' => [
+            'fix' => ['any' => 'Fix', 'answers' => 'Why it does not answer', 'https' => 'Fix HTTPS', 'resume' => 'Resume'],
             'state' => 'State',
             'dot' => ['ok' => 'All is well', 'warning' => 'Something to do', 'error' => 'Needs attention', 'stopped' => 'Not checked'],
             'certificate_ends' => 'HTTPS :days d',
@@ -105,6 +106,8 @@ return [
     'no' => 'No',
     'more' => 'More',
     'site' => [
+        'history' => ['title' => 'History', 'empty' => 'Nothing has been done to this site through the panel yet.', 'all' => 'The site\'s whole history', 'loading' => 'Reading the site\'s history…'],
+        'measured' => 'measured :ago',
         'php_none' => 'No PHP',
         'title' => ':domain — Larena Panel',
         'description' => 'What this site runs on, its certificate, its backups, its visits and errors.',
@@ -399,7 +402,7 @@ return [
             'provider' => 'Where DNS is kept', 'set' => 'Level', 'schedule' => 'Schedule', 'command' => 'Command', 'content' => 'Content',
             'ttl' => 'Record lifetime', 'security-only' => 'Security updates only', 'enable' => 'Turn on', 'check' => 'Check',
             'dump' => 'Database dump', 'archive' => 'Archive', 'by' => 'By', 'change_id' => 'Change', 'expect-sha256' => 'Checksum',
-            'remove' => 'Remove', 'ip-access' => 'Sign-in by the server address', 'code' => 'Kind of redirect',
+            'remove' => 'Remove', 'ip-access' => 'Sign-in by the server address', 'code' => 'Kind of redirect', 'without-secrets' => 'Without files with passwords',
         ],
         'values' => [
             'locale' => ['ru_RU' => 'Russian', 'en_US' => 'English', 'en_GB' => 'English (United Kingdom)', 'de_DE' => 'German', 'fr_FR' => 'French',
@@ -467,6 +470,11 @@ return [
         ],
     ],
     'job' => [
+        'secret_skipped_title' => 'Files with passwords left out: :count',
+        'secret_skipped_archive' => 'These files are not in the archive: you have no right to files with passwords. Everything else is packed.',
+        'secret_skipped_extract' => 'These files of the archive were not made and did not replace the ones there: you have no right to files with passwords. Everything else is unpacked.',
+        'secret_skipped_more' => 'And :count more: the server names the first 30.',
+        'secret_skipped_none' => 'There were no files with passwords here: nothing was left out.',
         // The state in words when the server gives none (simai-env before 1.60.0), «Повторить», why it failed from its output.
         'state_words' => ['running' => 'Running', 'succeeded' => 'Done', 'failed' => 'Failed', 'cancelled' => 'Cancelled', 'busy' => 'Busy'],
         'again' => 'Run again',
@@ -1275,6 +1283,8 @@ return [
         'kinds' => ['dir' => 'folder', 'other' => '—'],
         'secret' => 'Secrets',
         'secret_tip' => 'The file holds passwords or keys: it is not shown or downloaded without a question.',
+        'without_secrets_archive' => 'Files with passwords (.env and the like) stay out of the archive: you have no right to them.',
+        'without_secrets_extract' => 'Files with passwords in the archive are not made and do not replace the ones there: you have no right to them.',
         'secret_note' => 'This file holds the site\'s passwords or keys. Show and download it only when you really need to, and do not pass it on.',
         'secret_reveal' => 'Show the contents',
         'secret_download' => 'Download with the passwords…',
@@ -1350,6 +1360,7 @@ return [
             'not_a_file' => 'That is not a file: only a file can be downloaded.',
             'not_text' => 'That is not text: the file can only be downloaded.',
             'secret_files_not_allowed' => 'No right to view files with passwords; ask the server administrator.',
+            'secret_files_server_old' => 'This server cannot pack or unpack without the files with passwords. Ask the server administrator to update simai-env or to do it for you.',
             'not_previewable' => 'This file is neither a picture nor text: it cannot be viewed, only downloaded.',
             'too_large' => 'The file is too large: text over 1 MB can only be downloaded, and downloads go up to 1 GB.',
             'permission_denied' => 'The site\'s user may not go there: the server refused access.',

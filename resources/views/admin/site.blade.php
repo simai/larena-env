@@ -61,7 +61,9 @@
                     @if ($site->release !== null)
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.release') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->release ?? '—' }}</dd></div>
                     @endif
-                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-disk><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.disk') }}</dt><dd class="m-0 min-w-0 text-end">{{ \Larena\Env\Server\Bytes::human($site->diskBytes) }}</dd></div>
+                    {{-- The site's size with when the server measured it (simai-env disk.checked_at, at most hourly; FASTPANEL look §5.3).
+                         The database's size waits for a measured time from the server (simai-env 1.63.0); it is on «База данных». --}}
+                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-disk><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.disk') }}</dt><dd class="m-0 min-w-0 text-end">{{ \Larena\Env\Server\Bytes::human($site->diskBytes) }}@if ($site->diskBytes !== null && \Larena\Env\Server\Moment::ago($site->diskCheckedAt, \Larena\Env\Warnings\PanelWarnings::now(), static fn (string $key, array $replace = []): string => __('larena-env::admin.'.$key, $replace)) !== null)<span class="color-on-surface-variant" title="{{ \Larena\Env\Server\Moment::human($site->diskCheckedAt) }}" data-env-disk-measured> · {{ __('larena-env::admin.site.measured', ['ago' => \Larena\Env\Server\Moment::ago($site->diskCheckedAt, \Larena\Env\Warnings\PanelWarnings::now(), static fn (string $key, array $replace = []): string => __('larena-env::admin.'.$key, $replace))]) }}</span>@endif</dd></div>
                 </dl>
             </section>
             @if (($siteRoute ?? null) !== null)
@@ -684,6 +686,33 @@
                     </div>
                     </sf-modal>
                 @endforeach
+            </section>
+        @endif
+        @if ($tab === 'overview' && ($siteHistory ?? null) !== null)
+            {{-- «История» of this site at the bottom of its card (FASTPANEL look §5.3): its five latest runs from the server's
+                 list, each opening its own page; «Вся история» is the admin's «История» narrowed to the site. --}}
+            <section class="larena-panel larena-panel-padded" aria-labelledby="env-site-history" data-env-site-history>
+                <h2 id="env-site-history" class="text-2">{{ __('larena-env::admin.site.history.title') }}</h2>
+                {{ \Larena\Env\Http\Controllers\SiteAdminController::historyHolder($siteHistory['pending'], $siteHistory['url']) }}
+                @if ($siteHistory['pending'])
+                    <p class="m-0 color-on-surface-variant" data-env-site-history-pending>{{ __('larena-env::admin.site.history.loading') }}</p>
+                @elseif ($siteHistory['rows'] === [])
+                    <p class="m-0 color-on-surface-variant" data-env-site-history-empty>{{ __('larena-env::admin.site.history.empty') }}</p>
+                @else
+                    <ul class="m-0 p-0" style="list-style: none;">
+                        @foreach ($siteHistory['rows'] as $row)
+                            <li class="flex flex-wrap items-cross-center g-1 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-site-history-row="{{ $row['state'] }}">
+                                <sf-badge status="{{ $row['status'] }}" appearance="tonal" text="{{ $row['words'] }}"></sf-badge>
+                                <a href="{{ $row['href'] }}" class="grow min-w-0" style="overflow-wrap: anywhere;">{{ $row['title'] }}</a>
+                                @if ($row['ago'] !== null)
+                                    <span class="text-small color-on-surface-variant" title="{{ $row['time'] }}">{{ $row['ago'] }}{{ $row['who'] !== '' ? ' · '.$row['who'] : '' }}</span>
+                                @endif
+                            </li>
+                        @endforeach
+                    </ul>
+                @endif
+                {{ \Larena\Env\Http\Controllers\SiteAdminController::historyHolder() }}
+                <p class="m-0 m-top-1"><a href="{{ $siteHistory['all'] }}" data-env-site-history-all>{{ __('larena-env::admin.site.history.all') }}</a></p>
             </section>
         @endif
         </div>

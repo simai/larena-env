@@ -76,7 +76,7 @@ final class PlanValues
         'title', 'source', 'url', 'mode', 'daily-backup', 'bitrix-files', 'redirect-to', 'redirect-code', 'redirect-path', 'upstream-port',
         'upstream-path', 'websockets', 'check-dns', 'migrate', 'id', 'path', 'to', 'port', 'proto', 'action', 'address', 'allow', 'countries',
         'from', 'kind', 'target', 'token', 'provider', 'set', 'schedule', 'command', 'content', 'ttl', 'security-only', 'enable', 'check', 'dump',
-        'archive', 'by', 'change_id', 'expect-sha256', 'remove', 'ip-access', 'code'];
+        'archive', 'by', 'change_id', 'expect-sha256', 'remove', 'ip-access', 'code', 'without-secrets'];
 
     /** The values said in words, by argument: the dictionary they are in and the values it has. */
     private const array VALUES = [

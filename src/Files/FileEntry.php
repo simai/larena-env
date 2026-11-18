@@ -19,6 +19,9 @@ final readonly class FileEntry
         public ?string $mode,
         public ?string $mtime,
         public ?string $target = null,
+        // The server's own mark of a file with passwords (simai-env 1.62.2 `secret` in file:list, file:stat and the trash);
+        // null from an older server, which the panel's list then answers alone.
+        public ?bool $marked = null,
     ) {
     }
 
@@ -37,7 +40,8 @@ final readonly class FileEntry
 
         return new self($name, $type, is_int($data['size'] ?? null) ? $data['size'] : null,
             is_string($data['mode'] ?? null) && preg_match('/\A[0-7]{3,4}\z/D', $data['mode']) === 1 ? $data['mode'] : null,
-            self::moment($data['mtime'] ?? null), is_string($data['target'] ?? null) && $data['target'] !== '' ? $data['target'] : null);
+            self::moment($data['mtime'] ?? null), is_string($data['target'] ?? null) && $data['target'] !== '' ? $data['target'] : null,
+            is_bool($data['secret'] ?? null) ? $data['secret'] : null);
     }
 
     /** The server's time as seconds since 1970; a written time is kept as it came. */
@@ -74,22 +78,29 @@ final readonly class FileEntry
 
     /**
      * A file that holds passwords or keys (PX-92): .env and its copies, the database settings of WordPress and 1C-Bitrix,
-     * private keys and password files. The list marks it «секреты», and its download asks first.
+     * private keys and password files. The list marks it «секреты», and its download asks first. The server's own mark
+     * (simai-env 1.62.2) is taken when it gives one; the panel's list below stays for an older server, and a file either
+     * of them names is one: the right is never lost to a mark that is missing.
      */
     public function isSecret(): bool
     {
-        return $this->type === 'file' && self::secret($this->name);
+        return $this->marked === true || ($this->type === 'file' && self::secret($this->name));
     }
 
+    /**
+     * The panel's one list of such names, the server's as of simai-env 1.62.2 (docs/commands/file.md): it answers where
+     * the panel has only a name (an address, a path to save or pack) and for a server that marks nothing.
+     */
     public static function secret(string $name): bool
     {
         $lower = strtolower($name);
-        if (in_array($lower, ['.env.example', '.env.sample', '.env.dist'], true)) {
+        if (in_array($lower, ['.env.example', '.env.sample', '.env.dist', '.env.template'], true)) {
             return false;
         }
 
         return $lower === '.env' || str_starts_with($lower, '.env.') || in_array($lower, ['wp-config.php', '.settings.php', '.settings_extra.php',
-            'dbconn.php', '.htpasswd', 'auth.json', 'id_rsa', 'id_ed25519', 'id_ecdsa'], true) || preg_match('/\.(?:pem|key|p12|pfx)\z/D', $lower) === 1;
+            'dbconn.php', '.htpasswd', 'auth.json', '.my.cnf', '.pgpass', '.netrc', 'id_rsa', 'id_ed25519', 'id_ecdsa'], true)
+            || preg_match('/\.(?:pem|key|p12|pfx)\z/D', $lower) === 1;
     }
 
     /** An archive file:extract unpacks, by its name. */

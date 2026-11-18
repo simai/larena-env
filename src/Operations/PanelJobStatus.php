@@ -48,6 +48,10 @@ final readonly class PanelJobStatus
         public ?array $cancel = null,
         // A site's database connection (site:db-credentials, simai-env 1.59.0): its password given once, the same way.
         public ?DbCredentials $credentials = null,
+        // The files with passwords a pack or unpack left out (file:archive / file:extract `without-secrets`, simai-env
+        // 1.62.2): at most 30 paths as the server keeps them, and how many in all.
+        /** @var array{paths: list<string>, total: int}|null */
+        public ?array $secretSkipped = null,
     ) {
     }
 
@@ -125,7 +129,24 @@ final readonly class PanelJobStatus
             cancel: is_array($data['cancel'] ?? null) && is_bool($data['cancel']['cancellable'] ?? null)
                 ? ['cancellable' => $data['cancel']['cancellable'], 'leaves' => self::words($data['cancel']['leaves'] ?? null)] : null,
             credentials: is_array($data['result'] ?? null) ? DbCredentials::fromData($data['result']) : null,
+            secretSkipped: is_array($data['result'] ?? null) ? self::secretSkipped($data['result']) : null,
         );
+    }
+
+    /**
+     * @param array<array-key, mixed> $result
+     * @return array{paths: list<string>, total: int}|null
+     */
+    private static function secretSkipped(array $result): ?array
+    {
+        if (!is_array($result['secret_skipped'] ?? null)) {
+            return null;
+        }
+        $paths = array_values(array_filter(array_slice($result['secret_skipped'], 0, 30),
+            static fn (mixed $path): bool => is_string($path) && $path !== '' && preg_match('/[\x00-\x1f\x7f]/', $path) !== 1));
+        $total = is_int($result['secret_skipped_total'] ?? null) ? max($result['secret_skipped_total'], count($paths)) : count($paths);
+
+        return ['paths' => array_map(static fn (string $path): string => mb_substr($path, 0, 200), $paths), 'total' => $total];
     }
 
     private static function words(mixed $value): ?string

@@ -298,8 +298,12 @@ final class PanelCommands
         'file:copy' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH, 'to' => self::FS_PATH], 'required' => ['domain', 'path', 'to'], 'since' => '1.57.0', 'kind' => self::ACTION],
         'file:remove' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH], 'required' => ['domain', 'path'], 'since' => '1.39.0', 'kind' => self::ACTION],
         'file:upload' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH, 'expect-sha256' => self::EXPECT_SHA256], 'required' => ['domain', 'path'], 'since' => '1.40.0', 'kind' => self::ACTION],
-        'file:archive' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH, 'to' => self::FS_ARCHIVE], 'required' => ['domain', 'path', 'to'], 'since' => '1.40.0', 'kind' => self::ACTION],
-        'file:extract' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH, 'to' => self::FS_PATH, 'overwrite' => self::YES_NO], 'required' => ['domain', 'path', 'to'], 'since' => '1.40.0', 'kind' => self::ACTION],
+        // Without the files with passwords (`without-secrets`, simai-env 1.62.2): left out of the archive, neither made nor
+        // overwritten on unpacking; the job's result names them (secret_skipped, secret_skipped_total).
+        'file:archive' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH, 'to' => self::FS_ARCHIVE, 'without-secrets' => self::YES_NO],
+            'required' => ['domain', 'path', 'to'], 'since' => '1.40.0', 'kind' => self::ACTION],
+        'file:extract' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH, 'to' => self::FS_PATH, 'overwrite' => self::YES_NO,
+            'without-secrets' => self::YES_NO], 'required' => ['domain', 'path', 'to'], 'since' => '1.40.0', 'kind' => self::ACTION],
         // The site's trash (simai-env 1.57.0): file:remove moves into it, entries are kept there for a while (30 days in
         // 1.57.0), put back where they were or deleted for good, one or all.
         'file:trash-list' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => '1.57.0', 'kind' => self::READ],
@@ -432,6 +436,9 @@ final class PanelCommands
         'bitrix:restore-ready' => ['source' => '1.56.0', 'url' => '1.56.0'],
         // A certificate through Cloudflare DNS, also for every subdomain (simai-env 1.36.0).
         'ssl:letsencrypt' => ['challenge' => '1.36.0', 'wildcard' => '1.36.0'],
+        // Packing and unpacking without the files with passwords (simai-env 1.62.2).
+        'file:archive' => ['without-secrets' => '1.62.2'],
+        'file:extract' => ['without-secrets' => '1.62.2'],
     ];
 
     /**

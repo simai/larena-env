@@ -27,6 +27,19 @@ final class ServerSitesPage
     /** The site's sections its row menu opens beside the site itself: every site has them. */
     private const array SECTIONS = ['backups', 'domains', 'log'];
 
+    /**
+     * Where each problem of a row is fixed (the FASTPANEL look 2026-11-18 §5.2: a mark per problem that leads to its fix),
+     * worst first: a site that does not answer (its log, errors first), HTTPS missing or ending (its names and
+     * certificate), a paused site (resuming it), no fresh copy (making one). Each is a row action with its own icon, offered
+     * only on a row with that problem; «Исправить» in the row opens the worst one (/sites/{domain}/fix).
+     */
+    public const array FIXES = [
+        'answers' => ['icon' => 'error', 'href' => '/admin/server/sites/__ID__?tab=log'],
+        'https' => ['icon' => 'lock_open', 'href' => '/admin/server/sites/__ID__?tab=domains'],
+        'resume' => ['icon' => 'play_circle', 'href' => '/admin/server/sites/__ID__?action=site-resume'],
+        'backup' => ['icon' => 'backup', 'href' => '/admin/server/sites/__ID__?tab=backups&action=backup'],
+    ];
+
     /** The dot's statuses, worst last. */
     private const array DOTS = ['ok', 'stopped', 'warning', 'error'];
 
@@ -70,10 +83,15 @@ final class ServerSitesPage
             countLabel: $text('sites.count'),
             tableViewLabel: $text('sites.table_view'),
             layout: 'list',
-            quickActions: $canOperate ? ['visit', 'backup'] : ['visit'],
+            quickActions: $canOperate ? ['visit', 'fix', 'backup'] : ['visit', 'fix'],
             rowActions: ['visit' => ['label' => $text('sites.list.visit'), 'icon' => 'open_in_new']]
+                // The worst problem of the row, opened where it is fixed: in the row, beside the site itself.
+                + ['fix' => ['label' => $text('sites.list.fix.any'), 'icon' => 'build', 'href' => '/admin/server/sites/__ID__/fix']]
                 // The backup is planned on the site's own backups, in the side panel (larena/admin AdminPlannedAction).
-                + ($canOperate ? ['backup' => ['label' => $text('sites.list.backup'), 'icon' => 'backup', 'href' => '/admin/server/sites/__ID__?tab=backups&action=backup']] : [])
+                + ($canOperate ? ['backup' => ['label' => $text('sites.list.backup'), 'icon' => self::FIXES['backup']['icon'], 'href' => self::FIXES['backup']['href']]] : [])
+                + ['answers' => ['label' => $text('sites.list.fix.answers'), 'icon' => self::FIXES['answers']['icon'], 'href' => self::FIXES['answers']['href']],
+                    'https' => ['label' => $text('sites.list.fix.https'), 'icon' => self::FIXES['https']['icon'], 'href' => self::FIXES['https']['href']]]
+                + ($canOperate ? ['resume' => ['label' => $text('sites.list.fix.resume'), 'icon' => self::FIXES['resume']['icon'], 'href' => self::FIXES['resume']['href']]] : [])
                 + array_combine(self::SECTIONS, array_map(static fn (string $tab): array => ['label' => $text('site.tabs.'.$tab), 'icon' => SiteObjectMenu::ICONS[$tab],
                     'href' => '/admin/server/sites/__ID__?tab='.$tab], self::SECTIONS)),
             emptyText: $text('sites.list.empty'),
@@ -106,6 +124,9 @@ final class ServerSitesPage
         [$dot, $word] = $reasons[0] ?? ($site->suspended ? ['stopped', $text('sites.state.paused')]
             : ($answers === 'unchecked' ? ['stopped', $text('sites.state.unchecked')] : ['ok', $text('sites.state.works')]));
         $keeps = $backup['state'] !== SiteBackupSummary::NOT_NEEDED;
+        $problems = self::problems($site, $backup['state'], $certificate['status'] ?? null);
+        // The fixes of this row's problems, worst first; a change (resuming, a copy) only for a person who may make it.
+        $fixes = array_values(array_filter($problems, static fn (string $problem): bool => $canOperate || !in_array($problem, ['resume', 'backup'], true)));
 
         return [
             'id' => $site->domain,
@@ -121,8 +142,48 @@ final class ServerSitesPage
             'certificate' => $certificate,
             // The site itself, over HTTPS where it has a certificate.
             '_links' => ['visit' => ($site->ssl === 'none' ? 'http://' : 'https://').$site->domain.'/'],
-            '_actions' => [...($canOperate && $keeps ? ['view', 'visit', 'backup'] : ['view', 'visit']), ...self::SECTIONS],
+            '_actions' => array_values(array_unique([...['view', 'visit'], ...(array_diff($fixes, $canOperate && $keeps ? ['backup'] : []) !== [] ? ['fix'] : []), ...($canOperate && $keeps ? ['backup'] : []),
+                ...array_diff($fixes, ['backup']), ...self::SECTIONS])),
         ];
+    }
+
+    /**
+     * The row's problems, worst first, from what the list already holds (SiteSummary, no read of its own): `answers` a site
+     * that does not answer (a paused one answers 503 on purpose and is `resume` instead), `https` a public name without a
+     * working certificate or with one ending within 14 days, `resume` a paused site, `backup` no fresh copy.
+     *
+     * @return list<string> keys of FIXES
+     */
+    public static function problems(SiteSummary $site, string $backup, ?string $certificate): array
+    {
+        $answers = SiteState::of($site->answersChecked, $site->answers);
+        $problems = [];
+        if (!$site->suspended && ($answers === 'down' || $answers === 'error')) {
+            $problems[] = 'answers';
+        }
+        if (in_array($certificate, ['error', 'warning'], true)) {
+            $problems[] = 'https';
+        }
+        if ($site->suspended) {
+            $problems[] = 'resume';
+        }
+        if (in_array($backup, [SiteBackupSummary::FAILED, SiteBackupSummary::NONE, SiteBackupSummary::STALE], true)) {
+            $problems[] = 'backup';
+        }
+
+        return $problems;
+    }
+
+    /**
+     * Where the worst problem of a site is fixed (the row's «Исправить»); the site's own page when it has none.
+     *
+     * @param callable(string, array<string, string>=): string $text
+     */
+    public static function fixAddress(SiteSummary $site, \DateTimeImmutable $now, array $failures, callable $text): string
+    {
+        $problems = self::problems($site, SiteBackupSummary::row($site, $now, $failures, $text)['state'], self::certificate($site, $text)['status'] ?? null);
+
+        return str_replace('__ID__', $site->domain, isset($problems[0]) ? self::FIXES[$problems[0]]['href'] : '/admin/server/sites/__ID__');
     }
 
     /**

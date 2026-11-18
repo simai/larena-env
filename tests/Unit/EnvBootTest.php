@@ -65,7 +65,7 @@ env_assert($names === ['larena.env.admin.alerts.ack.open', 'larena.env.admin.ale
     'larena.env.admin.security.plan', 'larena.env.admin.security.plan.open', 'larena.env.admin.security.run', 'larena.env.admin.services', 'larena.env.admin.services.plan',
     'larena.env.admin.services.run', 'larena.env.admin.settings', 'larena.env.admin.site', 'larena.env.admin.site.cron.plan', 'larena.env.admin.site.cron.run',
     'larena.env.admin.site.dns.plan', 'larena.env.admin.site.dns.run', 'larena.env.admin.site.files.download', 'larena.env.admin.site.files.plan', 'larena.env.admin.site.files.preview',
-    'larena.env.admin.site.files.run', 'larena.env.admin.site.log.download', 'larena.env.admin.site.nginx.plan', 'larena.env.admin.site.nginx.run', 'larena.env.admin.site.plan',
+    'larena.env.admin.site.files.run', 'larena.env.admin.site.fix', 'larena.env.admin.site.log.download', 'larena.env.admin.site.nginx.plan', 'larena.env.admin.site.nginx.run', 'larena.env.admin.site.plan',
     'larena.env.admin.site.run', 'larena.env.admin.sites.enable.plan', 'larena.env.admin.sites.enable.run', 'larena.env.admin.sites.new',
     'larena.env.admin.sites.new.step', 'larena.env.admin.sites.new.submit', 'larena.env.admin.sites.plan', 'larena.env.admin.sites.plan.draft',
     'larena.env.admin.sites.port', 'larena.env.admin.sites.run', 'larena.env.admin.software', 'larena.env.admin.software.php',

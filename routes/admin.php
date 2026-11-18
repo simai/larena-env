@@ -131,6 +131,8 @@ $router->get('/sites/{domain}', [SiteAdminController::class, 'show'])->where('do
 $router->get('/sites/{domain}/files/download', [SiteFilesController::class, 'download'])->where('domain', $domain)->name('larena.env.admin.site.files.download');
 // A picture of the site shown in place, once its bytes are a picture (PX-96).
 $router->get('/sites/{domain}/files/preview', [SiteFilesController::class, 'preview'])->where('domain', $domain)->name('larena.env.admin.site.files.preview');
+// A row's «Исправить» on the sites list: the place where the site's worst problem is fixed (FASTPANEL look §5.2).
+$router->get('/sites/{domain}/fix', [SiteAdminController::class, 'fix'])->where('domain', $domain)->name('larena.env.admin.site.fix');
 // «Скачать журнал»: the last lines of a site's log as the server wrote them (PX-48).
 $router->get('/sites/{domain}/log/download', [SiteAdminController::class, 'logDownload'])->where('domain', $domain)->name('larena.env.admin.site.log.download');
 $router->get('/jobs/{job}', [ServerJobController::class, 'show'])->where('job', '[a-f0-9]{24}')->name('larena.env.admin.job');

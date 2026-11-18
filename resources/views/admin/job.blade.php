@@ -129,6 +129,26 @@
             @elseif ($status->command === 'site:db-credentials' && in_array('db_password', $status->shownOnce, true))
                 <p role="note" data-env-job-credentials-shown>{{ __('larena-env::admin.database.credentials.shown') }}</p>
             @endif
+            {{-- What a pack or unpack left out (without-secrets, simai-env 1.62.2; q-4997ae4e93): the files with passwords are
+                 named, never their text; at most 30 come from the server, the rest is a count. --}}
+            @if ($status->secretSkipped !== null)
+                @if ($status->secretSkipped['total'] === 0)
+                    <p role="note" data-env-job-secret-skipped="0">{{ __('larena-env::admin.job.secret_skipped_none') }}</p>
+                @else
+                    <div class="larena-panel larena-panel-padded m-y-2" role="note" data-env-job-secret-skipped="{{ $status->secretSkipped['total'] }}">
+                        <h3 class="m-top-0 text-medium">{{ __('larena-env::admin.job.secret_skipped_title', ['count' => (string) $status->secretSkipped['total']]) }}</h3>
+                        <p>{{ __($status->command === 'file:extract' ? 'larena-env::admin.job.secret_skipped_extract' : 'larena-env::admin.job.secret_skipped_archive') }}</p>
+                        <ul class="m-0 p-left-3">
+                            @foreach ($status->secretSkipped['paths'] as $skipped)
+                                <li class="mono" style="overflow-wrap: anywhere;" data-env-job-secret-skipped-path>{{ $skipped }}</li>
+                            @endforeach
+                        </ul>
+                        @if ($status->secretSkipped['total'] > count($status->secretSkipped['paths']))
+                            <p class="m-0 m-top-1 text-small color-on-surface-variant" data-env-job-secret-skipped-more>{{ __('larena-env::admin.job.secret_skipped_more', ['count' => (string) ($status->secretSkipped['total'] - count($status->secretSkipped['paths']))]) }}</p>
+                        @endif
+                    </div>
+                @endif
+            @endif
             @if ($status->state->isOver() && $status->command === 'site:add' && is_string($status->args['domain'] ?? null) && $status->state->value === 'succeeded')
                 <p><a href="{{ route('larena.env.admin.site', ['domain' => $status->args['domain']], false) }}" class="larena-button" data-env-job-next-site>{{ __('larena-env::admin.routes.to_site') }}</a></p>
             @elseif ($status->state->isOver() && \Larena\Env\Admin\JobOutcome::next($status) !== null)

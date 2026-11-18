@@ -159,7 +159,7 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
             }
             $entries = [];
             foreach (array_diff((array) scandir($path), ['.', '..']) as $name) {
-                $entries[] = ['name' => (string) $name] + self::stat($path.'/'.$name);
+                $entries[] = ['name' => (string) $name] + self::stat($path.'/'.$name) + self::mark((string) $name, $path.'/'.$name);
             }
             // Directories first, as the gateway lists them.
             usort($entries, static fn (array $a, array $b): int => [$a['type'] === 'dir' ? 0 : 1, $a['name']] <=> [$b['type'] === 'dir' ? 0 : 1, $b['name']]);
@@ -170,7 +170,7 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
             throw new FakeRefusal('not_found');
         }
         if ($command === 'file:stat') {
-            return ['schema' => 'simai-file-stat/1', 'path' => $relative, 'name' => basename($relative)] + self::stat($path);
+            return ['schema' => 'simai-file-stat/1', 'path' => $relative, 'name' => basename($relative)] + self::stat($path) + self::mark(basename($relative), $path);
         }
         if (!is_file($path) || is_link($path)) {
             throw new FakeRefusal('not_a_file');
@@ -239,6 +239,36 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
         return $type === 'link' ? $stat + ['target' => (string) readlink($full)] : $stat;
     }
 
+    /**
+     * The server's mark of a file with passwords (simai-env 1.62.2): its own list, which the panel's FileEntry::secret
+     * copies; every file has the mark, true or false.
+     *
+     * @return array{secret?: bool}
+     */
+    private static function mark(string $name, string $full): array
+    {
+        return is_file($full) && !is_link($full) ? ['secret' => \Larena\Env\Files\FileEntry::secret($name)] : [];
+    }
+
+    /**
+     * The files with passwords under a path, as the site's paths: what `without-secrets yes` leaves out of an archive.
+     *
+     * @return list<string>
+     */
+    private function secretsUnder(string $domain, string $relative): array
+    {
+        $full = $this->path($domain, $relative);
+        if (is_file($full)) {
+            return \Larena\Env\Files\FileEntry::secret(basename($full)) ? [trim($relative, '/')] : [];
+        }
+        $found = [];
+        foreach (is_dir($full) && !is_link($full) ? array_diff((array) scandir($full), ['.', '..']) : [] as $name) {
+            $found = [...$found, ...$this->secretsUnder($domain, trim($relative, '/').'/'.$name)];
+        }
+
+        return $found;
+    }
+
     /** @throws FakeRefusal what the gateway refuses before it plans */
     private function check(string $command, string $domain, PanelRequest $request): void
     {
@@ -247,7 +277,8 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
             'file:rename' => $this->free($this->path($domain, $args['to'])) && $this->existing($this->path($domain, $args['path'])),
             'file:mkdir' => $this->free($this->path($domain, $args['path'])),
             'file:remove' => $this->existing($this->path($domain, $args['path'])) && $this->notSite($args['path']),
-            'file:archive' => $this->existing($this->path($domain, $args['path'])) && $this->free($this->path($domain, $args['to'])),
+            'file:archive' => $this->existing($this->path($domain, $args['path'])) && $this->free($this->path($domain, $args['to']))
+                && $this->packable($domain, $args),
             'file:extract' => $this->existing($this->path($domain, $args['path'])) && $this->path($domain, $args['to']) !== '',
             'file:write', 'file:upload' => $this->expected($this->path($domain, $args['path']), $args['expect-sha256'] ?? 'any'),
             // As 1.57.0: a restore's plan fails while its place is taken or the entry is gone.
@@ -286,7 +317,7 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
     }
 
     /**
-     * @return list<string> the job's lines
+     * @return list<string>|array{0: list<string>, 1: array<string, mixed>} the job's lines, or its lines and its result
      *
      * @throws FakeRefusal
      */
@@ -347,11 +378,35 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
 
                 return ['Deleted '.count($ids).' trash entries for good'];
             case 'file:archive':
+                // Without the files with passwords (1.62.2): the stand-in packs nothing, and names what it would leave out.
+                if (($args['without-secrets'] ?? 'no') === 'yes') {
+                    $skipped = $this->secretsUnder($domain, $args['path']);
+
+                    return [["Packed {$args['path']} into {$args['to']}", 'packed: 1'], self::skipped($skipped)];
+                }
+
                 return ["Packed {$args['path']} into {$args['to']}", 'packed: 1'];
             case 'file:extract':
                 if (($args['overwrite'] ?? 'no') !== 'yes' && is_dir($this->path($domain, $args['to'])) && $this->path($domain, $args['to']) !== $this->path($domain, '.')) {
                     // The stand-in unpacks nothing; a folder that is there already holds files of the same name.
                     throw new FakeRefusal('exists');
+                }
+                if (($args['without-secrets'] ?? 'no') === 'yes') {
+                    // The entries of a zip with passwords, as the site's paths they would have had: neither made nor overwritten.
+                    $skipped = [];
+                    $zip = class_exists(\ZipArchive::class) ? new \ZipArchive() : null;
+                    if ($zip !== null && $zip->open($this->path($domain, $args['path'])) === true) {
+                        for ($index = 0; $index < $zip->numFiles; $index++) {
+                            $name = (string) $zip->getNameIndex($index);
+                            if (!str_ends_with($name, '/') && \Larena\Env\Files\FileEntry::secret(basename($name))) {
+                                $into = trim($args['to'], '/');
+                                $skipped[] = ($into === '' || $into === '.' ? '' : $into.'/').$name;
+                            }
+                        }
+                        $zip->close();
+                    }
+
+                    return [["Unpacked {$args['path']} into {$args['to']}", 'files: 0, dirs: 0, skipped: 0'], self::skipped($skipped)];
                 }
 
                 return ["Unpacked {$args['path']} into {$args['to']}", 'files: 0, dirs: 0, skipped: 0'];
@@ -399,7 +454,8 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
             $meta = json_decode((string) @file_get_contents($dir.'/'.$id.'/meta.json'), true);
             if (is_array($meta)) {
                 $entries[] = ['id' => (string) $id, 'path' => $meta['path'] ?? null, 'name' => $meta['name'] ?? null, 'type' => $meta['type'] ?? 'file',
-                    'size' => (int) ($meta['size'] ?? 0), 'deleted_at' => $meta['deleted_at'] ?? null, 'expires_at' => $meta['expires_at'] ?? null];
+                    'size' => (int) ($meta['size'] ?? 0), 'deleted_at' => $meta['deleted_at'] ?? null, 'expires_at' => $meta['expires_at'] ?? null,
+                    'secret' => ($meta['type'] ?? 'file') === 'file' && \Larena\Env\Files\FileEntry::secret((string) ($meta['name'] ?? ''))];
             }
         }
         rsort($entries);
@@ -437,6 +493,21 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
         return true;
     }
 
+    /**
+     * @param array<string, string> $args
+     *
+     * @throws FakeRefusal packing a file with passwords itself without them is refused `secret`, as 1.62.2 does
+     */
+    private function packable(string $domain, array $args): bool
+    {
+        if (($args['without-secrets'] ?? 'no') === 'yes' && is_file($this->path($domain, $args['path']))
+            && \Larena\Env\Files\FileEntry::secret(basename($args['path']))) {
+            throw new FakeRefusal('secret');
+        }
+
+        return true;
+    }
+
     /** @throws FakeRefusal */
     private function free(string $path): bool
     {
@@ -463,14 +534,30 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
         return PanelAnswer::fromDocument($request->requestId, ['status' => 'ok', 'kind' => $kind, 'data' => $data, 'command_status' => 'success']);
     }
 
-    /** @param list<string> $lines */
+    /**
+     * The job's result of what was left out, as simai-env 1.62.2 keeps it: at most 30 paths, and the count.
+     *
+     * @param list<string> $skipped
+     * @return array{secret_skipped: list<string>, secret_skipped_total: int}
+     */
+    private static function skipped(array $skipped): array
+    {
+        return ['secret_skipped' => array_slice($skipped, 0, 30), 'secret_skipped_total' => count($skipped)];
+    }
+
+    /** @param list<string>|array{0: list<string>, 1: array<string, mixed>} $lines the job's lines, or its lines and its result */
     private function started(PanelRequest $request, array $lines): PanelAnswer
     {
+        $result = null;
+        if (isset($lines[1]) && is_array($lines[1]) && is_array($lines[0])) {
+            [$lines, $result] = $lines;
+        }
         $id = bin2hex(random_bytes(12));
         @mkdir($this->root.'/jobs', 0o775, true);
         file_put_contents($this->jobFile($id), json_encode(['job_id' => $id, 'state' => 'succeeded', 'exit_code' => 0, 'command' => $request->command,
             'args' => $request->args, 'created_at' => gmdate('Y-m-d\TH:i:s\Z'), 'request_id' => $request->requestId,
-            'actor' => ['user' => $request->actor->user, 'owner' => $request->actor->owner], 'lines' => $lines], JSON_THROW_ON_ERROR));
+            'actor' => ['user' => $request->actor->user, 'owner' => $request->actor->owner], 'lines' => $lines]
+            + ($result !== null ? ['result' => $result] : []), JSON_THROW_ON_ERROR));
 
         return PanelAnswer::fromDocument($request->requestId, ['status' => 'ok', 'kind' => 'job', 'job_id' => $id]);
     }

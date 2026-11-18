@@ -77,7 +77,8 @@ final class SiteFilesPage
      * @param list<TrashEntry> $entries
      * @param callable(string, array<string, string>=): string $text
      */
-    public static function trash(string $domain, array $entries, bool $restore, bool $purge, callable $text, string $token, ?\DateTimeImmutable $now = null): AdminDataviewPage
+    public static function trash(string $domain, array $entries, bool $restore, bool $purge, callable $text, string $token, ?\DateTimeImmutable $now = null,
+        bool $secrets = true): AdminDataviewPage
     {
         $now ??= new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
         $plan = '/admin/server/sites/'.$domain.'/files/plan';
@@ -88,7 +89,10 @@ final class SiteFilesPage
             'deleted' => self::when($entry->deletedAt, $now, $text),
             'expires' => $entry->expiresAt === null ? '' : ['label' => $text('files.trash.until', ['time' => Moment::human($entry->expiresAt)]),
                 'text' => $text('files.trash.until', ['time' => Moment::human($entry->expiresAt)])],
-            '_actions' => array_values(array_filter([$restore ? 'restore' : null, $purge ? 'purge' : null])),
+            // A file with passwords is marked here too, and put back only by a person with that right (q-4997ae4e93).
+            'mark' => $entry->secret ? ['label' => $text('files.secret'), 'text' => $text('files.secret'), 'status' => 'warning',
+                'tip' => $secrets ? $text('files.secret_tip') : $text('files.reasons.secret_files_not_allowed')] : '',
+            '_actions' => array_values(array_filter([$restore && (!$entry->secret || $secrets) ? 'restore' : null, $purge ? 'purge' : null])),
         ], $entries);
 
         return new AdminDataviewPage(
@@ -99,6 +103,7 @@ final class SiteFilesPage
                 ['key' => 'place', 'label' => $text('files.trash.place'), 'list' => 'supporting'],
                 ['key' => 'deleted', 'label' => $text('files.trash.deleted'), 'list' => 'fact'],
                 ['key' => 'expires', 'label' => $text('files.trash.expires'), 'list' => 'fact'],
+                ['key' => 'mark', 'label' => $text('files.mark'), 'list' => 'fact'],
             ],
             total: count($rows),
             pageId: 'page.admin.env-site-trash',

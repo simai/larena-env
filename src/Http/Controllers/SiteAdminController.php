@@ -165,6 +165,26 @@ final readonly class SiteAdminController
         return $this->authorizer?->authorize($request, 'env.sites.operate')->isAllowed() ?? false;
     }
 
+    /**
+     * The sites list's «Исправить» (FASTPANEL look 2026-11-18 §5.2): to where the site's worst problem is fixed, from the
+     * overview the list was drawn from (kept a little while, so no new read for it) and the server's alerts of a failed copy.
+     */
+    public function fix(Request $request, string $domain): RedirectResponse
+    {
+        $actor = ResolvePanelActor::of($request);
+        $overview = $this->overviews->read($actor)->overview;
+        foreach ($overview->sites ?? [] as $site) {
+            if ($site->domain === $domain) {
+                $text = fn (string $key, array $replace = []): string => (string) $this->translator->get('larena-env::admin.'.$key, $replace);
+                $failures = \Larena\Env\Admin\SiteBackupSummary::failures($overview->capabilities?->allows('self:alerts') === true ? $this->extras->alerts($actor) : null);
+
+                return new RedirectResponse(\Larena\Env\Admin\ServerSitesPage::fixAddress($site, PanelWarnings::now(), $failures, $text));
+            }
+        }
+
+        return new RedirectResponse(route('larena.env.admin.site', ['domain' => $domain], false));
+    }
+
     public function show(Request $request, string $domain): mixed
     {
         $actor = ResolvePanelActor::of($request);
@@ -309,7 +329,91 @@ final readonly class SiteAdminController
             'notice' => $request->session()->get('larena_env_notice'),
             // ?action=<code> opens that action's side panel with the page (a next step that leads to an action, PX-15).
             'openAction' => is_string($request->query('action')) ? $request->query('action') : null,
+            // «История» of the site at the bottom of its card (FASTPANEL look §5.3). The server's list is never kept and costs a
+            // start of simai-env, so the card is drawn without it and the part fills itself a moment later (larena/admin
+            // AdminLiveRegion, asked once): the click stays within the 0.5 s of the UX audit.
+            'siteHistory' => $site !== null && $tab === 'overview' && $capabilities->allows('job:list') ? $this->historyPart($request, $actor, $domain) : null,
         ]);
+    }
+
+    /** The live part of the card that holds the site's history. */
+    public const string HISTORY_PART = 'env-site-history';
+
+    /**
+     * The site's history now when the part itself is asked (or the admin cannot fill a part later), else a part to fill.
+     *
+     * @return array{pending: bool, url: string, rows?: list<array<string, mixed>>, all: string}
+     */
+    private function historyPart(Request $request, PanelActor $actor, string $domain): array
+    {
+        $url = route('larena.env.admin.site', ['domain' => $domain], false);
+        $later = class_exists(\Larena\Admin\Runtime\AdminLiveRegion::class)
+            && \Larena\Admin\Runtime\AdminLiveRegion::asked($request) !== self::HISTORY_PART && $request->query('history') !== '1';
+
+        return $later ? ['pending' => true, 'url' => $url, 'all' => '/admin/history?object='.rawurlencode($domain)]
+            : ['pending' => false, 'url' => $url] + $this->siteHistory($actor, $domain);
+    }
+
+    /**
+     * The holder of the history part (larena/admin AdminLiveRegion): its opening when given whether it is still to fill and
+     * the card's address, its closing without; nothing where the admin has no live parts.
+     */
+    public static function historyHolder(?bool $pending = null, string $url = ''): \Illuminate\Support\HtmlString
+    {
+        if (!class_exists(\Larena\Admin\Runtime\AdminLiveRegion::class)) {
+            return new \Illuminate\Support\HtmlString('');
+        }
+
+        return new \Illuminate\Support\HtmlString($pending === null ? \Larena\Admin\Runtime\AdminLiveRegion::close(self::HISTORY_PART)
+            : \Larena\Admin\Runtime\AdminLiveRegion::open(self::HISTORY_PART, $pending, $url, '', 1000));
+    }
+
+    /** How many of a site's runs its card shows; the rest is in «История». */
+    public const int HISTORY_ROWS = 5;
+
+    /**
+     * The site's latest runs, newest first, from one page of the server's list (job:list has no filter by site, so its
+     * last 100 runs are read and this site's kept): what, how it ended, how long ago and who, each opening its own page;
+     * «Вся история» is the admin's «История» narrowed to the site (its object is the domain, EnvHistorySource).
+     *
+     * @return array{rows: list<array{title: string, state: string, status: string, words: string, ago: ?string, time: string, who: string, href: string}>, all: string}
+     */
+    private function siteHistory(PanelActor $actor, string $domain): array
+    {
+        $page = $this->operations->jobPage($actor, null, 100);
+        $text = fn (string $key, array $replace = []): string => (string) $this->translator->get('larena-env::admin.'.$key, $replace);
+        $rows = [];
+        foreach ($page->jobs ?? [] as $status) {
+            $over = $status->args['domain'] ?? (($status->object['kind'] ?? null) === 'site' ? $status->object['id'] : null);
+            if ($over !== $domain) {
+                continue;
+            }
+            $at = $status->startedAt ?? $status->createdAt;
+            $rows[] = [
+                'title' => \Larena\Env\Admin\EnvHistorySource::title($status, $this->translator),
+                'state' => $status->state->value,
+                'status' => match ($status->state) {
+                    \Larena\Env\Operations\JobState::Succeeded => 'success',
+                    \Larena\Env\Operations\JobState::Running => 'info',
+                    \Larena\Env\Operations\JobState::Cancelled => 'warning',
+                    default => 'error',
+                },
+                'words' => \Larena\Env\Admin\JobOutcome::stateWords($status),
+                'ago' => \Larena\Env\Server\Moment::ago($at, PanelWarnings::now(), $text),
+                'time' => \Larena\Env\Server\Moment::human($at),
+                'who' => match ($status->actorKind) {
+                    'schedule' => $text('runs.by_schedule'),
+                    'server' => $text('runs.by_server'),
+                    default => '',
+                },
+                'href' => route('larena.env.admin.job', ['job' => $status->jobId], false),
+            ];
+            if (count($rows) === self::HISTORY_ROWS) {
+                break;
+            }
+        }
+
+        return ['rows' => $rows, 'all' => '/admin/history?object='.rawurlencode($domain)];
     }
 
     /**
@@ -584,7 +688,7 @@ final readonly class SiteAdminController
             'trashKept' => $trashKept,
             'trash' => is_array($trash) ? $trash : null,
             'trashView' => is_array($trash) && $trash['entries'] !== [] ? $present(SiteFilesPage::trash($domain, $trash['entries'],
-                $capabilities->allows('file:trash-restore'), $capabilities->allows('file:trash-empty'), $text, $token)) : null,
+                $capabilities->allows('file:trash-restore'), $capabilities->allows('file:trash-empty'), $text, $token, null, $secretAllowed)) : null,
             'trashEmpty' => $capabilities->allows('file:trash-empty'),
             'trashOpen' => $request->query('trash') === '1',
             'list' => is_array($folder) && !$opened ? $present(SiteFilesPage::folder($domain, $path, $entries, $allows, $text, $token, $trashKept)) : null,

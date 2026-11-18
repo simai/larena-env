@@ -37,6 +37,7 @@ use Larena\Env\Gateway\PanelRequest;
 use Larena\Env\Http\Controllers\SiteAdminController;
 use Larena\Env\Http\Controllers\SiteFilesController;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
+use Larena\Env\Operations\PanelJobStatus;
 use Larena\Env\Operations\PanelOperations;
 use Larena\Env\People\PanelAudit;
 use Larena\Env\People\SecretFileAccess;
@@ -122,6 +123,40 @@ final class WatchedGateway implements PanelGateway, PanelFileGateway
         }
 
         return false;
+    }
+}
+
+/** A server of simai-env 1.62.2 (it packs without the files with passwords), remembering every argument it was sent. */
+final class NewerGateway implements PanelGateway, PanelFileGateway
+{
+    /** @var list<array{0: string, 1: array<string, mixed>, 2: bool}> */
+    public array $sent = [];
+
+    public function __construct(private readonly PanelGateway&PanelFileGateway $inner)
+    {
+    }
+
+    public function source(): string
+    {
+        return $this->inner->source();
+    }
+
+    public function ask(PanelRequest $request): PanelAnswer
+    {
+        $this->sent[] = [$request->command, $request->args, $request->confirm];
+        $answer = $this->inner->ask($request);
+        if ($request->command !== 'self:describe' || !is_array($answer->data['simai_env'] ?? null)) {
+            return $answer;
+        }
+        $data = $answer->data;
+        $data['simai_env']['version'] = '1.62.2';
+
+        return PanelAnswer::fromDocument($request->requestId, ['status' => 'ok', 'kind' => 'result', 'data' => $data, 'command_status' => 'success']);
+    }
+
+    public function download(PanelRequest $request, string $into): PanelDownload
+    {
+        return $this->inner->download($request, $into);
     }
 }
 
@@ -364,5 +399,156 @@ env_assert(substr_count($people, 'name="secret_files" value="yes"') === 2 && pre
     && str_contains($people, e($lines['people']['secret_files'])), 'Each person\'s row has the tick, checked for the one it is on for.');
 $secrets->set('trusted@stand.test', false, 'admin@stand.test');
 env_assert(!$secrets->allows($trusted) && $last($sink->events())->type === 'env.person.secret_files_disallowed', 'Unticked: off again, and said in «История».');
+
+// 6. Packing and unpacking (simai-env 1.62.2, `without-secrets`): a person without the right packs a folder and unpacks an
+// archive, and the server leaves the files with passwords out; the job's page names them. The panel adds it, never the form.
+mkdir($root.'/sites/'.$domain.'/conf', 0o775, true);
+file_put_contents($root.'/sites/'.$domain.'/conf/.env', "APP_KEY=base64:kept-out\n");
+file_put_contents($root.'/sites/'.$domain.'/conf/app.php', "<?php return [];\n");
+if (class_exists(ZipArchive::class)) {
+    $zip = new ZipArchive();
+    $zip->open($root.'/sites/'.$domain.'/upload.zip', ZipArchive::CREATE);
+    $zip->addFromString('.env', "DB_PASSWORD=from-archive\n");
+    $zip->addFromString('public/index.php', "<?php echo 1;\n");
+    $zip->addFromString('keys/id_rsa', "-----BEGIN-----\n");
+    $zip->close();
+}
+$planRequest = static fn (PanelActor $actor, array $input) => $asking($actor, $site.'/files/plan', 'POST', $input);
+$pack = ['op' => 'archive', 'path' => 'conf', 'name' => 'conf', 'format' => 'zip'];
+// An older server (the recorded one, 1.49.0) cannot leave them out: refused to such a person, as before, in plain words.
+$old = $filesController->plan($planRequest($staff, $pack), $domain);
+env_assert($old instanceof RedirectResponse && $notice($old) === $lines['files']['reasons'][SiteFilesController::SECRETS_KEPT], 'An older server: packing refused with its line.');
+env_assert($filesController->plan($planRequest($admin, $pack), $domain) instanceof \Illuminate\Contracts\View\View, 'The server level packs on any server.');
+
+$newer = new NewerGateway($fake);
+$newerFiles = new SiteFiles($newer);
+$newerOperations = new PanelOperations($newer);
+$newerController = new SiteFilesController($newerOperations, new ServerOverviewReader($newer), $newerFiles, $factory, $translator, $host, $secrets);
+$planned = $newerController->plan($planRequest($staff, $pack), $domain);
+env_assert($planned instanceof \Illuminate\Contracts\View\View && ($planned->getData()['hidden']['args[without-secrets]'] ?? null) === 'yes', 'Without the right: planned, without the files with passwords.');
+$planSent = $last(array_values(array_filter($newer->sent, static fn (array $one): bool => $one[0] === 'file:archive')));
+env_assert(($planSent[1]['without-secrets'] ?? null) === 'yes' && !$planSent[2], 'The plan asked the server without them.');
+$planPage = (string) $factory->make('larena-env::admin.plan', $planned->getData())->render();
+env_assert(str_contains($planPage, e($lines['plan']['args']['without-secrets'])), 'The plan names it in words.');
+// The confirmation sent straight with the argument taken out (or said `no`): the panel puts it back.
+$ranPack = $newerController->run($asking($staff, $site.'/files/run', 'POST', ['op' => 'archive', 'args' => ['domain' => $domain, 'path' => 'conf', 'to' => 'conf.zip', 'without-secrets' => 'no']]), $domain);
+$runSent = $last(array_values(array_filter($newer->sent, static fn (array $one): bool => $one[0] === 'file:archive')));
+env_assert(str_contains($ranPack->getTargetUrl(), 'job') && ($runSent[1]['without-secrets'] ?? null) === 'yes' && $runSent[2], 'Confirmed: sent without them, whatever the form said.');
+$jobId = basename($ranPack->getTargetUrl());
+$jobStatus = $newerOperations->view($staff, $jobId)->status ?? null;
+env_assert($jobStatus !== null && $jobStatus->secretSkipped === ['paths' => ['conf/.env'], 'total' => 1], 'The job names what it left out: '.json_encode($jobStatus?->secretSkipped));
+$jobPage = (string) $factory->make('larena-env::admin.job', ['jobId' => $jobId, 'source' => 'stand-in', 'status' => $jobStatus, 'log' => null, 'refused' => false,
+    'reasonText' => null, 'notice' => null])->render();
+env_assert(str_contains($jobPage, 'data-env-job-secret-skipped="1"') && str_contains($jobPage, '>conf/.env<') && str_contains($jobPage, e($lines['job']['secret_skipped_archive']))
+    && !str_contains($jobPage, 'kept-out'), 'The job page says it in words and names the file, never its text.');
+// The server level packs with them (nothing added).
+$newerController->run($asking($admin, $site.'/files/run', 'POST', ['op' => 'archive', 'args' => ['domain' => $domain, 'path' => 'conf', 'to' => 'conf-all.zip']]), $domain);
+$adminSent = $last(array_values(array_filter($newer->sent, static fn (array $one): bool => $one[0] === 'file:archive')));
+env_assert(!isset($adminSent[1]['without-secrets']), 'The server level packs everything.');
+// Packing the .env itself stays refused before the server is asked.
+$self = $newerController->plan($planRequest($staff, ['op' => 'archive', 'path' => 'conf/.env', 'name' => 'env', 'format' => 'zip']), $domain);
+env_assert($self instanceof RedirectResponse && $notice($self) === $refusedLine, 'The .env itself is not packed by such a person.');
+if (class_exists(ZipArchive::class)) {
+    $unpack = $newerController->run($asking($staff, $site.'/files/run', 'POST', ['op' => 'extract', 'args' => ['domain' => $domain, 'path' => 'upload.zip', 'to' => '.', 'overwrite' => 'yes']]), $domain);
+    $unpacked = $newerOperations->view($staff, basename($unpack->getTargetUrl()))->status ?? null;
+    env_assert($unpacked !== null && $unpacked->secretSkipped === ['paths' => ['.env', 'keys/id_rsa'], 'total' => 2], 'Unpacked without them: '.json_encode($unpacked?->secretSkipped));
+    $unpackPage = (string) $factory->make('larena-env::admin.job', ['jobId' => 'x', 'source' => 'stand-in', 'status' => $unpacked, 'log' => null, 'refused' => false,
+        'reasonText' => null, 'notice' => null])->render();
+    env_assert(str_contains($unpackPage, e($lines['job']['secret_skipped_extract'])) && str_contains($unpackPage, '>keys/id_rsa<'), 'Said for unpacking.');
+}
+// The side panel's form says it before anything is asked.
+$formFiles = $filesTab($staff, 'path=.&op=archive&entry=conf');
+$form = (string) $factory->make('larena-env::admin.partials.files', ['files' => $formFiles, 'domain' => $domain])->render();
+env_assert(str_contains($form, 'data-env-files-without-secrets') && str_contains($form, e($lines['files']['without_secrets_archive'])), 'The pack form says the files with passwords stay out.');
+$adminForm = (string) $factory->make('larena-env::admin.partials.files', ['files' => $filesTab($admin, 'path=.&op=archive&entry=conf'), 'domain' => $domain])->render();
+env_assert(!str_contains($adminForm, 'data-env-files-without-secrets'), 'Not said to the server level.');
+// More than the server names: the rest is a count.
+$many = PanelJobStatus::fromData(['job_id' => 'c00000000000000000000001', 'state' => 'succeeded', 'command' => 'file:extract',
+    'result' => ['secret_skipped' => array_map(static fn (int $n): string => "site{$n}/.env", range(1, 30)), 'secret_skipped_total' => 42]]);
+env_assert($many->secretSkipped['total'] === 42 && count($many->secretSkipped['paths']) === 30, 'Thirty named, forty-two in all.');
+$manyPage = (string) $factory->make('larena-env::admin.job', ['jobId' => 'y', 'source' => 'stand-in', 'status' => $many, 'log' => null, 'refused' => false, 'reasonText' => null, 'notice' => null])->render();
+env_assert(str_contains($manyPage, 'data-env-job-secret-skipped-more') && str_contains($manyPage, '12'), 'And twelve more, said.');
+
+// The server's own mark: taken when given, the panel's list where it is not; a file either names is one.
+env_assert(FileEntry::fromData(['name' => 'custom.secret', 'type' => 'file', 'secret' => true])->isSecret(), 'Marked by the server: a file with passwords.');
+env_assert(FileEntry::fromData(['name' => '.env', 'type' => 'file'])->isSecret() && !FileEntry::fromData(['name' => 'notes.txt', 'type' => 'file', 'secret' => false])->isSecret(),
+    'No mark: the panel\'s list.');
+env_assert(FileEntry::secret('.my.cnf') && FileEntry::secret('.pgpass') && FileEntry::secret('.netrc') && !FileEntry::secret('.env.template'), 'The list is the server\'s (1.62.2).');
+$listed = $newerFiles->folder($staff, $domain, 'conf');
+$marks = is_array($listed) ? array_map(static fn (FileEntry $one): array => [$one->name, $one->marked, $one->isSecret()], $listed['entries']) : [];
+env_assert($marks === [['.env', true, true], ['app.php', false, false]], 'The list carries the server\'s mark: '.json_encode($marks));
+
+// The trash: a removed .env is marked, and put back only by a person with the right, never elsewhere.
+$newerController->run($asking($admin, $site.'/files/run', 'POST', ['op' => 'remove', 'args' => ['domain' => $domain, 'path' => 'conf/.env']]), $domain);
+$trashed = $newerFiles->trash($admin, $domain);
+$secretEntry = is_array($trashed) ? $trashed['entries'][0] : null;
+env_assert($secretEntry !== null && $secretEntry->secret && $secretEntry->name === '.env', 'The trash marks the .env.');
+$trashRows = SiteFilesPage::trash($domain, $trashed['entries'], true, true, $text, 'tok', null, false)->rows;
+env_assert($trashRows[0]['mark']['label'] === $lines['files']['secret'] && $trashRows[0]['_actions'] === ['purge'], 'Without the right: marked, not offered back.');
+$adminTrash = SiteFilesPage::trash($domain, $trashed['entries'], true, true, $text, 'tok')->rows;
+env_assert(in_array('restore', $adminTrash[0]['_actions'], true), 'With the right: offered back.');
+$restoreRefused = $newerController->run($asking($staff, $site.'/files/run', 'POST', ['op' => 'trash-restore', 'args' => ['domain' => $domain, 'id' => $secretEntry->id, 'to' => 'public/readme.txt']]), $domain);
+env_assert($notice($restoreRefused) === $refusedLine && !file_exists($root.'/sites/'.$domain.'/public/readme.txt'), 'A restore elsewhere by such a person is refused.');
+$restoredByAdmin = $newerController->run($asking($admin, $site.'/files/run', 'POST', ['op' => 'trash-restore', 'args' => ['domain' => $domain, 'id' => $secretEntry->id, 'to' => 'public/readme.txt']]), $domain);
+$restoreSent = $last(array_values(array_filter($newer->sent, static fn (array $one): bool => $one[0] === 'file:trash-restore')));
+env_assert(!isset($restoreSent[1]['to']) && file_exists($root.'/sites/'.$domain.'/conf/.env') && !file_exists($root.'/sites/'.$domain.'/public/readme.txt'),
+    'Even the server level puts it back only where it was: the panel never sends `to`.');
+
+// The site card (FASTPANEL look §5.3): the site's size with when it was measured, and its «История» at the bottom: the
+// five latest runs of this site, filled a moment after the card (one job:list), with «Вся история» narrowed to the site.
+$jobsListed = new class ($fake) implements PanelGateway, PanelFileGateway {
+    public int $lists = 0;
+
+    public function __construct(private readonly PanelGateway&PanelFileGateway $inner)
+    {
+    }
+
+    public function source(): string
+    {
+        return $this->inner->source();
+    }
+
+    public function ask(PanelRequest $request): PanelAnswer
+    {
+        if ($request->command !== 'job:list') {
+            return $this->inner->ask($request);
+        }
+        $this->lists++;
+        $job = static fn (int $n, string $command, array $args, string $state, string $kind = 'person'): array => ['job_id' => sprintf('%024x', $n), 'state' => $state,
+            'command' => $command, 'args' => $args, 'created_at' => sprintf('2026-11-18T%02d:00:00Z', 23 - $n), 'started_at' => sprintf('2026-11-18T%02d:00:00Z', 23 - $n),
+            'actor' => ['user' => 'admin@stand.test', 'kind' => $kind], 'exit_code' => $state === 'failed' ? 1 : 0];
+        $jobs = [$job(1, 'backup:data', ['domain' => 'demo-owned.test'], 'succeeded', 'schedule'), $job(2, 'site:set-php', ['domain' => 'other.test', 'php' => '8.3'], 'succeeded'),
+            $job(3, 'ssl:letsencrypt', ['domain' => 'demo-owned.test'], 'failed'), $job(4, 'site:cache-clear', ['domain' => 'demo-owned.test'], 'succeeded'),
+            $job(5, 'self:update', ['target' => 'env'], 'succeeded', 'server'), $job(6, 'backup:data', ['domain' => 'demo-owned.test'], 'succeeded'),
+            $job(7, 'site:suspend', ['domain' => 'demo-owned.test'], 'succeeded'), $job(8, 'site:resume', ['domain' => 'demo-owned.test'], 'succeeded')];
+
+        return PanelAnswer::fromDocument($request->requestId, ['status' => 'ok', 'kind' => 'result', 'data' => ['schema' => 'simai-job-list/1', 'jobs' => $jobs, 'more' => false]]);
+    }
+
+    public function download(PanelRequest $request, string $into): PanelDownload
+    {
+        return $this->inner->download($request, $into);
+    }
+};
+$historyCard = new SiteAdminController(new SiteDetailsReader($jobsListed), new ServerOverviewReader($jobsListed), new SiteExtrasReader($jobsListed),
+    new PanelOperations($jobsListed), $factory, $translator, files: new SiteFiles($jobsListed));
+$cardFirst = $historyCard->show($asking($admin, $site), $domain);
+$firstData = $cardFirst->getData();
+env_assert(($firstData['siteHistory']['pending'] ?? null) === (class_exists(\Larena\Admin\Runtime\AdminLiveRegion::class)) && $jobsListed->lists === (class_exists(\Larena\Admin\Runtime\AdminLiveRegion::class) ? 0 : 1),
+    'The card is drawn without the server\'s list; the part fills itself.');
+$firstPage = (string) $cardFirst->render();
+env_assert(str_contains($firstPage, 'data-env-disk-measured') && str_contains($firstPage, 'title="'.e(\Larena\Env\Server\Moment::human('2026-01-01T00:00:00Z')).'"'),
+    'The size says when it was measured, the exact time in the tooltip.');
+env_assert(str_contains($firstPage, 'data-env-site-history') && str_contains($firstPage, 'href="/admin/history?object=demo-owned.test"'), '«Вся история» is «История» narrowed to the site.');
+$filledRequest = $asking($admin, $site);
+$filledRequest->headers->set('X-Larena-Fragment', 'live:'.SiteAdminController::HISTORY_PART);
+$filled = $historyCard->show($filledRequest, $domain)->getData()['siteHistory'];
+$titles = array_column($filled['rows'], 'state');
+env_assert(!$filled['pending'] && count($filled['rows']) === SiteAdminController::HISTORY_ROWS && $titles === ['succeeded', 'failed', 'succeeded', 'succeeded', 'succeeded'],
+    'Asked as the part: this site\'s five latest runs, the others\' left out: '.json_encode($filled['rows'], JSON_UNESCAPED_UNICODE));
+env_assert($filled['rows'][0]['who'] === $lines['runs']['by_schedule'] && $filled['rows'][1]['status'] === 'error' && str_contains($filled['rows'][0]['href'], sprintf('%024x', 1)),
+    'Who started it, how it ended, its own page.');
+$filledPage = (string) $factory->make('larena-env::admin.site', $historyCard->show($filledRequest, $domain)->getData())->render();
+env_assert(substr_count($filledPage, 'data-env-site-history-row=') === 5 && !str_contains($filledPage, 'data-env-site-history-pending'), 'The part shows the five runs.');
 
 echo "SecretFilesTest passed.\n";

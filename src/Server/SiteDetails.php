@@ -54,6 +54,8 @@ final readonly class SiteDetails
         public bool $suspended = false,
         // The folder visitors see, inside the site's directory (`public`; a link to the current release where releases are).
         public string $publicDir = 'public',
+        // When the server last measured the directory (simai-env `disk.checked_at`, at most hourly by self status-refresh).
+        public ?string $diskCheckedAt = null,
     ) {
     }
 
@@ -109,6 +111,7 @@ final readonly class SiteDetails
             answers: is_array($data['answers'] ?? null) && is_int($data['answers']['http'] ?? null) ? $data['answers']['http'] : null,
             answersChecked: is_array($data['answers'] ?? null),
             diskBytes: is_array($data['disk'] ?? null) && is_int($data['disk']['bytes'] ?? null) ? $data['disk']['bytes'] : null,
+            diskCheckedAt: is_array($data['disk'] ?? null) && is_string($data['disk']['checked_at'] ?? null) && $data['disk']['checked_at'] !== '' ? $data['disk']['checked_at'] : null,
             lastVerify: is_array($data['last_verify'] ?? null) ? BackupCheck::fromData($data['last_verify'])
                 : (is_array($backups['last_verify'] ?? null) ? BackupCheck::fromData($backups['last_verify']) : null),
             webServer: in_array($data['web_server'] ?? null, ['nginx', 'apache'], true) ? $data['web_server'] : null,

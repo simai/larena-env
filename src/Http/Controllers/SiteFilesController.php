@@ -50,6 +50,8 @@ final readonly class SiteFilesController
     public const int PREVIEW_MAX_BYTES = 5_242_880;
     /** The formats file:archive makes, by the name it is given. */
     public const array ARCHIVE_FORMATS = ['zip', 'tar.gz'];
+    /** Why packing or unpacking is refused to a person without the right on a server that cannot leave such files out. */
+    public const string SECRETS_KEPT = 'secret_files_server_old';
     /** The nginx directives', the system level's only (simai-env 1.41.0); removing them is saving none. */
     public const array OVERLAY_OPERATIONS = ['nginx-save' => 'site:nginx-custom', 'nginx-clear' => 'site:nginx-custom'];
 
@@ -87,6 +89,11 @@ final readonly class SiteFilesController
         if ($this->secretRefused($actor, $args)) {
             return $this->back($request, $domain, $tab, SecretFileAccess::REFUSED, $args['path'] ?? null);
         }
+        $guarded = $this->withoutSecrets($actor, $op, $domain, $args);
+        if (is_string($guarded)) {
+            return $this->back($request, $domain, $tab, $guarded, $args['path'] ?? null);
+        }
+        $args = $guarded;
         $staged = null;
         if (PanelCommands::attachmentLimit($command) !== null) {
             $staged = $this->stage($request, $domain, $command, $op);
@@ -202,6 +209,12 @@ final readonly class SiteFilesController
         if ($this->secretRefused($actor, $args)) {
             return $this->back($request, $domain, $tab, SecretFileAccess::REFUSED, $args['path'] ?? null);
         }
+        // Packing, unpacking and a trash restore are guarded again here, whatever the form sent.
+        $guarded = $this->withoutSecrets($actor, $op, $domain, $args);
+        if (is_string($guarded)) {
+            return $this->back($request, $domain, $tab, $guarded, $args['path'] ?? null);
+        }
+        $args = $guarded;
         if ($op === 'upload') {
             return $this->runUpload($request, $actor, $domain, (string) $request->input('staged'));
         }
@@ -623,6 +636,45 @@ final readonly class SiteFilesController
     private function secretRefused(PanelActor $actor, array $args): bool
     {
         return self::secretOf($args) !== null && !$this->secretAllowed($actor);
+    }
+
+    /**
+     * The files with passwords inside a folder or an archive (q-4997ae4e93, simai-env 1.62.2): a person without the right
+     * packs and unpacks with `without-secrets yes`, so such files are left out of an archive and are neither made nor
+     * overwritten from one; the job's page names what was left out. The panel adds it on every plan and run, never the form;
+     * a server that cannot leave them out (before 1.62.2) refuses packing and unpacking to such a person. A trash entry is
+     * put back only where it was (the panel never sends `to`: elsewhere a .env would come back under a name anyone reads),
+     * and one with passwords only by a person with the right.
+     *
+     * @param array<string, string> $args
+     * @return array<string, string>|string the arguments to send, or why it is refused
+     */
+    private function withoutSecrets(PanelActor $actor, string $op, string $domain, array $args): array|string
+    {
+        if ($op === 'trash-restore') {
+            unset($args['to']);
+            if (!$this->secretAllowed($actor)) {
+                $trash = $this->files->trash($actor, $domain);
+                foreach (is_array($trash) ? $trash['entries'] : [] as $entry) {
+                    if ($entry->id === ($args['id'] ?? null) && $entry->secret) {
+                        return SecretFileAccess::REFUSED;
+                    }
+                }
+            }
+
+            return $args;
+        }
+        if ($op !== 'archive' && $op !== 'extract') {
+            return $args;
+        }
+        if ($this->secretAllowed($actor)) {
+            unset($args['without-secrets']);
+
+            return $args;
+        }
+        $command = self::FILE_OPERATIONS[$op];
+
+        return $this->capabilities($actor)->takes($command, 'without-secrets') ? ['without-secrets' => 'yes'] + $args : self::SECRETS_KEPT;
     }
 
     /** @param array<string, string> $args */
