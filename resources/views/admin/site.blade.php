@@ -26,7 +26,8 @@
         </span>
     @endsection
     @section('actions')
-        <a class="larena-button" href="{{ $site->certificate !== null ? 'https' : 'http' }}://{{ $domain }}/" target="_blank" rel="noopener noreferrer" data-env-site-open>{{ __('larena-env::admin.site.open') }}</a>
+        {{-- One line beside a long heading too («demo.test · PHP и веб-сервер» squeezed it onto two at 1440, audit 2026-11-18). --}}
+        <a class="larena-button" style="white-space: nowrap;" href="{{ $site->certificate !== null ? 'https' : 'http' }}://{{ $domain }}/" target="_blank" rel="noopener noreferrer" data-env-site-open>{{ __('larena-env::admin.site.open') }}</a>
     @endsection
 @endif
 
@@ -133,16 +134,17 @@
             @endif
             <section class="larena-panel larena-panel-padded" data-env-doctor="{{ $doctor?->status ?? 'unknown' }}" aria-labelledby="env-site-doctor">
                 <h2 id="env-site-doctor" class="text-2">{{ __('larena-env::admin.doctor.title') }}</h2>
-                @if ($doctor === null)
+                {{-- The site's own answer is the check's first row when it fails: the head and the check say one thing. --}}
+                @if ($doctor === null && ($checkProblems ?? \Larena\Env\Admin\SiteChecks::problems($doctor, $checkFixes ?? false, $site)) === [])
                     <p>{{ __('larena-env::admin.doctor.none') }}</p>
-                @elseif ($doctor->problems === [])
+                @elseif (($checkProblems ?? \Larena\Env\Admin\SiteChecks::problems($doctor, $checkFixes ?? false, $site)) === [])
                     <p>{{ __('larena-env::admin.doctor.clean', ['count' => (string) $doctor->passed]) }}</p>
                 @else
-                    <p>{{ __('larena-env::admin.doctor.summary', ['count' => (string) count($doctor->problems), 'passed' => (string) $doctor->passed]) }}</p>
+                    <p>{{ __('larena-env::admin.doctor.summary', ['count' => (string) count($checkProblems ?? \Larena\Env\Admin\SiteChecks::problems($doctor, $checkFixes ?? false, $site)), 'passed' => (string) ($doctor->passed ?? 0)]) }}</p>
                     <ul class="m-0 p-0" style="list-style: none;">
                         {{-- A rule of the site's profile (simai-env 1.55.1) says what the server found and since when, and where
                              the server offers a fix, «Исправить…» opens its plan; other checks are one line as before. --}}
-                        @foreach (\Larena\Env\Admin\SiteChecks::problems($doctor, $checkFixes ?? false) as $problem)
+                        @foreach (($checkProblems ?? \Larena\Env\Admin\SiteChecks::problems($doctor, $checkFixes ?? false, $site)) as $problem)
                             <li class="flex flex-wrap items-cross-center g-1 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-problem="{{ $problem['status'] }}"@if ($problem['key'] !== null) data-env-rule="{{ $problem['key'] }}"@endif>
                                 <sf-badge appearance="tonal" status="{{ $problem['tone'] }}" text="{{ __($problem['label']) }}"></sf-badge>
                                 <span class="grow min-w-0" style="overflow-wrap: anywhere;" data-env-check="{{ $problem['title'] }}">{{ $problem['text'] }}@if ($problem['detail'] !== null || $problem['since'] !== null)<span class="text-small color-on-surface-variant" style="display: block;" data-env-check-detail>{{ $problem['detail'] }}{{ $problem['detail'] !== null && $problem['since'] !== null ? ' · ' : '' }}{{ $problem['since'] !== null ? __('larena-env::admin.doctor.since', ['time' => $problem['since']]) : '' }}</span>@endif</span>
@@ -736,7 +738,7 @@
                         @foreach ($siteHistory['rows'] as $row)
                             <li class="flex flex-wrap items-cross-center g-1 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-site-history-row="{{ $row['state'] }}">
                                 <sf-badge status="{{ $row['status'] }}" appearance="tonal" text="{{ $row['words'] }}"></sf-badge>
-                                <a href="{{ $row['href'] }}" class="grow min-w-0" style="overflow-wrap: anywhere;">{{ $row['title'] }}</a>
+                                <a href="{{ $row['href'] }}" class="grow min-w-0" style="overflow-wrap: anywhere;">{{ $row['title'] }}@if (($row['times'] ?? 1) > 1) <span class="color-on-surface-variant" data-env-site-history-times="{{ $row['times'] }}" title="{{ __('larena-env::admin.site.history.times', ['count' => (string) $row['times']]) }}">×{{ $row['times'] }}</span>@endif</a>
                                 @if ($row['ago'] !== null)
                                     <span class="text-small color-on-surface-variant" title="{{ $row['time'] }}">{{ $row['ago'] }}{{ $row['who'] !== '' ? ' · '.$row['who'] : '' }}</span>
                                 @endif

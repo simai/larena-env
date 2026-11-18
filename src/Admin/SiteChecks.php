@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Larena\Env\Admin;
 
 use Larena\Env\Server\Moment;
+use Larena\Env\Server\SiteDetails;
 use Larena\Env\Server\SiteDoctor;
 
 /**
@@ -23,9 +24,39 @@ final class SiteChecks
      *
      * @return list<array{status: string, tone: string, label: string, title: string, text: string, area: string, key: ?string, detail: ?string, since: ?string, fix: ?string}>
      */
-    public static function problems(?SiteDoctor $doctor, bool $fixes = false): array
+    public static function problems(?SiteDoctor $doctor, bool $fixes = false, ?SiteDetails $site = null): array
     {
-        return array_map(static fn (array $check): array => self::row($check, $fixes), $doctor->problems ?? []);
+        return [...($site === null ? [] : self::answer($site)), ...array_map(static fn (array $check): array => self::row($check, $fixes), $doctor->problems ?? [])];
+    }
+
+    /**
+     * How the site answers its address, as the first row of the check when it fails: the server's check of a site looks
+     * at its settings, not at its answer, so a site with a server error passed every check while the card's head said
+     * «Ошибка сервера» (panel audit 2026-11-18). Both now say the one answer the server measured (site:describe
+     * `answers`); a paused site answers 503 on purpose and is no problem of the check.
+     *
+     * @return list<array{status: string, tone: string, label: string, title: string, text: string, area: string, key: ?string, detail: ?string, since: ?string, fix: ?string}>
+     */
+    public static function answer(SiteDetails $site): array
+    {
+        $state = SiteState::of($site->answersChecked, $site->answers, $site->suspended);
+        if (!in_array($state, ['error', 'down'], true)) {
+            return [];
+        }
+        $word = static fn (string $key, array $replace = []): string => function_exists('__') ? (string) __('larena-env::admin.'.$key, $replace) : $key;
+
+        return [[
+            'status' => 'FAIL',
+            'tone' => 'error',
+            'label' => 'larena-env::admin.doctor.fail',
+            'title' => 'answers',
+            'text' => $word('doctor.answers.'.$state),
+            'area' => $word('doctor.areas.http'),
+            'key' => 'answers',
+            'detail' => $site->answers === null ? null : $word('sites.answers_code', ['code' => (string) $site->answers]),
+            'since' => null,
+            'fix' => null,
+        ]];
     }
 
     /** @return list<array{status: string, tone: string, label: string, title: string, text: string, area: string, key: ?string, detail: ?string, since: ?string, fix: ?string}> */

@@ -278,6 +278,8 @@ env_assert(SiteOperation::CertificateRemove->tab() === 'domains' && SiteOperatio
     && SiteOperation::inRow([SiteOperation::CertificateRemove, SiteOperation::CacheClear]) === [SiteOperation::CacheClear]
     && SiteOperation::CertificateRemove->arguments('demo-php.test', []) === ['domain' => 'demo-php.test', 'delete-cert' => 'yes'],
     'The certificate is removed from its own block, asked as what cannot be undone, deleted with it.');
+env_assert(SiteOperation::inRow([SiteOperation::SiteRemove, SiteOperation::SitePause, SiteOperation::CacheClear]) === [SiteOperation::SitePause, SiteOperation::CacheClear, SiteOperation::SiteRemove],
+    'The card\'s actions start with an ordinary one; removing the site comes last (panel audit 2026-11-18).');
 env_assert(in_array(SiteOperation::PhpRestore, $offered, true) && !SiteOperation::PhpRestore->suitsSite($describe(['profile' => 'wordpress']))
     && SiteOperation::PhpRestore->arguments('demo-php.test', ['files' => 'site.tar.gz', 'dump' => '', 'overwrite' => 'no']) === ['domain' => 'demo-php.test', 'files' => 'site.tar.gz', 'overwrite' => 'no'],
     'A plain PHP site is restored from its archive; no dump is sent when none is chosen: '.json_encode(SiteOperation::PhpRestore->arguments('demo-php.test', ['files' => 'site.tar.gz', 'dump' => '', 'overwrite' => 'no'])));
@@ -322,8 +324,12 @@ env_assert($summary->suspended && array_filter($siteWarnings, static fn ($warnin
 $overview = $overviews->read($admin)->overview;
 $sitesPage = \Larena\Env\Admin\ServerSitesPage::of($overview, $text, new DateTimeImmutable('2026-11-18T10:05:00Z'), [], true);
 $row = array_column($sitesPage->rows, null, 'id')['paused.test'] ?? null;
-env_assert($row !== null && $row['state']['value'] !== 'error' && ($row['answers']['text'] ?? null) === $text('sites.state.paused'),
-    'The list says «На паузе»: '.json_encode($row));
+env_assert($row !== null && $row['state']['value'] === 'warning' && $row['state']['label'] !== $text('sites.state.paused') && ($row['answers']['text'] ?? null) === $text('sites.state.paused'),
+    'The list says «На паузе» as a mark while the dot says a worse thing (no backups): '.json_encode($row));
+$quiet = new \Larena\Env\Server\SiteSummary('quiet.test', 'generic', '8.3', 'none', null, null, null, 60, true, answers: 503, answersChecked: true, lastBackup: '2026-11-18T09:00:00Z', suspended: true);
+$quietRow = \Larena\Env\Admin\ServerSitesPage::of(new \Larena\Env\Server\ServerOverview(...[...get_object_vars($overview), 'sites' => [$quiet]]), $text, new DateTimeImmutable('2026-11-18T10:05:00Z'), [], true)->rows[0];
+env_assert($quietRow['state'] === ['value' => 'stopped', 'label' => $text('sites.state.paused')] && $quietRow['answers'] === '',
+    'Otherwise «На паузе» is said once, by the dot\'s word, not again as a mark (panel audit 2026-11-18): '.json_encode($quietRow));
 
 env_assert(\Larena\Env\Admin\SiteState::of(true, 503, true) === 'paused' && \Larena\Env\Admin\SiteState::status('paused') === 'warning' && \Larena\Env\Admin\SiteState::of(true, 503) === 'error',
     'The card and its menu say «На паузе», not «Ошибка сервера».');

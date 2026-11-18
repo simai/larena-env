@@ -310,7 +310,8 @@ enum SiteOperation: string
 
     /**
      * The tab's actions its row of buttons offers: not those the «База данных» block offers by its state (the browser,
-     * the database's own), nor an account's action without an account to name.
+     * the database's own), nor an account's action without an account to name. The actions that destroy come last, after
+     * the ordinary ones (panel audit 2026-11-18: «Удалить сайт» first and red was the first thing the eye met).
      *
      * @param list<self> $operations
      * @param array<string, list<mixed>> $accountChoices the accounts each account's action may name
@@ -319,9 +320,12 @@ enum SiteOperation: string
      */
     public static function inRow(array $operations, array $accountChoices = []): array
     {
-        return array_values(array_filter($operations, static fn (self $operation): bool => ($operation->namesSite() || ($accountChoices[$operation->value] ?? []) !== [])
+        $row = array_values(array_filter($operations, static fn (self $operation): bool => ($operation->namesSite() || ($accountChoices[$operation->value] ?? []) !== [])
             && !in_array($operation, self::PER_ACCESS, true) && !in_array($operation, self::BROWSER, true) && !in_array($operation, self::DATABASE, true) && !in_array($operation, self::CERTIFICATE, true)
             && !in_array($operation, self::RUNTIME, true)));
+
+        return [...array_values(array_filter($row, static fn (self $operation): bool => !$operation->destroys())),
+            ...array_values(array_filter($row, static fn (self $operation): bool => $operation->destroys()))];
     }
 
     /** The fix of a check's rule: the «Проверка» block offers it on the rule's own row, never among the tab's buttons. */

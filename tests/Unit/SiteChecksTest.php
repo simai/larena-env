@@ -410,4 +410,18 @@ foreach (['site.blade.php', 'plan.blade.php'] as $view) {
     env_assert(!str_contains($source, '{!!') && preg_match('/<style\b|<script\b|@php\b/i', $source) !== 1, "{$view} prints nothing raw and holds no script.");
 }
 
+// The site's answer and its check say one thing (panel audit 2026-11-18): a server error is the check's first problem,
+// a paused site's 503 and a working one are none.
+$answering = static fn (?int $code, bool $suspended = false): \Larena\Env\Server\SiteDetails => new \Larena\Env\Server\SiteDetails('s.test', 'static', 'none', 'none', null, null, null, null, [], null, null, null, null, [], false,
+    answers: $code, answersChecked: true, suspended: $suspended);
+$clean = new \Larena\Env\Server\SiteDoctor('PASS', [], 12);
+$failing = \Larena\Env\Admin\SiteChecks::problems($clean, false, $answering(502));
+env_assert(count($failing) === 1 && $failing[0]['key'] === 'answers' && $failing[0]['tone'] === 'error' && $failing[0]['detail'] === 'HTTP 502' && $failing[0]['fix'] === null,
+    'A server error is the check\'s problem: '.json_encode($failing, JSON_UNESCAPED_UNICODE));
+env_assert(\Larena\Env\Admin\SiteChecks::problems($clean, false, $answering(200)) === [] && \Larena\Env\Admin\SiteChecks::problems($clean, false, $answering(503, true)) === []
+    && \Larena\Env\Admin\SiteChecks::problems($clean, false, $answering(404)) === [], 'A working, a paused and a site answering 404 pass.');
+env_assert(\Larena\Env\Admin\SiteChecks::problems(null, false, $answering(null))[0]['text'] !== \Larena\Env\Admin\SiteChecks::problems(null, false, $answering(500))[0]['text'],
+    'No answer at all and a server error are said apart.');
+env_assert(is_string($russian['doctor']['answers']['error'] ?? null) && is_string($lines['doctor']['areas']['http'] ?? null), 'Their words in both languages.');
+
 echo "SiteChecksTest passed.\n";

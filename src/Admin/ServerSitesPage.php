@@ -135,8 +135,9 @@ final class ServerSitesPage
             'profile' => $site->profile,
             // «WordPress · PHP 8.3»; a plain PHP site is «PHP · 8.3», not «PHP · PHP 8.3».
             'php' => preg_match('/^\d+(\.\d+)*$/', $site->php) === 1 ? ($site->profile === 'generic' ? $site->php : $text('sites.list.php', ['version' => $site->php])) : '',
-            // Said only when the site does not answer: «Работает» in every row said nothing (PX-54).
-            'answers' => $site->suspended ? ['label' => $text('sites.state.paused'), 'text' => $text('sites.state.paused'), 'status' => 'warning']
+            // Said only when the site does not answer: «Работает» in every row said nothing (PX-54). A paused site is said
+            // once: by its dot's word under its name, or as a mark when the dot says a worse thing (panel audit 2026-11-18).
+            'answers' => $site->suspended ? ($word === $text('sites.state.paused') ? '' : ['label' => $text('sites.state.paused'), 'text' => $text('sites.state.paused'), 'status' => 'warning'])
                 : ($answers === 'down' || $answers === 'error' ? ['label' => $text('sites.state.'.$answers), 'text' => $text('sites.state.'.$answers), 'status' => 'error'] : ''),
             'backups' => $backups,
             'certificate' => $certificate,

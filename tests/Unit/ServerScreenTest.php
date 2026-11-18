@@ -94,6 +94,11 @@ env_assert($byDomain['demo-php.test']['_links']['visit'] === 'http://demo-php.te
 env_assert($byDomain['demo-owned.test']['backups']['text'] === $text('sites.list.backup_none') && $byDomain['demo-owned.test']['backups']['status'] === 'warning', 'No backup yet is a warning.');
 env_assert($byDomain['demo-owned.test']['state'] === ['value' => 'warning', 'label' => $text('sites.list.backup_none')], 'The dot says the first thing to deal with: '.json_encode($byDomain['demo-owned.test']['state'], JSON_UNESCAPED_UNICODE));
 env_assert($byDomain['demo-redirect.test']['backups']['text'] === $text('sites.list.backup_not_needed') && $byDomain['demo-redirect.test']['_actions'] === ['view', 'visit', 'backups', 'domains', 'log'], 'A redirect needs no backup and offers none.');
+// «Копии не нужны» and «Копий ещё нет» are told apart (PX-103): the same words said opposite things.
+foreach (['en', 'ru'] as $language) {
+    $listWords = (require dirname(__DIR__, 2).'/resources/lang/'.$language.'/admin.php')['sites']['list'];
+    env_assert($listWords['backup_none'] !== $listWords['backup_not_needed'], "No backup yet and no backup needed read differently ({$language}).");
+}
 env_assert($byDomain['demo-php.test']['backups']['status'] === 'warning' && str_starts_with($byDomain['demo-php.test']['backups']['tip'], $text('sites.list.backup_tip', ['time' => ''])), 'An old backup is a warning, its exact time in the tooltip.');
 // A failure the server's alerts tell is said first, in red, its time in the tooltip.
 $failedPage = ServerSitesPage::of($overview, $text, null, \Larena\Env\Admin\SiteBackupSummary::failures(\Larena\Env\Alerts\ServerAlerts::fromData(

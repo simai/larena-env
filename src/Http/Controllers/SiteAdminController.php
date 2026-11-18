@@ -300,6 +300,8 @@ final readonly class SiteAdminController
             // The fix of a profile's rule that does not pass (simai-env 1.55.1), offered on the rule's own row of «Проверка»
             // only where the server lists site:check-fix; an older server shows the block as before.
             'checkFixes' => $capabilities->allows(SiteOperation::CheckFix->command()),
+            // The check's rows with the site's own answer first when it fails: the card's head and its check say one thing.
+            'checkProblems' => $site === null || $tab !== 'overview' ? [] : \Larena\Env\Admin\SiteChecks::problems($doctor, $capabilities->allows(SiteOperation::CheckFix->command()), $site),
             // The site's names (simai-env 1.53.0): the block is there only where the server lists site:names, so an older
             // server shows the tab as before, without a refusal; adding and removing go through the plan as every action.
             'siteNames' => $siteNames,
@@ -376,7 +378,7 @@ final readonly class SiteAdminController
      * last 100 runs are read and this site's kept): what, how it ended, how long ago and who, each opening its own page;
      * «Вся история» is the admin's «История» narrowed to the site (its object is the domain, EnvHistorySource).
      *
-     * @return array{rows: list<array{title: string, state: string, status: string, words: string, ago: ?string, time: string, who: string, href: string}>, all: string}
+     * @return array{rows: list<array{title: string, state: string, status: string, words: string, ago: ?string, time: string, who: string, href: string, times: int}>, all: string}
      */
     private function siteHistory(PanelActor $actor, string $domain): array
     {
@@ -389,7 +391,7 @@ final readonly class SiteAdminController
                 continue;
             }
             $at = $status->startedAt ?? $status->createdAt;
-            $rows[] = [
+            $row = [
                 'title' => \Larena\Env\Admin\EnvHistorySource::title($status, $this->translator),
                 'state' => $status->state->value,
                 'status' => match ($status->state) {
@@ -408,12 +410,37 @@ final readonly class SiteAdminController
                 },
                 'href' => route('larena.env.admin.job', ['job' => $status->jobId], false),
             ];
-            if (count($rows) === self::HISTORY_ROWS) {
+            $rows = self::addRun($rows, $row);
+            if (count($rows) > self::HISTORY_ROWS) {
+                array_pop($rows);
                 break;
             }
         }
 
         return ['rows' => $rows, 'all' => '/admin/history?object='.rawurlencode($domain)];
+    }
+
+    /**
+     * A run added to the card's history, newest first: one the same as the row above it (the same action, ended the same,
+     * by the same hand) is not a row of its own but one more «×N» of that row, which keeps the newest's time and page
+     * (panel audit 2026-11-18: three «Очистка корзины» in 9 hours were three equal rows).
+     *
+     * @param list<array<string, mixed>> $rows
+     * @param array<string, mixed> $row
+     *
+     * @return list<array<string, mixed>>
+     */
+    public static function addRun(array $rows, array $row): array
+    {
+        $last = $rows === [] ? null : $rows[count($rows) - 1];
+        if ($last !== null && $last['title'] === $row['title'] && $last['state'] === $row['state'] && $last['who'] === $row['who']) {
+            $rows[count($rows) - 1]['times'] = ($last['times'] ?? 1) + 1;
+
+            return $rows;
+        }
+        $rows[] = $row + ['times' => 1];
+
+        return $rows;
     }
 
     /**
