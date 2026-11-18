@@ -10,7 +10,7 @@
         <div class="m-bottom-1">@include('larena-env::admin.partials.explanation', ['text' => __('larena-env::admin.files.explain')])</div>
         {{-- Where a removal goes, said before anything is removed: the site's trash and its term, or that it is final. --}}
         <p class="m-0 m-bottom-1 text-small color-on-surface-variant" data-env-files-term="{{ $files['trashKept'] ? 'trash' : 'final' }}">{{ $files['trashKept']
-            ? __('larena-env::admin.files.explain_trash', ['days' => (string) ($files['trash']['days'] ?? 30)]) : __('larena-env::admin.files.explain_final') }}</p>
+            ? __('larena-env::admin.files.explain_trash', ['days' => (string) ($files['trash']['days'] ?? 7)]) : __('larena-env::admin.files.explain_final') }}</p>
         <nav aria-label="{{ __('larena-env::admin.files.path') }}" data-env-files-crumbs class="flex flex-wrap g-1" style="overflow-wrap: anywhere;">
             <a href="{{ $files['base'] }}&amp;path=.">{{ $domain }}</a>
             @foreach ($files['crumbs'] as $crumb)
@@ -58,7 +58,10 @@
                 </figure>
             @elseif ($files['text'] !== null)
                 {{-- The text as it was read: saved with its sha256, so a change made meanwhile is refused, never lost. --}}
-                @if (!$files['text']['savable'])
+                @if ($files['text']['truncated'] ?? false)
+                    {{-- simai-env 1.61.0 file:preview: the first 1 MiB of a larger text, shown and never saved over the whole. --}}
+                    <p data-env-files-truncated role="note">{{ __('larena-env::admin.files.truncated_text') }}</p>
+                @elseif (!$files['text']['savable'])
                     <p data-env-files-too-long role="note">{{ __('larena-env::admin.files.too_long_to_save') }}</p>
                 @endif
                 <form method="post" action="{{ route('larena.env.admin.site.files.plan', ['domain' => $domain], false) }}" class="larena-form" data-env-files-editor>

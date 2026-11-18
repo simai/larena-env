@@ -18,6 +18,8 @@ return [
             // Both levels: the sites a person reaches, the first screen. «История» (the server's runs and the action
             // journal, larena/admin) is the menu's last root of its own, by «Уведомления» (owner decision dec-d9f352569fd1).
             'sites' => ['label' => 'larena-env::admin.menu.sites', 'icon' => 'dns', 'level' => 'site', 'kind' => 'row', 'row' => 'env.server'],
+            // Both levels: the sites' databases (simai-env 1.59.0 db:list), each opening its site's «База данных».
+            'databases' => ['label' => 'larena-env::admin.menu.databases', 'icon' => 'database', 'level' => 'site', 'kind' => 'row', 'row' => 'env.databases'],
             // The system level: people, the server, the panel's own settings.
             'users' => ['label' => 'larena-env::admin.menu.users', 'icon' => 'group', 'level' => 'install', 'kind' => 'root'],
             'server' => ['label' => 'larena-env::admin.menu.server', 'icon' => 'memory', 'level' => 'install', 'kind' => 'root'],

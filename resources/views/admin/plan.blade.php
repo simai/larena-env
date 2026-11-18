@@ -14,7 +14,15 @@
          goes, the ticks that change the plan, one «Подробнее» for the server's own terms, one filled answer and a quiet
          «Отмена» beside it. The same part opens in the side panel over the site (X-Larena-Fragment: action); this address
          stays for links from the journal and the notifications. --}}
+    @if (isset($refused))
+        {{-- An action the server will not plan (simai-env 1.60.0 checks, 1.61.0 named refusals): the same window, what stops
+             it in words above the button, which stays off, and the way out where there is one. --}}
+        <section class="larena-panel larena-panel-padded" data-env-plan-refused="{{ $refusedReason }}" aria-label="{{ $heading }}">
+            {{ \Larena\Env\Admin\PlanAction::refused($heading, $refused, $refusedNotes, $runUrl, csrf_token(), $cancelUrl, $refusedKey, $refusedMore) }}
+        </section>
+    @else
     <section class="larena-panel larena-panel-padded" data-env-plan="{{ $plan->command }}" data-env-confirm="{{ $plan->command }}" aria-label="{{ $heading }}">
         {{ \Larena\Env\Admin\PlanAction::part(get_defined_vars(), csrf_token(), $__env->make('larena-env::admin.partials.plan-more', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render()) }}
     </section>
+    @endif
 @endsection

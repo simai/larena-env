@@ -148,6 +148,21 @@ $notes = $files->text($admin, 'demo-php.test', 'notes.txt');
 env_assert(is_array($notes) && $notes['content'] === "Notes of demo-php.test\n" && $notes['sha256'] === hash('sha256', "Notes of demo-php.test\n") && $notes['savable'], 'A text file is read with its sha256.');
 file_put_contents($root.'/sites/demo-php.test/logo.png', "\x89PNG\0\0");
 env_assert($files->text($admin, 'demo-php.test', 'logo.png') === 'not_text', 'Not text: refused, downloaded instead.');
+// «Посмотреть» (simai-env 1.61.0 file:preview): a text's first bytes with whether they were cut, a picture whole, the rest
+// said in words; a text not cut is the file itself, its sha256 the one a save expects.
+$look = $files->preview($admin, 'demo-php.test', 'notes.txt');
+env_assert(is_array($look) && $look['kind'] === 'text' && !$look['truncated'] && $look['content'] === $notes['content'] && $look['sha256'] === $notes['sha256'] && $look['savable'],
+    'A text looked at whole: the same text and sha256, so it can be saved.');
+$cut = $files->preview($admin, 'demo-php.test', 'notes.txt', 5);
+env_assert(is_array($cut) && $cut['truncated'] && $cut['content'] === 'Notes' && !$cut['savable'], 'A text longer than asked: its start, never saved over the whole.');
+env_assert($files->preview($admin, 'demo-php.test', 'logo.png') === 'not_previewable', 'Neither picture nor text: not previewable.');
+file_put_contents($root.'/sites/demo-php.test/logo.png', "\x89PNG\r\n\x1a\n".str_repeat("\0", 40));
+$picture = $files->preview($admin, 'demo-php.test', 'logo.png');
+env_assert(is_array($picture) && $picture['kind'] === 'image' && $picture['mime'] === 'image/png' && str_starts_with($picture['content'], "\x89PNG"), 'A picture whole, its bytes decoded.');
+env_assert($files->preview($admin, 'demo-php.test', 'logo.png', 10) === 'too_large', 'A picture larger than asked: too large, said in words.');
+$english = require dirname(__DIR__, 2).'/resources/lang/en/admin.php';
+env_assert(is_string($english['files']['reasons']['not_previewable'] ?? null) && is_string($english['files']['truncated_text'] ?? null), 'Each said in words.');
+file_put_contents($root.'/sites/demo-php.test/logo.png', "\x89PNG\0\0");
 
 $operations = new PanelOperations($gateway);
 $save = ['domain' => 'demo-php.test', 'path' => 'notes.txt', 'content' => "<h1>new</h1>\n", 'expect-sha256' => $notes['sha256']];
@@ -167,8 +182,8 @@ $operations->startCommand($admin, 'file:remove', ['domain' => 'demo-php.test', '
 env_assert($files->folder($admin, 'demo-php.test', 'public-new') === 'not_found', 'Removed from its place, with what it held.');
 // The site's trash (simai-env 1.57.0, PX-95): what was removed stays, is put back, or is removed for good, each planned.
 $trash = $files->trash($admin, 'demo-php.test');
-env_assert(is_array($trash) && $trash['days'] === 30 && count($trash['entries']) === 1 && $trash['entries'][0]->path === 'public-new' && $trash['entries'][0]->type === 'dir'
-    && preg_match(\Larena\Env\Files\TrashEntry::ID, $trash['entries'][0]->id) === 1 && $trash['entries'][0]->expiresAt !== null, 'Removed into the trash, kept 30 days.');
+env_assert(is_array($trash) && $trash['days'] === 7 && count($trash['entries']) === 1 && $trash['entries'][0]->path === 'public-new' && $trash['entries'][0]->type === 'dir'
+    && preg_match(\Larena\Env\Files\TrashEntry::ID, $trash['entries'][0]->id) === 1 && $trash['entries'][0]->expiresAt !== null, 'Removed into the trash, kept 7 days (simai-env 1.61.0).');
 $trashId = $trash['entries'][0]->id;
 env_assert($operations->planCommand($admin, 'file:trash-restore', ['domain' => 'demo-php.test', 'id' => $trashId])->plan?->command === 'file:trash-restore', 'Putting back is planned first.');
 env_assert($operations->planCommand($admin, 'file:trash-restore', ['domain' => 'demo-php.test', 'id' => '20260101T000000Z-abcdef'])->plan === null, 'Nothing of that id: no plan.');

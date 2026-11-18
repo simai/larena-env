@@ -78,10 +78,12 @@ final readonly class ServerJobController
             'missing' => $result->status === null && $result->reason === self::UNKNOWN_JOB,
             'reasonText' => $result->reason === null ? null : $this->reasonText($result->reason),
             'notice' => $request->session()->get('larena_env_notice'),
+            // The server's own zone (simai-env 1.60.0): its times are said in it, how long ago in the tooltip.
+            'timezone' => $result->status === null ? null : $this->overviews?->read($actor)->overview?->timezone,
         ]);
-        // A page that shows a value given once (WordPress's administrator password, a database browser's address) is never kept by the browser or a proxy:
-        // the person sees it on this answer only.
-        if ($result->status?->secret !== null || $result->status?->browser !== null) {
+        // A page that shows a value given once (WordPress's administrator password, a database browser's address, a
+        // database's password) is never kept by the browser or a proxy: the person sees it on this answer only.
+        if ($result->status?->secret !== null || $result->status?->browser !== null || $result->status?->credentials !== null) {
             return new \Illuminate\Http\Response($view->render(), 200, ['Cache-Control' => 'no-store, private', 'Pragma' => 'no-cache']);
         }
 

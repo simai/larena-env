@@ -162,7 +162,7 @@ with web.open(request) as answer:
 items = menu.get("navigation", menu).get("items", [])
 roots = [item["key"] for item in items]
 print("menu roots:", roots)
-assert roots == ["sites", "users", "server", "settings", "admin.history"], roots
+assert roots == ["sites", "databases", "users", "server", "settings", "admin.history"], roots
 children = {item["key"]: [row["key"] for row in item.get("children", []) if row.get("kind") == "page"] for item in items}
 # The services came with simai-env 1.33.0, the firewall and who reaches the panel with 1.35.0.
 assert sorted(children["server"]) == ["env.dns", "env.firewall", "env.security", "env.server.overview", "env.services", "env.software", "env.software.php", "env.storages"], children

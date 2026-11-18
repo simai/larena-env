@@ -58,7 +58,9 @@ final readonly class PanelAnswer
                 return self::failed($requestId, PanelReason::ANSWER_INVALID);
             }
 
-            return new self($requestId, $status, reason: $reason, operationId: self::text($document['operation_id'] ?? null));
+            // What the refusal or the failure found stays with it (simai-env 1.60.0: a plan's checks, a refusal's detail).
+            return new self($requestId, $status, data: is_array($document['data'] ?? null) ? $document['data'] : [], reason: $reason,
+                operationId: self::text($document['operation_id'] ?? null));
         }
         $kind = $document['kind'] ?? null;
         $data = $document['data'] ?? [];

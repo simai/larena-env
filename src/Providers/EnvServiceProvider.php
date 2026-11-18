@@ -161,6 +161,7 @@ final class EnvServiceProvider extends ServiceProvider
                         $app->make(\Larena\Env\Operations\PanelOperations::class),
                         $app->make(\Illuminate\Contracts\Translation\Translator::class),
                         $app->bound(\Larena\Admin\Contracts\AdminIdentityLabelResolver::class) ? $app->make(\Larena\Admin\Contracts\AdminIdentityLabelResolver::class) : null,
+                        $app->bound('cache') ? $app->make('cache')->store() : null,
                     ));
                 });
             }

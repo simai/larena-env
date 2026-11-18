@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 namespace Larena\Env\Operations;
 
-/** What an action would do, or the reason code why the panel cannot say. Nothing has run either way. */
+/**
+ * What an action would do, or the reason code why the panel cannot say. Nothing has run either way. A plan the server
+ * refused or could not make says what stopped it (simai-env 1.60.0 `data.checks`) and, for a named refusal, its own
+ * words (`data.detail`, simai-env 1.61.0).
+ */
 final readonly class PlanResult
 {
     public function __construct(
@@ -12,6 +16,14 @@ final readonly class PlanResult
         public ?PanelPlan $plan,
         public ?string $reason = null,
         public bool $refused = false,
+        public ?PlanChecks $checks = null,
+        public ?string $detail = null,
     ) {
+    }
+
+    /** Whether the server said what stops the action: a named refusal with its words, or a plan check that failed. */
+    public function said(): bool
+    {
+        return $this->plan === null && (($this->checks !== null && $this->checks->blockers !== []) || $this->detail !== null);
     }
 }

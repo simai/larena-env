@@ -64,6 +64,8 @@ enum SiteOperation: string
     // A database browser for the site (simai-env 1.58.0): Adminer on its HTTPS address for a while, and closing it early.
     case DatabaseBrowse = 'database-browse';
     case DatabaseBrowseClose = 'database-browse-close';
+    // The site's database connection details (simai-env 1.59.0): the password handed out once, never kept by the panel.
+    case DatabaseCredentials = 'database-credentials';
 
     public function command(): string
     {
@@ -106,6 +108,7 @@ enum SiteOperation: string
             self::RedirectRemove => 'site:redirect-remove',
             self::DatabaseBrowse => 'site:db-browser',
             self::DatabaseBrowseClose => 'site:db-browser-close',
+            self::DatabaseCredentials => 'site:db-credentials',
         };
     }
 
@@ -115,7 +118,8 @@ enum SiteOperation: string
         return match ($this) {
             self::CertificateIssue, self::CertificateRenew, self::NameAdd, self::NameRemove, self::RedirectAdd, self::RedirectRemove => 'domains',
             self::PhpVersion, self::PhpSetting, self::PhpSettingRemove, self::ServiceRestart, self::QueueRestart, self::ApacheOn, self::ApacheOff => 'php',
-            self::DatabaseCreate, self::DatabasePassword, self::DatabaseExport, self::DatabaseDrop, self::DatabaseBrowse, self::DatabaseBrowseClose => 'database',
+            self::DatabaseCreate, self::DatabasePassword, self::DatabaseExport, self::DatabaseDrop, self::DatabaseBrowse, self::DatabaseBrowseClose,
+            self::DatabaseCredentials => 'database',
             self::Backup, self::BackupRestoreDatabase, self::BackupExtractFiles, self::BackupVerify, self::BackupSchedule => 'backups',
             self::Rollback => 'releases',
             self::SftpCreate, self::SftpAddKey, self::SftpDisable, self::SftpEnable, self::SftpRemove => 'access',
@@ -245,6 +249,27 @@ enum SiteOperation: string
      */
     public const array BROWSER = [self::DatabaseBrowse, self::DatabaseBrowseClose];
 
+    /**
+     * The actions of the «База данных» block itself (simai-env 1.59.0): «Данные для подключения», «Создать базу» for a
+     * site without one, «Сменить пароль»; the tab's row of buttons leaves them out with the browser's.
+     */
+    public const array DATABASE = [self::DatabaseCreate, self::DatabaseCredentials, self::DatabasePassword];
+
+    /**
+     * The tab's actions its row of buttons offers: not those the «База данных» block offers by its state (the browser,
+     * the database's own), nor an account's action without an account to name.
+     *
+     * @param list<self> $operations
+     * @param array<string, list<mixed>> $accountChoices the accounts each account's action may name
+     *
+     * @return list<self>
+     */
+    public static function inRow(array $operations, array $accountChoices = []): array
+    {
+        return array_values(array_filter($operations, static fn (self $operation): bool => ($operation->namesSite() || ($accountChoices[$operation->value] ?? []) !== [])
+            && !in_array($operation, self::BROWSER, true) && !in_array($operation, self::DATABASE, true)));
+    }
+
     /** The fix of a check's rule: the «Проверка» block offers it on the rule's own row, never among the tab's buttons. */
     public const array CHECKS = [self::CheckFix];
 
@@ -305,14 +330,15 @@ enum SiteOperation: string
             self::ServiceRestart => $site->service !== null,
             self::QueueRestart => $site->workers !== [],
             self::PhpVersion, self::PhpSetting, self::PhpSettingRemove => $site->php !== 'none',
-            // A database is made for a site that runs code and has none yet.
-            self::DatabaseCreate => $site->databaseEngine === null && $site->php !== 'none',
-            // The server keeps the password of a WordPress or Bitrix site in the site's own config: it refuses to change it.
-            self::DatabasePassword => $site->databaseEngine !== null && !in_array($site->profile, ['wordpress', 'bitrix'], true),
+            // One database per site: offered only to a site without one. Whether its kind may have one is the server's
+            // to say (a profile with db=no refuses in the plan, said in words).
+            self::DatabaseCreate => $site->databaseEngine === null,
+            // simai-env 1.59.0 changes the password in a WordPress or Bitrix site's own config too.
+            self::DatabasePassword, self::DatabaseCredentials => $site->databaseEngine !== null,
             self::DatabaseExport => $site->databaseEngine !== null,
             self::DatabaseDrop => $site->databaseEngine !== null,
-            // The browser only where the server would open it; why not is said in the «База данных» block instead.
-            self::DatabaseBrowse => \Larena\Env\Server\DbBrowserState::refusal($site) === null,
+            // The browser wherever the site has a database; what stops it otherwise, the server says in the plan (1.61.0).
+            self::DatabaseBrowse => $site->databaseEngine !== null,
             self::DatabaseBrowseClose => $site->databaseEngine !== null,
             // Apache serves PHP profiles only; the switch offers the other way from what the server says serves the site.
             self::ApacheOn => in_array($site->profile, SiteDetails::APACHE_PROFILES, true) && $site->webServer === 'nginx',

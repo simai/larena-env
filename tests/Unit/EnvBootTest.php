@@ -35,9 +35,9 @@ env_assert($with['admin_loadable'] === true, 'The admin must be installed for de
 $navigation = $with['navigation'];
 sort($navigation);
 // The recording's server lists its services, its software and PHP, the firewall, the security and who reaches the panel.
-env_assert($navigation === ['env.alerts.channel', 'env.dns', 'env.dns.connection', 'env.firewall', 'env.panel.access', 'env.people', 'env.security', 'env.server',
-    'env.server.overview', 'env.services', 'env.software', 'env.software.php', 'env.storages'] && $with['navigation_valid'] === array_fill(0, 13, true),
-    'With the admin the sites, the overview, the spaces, DNS, the alerts\' channel, the update, the services, the software, PHP, the firewall, the security, the backup storages and who reaches the panel are valid menu entries: '.implode(', ', $navigation));
+env_assert($navigation === ['env.alerts.channel', 'env.databases', 'env.dns', 'env.dns.connection', 'env.firewall', 'env.panel.access', 'env.people', 'env.security', 'env.server',
+    'env.server.overview', 'env.services', 'env.software', 'env.software.php', 'env.storages'] && $with['navigation_valid'] === array_fill(0, 14, true),
+    'With the admin the sites, the databases, the overview, the spaces, DNS, the alerts\' channel, the update, the services, the software, PHP, the firewall, the security, the backup storages and who reaches the panel are valid menu entries: '.implode(', ', $navigation));
 // The overview, the panel's dashboard, is the first of the panel's rows in the menu.
 $orders = [];
 foreach ((new \Larena\Env\Navigation\ServerAdminNavigationContributor(null))->navigationDescriptors() as $row) {
@@ -54,7 +54,7 @@ $names = array_keys($with['routes']);
 sort($names);
 env_assert($names === ['larena.env.admin.alerts.ack.open', 'larena.env.admin.alerts.ack.plan', 'larena.env.admin.alerts.ack.run', 'larena.env.admin.alerts.channel',
     'larena.env.admin.alerts.channel.plan', 'larena.env.admin.alerts.channel.run', 'larena.env.admin.alerts.test.plan', 'larena.env.admin.alerts.test.run',
-    'larena.env.admin.change.keep', 'larena.env.admin.dns', 'larena.env.admin.dns.certificates.plan', 'larena.env.admin.dns.certificates.run',
+    'larena.env.admin.change.keep', 'larena.env.admin.databases', 'larena.env.admin.dns', 'larena.env.admin.dns.certificates.plan', 'larena.env.admin.dns.certificates.run',
     'larena.env.admin.dns.connection', 'larena.env.admin.dns.connection.addresses', 'larena.env.admin.dns.connection.disconnect',
     'larena.env.admin.dns.connection.save', 'larena.env.admin.dns.run', 'larena.env.admin.dns.zone', 'larena.env.admin.dns.zone.plan',
     'larena.env.admin.dns.zone.undo', 'larena.env.admin.firewall', 'larena.env.admin.firewall.plan', 'larena.env.admin.firewall.run',
@@ -140,10 +140,13 @@ env_assert($adminNames === [
     // The server's «Первые шаги» (larena/admin AdminFirstSteps), only where the admin is installed.
     'src/Admin/PanelFirstSteps.php',
     'src/Admin/PlanAction.php',
+    // «Базы данных» in the admin's shared data view (simai-env 1.59.0 db:list).
+    'src/Admin/ServerDatabasesPage.php',
     'src/Admin/ServerSitesPage.php',
     // A site's folder and its trash in the admin's shared data view (files study PX-93, PX-94).
     'src/Admin/SiteFilesPage.php',
     'src/Admin/SiteObjectMenu.php',
+    'src/Http/Controllers/DatabasesController.php',
     'src/Http/Controllers/ServerAdminController.php',
     // The setup's breadcrumbs, only where the admin is installed.
     'src/Http/Controllers/ServerSetupController.php',

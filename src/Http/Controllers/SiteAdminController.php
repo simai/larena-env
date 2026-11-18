@@ -58,6 +58,8 @@ final readonly class SiteAdminController
     private const array LOG_KINDS = ['access', 'error'];
     /** How many of the last lines the log reads; the gateway gives at most 1000. */
     public const array LOG_LINES = [200, 500, 1000];
+    /** «Скачать журнал»: the server's last lines, up to 10000 since simai-env 1.60.0 (an older one gives its 1000). */
+    public const int DOWNLOAD_LINES = 10000;
 
     public function __construct(
         private SiteDetailsReader $sites,
@@ -132,8 +134,7 @@ final readonly class SiteAdminController
     {
         $actor = ResolvePanelActor::of($request);
         $kind = in_array($request->query('log'), self::LOG_KINDS, true) ? (string) $request->query('log') : 'access';
-        $lines = in_array((int) $request->query('lines'), self::LOG_LINES, true) ? (int) $request->query('lines') : self::LOG_LINES[count(self::LOG_LINES) - 1];
-        $log = $this->sites->log($actor, $domain, $kind, $lines);
+        $log = $this->sites->log($actor, $domain, $kind, self::DOWNLOAD_LINES, entries: false);
         if ($log->log === null) {
             return new RedirectResponse(route('larena.env.admin.site', ['domain' => $domain, 'tab' => 'log', 'log' => $kind === 'error' ? 'error' : 'access'], false));
         }
@@ -202,7 +203,10 @@ final readonly class SiteAdminController
         // A search goes to the server, which looks through far more lines than are shown, when its release can.
         $match = $search !== '' && preg_match('/\A[ -~]{1,200}\z/D', $search) === 1 && $capabilities->searchesLogs() ? $search : null;
         // «Обновить» reads the server again past the minute the panel keeps a log's answer (critics 2026-11-07).
-        $log = $site === null || $tab !== 'log' ? null : $this->sites->log($actor, $domain, $kind, $lines, $match, $request->query('fresh') === '1');
+        // The answers asked are kept by the server among its last 20000 lines (simai-env 1.60.0): the site's errors are
+        // found even on a busy site, where its last 1000 lines are all ordinary visits.
+        $status = $kind !== 'access' || $group === '' ? null : ($group === SiteLogView::PROBLEMS ? '4xx,5xx' : $group);
+        $log = $site === null || $tab !== 'log' ? null : $this->sites->log($actor, $domain, $kind, $lines, $match, $request->query('fresh') === '1', $status);
         $logRead = $log?->log === null ? null : SiteLogView::of($log->log, $search, $group);
         $doctor = $site === null || $tab !== 'overview' ? null : $this->sites->doctor($actor, $domain);
         $operations = $site === null ? [] : SiteOperation::offeredFor($site, $capabilities);
@@ -293,7 +297,8 @@ final readonly class SiteAdminController
             'log' => $logRead,
             'logRows' => $logRead?->display($logShown, fn (string $level): string => $this->levelWords($level)) ?? [],
             'logMore' => $logRead !== null && count($logRead->rows) > $logShown ? $request->fullUrlWithQuery(['shown' => $logShown + SiteLogView::PAGE]) : null,
-            'logDownload' => route('larena.env.admin.site.log.download', ['domain' => $domain, 'log' => $kind, 'lines' => $lines], false),
+            'logDownload' => route('larena.env.admin.site.log.download', ['domain' => $domain, 'log' => $kind], false),
+            'logZone' => $overview?->timezone,
             'logReadAt' => $log?->readAt === null ? null : gmdate('H:i:s', $log->readAt),
             'logReasonText' => $log === null || $log->reason === null ? null : $this->reasonText($log->reason),
             'notice' => $request->session()->get('larena_env_notice'),
@@ -452,7 +457,16 @@ final readonly class SiteAdminController
         $secret = $opened && FileEntry::secret(basename($view));
         // A file with passwords is shown only when asked for (PX-92), a picture in place (PX-96), any other file as text.
         $revealed = $secret && $request->query('reveal') === '1';
-        $textRead = $opened && !$image && (!$secret || $revealed) && $allows['read'] ? $this->files->text($actor, $domain, $view) : null;
+        // «Посмотреть» (simai-env 1.61.0 file:preview): a text's first 1 MiB even of a larger file, cut where it is cut;
+        // an older server reads the whole text (file:read, up to 1 MiB).
+        $previews = $capabilities->allows('file:preview');
+        $textRead = null;
+        if ($opened && !$image && (!$secret || $revealed) && ($allows['read'] || $previews)) {
+            $textRead = $previews ? $this->files->preview($actor, $domain, $view) : $this->files->text($actor, $domain, $view);
+            if (is_array($textRead) && ($textRead['kind'] ?? 'text') !== 'text') {
+                $textRead = 'not_previewable';
+            }
+        }
         if (!$opened && !is_array($folder)) {
             $folder = $path === '.' && is_array($root) ? $root : (is_string($folder) ? $folder : $this->files->folder($actor, $domain, $path));
         }
@@ -614,18 +628,9 @@ final readonly class SiteAdminController
         }
         $result = $this->operations->plan($actor, $operation, $domain, $input);
         if ($result->plan === null) {
-            // The server's plan says only plan_failed when it will not open a database browser: the panel says why, from
-            // what it knows of the site (no database, no PHP, an alias, paused, no HTTPS).
-            $reason = $result->reason ?? 'answer_shape_invalid';
-            if ($operation === SiteOperation::DatabaseBrowse && $reason === 'plan_failed') {
-                $site = $this->sites->read($actor, $domain)->site;
-                $why = $site === null ? null : \Larena\Env\Server\DbBrowserState::refusal($site);
+            $refused = $this->refusedPlan($operation, $domain, $result);
 
-                return NoticeRedirect::to($request, route('larena.env.admin.site', ['domain' => $domain], false).'?tab=database',
-                    (string) $this->translator->get('larena-env::admin.db_browser.refusals.'.($why ?? 'other')));
-            }
-
-            return $this->back($request, $domain, $reason, $operation->tab(), $operation);
+            return $refused ?? $this->back($request, $domain, $result->reason ?? 'answer_shape_invalid', $operation->tab(), $operation);
         }
 
         return $this->views->make('larena-env::admin.plan', [
@@ -642,6 +647,64 @@ final readonly class SiteAdminController
             'resources' => $result->plan->resources,
             'then' => $operation === SiteOperation::WordpressInstall ? [(string) $this->translator->get('larena-env::admin.routes.password_once')] : [],
             'warnings' => $this->knownWarnings($actor, $operation, $domain, $input),
+        ]);
+    }
+
+    /**
+     * The window of an action the server will not plan, in words (simai-env 1.60.0 `checks`, 1.61.0 named refusals):
+     * what stops it — the panel's sentence for a reason it knows (the database browser's no_https, no_driver…), then the
+     * server's own blockers, or its detail — above a button that stays off; what is worth knowing below; and where HTTPS
+     * is what is missing, «Выпустить сертификат». Null when the server said nothing a person can act on.
+     */
+    private function refusedPlan(SiteOperation $operation, string $domain, \Larena\Env\Operations\PlanResult $result): mixed
+    {
+        $reason = $result->reason ?? 'answer_shape_invalid';
+        $reasons = [];
+        if ($operation === SiteOperation::DatabaseBrowse && in_array($reason, \Larena\Env\Server\DbBrowserState::REFUSALS, true)) {
+            $reasons[] = (string) $this->translator->get('larena-env::admin.db_browser.refusals.'.$reason);
+        }
+        $blockers = $result->checks->blockers ?? [];
+        // A refusal the panel has its own sentence for, and nothing more from the server: said as before, on the tab.
+        $key = 'larena-env::admin.reasons.'.$reason;
+        $known = (string) $this->translator->get($key) !== $key;
+        if ($reasons === [] && $blockers === [] && $known) {
+            return null;
+        }
+        if ($reasons === [] && $known && $blockers !== []) {
+            $reasons[] = (string) $this->translator->get($key);
+        }
+        foreach ($blockers as $blocker) {
+            if (!in_array($blocker, $reasons, true)) {
+                $reasons[] = $blocker;
+            }
+        }
+        if ($reasons === [] && $result->detail !== null && $result->detail !== '') {
+            $reasons[] = $result->detail;
+        }
+        if ($reasons === [] && $operation === SiteOperation::DatabaseBrowse && $reason === 'plan_failed') {
+            // An older server says only plan_failed: what the browser needs, in general.
+            $reasons[] = (string) $this->translator->get('larena-env::admin.db_browser.refusals.other');
+        }
+        if ($reasons === []) {
+            return null;
+        }
+        $site = route('larena.env.admin.site', ['domain' => $domain], false);
+        $more = '';
+        if ($reason === 'no_https') {
+            $more = '<a href="'.e($site.'?tab=domains&action='.SiteOperation::CertificateIssue->value).'" class="larena-button larena-button-primary" data-env-plan-certificate>'
+                .e((string) $this->translator->get('larena-env::admin.db_browser.certificate')).'</a>';
+        }
+
+        return $this->views->make('larena-env::admin.plan', [
+            'heading' => (string) $this->translator->get('larena-env::admin.operations.'.$operation->value),
+            'eyebrow' => $domain,
+            'runUrl' => route('larena.env.admin.site.run', ['domain' => $domain], false),
+            'cancelUrl' => $site.'?tab='.$operation->tab(),
+            'refused' => $reasons,
+            'refusedNotes' => $result->checks->notes ?? [],
+            'refusedReason' => $reason,
+            'refusedKey' => 'refused-'.$operation->value,
+            'refusedMore' => $more,
         ]);
     }
 

@@ -91,7 +91,7 @@
                         · <a href="{{ $logOther }}#env-service-log" data-env-service-log-other>{{ __('larena-env::admin.services.journal_switch.'.$log->view) }}</a>
                     </p>
                     @if ($logRows !== [])
-                        @include('larena-admin::history.log', ['rows' => $logRows, 'label' => __('larena-env::admin.services.journal_of', ['name' => $logOf])])
+                        @include('larena-admin::history.log', ['rows' => $logRows, 'label' => __('larena-env::admin.services.journal_of', ['name' => $logOf]), 'zone' => $logZone ?? null])
                     @endif
                     <p class="m-0 m-top-1 color-on-surface-variant" data-env-service-log-count>
                         {{ __('larena-env::admin.services.journal_count', ['shown' => (string) count($logRows), 'total' => (string) $log->total]) }}

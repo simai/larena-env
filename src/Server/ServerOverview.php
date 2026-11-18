@@ -32,6 +32,8 @@ final readonly class ServerOverview
         public ?PanelCapabilities $capabilities = null,
         public array $blockedOwners = [],
         public array $ownerDiskBytes = [],
+        // The server's time zone (simai-env 1.60.0 `timezone {name, offset}`): its times are said in it, an IANA name.
+        public ?string $timezone = null,
     ) {
     }
 
@@ -55,7 +57,7 @@ final readonly class ServerOverview
 
         return new self($this->generatedAt, $this->envVersion, $this->osId, $this->osVersion, $this->services, $this->phpVersions,
             array_values(array_filter($this->sites, static fn (SiteSummary $site): bool => !in_array(strtolower($site->domain), $domains, true))),
-            $this->owners, $this->capabilities, $this->blockedOwners, $this->ownerDiskBytes);
+            $this->owners, $this->capabilities, $this->blockedOwners, $this->ownerDiskBytes, $this->timezone);
     }
 
     /**
@@ -110,6 +112,21 @@ final readonly class ServerOverview
 
         return new self($generatedAt, $envVersion, $osId, $osVersion, $services,
             array_values(array_filter(is_array($host['php_versions'] ?? null) ? $host['php_versions'] : [], 'is_string')), $sites, $owners,
-            PanelCapabilities::fromHostDescription($host), $blocked, $disk);
+            PanelCapabilities::fromHostDescription($host), $blocked, $disk, self::zone($host['timezone']['name'] ?? null));
+    }
+
+    /** An IANA zone name the panel's PHP knows (`Europe/Moscow`, `UTC`), else null. */
+    public static function zone(mixed $name): ?string
+    {
+        if (!is_string($name) || preg_match('~\A[A-Za-z][A-Za-z0-9_+-]*(?:/[A-Za-z0-9_+-]+){0,2}\z~D', $name) !== 1) {
+            return null;
+        }
+        try {
+            new \DateTimeZone($name);
+        } catch (\Exception) {
+            return null;
+        }
+
+        return $name;
     }
 }

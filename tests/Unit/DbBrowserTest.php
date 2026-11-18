@@ -156,16 +156,17 @@ foreach (['4', '481', '0', '60 ', 'x', '1000'] as $minutes) {
 }
 env_assert(!(new PanelCapabilities('1.57.0'))->allows('site:db-browser') && (new PanelCapabilities('1.58.0'))->allows('site:db-browser-close'), 'Offered from 1.58.0 only.');
 
-// What stops it, from the site the server described, in the server's own order.
+// What stops it: the panel knows only that a site has no database; every other reason is the server's (simai-env 1.61.0).
 $site = static fn (array $over = []): SiteDetails => SiteDetails::fromDescription($over + ['schema' => 'simai-site/1', 'domain' => 'shop.example.com', 'profile' => 'generic',
     'php' => '8.3', 'ssl' => 'letsencrypt', 'database' => ['engine' => 'mysql'], 'certificate' => ['names' => ['shop.example.com'], 'days_left' => 60]]);
-env_assert(DbBrowserState::refusal($site()) === null, 'A PHP site with its database and HTTPS can open it.');
-env_assert(DbBrowserState::refusal($site(['database' => null])) === 'no_database' && DbBrowserState::refusal($site(['php' => 'none'])) === 'no_php'
-    && DbBrowserState::refusal($site(['profile' => 'alias'])) === 'alias' && DbBrowserState::refusal($site(['suspended' => true])) === 'suspended'
-    && DbBrowserState::refusal($site(['ssl' => 'none', 'certificate' => null])) === 'no_https', 'No database, no PHP, an alias, paused, no HTTPS: each said.');
-env_assert(SiteOperation::DatabaseBrowse->suitsSite($site()) && !SiteOperation::DatabaseBrowse->suitsSite($site(['ssl' => 'none', 'certificate' => null]))
+env_assert(DbBrowserState::refusal($site()) === null && DbBrowserState::refusal($site(['database' => null])) === 'no_database', 'Without a database there is nothing to open.');
+env_assert(DbBrowserState::refusal($site(['php' => 'none'])) === null && DbBrowserState::refusal($site(['profile' => 'alias'])) === null
+    && DbBrowserState::refusal($site(['suspended' => true])) === null && DbBrowserState::refusal($site(['ssl' => 'none', 'certificate' => null])) === null,
+    'No PHP, an alias, paused, no HTTPS: no longer worked out from the description; the server names them.');
+env_assert(SiteOperation::DatabaseBrowse->suitsSite($site()) && SiteOperation::DatabaseBrowse->suitsSite($site(['ssl' => 'none', 'certificate' => null]))
+    && !SiteOperation::DatabaseBrowse->suitsSite($site(['database' => null]))
     && SiteOperation::DatabaseBrowse->tab() === 'database' && SiteOperation::DatabaseBrowse->fields() === ['minutes'] && SiteOperation::DatabaseBrowseClose->asksNothing(),
-    'Offered on «База данных» where it opens; closing asks nothing.');
+    'Offered on «База данных» wherever there is a database; closing asks nothing.');
 foreach (SiteOperation::DatabaseBrowse->arguments('shop.example.com', ['minutes' => '15', 'other' => 'x']) as $name => $value) {
     env_assert(in_array($name, ['domain', 'minutes'], true), 'Only the domain and the minutes are sent.');
 }

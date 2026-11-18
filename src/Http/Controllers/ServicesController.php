@@ -53,11 +53,23 @@ final readonly class ServicesController
         $services = $this->services($actor, $read->overview);
         $names = array_map(static fn (HostService $service): string => $service->name, $services);
         $logOf = $request->query('log');
-        $log = is_string($logOf) && in_array($logOf, $names, true) && $capabilities?->allows('service:log') === true
-            ? $this->extras->serviceLog($actor, $logOf, self::LOG_LINES) : null;
-        // «Журнал службы» (PX-48): errors first, 50 lines and «Ещё 50», the line as written on a press.
-        $logView = $log === null ? null : ServiceLogView::of($log, is_string($request->query('show')) ? $request->query('show') : '',
-            fn (string $tone): string => (string) $this->translator->get('larena-env::admin.services.tones.'.$tone));
+        $show = is_string($request->query('show')) ? $request->query('show') : '';
+        $log = null;
+        if (is_string($logOf) && in_array($logOf, $names, true) && $capabilities?->allows('service:log') === true) {
+            // «Журнал службы» (PX-48): errors first — the server keeps them (simai-env 1.60.0 priority) among its lines;
+            // none, and the screen opens on every line.
+            if ($show !== 'all') {
+                $log = $this->extras->serviceLog($actor, $logOf, self::LOG_LINES, ServiceLogView::PROBLEMS_PRIORITY);
+                if ($log !== null && $log['filtered'] && $log['entries'] === [] && $show === '') {
+                    $log = null;
+                    $show = 'all';
+                }
+            }
+            $log ??= $this->extras->serviceLog($actor, $logOf, self::LOG_LINES);
+        }
+        // 50 lines and «Ещё 50», the line as written on a press.
+        $logView = $log === null ? null : ServiceLogView::of($log['lines'], $log['entries'], $show,
+            fn (string $tone): string => (string) $this->translator->get('larena-env::admin.services.tones.'.$tone), $log['filtered']);
         $shown = max(ServiceLogView::PAGE, min(self::LOG_LINES, (int) $request->query('shown', (string) ServiceLogView::PAGE)));
         $shown -= $shown % ServiceLogView::PAGE;
         $canOperate = $this->authorizer?->authorize($request, 'env.server.operate')->isAllowed() ?? false;
@@ -79,6 +91,7 @@ final readonly class ServicesController
             'logOf' => is_string($logOf) && in_array($logOf, $names, true) ? $logOf : null,
             'log' => $logView,
             'logRows' => $logView === null ? [] : array_slice($logView->rows, 0, $shown),
+            'logZone' => $read->overview?->timezone,
             'logMore' => $logView !== null && count($logView->rows) > $shown ? $request->fullUrlWithQuery(['shown' => $shown + ServiceLogView::PAGE]) : null,
             'logOther' => $logView === null ? null : $request->fullUrlWithQuery(['show' => $logView->view === 'problems' ? 'all' : 'problems', 'shown' => null]),
             'notice' => $request->session()->get('larena_env_notice'),

@@ -17,7 +17,8 @@ use Larena\Env\Operations\PanelJobStatus;
 final class JobOutcome
 {
     /** The words of the end, by command (`job.done.<command>`); any other says «Готово». */
-    private const array DONE = ['site:remove', 'site:db-drop', 'site:redirect-add', 'site:redirect-remove', 'ssl:letsencrypt', 'wp:install', 'profile:enable', 'profile:disable', 'site:db-browser', 'site:db-browser-close'];
+    private const array DONE = ['site:remove', 'site:db-drop', 'site:redirect-add', 'site:redirect-remove', 'ssl:letsencrypt', 'wp:install', 'profile:enable', 'profile:disable', 'site:db-browser', 'site:db-browser-close',
+        'site:db-create', 'site:db-rotate', 'site:db-credentials'];
 
     private function __construct()
     {
@@ -58,6 +59,9 @@ final class JobOutcome
             $status->command === 'ssl:letsencrypt' && $domain !== null => ['https://'.$domain.'/', self::text('job.next.open_site')],
             // The next step opens its action at once (PX-15): the site with the certificate's question open.
             $status->command === 'wp:install' && $domain !== null => [self::site($domain).'?tab=overview&action=certificate-issue', self::text('job.next.https')],
+            // A new database password (simai-env 1.59.0) is shown by asking for the connection details, once.
+            $status->command === 'site:db-rotate' && $domain !== null => [self::site($domain).'?tab=database&action=database-credentials', self::text('job.next.credentials')],
+            in_array($status->command, ['site:db-create', 'site:db-credentials'], true) && $domain !== null => [self::site($domain).'?tab=database', self::text('job.next.database')],
             $domain !== null => [self::site($domain), self::text('job.next.site')],
             default => null,
         };
@@ -80,7 +84,9 @@ final class JobOutcome
 
     /**
      * The run's progress on the Framework's sf-progress-run (larena/admin AdminPlannedAction::progress, PX-7, PX-11): the
-     * server gives no steps yet, so a bar without a per cent while it runs; once over, what became in words.
+     * server's steps (simai-env 1.60.0) in its words, where it stands («2 из 5: Создаётся база»), a step not reached yet
+     * by its number; without steps a bar without a per cent while it runs; once over, what became in words, the reason of
+     * a failure as the server says it.
      */
     public static function progress(PanelJobStatus $status): HtmlString
     {
@@ -98,12 +104,43 @@ final class JobOutcome
             JobState::Succeeded => self::heading($status),
             JobState::Busy => self::text('job.states.busy'),
             JobState::Cancelled => self::text('job.states.cancelled'),
-            default => self::text('job.failed_text'),
+            default => $status->outcome['words'] ?? self::text('job.failed_text'),
         };
-        $label = is_string($status->args['domain'] ?? null) && $status->args['domain'] !== ''
-            ? self::text('job.progress_of', ['domain' => $status->args['domain']]) : self::text('job.progress');
+        $label = $status->title ?? (is_string($status->args['domain'] ?? null) && $status->args['domain'] !== ''
+            ? self::text('job.progress_of', ['domain' => $status->args['domain']]) : self::text('job.progress'));
 
-        return AdminPlannedAction::progress($label, $state, [], $result, (string) \Larena\Env\Server\Moment::iso($status->createdAt));
+        return AdminPlannedAction::progress($label, $state, self::steps($status), $result,
+            (string) \Larena\Env\Server\Moment::iso($status->startedAt ?? $status->createdAt), (string) \Larena\Env\Server\Moment::iso($status->finishedAt),
+            self::where($status), $status->progress === null ? null : count(array_filter($status->steps, static fn (array $step): bool => $step['state'] === 'done')),
+            $status->progress['total'] ?? null);
+    }
+
+    /**
+     * The steps as sf-progress-run takes them: each by its words, one not reached yet as «Шаг 3».
+     *
+     * @return list<array{id: string, title: string, state: string, started?: string, finished?: string}>
+     */
+    public static function steps(PanelJobStatus $status): array
+    {
+        $steps = [];
+        foreach ($status->steps as $step) {
+            $steps[] = ['id' => 'step-'.$step['id'], 'title' => $step['title'] ?? self::text('job.step_waiting', ['number' => $step['id']]), 'state' => $step['state']]
+                + ($step['started'] !== null ? ['started' => (string) \Larena\Env\Server\Moment::iso($step['started'])] : [])
+                + ($step['finished'] !== null ? ['finished' => (string) \Larena\Env\Server\Moment::iso($step['finished'])] : []);
+        }
+
+        return $steps;
+    }
+
+    /** Where a running job stands in words: «2 из 5: Создаётся база»; empty without steps or once over. */
+    public static function where(PanelJobStatus $status): string
+    {
+        if ($status->state !== JobState::Running || $status->progress === null) {
+            return '';
+        }
+        $replace = ['current' => (string) $status->progress['current'], 'total' => (string) $status->progress['total']];
+
+        return $status->progress['title'] !== null ? self::text('job.where', $replace + ['title' => $status->progress['title']]) : self::text('job.where_bare', $replace);
     }
 
     /** The job's live part (larena/admin AdminLiveRegion): read again while it runs, said in a few words. */

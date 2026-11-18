@@ -260,8 +260,21 @@ final readonly class SiteFilesController
         $actor = ResolvePanelActor::of($request);
         $path = FilePath::clean($request->query('path'));
         $type = $path === null ? null : \Larena\Env\Files\FileEntry::imageType($path);
-        if (!$this->capabilities($actor)->allows('file:download') || $path === null || $path === '.' || $type === null) {
+        if (!($this->capabilities($actor)->allows('file:download') || $this->capabilities($actor)->allows('file:preview')) || $path === null || $path === '.' || $type === null) {
             return new \Illuminate\Http\Response('', 404, ['Cache-Control' => 'no-store']);
+        }
+        // simai-env 1.61.0 gives the picture itself in one look (file:preview), refusing what is larger than asked.
+        if ($this->capabilities($actor)->allows('file:preview')) {
+            $look = $this->files->preview($actor, $domain, $path, self::PREVIEW_MAX_BYTES);
+            if (!is_array($look)) {
+                return new \Illuminate\Http\Response('', $look === 'too_large' ? 413 : ($look === 'not_previewable' ? 415 : 404), ['Cache-Control' => 'no-store']);
+            }
+            $bytes = $look['kind'] === 'image' ? $look['content'] : null;
+            if ($bytes === null || !self::isPicture($bytes, $type)) {
+                return new \Illuminate\Http\Response('', 415, ['Cache-Control' => 'no-store']);
+            }
+
+            return self::picture($bytes, $type);
         }
         $stat = $this->files->stat($actor, $domain, $path);
         if (!$stat instanceof \Larena\Env\Files\FileEntry || $stat->type !== 'file' || ($stat->size ?? PHP_INT_MAX) > self::PREVIEW_MAX_BYTES) {
@@ -282,6 +295,12 @@ final readonly class SiteFilesController
             return new \Illuminate\Http\Response('', 415, ['Cache-Control' => 'no-store']);
         }
 
+        return self::picture($bytes, $type);
+    }
+
+    /** A picture served as the picture it is, sandboxed, never kept. */
+    private static function picture(string $bytes, string $type): \Illuminate\Http\Response
+    {
         return new \Illuminate\Http\Response($bytes, 200, [
             'Content-Type' => $type,
             'Content-Length' => (string) strlen($bytes),

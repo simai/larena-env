@@ -49,6 +49,17 @@ final readonly class SiteExtrasReader
         return $all === null ? null : array_values(array_filter($all, static fn (SiteDatabase $db): bool => $db->site === $domain));
     }
 
+    /**
+     * Every database the person reaches (db:list, simai-databases/1): the system level's all, an owner's their own
+     * sites' only — the server keeps the scope.
+     *
+     * @return list<SiteDatabase>|null
+     */
+    public function allDatabases(PanelActor $actor): ?array
+    {
+        return $this->list($actor, 'db:list', [], 'databases', SiteDatabase::fromData(...));
+    }
+
     /** Whether the site's database browser is open, and until when (site:db-browser-status, simai-env 1.58.0). */
     public function dbBrowser(PanelActor $actor, string $domain): ?DbBrowserState
     {
@@ -136,15 +147,30 @@ final readonly class SiteExtrasReader
         return $data === null ? null : ServerSoftware::fromData($data);
     }
 
-    public function serviceLog(PanelActor $actor, string $name, int $lines = 100): ?array
+    /**
+     * A service's journal: its lines and, since simai-env 1.60.0, the server's reading of each (`format: json`), only
+     * the given priority and above when asked (`err`, `warning`). An older server, which refuses what it does not know,
+     * is asked as before: its plain lines, at most 1000, no entries.
+     *
+     * @return array{lines: list<string>, entries: ?list<LogEntry>, filtered: bool}|null
+     */
+    public function serviceLog(PanelActor $actor, string $name, int $lines = 100, ?string $priority = null): ?array
     {
-        $data = $this->data($actor, 'service:log', ['name' => $name, 'lines' => (string) $lines]);
+        $plain = ['name' => $name, 'lines' => (string) min($lines, 1000)];
+        $data = $this->data($actor, 'service:log', ['name' => $name, 'lines' => (string) $lines, 'format' => 'json']
+            + ($priority === null ? [] : ['priority' => $priority]));
+        $filtered = $priority !== null;
+        if ($data === null) {
+            $data = $this->data($actor, 'service:log', $plain);
+            $filtered = false;
+        }
         if ($data === null) {
             return null;
         }
         $log = is_array($data['lines'] ?? null) ? $data['lines'] : [];
+        $entries = LogEntry::listOf($data['entries'] ?? null);
 
-        return array_values(array_filter($log, 'is_string'));
+        return ['lines' => array_values(array_filter($log, 'is_string')), 'entries' => $entries, 'filtered' => $filtered && $entries !== null];
     }
 
     /** @return list<SiteProfile>|null the kinds of site the server makes, with their arguments (Panel plan 5.5) */

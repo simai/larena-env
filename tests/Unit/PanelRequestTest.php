@@ -33,7 +33,11 @@ env_assert(json_decode($line, true) === [
     'command' => 'site:describe',
     'args' => ['domain' => 'example.com'],
     'confirm' => false,
+    'lang' => 'en',
 ], 'The request has the protocol\'s fields: '.$line);
+\Larena\Env\Gateway\PanelLanguage::use('ru');
+env_assert(json_decode($request->toLine(), true)['lang'] === 'ru', 'The server\'s words come in the panel\'s language (simai-env 1.60.0).');
+\Larena\Env\Gateway\PanelLanguage::use(null);
 
 $empty = (new PanelRequest('r2', $actor, 'self:describe'))->toLine();
 env_assert(str_contains($empty, '"args":{}'), 'Empty args stay an object, the gateway refuses a list: '.$empty);
@@ -58,7 +62,15 @@ env_assert(env_refusal(static fn () => new PanelRequest('r', $actor, 'site:descr
 env_assert(env_refusal(static fn () => new PanelRequest('r', $actor, 'job:cancel', ['job_id' => str_repeat('a', 24)], true)) === 'not_allowed', 'A job command is never confirmed.');
 env_assert(env_refusal(static fn () => new PanelRequest('r', $actor, 'job:status', ['job_id' => 'NOTHEX0000000000000000'])) === 'invalid_argument', 'A job id is checked.');
 env_assert(env_refusal(static fn () => new PanelRequest('r', $actor, 'ssl:letsencrypt', ['domain' => 'example.com'])) === 'invalid_argument', 'The certificate needs an email.');
-env_assert(env_refusal(static fn () => new PanelRequest('r', $actor, 'logs:nginx', ['domain' => 'example.com', 'lines' => '5000'])) === 'invalid_argument', 'At most a thousand lines.');
+env_assert(env_refusal(static fn () => new PanelRequest('r', $actor, 'logs:nginx', ['domain' => 'example.com', 'lines' => '10001'])) === 'invalid_argument', 'At most ten thousand lines (a download, simai-env 1.60.0).');
+env_assert(env_refusal(static fn () => new PanelRequest('r', $actor, 'logs:nginx', ['domain' => 'example.com', 'lines' => '10000', 'format' => 'json', 'status' => '4xx,5xx'])) === null
+    && env_refusal(static fn () => new PanelRequest('r', $actor, 'logs:nginx', ['domain' => 'example.com', 'status' => '4xx;rm'])) === 'invalid_argument', 'The server reads the lines and keeps the answers asked.');
+env_assert(env_refusal(static fn () => new PanelRequest('r', $actor, 'service:log', ['name' => 'nginx', 'format' => 'json', 'priority' => 'warning'])) === null
+    && env_refusal(static fn () => new PanelRequest('r', $actor, 'service:log', ['name' => 'nginx', 'priority' => 'loud'])) === 'invalid_argument', 'A service\'s journal by priority.');
+env_assert(env_refusal(static fn () => new PanelRequest('r', $actor, 'job:list', ['before' => str_repeat('a', 24), 'limit' => '100', 'state' => 'running'])) === null
+    && env_refusal(static fn () => new PanelRequest('r', $actor, 'job:list', ['limit' => '101'])) === 'invalid_argument', 'The list of jobs by pages.');
+env_assert(env_refusal(static fn () => new PanelRequest('r', $actor, 'file:preview', ['domain' => 'example.com', 'path' => 'a.txt', 'max-bytes' => '1048576'])) === null
+    && env_refusal(static fn () => new PanelRequest('r', $actor, 'file:preview', ['domain' => 'example.com', 'path' => 'a.txt', 'max-bytes' => '52428800'])) === 'invalid_argument', 'A look at a file: a size the gateway takes (it keeps at most 5 MiB).');
 // A new site, its PHP and a new owner: the gateway's own argument rules.
 env_assert(env_refusal(static fn () => new PanelRequest('r', $actor, 'site:add', ['domain' => 'new.test', 'profile' => 'laravel', 'php' => '8.3', 'create-db' => 'yes', 'db-engine' => 'pgsql'])) === null, 'A new site.');
 env_assert(env_refusal(static fn () => new PanelRequest('r', $actor, 'site:add', ['domain' => 'new.test', 'profile' => 'redirect', 'redirect-to' => 'javascript:alert(1)'])) === 'invalid_argument', 'A redirect goes to an http address only.');

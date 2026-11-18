@@ -203,9 +203,11 @@ env_assert(str_contains($beforeCheck, 'data-env-operation="backup-schedule"') &&
 // The database: its engine, its actions where the server has them, and never a password.
 $database = $screen(['site' => $site, 'tab' => 'database', 'tabOperations' => $onTab('database', $more),
     'databases' => [\Larena\Env\Server\SiteDatabase::fromData(['name' => 'demo_php', 'engine' => 'mysql', 'site' => 'demo-php.test', 'size_bytes' => 2048, 'users' => ['demo_php']])]]);
-env_assert(str_contains($database, 'data-env-database="mysql"') && str_contains($database, 'data-env-database-item="demo_php"') && str_contains($database, '2.0 KB'), 'The database and its size.');
+env_assert(str_contains($database, 'data-env-database="mysql"') && str_contains($database, 'data-env-database-name') && str_contains($database, '>demo_php<') && str_contains($database, '2.0 KB'), 'The database, its name and its size.');
 env_assert(str_contains($database, 'data-env-operation="database-password"') && str_contains($database, 'data-env-operation="database-export"')
     && !str_contains($database, 'data-env-operation="database-create"'), 'A site with a database changes its password and exports it, and is not given another.');
+// The block's own actions (simai-env 1.59.0): the password changed from the block, not from the row of buttons.
+env_assert(str_contains($database, 'data-env-database-rotate') && !str_contains($database, 'data-env-operation-open="database-password"'), 'The database\'s own actions are in its block.');
 
 // SFTP: the site's accounts, and an account's actions name it.
 $sftp = $screen(['site' => $site, 'tab' => 'access', 'tabOperations' => $onTab('access', $more),
@@ -271,11 +273,27 @@ env_assert(count($errors->rows) === 1 && $errors->rows[0]['level'] === 'error' &
 $problems = \Larena\Env\Server\SiteLogView::of($tail, '', \Larena\Env\Server\SiteLogView::PROBLEMS);
 env_assert(count($problems->rows) === 1 && $problems->rows[0]['status'] === '500', 'The site\'s errors: only the requests answered with an error.');
 $shown = $all->display(2);
-env_assert(count($shown) === 2 && $shown[1]['at'] === '2026-01-01T00:00:02Z' && $shown[1]['badge'] === ['text' => '500', 'status' => 'error']
+env_assert(count($shown) === 2 && $shown[1]['at'] === '2026-01-01T00:00:02+00:00' && $shown[1]['badge'] === ['text' => '500', 'status' => 'error']
     && $shown[1]['title'] === 'POST /form' && $shown[1]['note'] === '1.2.3.5' && str_starts_with($shown[1]['raw'], '1.2.3.5 - - [01/Jan/2026'), 'A row as the log viewer draws it.');
 env_assert($shown[0]['at'] === '' && $shown[0]['badge'] === null && $shown[0]['raw'] === 'not a request line', 'A line in another form: its text, no moment.');
-env_assert(\Larena\Env\Server\SiteLogView::iso('17/Nov/2026:10:11:12 +0300', 'access') === '2026-11-17T07:11:12Z'
-    && \Larena\Env\Server\SiteLogView::iso('2026/11/17 10:11:12', 'error') === '2026-11-17T10:11:12Z' && \Larena\Env\Server\SiteLogView::iso('soon', 'error') === null, 'nginx\'s moments in ISO 8601.');
+env_assert(\Larena\Env\Server\SiteLogView::iso('17/Nov/2026:10:11:12 +0300', 'access') === '2026-11-17T10:11:12+03:00'
+    && \Larena\Env\Server\SiteLogView::iso('2026/11/17 10:11:12', 'error') === null && \Larena\Env\Server\SiteLogView::iso('soon', 'access') === null,
+    'nginx\'s moments in ISO 8601 with their own zone; an error-log time without a zone is not taken for UTC.');
+// simai-env 1.60.0 reads the lines itself (format: json): the moment with its zone, the answer, the level; nothing guessed here.
+$read = \Larena\Env\Server\NginxLogTail::fromData(['schema' => 'simai-log-tail/1', 'domain' => 'a.test', 'kind' => 'error', 'lines' => ['x', 'y'], 'entries' => [
+    ['at' => '2026-11-17T10:11:12+03:00', 'level' => 'crit', 'message' => 'connect() failed', 'client' => '1.2.3.4', 'raw' => '2026/11/17 10:11:12 [crit] connect() failed'],
+    ['at' => null, 'raw' => 'an odd line'],
+]]);
+$readRows = \Larena\Env\Server\SiteLogView::of($read)->display(10, static fn (string $level): string => strtoupper($level));
+env_assert(count($readRows) === 2 && $readRows[1]['at'] === '2026-11-17T10:11:12+03:00' && $readRows[1]['badge'] === ['text' => 'CRIT', 'status' => 'error']
+    && $readRows[1]['title'] === 'connect() failed' && $readRows[1]['note'] === '1.2.3.4' && $readRows[0]['at'] === '' && $readRows[0]['title'] === 'an odd line',
+    'The server\'s reading of an error log: its zone kept, its level as a badge.');
+$visits = \Larena\Env\Server\NginxLogTail::fromData(['schema' => 'simai-log-tail/1', 'domain' => 'a.test', 'kind' => 'access', 'lines' => [], 'entries' => [
+    ['at' => '2026-11-17T10:11:12+03:00', 'status' => 404, 'method' => 'GET', 'path' => '/gone', 'ip' => '5.6.7.8', 'level' => 'warn', 'raw' => 'r1'],
+    ['at' => '2026-11-17T10:11:13+03:00', 'status' => 200, 'method' => 'GET', 'path' => '/', 'ip' => '5.6.7.8', 'level' => 'info', 'raw' => 'r2'],
+]]);
+$visitRows = \Larena\Env\Server\SiteLogView::of($visits, '', \Larena\Env\Server\SiteLogView::PROBLEMS)->display(10);
+env_assert(count($visitRows) === 1 && $visitRows[0]['title'] === 'GET /gone' && $visitRows[0]['badge'] === ['text' => '404', 'status' => 'warning'], 'A visit read by the server, among the errors.');
 $errorRows = $errors->display(50, static fn (string $level): string => strtoupper($level));
 env_assert($errorRows[0]['badge'] === ['text' => 'ERROR', 'status' => 'error'] && $errorRows[0]['title'] === '12#12: *1 open() failed'
     && $errorRows[0]['raw'] === '2026/01/01 00:00:00 [error] 12#12: *1 open() failed', 'An error line: its level in words, its message, the line as written.');

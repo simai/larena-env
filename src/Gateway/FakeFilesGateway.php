@@ -17,11 +17,11 @@ use Throwable;
 final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
 {
     /** The commands this stand-in answers, added to the host description's own list. */
-    public const array COMMANDS = ['file:list', 'file:stat', 'file:read', 'file:download', 'file:write', 'file:upload', 'file:mkdir', 'file:rename',
+    public const array COMMANDS = ['file:list', 'file:stat', 'file:read', 'file:preview', 'file:download', 'file:write', 'file:upload', 'file:mkdir', 'file:rename',
         'file:remove', 'file:archive', 'file:extract', 'file:trash-list', 'file:trash-restore', 'file:trash-empty'];
 
-    /** How long the stand-in keeps a removed entry, as simai-env 1.57.0 does. */
-    public const int TRASH_DAYS = 30;
+    /** How long the stand-in keeps a removed entry, as simai-env 1.61.0 does. */
+    public const int TRASH_DAYS = 7;
 
     private const array DESCRIPTIONS = [
         'file:write' => 'Replace or create a text file of a site', 'file:upload' => 'Put a file into a site', 'file:mkdir' => 'Make a directory',
@@ -175,6 +175,9 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
         if (!is_file($path) || is_link($path)) {
             throw new FakeRefusal('not_a_file');
         }
+        if ($command === 'file:preview') {
+            return self::preview($relative, $path, (int) ($args['max-bytes'] ?? 1_048_576));
+        }
         if (filesize($path) > 1_048_576) {
             throw new FakeRefusal('too_large');
         }
@@ -184,6 +187,46 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
         }
 
         return ['schema' => 'simai-file/1', 'path' => $relative, 'size' => strlen($bytes), 'mtime' => (int) filemtime($path), 'sha256' => hash('sha256', $bytes), 'content' => $bytes];
+    }
+
+    /**
+     * file:preview as simai-env 1.61.0 answers it: a picture whole (base64) when it fits, a text's first bytes (UTF-8)
+     * with `truncated`, anything else not previewable.
+     *
+     * @return array<string, mixed>
+     *
+     * @throws FakeRefusal
+     */
+    private static function preview(string $relative, string $path, int $max): array
+    {
+        $size = (int) filesize($path);
+        $head = (string) file_get_contents($path, false, null, 0, 16);
+        $image = match (true) {
+            str_starts_with($head, "\x89PNG\r\n\x1a\n") => 'image/png',
+            str_starts_with($head, "\xFF\xD8\xFF") => 'image/jpeg',
+            str_starts_with($head, 'GIF87a'), str_starts_with($head, 'GIF89a') => 'image/gif',
+            str_starts_with($head, 'RIFF') && substr($head, 8, 4) === 'WEBP' => 'image/webp',
+            default => null,
+        };
+        $base = ['schema' => 'simai-file-preview/1', 'path' => $relative, 'size' => $size, 'mtime' => (int) filemtime($path)];
+        if ($image !== null) {
+            if ($size > $max) {
+                throw new FakeRefusal('too_large');
+            }
+            $bytes = (string) file_get_contents($path);
+
+            return $base + ['kind' => 'image', 'mime' => $image, 'encoding' => 'base64', 'truncated' => false, 'bytes' => strlen($bytes),
+                'sha256' => hash('sha256', $bytes), 'content' => base64_encode($bytes)];
+        }
+        $bytes = (string) file_get_contents($path, false, null, 0, $max);
+        $cut = mb_strcut($bytes, 0, strlen($bytes), 'UTF-8');
+        if (str_contains($bytes, "\0") || !mb_check_encoding($size > $max ? $cut : $bytes, 'UTF-8')) {
+            throw new FakeRefusal('not_previewable');
+        }
+        $text = $size > $max ? $cut : $bytes;
+
+        return $base + ['kind' => 'text', 'mime' => 'text/plain', 'encoding' => 'utf-8', 'truncated' => $size > $max, 'bytes' => strlen($text),
+            'sha256' => hash('sha256', $text), 'content' => $text];
     }
 
     /** @return array{type: string, size: int, mtime: int, mode: string, target?: string} */

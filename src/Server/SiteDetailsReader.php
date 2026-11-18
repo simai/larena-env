@@ -45,13 +45,27 @@ final readonly class SiteDetailsReader
      * server searches its last 20000 lines for that fixed string (simai-env 1.28.0). With $fresh the server is read
      * again past the panel's kept answer: the person pressed «Обновить».
      */
-    public function log(PanelActor $actor, string $domain, string $kind, int $lines = 200, ?string $match = null, bool $fresh = false): NginxLogResult
+    /**
+     * The last lines of a site's log. Since simai-env 1.60.0 the server reads each line itself (`format: json`), keeps
+     * the answers asked (`status`: `4xx,5xx`) among its last 20000 lines, and gives up to 10000 lines for a download; an
+     * older server refuses what it does not know, and is asked again as before (its plain lines, at most 1000).
+     *
+     * @param ?string $status the answers the request log keeps (`4xx,5xx`), the server's filter
+     * @param bool $entries whether to ask for the server's reading of each line (not for a download)
+     */
+    public function log(PanelActor $actor, string $domain, string $kind, int $lines = 200, ?string $match = null, bool $fresh = false,
+        ?string $status = null, bool $entries = true): NginxLogResult
     {
         $source = $this->gateway->source();
+        $plain = ['domain' => $domain, 'kind' => $kind, 'lines' => (string) min($lines, 1000)] + ($match === null ? [] : ['match' => $match]);
+        $args = array_replace($plain, ['lines' => (string) $lines]) + ($entries ? ['format' => 'json'] : [])
+            + ($status !== null && $kind === 'access' ? ['status' => $status] : []);
         try {
-            $request = PanelRequest::read($actor, 'logs:nginx',
-                ['domain' => $domain, 'kind' => $kind, 'lines' => (string) $lines] + ($match === null ? [] : ['match' => $match]));
-            $answer = $fresh && $this->gateway instanceof CachingPanelGateway ? $this->gateway->fresh($request) : $this->gateway->ask($request);
+            $answer = $this->askLog($args, $actor, $fresh);
+            $newer = $entries || ($status !== null && $kind === 'access') || $lines > 1000;
+            if ($newer && $answer->status === PanelAnswerStatus::Refused && $answer->reason === PanelReason::INVALID_ARGUMENT) {
+                $answer = $this->askLog($plain, $actor, $fresh);
+            }
         } catch (PanelRefused $refused) {
             return new NginxLogResult($source, null, $refused->reasonCode, true);
         }
@@ -65,6 +79,14 @@ final readonly class SiteDetailsReader
         } catch (UnexpectedValueException) {
             return new NginxLogResult($source, null, PanelReason::ANSWER_SHAPE_INVALID);
         }
+    }
+
+    /** @param array<string, string> $args */
+    private function askLog(array $args, PanelActor $actor, bool $fresh): PanelAnswer
+    {
+        $request = PanelRequest::read($actor, 'logs:nginx', $args);
+
+        return $fresh && $this->gateway instanceof CachingPanelGateway ? $this->gateway->fresh($request) : $this->gateway->ask($request);
     }
 
     /** simai-env's check of the site: its state and what did not pass. Null when the gateway did not answer it. */

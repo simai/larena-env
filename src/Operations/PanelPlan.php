@@ -29,7 +29,31 @@ final readonly class PanelPlan
         public ?PlanCheck $check = null,
         // What a new site or a restored copy asks of the server (site:add, bitrix:restore-ready, simai-env 1.56.0).
         public ?PlanResources $resources = null,
+        // The plan in words (simai-env 1.60.0, `lang`): its title, each value with its label and words, what it does to
+        // data, the sentence for what deletes or replaces data, and what the plan's check found.
+        public ?string $title = null,
+        /** @var list<array{key: string, label: string, value: string, words: string}> */
+        public array $display = [],
+        public ?string $effectsWords = null,
+        public ?string $consequence = null,
+        public ?PlanChecks $checks = null,
     ) {
+    }
+
+    /**
+     * A value's words as the server says them, by its argument; null when the server said none.
+     *
+     * @return array{key: string, label: string, value: string, words: string}|null
+     */
+    public function said(string $key): ?array
+    {
+        foreach ($this->display as $row) {
+            if ($row['key'] === $key) {
+                return $row;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -72,6 +96,33 @@ final readonly class PanelPlan
             system: $command === 'software:update' && is_array($data['update'] ?? null) ? SystemUpdates::fromData($data['update']) : null,
             check: $command === 'site:check-fix' && is_array($data['check'] ?? null) ? PlanCheck::fromData($data['check']) : null,
             resources: is_array($data['resources'] ?? null) ? PlanResources::fromData($data['resources'], is_array($data['archive'] ?? null) ? $data['archive'] : null) : null,
+            title: self::words($data['title'] ?? null),
+            display: self::display($data['display'] ?? null),
+            effectsWords: self::words($data['effects_words'] ?? null),
+            consequence: self::words($data['consequence'] ?? null),
+            checks: PlanChecks::fromData($data['checks'] ?? null),
         );
+    }
+
+    private static function words(mixed $value): ?string
+    {
+        return is_string($value) && trim($value) !== '' ? mb_substr(trim($value), 0, 500) : null;
+    }
+
+    /** @return list<array{key: string, label: string, value: string, words: string}> */
+    private static function display(mixed $rows): array
+    {
+        $kept = [];
+        foreach (is_array($rows) ? $rows : [] as $row) {
+            if (!is_array($row) || !is_string($row['key'] ?? null)) {
+                continue;
+            }
+            $value = $row['value'] ?? '';
+            $value = is_array($value) ? implode(', ', array_filter($value, 'is_string')) : (is_scalar($value) ? (string) $value : '');
+            $kept[] = ['key' => $row['key'], 'label' => self::words($row['label'] ?? null) ?? $row['key'], 'value' => $value,
+                'words' => self::words($row['words'] ?? null) ?? $value];
+        }
+
+        return $kept;
     }
 }

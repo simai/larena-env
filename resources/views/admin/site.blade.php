@@ -241,23 +241,37 @@
         @elseif ($tab === 'database')
             <section class="larena-panel larena-panel-padded" data-env-database="{{ $site->databaseEngine ?? 'none' }}" aria-labelledby="env-site-database">
                 <h2 id="env-site-database" class="text-2">{{ __('larena-env::admin.database.title') }}</h2>
+                {{-- The site's one database (simai-env 1.59.0): its name and size from the server's list, and the block's own
+                     actions — «Данные для подключения» (the password shown once, never kept by the panel), «Сменить пароль»;
+                     «Создать базу» only for a site without one. A second database is never offered. --}}
                 @if ($site->databaseEngine === null)
                     <p>{{ __('larena-env::admin.database.none') }}</p>
+                    @if (in_array(\Larena\Env\Operations\SiteOperation::DatabaseCreate, $tabOperations, true))
+                        <p class="m-0 m-bottom-1 text-small color-on-surface-variant">{{ __('larena-env::admin.database.create_note') }}</p>
+                        <p class="flex flex-wrap g-1"><button type="button" class="larena-button larena-button-primary" data-sf-modal-open="env-op-{{ \Larena\Env\Operations\SiteOperation::DatabaseCreate->value }}" data-env-database-create>{{ __('larena-env::admin.database.actions.create') }}</button></p>
+                    @endif
                 @else
                     <dl class="m-0" style="display: block;" data-env-facts>
+                        @if (($databases[0] ?? null) !== null)
+                            <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.database.name') }}</dt><dd class="m-0 min-w-0 text-end mono" style="overflow-wrap: anywhere;" data-env-database-name>{{ $databases[0]->name }}</dd></div>
+                        @endif
                         <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.database.engine') }}</dt><dd class="m-0 min-w-0 text-end">{{ __('larena-env::admin.new_site.engines.'.$site->databaseEngine) === 'larena-env::admin.new_site.engines.'.$site->databaseEngine ? $site->databaseEngine : __('larena-env::admin.new_site.engines.'.$site->databaseEngine) }}</dd></div>
+                        @if (($databases[0] ?? null) !== null)
+                            <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.database.size') }}</dt><dd class="m-0 min-w-0 text-end" data-env-database-size>{{ \Larena\Env\Server\Bytes::human($databases[0]->sizeBytes) }}</dd></div>
+                            @if ($databases[0]->users !== [])
+                                <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.database.users') }}</dt><dd class="m-0 min-w-0 text-end mono" style="overflow-wrap: anywhere;">{{ implode(', ', $databases[0]->users) }}</dd></div>
+                            @endif
+                        @endif
                     </dl>
-                    @if ($databases !== null)
-                        <ul class="m-0 m-top-1 p-0" style="list-style: none;">
-                            @foreach ($databases as $database)
-                                <li class="flex flex-wrap items-cross-center g-1 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-database-item="{{ $database->name }}">
-                                    <span class="mono grow min-w-0" style="overflow-wrap: anywhere;">{{ $database->name }}</span>
-                                    <span class="text-small color-on-surface-variant">{{ \Larena\Env\Server\Bytes::human($database->sizeBytes) }}@if ($database->users !== []) · {{ implode(', ', $database->users) }}@endif</span>
-                                </li>
-                            @endforeach
-                        </ul>
-                    @endif
-                    <p>{{ __('larena-env::admin.database.secrets') }}</p>
+                    <p class="flex flex-wrap g-1 m-top-1" data-env-database-actions>
+                        @if (in_array(\Larena\Env\Operations\SiteOperation::DatabaseCredentials, $tabOperations, true))
+                            <button type="button" class="larena-button larena-button-primary" data-sf-modal-open="env-op-{{ \Larena\Env\Operations\SiteOperation::DatabaseCredentials->value }}" data-env-database-credentials>{{ __('larena-env::admin.database.actions.credentials') }}</button>
+                        @endif
+                        @if (in_array(\Larena\Env\Operations\SiteOperation::DatabasePassword, $tabOperations, true))
+                            <button type="button" class="larena-button" data-sf-modal-open="env-op-{{ \Larena\Env\Operations\SiteOperation::DatabasePassword->value }}" data-env-database-rotate>{{ __('larena-env::admin.database.actions.rotate') }}</button>
+                        @endif
+                    </p>
+                    <p class="m-0 m-top-1 text-small color-on-surface-variant">{{ __('larena-env::admin.database.secrets') }}</p>
                 @endif
                 {{-- «Открыть базу» (simai-env 1.58.0): Adminer on the site's HTTPS address for 15 minutes, an hour or four, signed in
                      to this database only; its address is shown once, on the run's screen. Open, it says until when and offers
@@ -414,7 +428,7 @@
                 @elseif ($logRows === [])
                     <p data-env-log-none>{{ __('larena-env::admin.log.'.($logView === 'problems' ? 'no_problems' : 'nothing_found'), ['total' => (string) $log->total]) }}</p>
                 @else
-                    @include('larena-admin::history.log', ['rows' => $logRows, 'label' => __('larena-env::admin.log.title')])
+                    @include('larena-admin::history.log', ['rows' => $logRows, 'label' => __('larena-env::admin.log.title'), 'zone' => $logZone ?? null])
                     <p class="color-on-surface-variant" data-env-log-count>
                         {{ __('larena-env::admin.log.count', ['shown' => (string) count($logRows), 'found' => (string) count($log->rows), 'total' => (string) $log->total]) }}
                         @if ($logMore !== null) · <a href="{{ $logMore }}" data-env-log-more>{{ __('larena-env::admin.log.more') }}</a>@endif
@@ -450,18 +464,18 @@
         @endif
 
         @if ($tabOperations !== [])
-            <section class="larena-panel larena-panel-padded" data-env-operations aria-labelledby="env-site-operations">
+            {{-- The database browser and the database's own actions are offered by the «База данных» block, not the row. --}}
+            <section class="larena-panel larena-panel-padded" data-env-operations @if (\Larena\Env\Operations\SiteOperation::inRow($tabOperations, $sftpChoices ?? []) !== []) aria-labelledby="env-site-operations" @else style="display: contents;" @endif>
+                @if (\Larena\Env\Operations\SiteOperation::inRow($tabOperations, $sftpChoices ?? []) !== [])
                 <h2 id="env-site-operations" class="text-2">{{ __('larena-env::admin.operations.title') }}</h2>
                 {{-- The tab's actions as a row of buttons; each opens its fields in a side panel, and the plan comes next
                      (the panel's UX audit, LAY-03): the tab is no longer a column of long forms. --}}
                 <div class="flex flex-wrap g-1" data-env-operation-buttons>
-                    @foreach ($tabOperations as $operation)
-                        @continue(!$operation->namesSite() && ($sftpChoices[$operation->value] ?? []) === [])
-                        {{-- The database browser is offered by its own block, by its state. --}}
-                        @continue(in_array($operation, \Larena\Env\Operations\SiteOperation::BROWSER, true))
+                    @foreach (\Larena\Env\Operations\SiteOperation::inRow($tabOperations, $sftpChoices ?? []) as $operation)
                         <button type="button" class="larena-button @if ($operation->destroys()) larena-button-danger @endif" data-sf-modal-open="env-op-{{ $operation->value }}" data-env-operation-open="{{ $operation->value }}">{{ __('larena-env::admin.operations.'.$operation->value) }}</button>
                     @endforeach
                 </div>
+                @endif
                 @foreach ($tabOperations as $operation)
                     @continue(!$operation->namesSite() && ($sftpChoices[$operation->value] ?? []) === [])
                     {{-- «Действие с планом» (larena/admin AdminPlannedAction): the form, its plan, the question and the run stay in this

@@ -19,7 +19,18 @@ final class PanelCommands
     private const string DOMAIN = '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D';
     private const string YES_NO = '/\A(?:yes|no)\z/D';
     private const string EMAIL = '/\A[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,253}\.[A-Za-z]{2,63}\z/D';
-    private const string LINES = '/\A(?:[1-9][0-9]{0,2}|1000)\z/D';
+    // A log read for «Скачать журнал» takes up to 10000 lines; as JSON entries with their zone; filtered on the server by
+    // the answer's status (4xx,5xx; 404) or a journal's priority and above (simai-env 1.60.0).
+    private const string LOG_LINES = '/\A(?:[1-9][0-9]{0,3}|10000)\z/D';
+    private const string LOG_FORMAT = '/\A(?:text|json)\z/D';
+    private const string LOG_STATUS = '/\A(?:[1-5]xx|[1-5][0-9]{2})(?:,(?:[1-5]xx|[1-5][0-9]{2})){0,9}\z/D';
+    private const string PRIORITY = '/\A(?:emerg|alert|crit|err|warning|notice|info|debug)\z/D';
+    // A page of the server's jobs (simai-env 1.60.0): continued after a job, 1 to 100, by states, since a moment (UTC).
+    private const string JOB_LIMIT = '/\A(?:[1-9][0-9]?|100)\z/D';
+    private const string JOB_STATES = '/\A(?:running|succeeded|failed|cancelled|busy)(?:,(?:running|succeeded|failed|cancelled|busy)){0,4}\z/D';
+    private const string ISO_UTC = '/\A[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z\z/D';
+    // How much of a file a look at it reads (file:preview, simai-env 1.61.0): the server caps it at 5 MiB.
+    private const string PREVIEW_BYTES = '/\A[1-9][0-9]{0,6}\z/D';
     private const string LOG_KIND = '/\A(?:access|error)\z/D';
     private const string JOB_ID = '/\A[a-f0-9]{24}\z/D';
     private const string CURSOR = '/\A[0-9]{1,7}\z/D';
@@ -161,7 +172,7 @@ final class PanelCommands
         'site:describe' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => '1.20.0', 'kind' => self::READ],
         'site:doctor' => ['args' => ['domain' => self::DOMAIN, 'strict' => self::YES_NO, 'include-target' => self::YES_NO],
             'required' => ['domain'], 'since' => '1.20.0', 'kind' => self::READ],
-        'logs:nginx' => ['args' => ['domain' => self::DOMAIN, 'kind' => self::LOG_KIND, 'lines' => self::LINES, 'match' => self::MATCH],
+        'logs:nginx' => ['args' => ['domain' => self::DOMAIN, 'kind' => self::LOG_KIND, 'lines' => self::LOG_LINES, 'match' => self::MATCH, 'format' => self::LOG_FORMAT, 'status' => self::LOG_STATUS],
             'required' => ['domain'], 'since' => '1.21.0', 'kind' => self::READ],
         // Actions of the certificates, backups, releases and services screens (simai-env 1.21.0).
         'ssl:letsencrypt' => ['args' => ['domain' => self::DOMAIN, 'email' => self::EMAIL, 'redirect' => self::YES_NO,
@@ -230,6 +241,8 @@ final class PanelCommands
         'access:remove' => ['args' => ['login' => self::LOGIN], 'required' => ['login'], 'since' => '1.30.0', 'kind' => self::ACTION],
         'db:list' => ['args' => [], 'required' => [], 'since' => '1.28.0', 'kind' => self::READ],
         'site:db-rotate' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => '1.28.0', 'kind' => self::ACTION],
+        // How to connect to a site's database (simai-env 1.59.0): its password in the job's result once (ONCE_RESULT), never in its log.
+        'site:db-credentials' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => '1.59.0', 'kind' => self::ACTION],
         // Panel plan stage 5. The server's services, the administrator's, each checked before a restart or a reload (nginx
         // -t, php-fpm -t), and the kinds of site the server makes, with their arguments (simai-env 1.33.0); a site's own
         // scheduled jobs, as its user (1.34.0); the firewall and who reaches the panel, each change undone by the server
@@ -237,7 +250,7 @@ final class PanelCommands
         'service:list' => ['args' => [], 'required' => [], 'since' => '1.33.0', 'kind' => self::READ],
         'service:restart' => ['args' => ['name' => self::SERVICE], 'required' => ['name'], 'since' => '1.33.0', 'kind' => self::ACTION],
         'service:reload' => ['args' => ['name' => self::SERVICE], 'required' => ['name'], 'since' => '1.33.0', 'kind' => self::ACTION],
-        'service:log' => ['args' => ['name' => self::SERVICE, 'lines' => self::LINES], 'required' => ['name'], 'since' => '1.33.0', 'kind' => self::READ],
+        'service:log' => ['args' => ['name' => self::SERVICE, 'lines' => self::LOG_LINES, 'format' => self::LOG_FORMAT, 'priority' => self::PRIORITY], 'required' => ['name'], 'since' => '1.33.0', 'kind' => self::READ],
         'self:profiles' => ['args' => [], 'required' => [], 'since' => '1.33.0', 'kind' => self::READ],
         // A bundled kind of site switched on or off by the administrator (simai-env 1.57.5): the new-site wizard offers a
         // switched-off one with «Включить»; the server refuses to switch off a core kind or one that sites still use.
@@ -263,6 +276,8 @@ final class PanelCommands
         'file:list' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH], 'required' => ['domain'], 'since' => '1.39.0', 'kind' => self::READ],
         'file:stat' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH], 'required' => ['domain', 'path'], 'since' => '1.39.0', 'kind' => self::READ],
         'file:read' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH], 'required' => ['domain', 'path'], 'since' => '1.39.0', 'kind' => self::READ],
+        // A look at a file without downloading it all (simai-env 1.61.0): a picture whole, or the start of a text.
+        'file:preview' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH, 'max-bytes' => self::PREVIEW_BYTES], 'required' => ['domain', 'path'], 'since' => '1.61.0', 'kind' => self::READ],
         'file:download' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH], 'required' => ['domain', 'path'], 'since' => '1.39.0', 'kind' => self::READ],
         'file:write' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH, 'content' => self::FILE_CONTENT, 'expect-sha256' => self::EXPECT_SHA256],
             'required' => ['domain', 'path', 'content'], 'since' => '1.39.0', 'kind' => self::ACTION],
@@ -382,7 +397,7 @@ final class PanelCommands
         'job:status' => ['args' => ['job_id' => self::JOB_ID], 'required' => ['job_id'], 'since' => '1.21.0', 'kind' => self::JOB],
         'job:log' => ['args' => ['job_id' => self::JOB_ID, 'after' => self::CURSOR], 'required' => ['job_id'], 'since' => '1.21.0', 'kind' => self::JOB],
         'job:cancel' => ['args' => ['job_id' => self::JOB_ID], 'required' => ['job_id'], 'since' => '1.21.0', 'kind' => self::JOB],
-        'job:list' => ['args' => [], 'required' => [], 'since' => '1.21.0', 'kind' => self::JOB],
+        'job:list' => ['args' => ['before' => self::JOB_ID, 'limit' => self::JOB_LIMIT, 'state' => self::JOB_STATES, 'since' => self::ISO_UTC], 'required' => [], 'since' => '1.21.0', 'kind' => self::JOB],
     ];
 
     /**

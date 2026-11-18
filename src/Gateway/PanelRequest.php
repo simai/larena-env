@@ -94,7 +94,9 @@ final readonly class PanelRequest
      * The request as the protocol writes it. `args` stays a JSON object when it is empty (the gateway refuses a list),
      * and `confirm` is true only for an action this package has had confirmed.
      *
-     * @return array{schema: string, request_id: string, actor: array<string, ?string>, command: string, args: object, confirm: bool, attachment?: array{sha256: string, size: int}}
+     * `lang` asks the server's words in the panel's language (simai-env 1.60.0); an older server leaves it unread.
+     *
+     * @return array{schema: string, request_id: string, actor: array<string, ?string>, command: string, args: object, confirm: bool, lang: string, attachment?: array{sha256: string, size: int}}
      */
     public function toDocument(): array
     {
@@ -105,6 +107,7 @@ final readonly class PanelRequest
             'command' => $this->command,
             'args' => (object) $this->args,
             'confirm' => $this->confirm,
+            'lang' => PanelLanguage::current(),
         ];
         if ($this->attachment !== null) {
             $document['attachment'] = $this->attachment->toDocument();

@@ -173,7 +173,7 @@ env_assert($planned->plan !== null && $planned->plan->command === 'service:resta
 env_assert($operations->planCommand($admin, 'service:reload', ['name' => 'nginx'])->plan?->command === 'service:reload', 'A reread too.');
 env_assert($operations->startCommand($admin, 'service:restart', ['name' => 'nginx'])->jobId !== null, 'Confirmed, a job.');
 $journal = $extras->serviceLog($admin, 'nginx');
-env_assert(count($journal ?? []) === 1 && str_contains($journal[0], 'Started nginx.service'), 'The journal of a service (simai-service-log/1).');
+env_assert(count($journal['lines'] ?? []) === 1 && str_contains($journal['lines'][0], 'Started nginx.service') && !$journal['filtered'], 'The journal of a service (simai-service-log/1).');
 env_assert($operations->planCommand($owner, 'service:restart', ['name' => 'nginx'])->reason === 'not_allowed' && $extras->services($owner) === null,
     'An owner cannot see or restart the server\'s services.');
 env_assert($operations->planCommand($admin, 'service:restart', ['name' => 'sshd'])->reason === 'invalid_argument', 'A service off the list is refused.');
@@ -299,22 +299,32 @@ $readOnly = $servicesPage(['allows' => ['restart' => false, 'reload' => false, '
 env_assert(str_contains($readOnly, 'data-env-services-unsupported') && !str_contains($readOnly, 'data-env-service-op') && !str_contains($readOnly, 'data-env-service-log-link'), 'A server without them: the state only.');
 // «Журнал службы» (PX-48): errors and warnings first, 50 lines and «Ещё», the line as written on a press; escaped.
 $tones = static fn (string $tone): string => ucfirst($tone);
-$journalOf = static fn (array $lines, string $show = ''): array => ['logOf' => 'nginx', 'log' => $view = \Larena\Env\Server\ServiceLogView::of($lines, $show, $tones,
-    new DateTimeImmutable('2026-11-18T12:00:00Z')), 'logRows' => array_slice($view->rows, 0, 50), 'logMore' => count($view->rows) > 50 ? '/admin/server/services?log=nginx&shown=100' : null,
+$journalOf = static fn (array $lines, string $show = '', ?array $entries = null): array => ['logOf' => 'nginx', 'log' => $view = \Larena\Env\Server\ServiceLogView::of($lines, $entries, $show, $tones),
+    'logRows' => array_slice($view->rows, 0, 50), 'logMore' => count($view->rows) > 50 ? '/admin/server/services?log=nginx&shown=100' : null,
     'logOther' => '/admin/server/services?log=nginx&show=all'];
 $journalLines = ['Nov 18 00:10:59 simai-stand nginx[728167]: 2026/11/18 00:10:59 [warn] 728167#728167: duplicate MIME type',
     'Nov 18 00:10:59 simai-stand systemd[1]: Reloaded nginx.service - A high performance web server.', 'line <b>'];
-$journal = \Larena\Env\Server\ServiceLogView::of($journalLines, '', $tones, new DateTimeImmutable('2026-11-18T12:00:00Z'));
+// simai-env 1.60.0 reads journald itself (format: json): the priority is the level, the moment has its zone.
+$journalEntries = \Larena\Env\Server\LogEntry::listOf([
+    ['at' => '2026-11-18T03:10:59+03:00', 'level' => 'warning', 'unit' => 'nginx.service', 'message' => 'duplicate MIME type', 'raw' => $journalLines[0]],
+    ['at' => '2026-11-18T03:10:59+03:00', 'level' => 'info', 'unit' => 'nginx.service', 'message' => 'Reloaded nginx.service - A high performance web server. failed words', 'raw' => $journalLines[1]],
+    ['at' => null, 'level' => 'info', 'unit' => null, 'message' => 'line <b>', 'raw' => 'line <b>'],
+]);
+$journal = \Larena\Env\Server\ServiceLogView::of($journalLines, $journalEntries, '', $tones);
 env_assert($journal->view === 'problems' && $journal->problems === 1 && count($journal->rows) === 1 && $journal->rows[0]['badge'] === ['text' => 'Warning', 'status' => 'warning']
-    && $journal->rows[0]['at'] === '2026-11-18T00:10:59Z' && $journal->rows[0]['note'] === 'nginx' && $journal->total === 3, 'Warnings and errors first, the moment in ISO, the unit.');
-$everything = \Larena\Env\Server\ServiceLogView::of($journalLines, 'all', $tones, new DateTimeImmutable('2026-11-18T12:00:00Z'));
+    && $journal->rows[0]['at'] === '2026-11-18T03:10:59+03:00' && $journal->rows[0]['note'] === 'nginx' && $journal->total === 3,
+    'Warnings and errors first, by the server\'s priority (never by words: «failed» in an info line is no error), the moment with its zone, the unit.');
+$everything = \Larena\Env\Server\ServiceLogView::of($journalLines, $journalEntries, 'all', $tones);
 env_assert(count($everything->rows) === 3 && $everything->rows[0]['raw'] === 'line <b>' && $everything->rows[0]['at'] === '', 'Every line, newest first.');
-env_assert(\Larena\Env\Server\ServiceLogView::of(['Nov 18 01:00:00 h cron[1]: ok'], '', $tones)->view === 'all', 'Without errors the journal opens on every line.');
-env_assert(\Larena\Env\Server\ServiceLogView::iso('Dec 31 23:00:00', new DateTimeImmutable('2027-01-01T01:00:00Z')) === '2026-12-31T23:00:00Z', 'Last year\'s line keeps its year.');
+$kept = \Larena\Env\Server\ServiceLogView::of([$journalLines[0]], array_slice($journalEntries ?? [], 0, 1), '', $tones, true);
+env_assert($kept->view === 'problems' && count($kept->rows) === 1, 'The errors the server kept (priority: warning) open as the errors.');
+$older = \Larena\Env\Server\ServiceLogView::of(array_fill(0, 3, 'Nov 18 00:10:59 h nginx[1]: [error] failed'), null, '', $tones);
+env_assert($older->view === 'all' && $older->problems === 0 && $older->rows[0]['badge'] === null && $older->rows[0]['at'] === '' && $older->rows[0]['time'] === 'Nov 18 00:10:59',
+    'An older server\'s lines: as written, no level guessed from words, no zone assumed.');
 $journalPage = $servicesPage($journalOf($journalLines, 'all'));
 env_assert(str_contains($journalPage, 'line &lt;b&gt;') && !str_contains($journalPage, 'line <b>') && str_contains($journalPage, 'data-larena-log-raw')
     && str_contains($journalPage, 'data-env-service-log-other'), 'The journal, escaped, with the line on a press and the other view.');
-$longJournal = $servicesPage($journalOf(array_fill(0, 120, 'Nov 18 00:10:59 h nginx[1]: [error] failed')));
+$longJournal = $servicesPage($journalOf(array_fill(0, 120, 'Nov 18 00:10:59 h nginx[1]: [error] failed'), 'all'));
 env_assert(substr_count($longJournal, 'data-larena-log-row=') === 50 && str_contains($longJournal, 'data-env-service-log-more'), '50 lines, then «Ещё 50».');
 
 $firewall = static fn (array $data): string => $factory->make('larena-env::admin.firewall', $data + ['source' => 'recorded', 'supported' => true,

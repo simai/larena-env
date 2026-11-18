@@ -128,7 +128,16 @@
     "src/Files/SiteFiles.php",
     "src/Gateway/FakeFilesGateway.php",
     "src/Http/Controllers/SiteFilesController.php",
-    "tests/Unit/FilesTest.php"
+    "tests/Unit/FilesTest.php",
+    "resources/views/admin/databases.blade.php",
+    "src/Admin/ServerDatabasesPage.php",
+    "src/Gateway/PanelLanguage.php",
+    "src/Http/Controllers/DatabasesController.php",
+    "src/Operations/DbCredentials.php",
+    "src/Operations/JobPage.php",
+    "src/Operations/PlanChecks.php",
+    "src/Server/LogEntry.php",
+    "tests/Unit/PanelRunsTest.php"
   ],
   "forbidden_files": [
     "../*"

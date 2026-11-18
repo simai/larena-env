@@ -28,6 +28,9 @@ final readonly class SiteFiles
      */
     public const int WRITE_MAX_BYTES = 61_440;
 
+    /** How much of a text a look shows: the server's default, 1 MiB. */
+    public const int PREVIEW_BYTES = 1_048_576;
+
     public function __construct(private PanelGateway $gateway)
     {
     }
@@ -70,6 +73,40 @@ final readonly class SiteFiles
 
         return ['content' => $content, 'sha256' => $sha256, 'size' => is_int($data['size'] ?? null) ? $data['size'] : null,
             'mtime' => FileEntry::moment($data['mtime'] ?? null), 'savable' => self::savable($content)];
+    }
+
+    /**
+     * A look at a file (file:preview, simai-file-preview/1, simai-env 1.61.0): a picture whole, or a text's first bytes
+     * with whether it was cut. The server refuses a picture larger than asked (`too_large`) and anything neither picture
+     * nor text (`not_previewable`). A text not cut is the file itself, so its sha256 is the one a save expects.
+     *
+     * @return array{kind: string, mime: string, content: string, sha256: string, truncated: bool, size: ?int, mtime: ?string, savable: bool}|string
+     */
+    public function preview(PanelActor $actor, string $domain, string $path, int $maxBytes = self::PREVIEW_BYTES): array|string
+    {
+        $data = $this->data($actor, 'file:preview', ['domain' => $domain, 'path' => $path, 'max-bytes' => (string) max(1, min(5_242_880, $maxBytes))]);
+        if (is_string($data)) {
+            return $data;
+        }
+        $kind = $data['kind'] ?? null;
+        $content = $data['content'] ?? null;
+        $sha256 = $data['sha256'] ?? null;
+        $encoding = $data['encoding'] ?? null;
+        if (!in_array($kind, ['image', 'text'], true) || !is_string($content) || !is_string($sha256) || preg_match('/\A[a-f0-9]{64}\z/D', $sha256) !== 1
+            || $encoding !== ($kind === 'image' ? 'base64' : 'utf-8')) {
+            return PanelReason::ANSWER_SHAPE_INVALID;
+        }
+        if ($kind === 'image') {
+            $content = base64_decode($content, true);
+            if ($content === false) {
+                return PanelReason::ANSWER_SHAPE_INVALID;
+            }
+        }
+        $truncated = ($data['truncated'] ?? false) === true;
+
+        return ['kind' => $kind, 'mime' => is_string($data['mime'] ?? null) ? $data['mime'] : '', 'content' => $content, 'sha256' => $sha256,
+            'truncated' => $truncated, 'size' => is_int($data['size'] ?? null) ? $data['size'] : null, 'mtime' => FileEntry::moment($data['mtime'] ?? null),
+            'savable' => $kind === 'text' && !$truncated && self::savable($content)];
     }
 
     /** Whether the text fits the request line a save sends, as JSON writes it there. */

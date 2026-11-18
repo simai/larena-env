@@ -118,6 +118,8 @@ $router->middleware(['access:env.sites.operate'])->group(static function ($route
     $router->get('/alerts/ack/plan', [AlertsController::class, 'ackPlan'])->name('larena.env.admin.alerts.ack.open');
     $router->post('/alerts/ack/run', [AlertsController::class, 'ackRun'])->name('larena.env.admin.alerts.ack.run');
 });
+// «Базы данных» (simai-env 1.59.0): the sites' databases a person reaches, each row opening its site's «База данных».
+$router->get('/databases', [\Larena\Env\Http\Controllers\DatabasesController::class, 'index'])->name('larena.env.admin.databases');
 $router->get('/sites/{domain}', [SiteAdminController::class, 'show'])->where('domain', $domain)->name('larena.env.admin.site');
 // A site's file, handed over once checked (Panel plan 6.2); the server keeps the owner's scope.
 $router->get('/sites/{domain}/files/download', [SiteFilesController::class, 'download'])->where('domain', $domain)->name('larena.env.admin.site.files.download');

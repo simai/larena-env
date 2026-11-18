@@ -13,7 +13,8 @@ final readonly class DbBrowserState
     public const string SCHEMA = 'simai-db-browser/1';
 
     /** Why the server would refuse to open one: what the site lacks, said before anyone asks (the plan says plan_failed only). */
-    public const array REFUSALS = ['no_database', 'no_php', 'alias', 'suspended', 'no_https'];
+    /** The reasons the server names when it will not open the browser (simai-env 1.61.0 site:db-browser `refused`). */
+    public const array REFUSALS = ['no_database', 'no_php', 'no_https', 'alias', 'suspended', 'no_driver', 'engine_unsupported'];
 
     public function __construct(public bool $open, public ?string $expiresAt)
     {
@@ -31,18 +32,12 @@ final readonly class DbBrowserState
     }
 
     /**
-     * What stops the browser on this site, in the order the server checks it: no database of its own, no PHP, another
-     * site's pool (an alias), paused, no HTTPS certificate. Null when nothing the panel knows of does.
+     * What stops the browser on this site, as far as the panel knows it without asking: no database of its own. Every
+     * other reason (no PHP, an alias, paused, no HTTPS, no driver) the server names when it refuses the plan
+     * (simai-env 1.61.0), so the panel no longer works it out from the site's description.
      */
     public static function refusal(SiteDetails $site): ?string
     {
-        return match (true) {
-            $site->databaseEngine === null => 'no_database',
-            $site->php === 'none' || $site->php === '' => 'no_php',
-            $site->profile === 'alias' => 'alias',
-            $site->suspended => 'suspended',
-            $site->ssl === 'none' => 'no_https',
-            default => null,
-        };
+        return $site->databaseEngine === null ? 'no_database' : null;
     }
 }

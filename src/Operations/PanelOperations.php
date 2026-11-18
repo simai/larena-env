@@ -61,7 +61,11 @@ final readonly class PanelOperations
             return new PlanResult($source, null, $refused->reasonCode, true);
         }
         if ($answer->status !== PanelAnswerStatus::Ok) {
-            return new PlanResult($source, null, $answer->reason ?? PanelReason::ANSWER_INVALID, $answer->status === PanelAnswerStatus::Refused);
+            // What stopped it, in the server's words (simai-env 1.60.0 checks; 1.61.0 a named refusal's detail).
+            $detail = $answer->data['detail'] ?? null;
+
+            return new PlanResult($source, null, $answer->reason ?? PanelReason::ANSWER_INVALID, $answer->status === PanelAnswerStatus::Refused,
+                PlanChecks::fromData($answer->data['checks'] ?? null), is_string($detail) && trim($detail) !== '' ? mb_substr(trim($detail), 0, 500) : null);
         }
         if ($answer->kind !== 'plan') {
             return new PlanResult($source, null, PanelReason::ANSWER_SHAPE_INVALID);
@@ -106,8 +110,28 @@ final readonly class PanelOperations
      */
     public function jobs(PanelActor $actor): ?array
     {
+        return $this->jobPage($actor)?->jobs;
+    }
+
+    /**
+     * A page of the server's jobs (simai-env 1.60.0 job:list {before, limit, state, since}): `before` continues after that
+     * job, `state` narrows to a comma list of states, `since` (ISO, UTC) keeps what ended after it and all that runs. A
+     * server before 1.60.0 takes no arguments: it is asked plainly and its last 100 are the one page. Null when the list
+     * cannot be read.
+     */
+    public function jobPage(PanelActor $actor, ?string $before = null, ?int $limit = null, ?string $state = null, ?string $since = null): ?JobPage
+    {
+        $args = array_filter(['before' => $before, 'limit' => $limit === null ? null : (string) max(1, min(100, $limit)), 'state' => $state, 'since' => $since],
+            static fn (?string $value): bool => $value !== null && $value !== '');
         try {
-            $answer = $this->gateway->ask(PanelRequest::read($actor, 'job:list'));
+            $answer = $this->gateway->ask(PanelRequest::read($actor, 'job:list', $args));
+            if ($args !== [] && $answer->status === PanelAnswerStatus::Refused && $answer->reason === PanelReason::INVALID_ARGUMENT) {
+                // An older server: its whole list, once; there is nothing before it.
+                if ($before !== null) {
+                    return new JobPage([]);
+                }
+                $answer = $this->gateway->ask(PanelRequest::read($actor, 'job:list'));
+            }
         } catch (PanelRefused) {
             return null;
         }
@@ -125,8 +149,11 @@ final readonly class PanelOperations
                 $jobs[$status->jobId] = $status;
             }
         }
+        $counts = is_array($answer->data['counts'] ?? null) ? $answer->data['counts'] : [];
+        $next = $answer->data['next_before'] ?? null;
 
-        return $jobs;
+        return new JobPage($jobs, ($answer->data['more'] ?? false) === true, is_string($next) && preg_match('/\A[a-f0-9]{24}\z/D', $next) === 1 ? $next : null,
+            is_int($counts['running'] ?? null) ? $counts['running'] : null, is_int($counts['failed_since'] ?? null) ? $counts['failed_since'] : null);
     }
 
     public function view(PanelActor $actor, string $jobId, int $after = 0): JobViewResult

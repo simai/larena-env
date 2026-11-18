@@ -92,10 +92,13 @@ final class PlanAction
                 $facts[] = [self::text('plan.target') ?? 'Target', $target];
             }
             foreach (PlanValues::of($plan->args, $target, array_merge($chosen, $screen['check'] !== null ? ['id'] : [])) as $row) {
-                $facts[] = [$row['label'], $row['value']];
+                // The panel's own words where it has them, else the server's (simai-env 1.60.0 `display`): «Язык сайта» · «английский».
+                $said = $plan->said($row['name']);
+                $facts[] = [$row['label'] === $row['name'] && $said !== null ? $said['label'] : $row['label'],
+                    $said !== null && $row['value'] === ($plan->args[$row['name']] ?? null) && $said['words'] !== '' ? $said['words'] : $row['value']];
             }
         }
-        $heading = $screen['heading'] !== '' ? $screen['heading'] : $command;
+        $heading = $screen['heading'] !== '' ? $screen['heading'] : ($plan->title ?? $command);
         $question = $destroys
             ? self::firstSentence(self::text('plan.ask.'.$key, ['target' => (string) $target]) ?? $heading.'?')
             : (($target !== null && $target !== '' && !str_contains($heading, $target))
@@ -115,13 +118,16 @@ final class PlanAction
             runFields: $fields,
             acceptText: $destroys ? $heading : ($heading !== $command ? $heading : (self::text('plan.confirm') ?? '')),
             danger: $destroys,
-            consequence: $destroys ? (self::text('plan.consequence.'.$key) ?? '') : '',
+            // What deletes or replaces data says so on the plate: the panel's sentence, else the server's (simai-env 1.60.0).
+            consequence: ($destroys ? self::text('plan.consequence.'.$key) : null) ?? $plan->consequence ?? '',
             require: $destroys && $target !== null ? $target : '',
             facts: $facts,
-            warnings: $screen['warnings'],
+            // What the panel knows, then what the server's check found: what would stop it, then what is worth knowing.
+            warnings: [...$screen['warnings'], ...($plan->checks?->warnings() ?? [])],
             details: [
                 [self::text('plan.command') ?? 'Command', $command],
-                [self::text('plan.effects') ?? 'Effects', PlanValues::effects($plan->effects)],
+                [self::text('plan.effects') ?? 'Effects', PlanValues::effects($plan->effects) !== $plan->effects || $plan->effectsWords === null
+                    ? PlanValues::effects($plan->effects) : $plan->effectsWords],
                 [self::text('plan.lock') ?? 'Lock', PlanValues::lock($plan->lock)],
             ],
             detailsText: $plan->description,
@@ -132,6 +138,35 @@ final class PlanAction
             key: 'env-'.preg_replace('/[^a-z0-9-]/', '-', strtolower($key)),
             more: trim($screen['more']) !== '' ? [AdminRenderedPart::control($screen['more'])] : [],
         );
+    }
+
+    /**
+     * The question of an action the server will not plan (simai-env 1.60.0 checks, 1.61.0 named refusals): the same
+     * window with nothing to accept — what stops it as blocking warnings, the acceptance off, what is worth knowing below,
+     * and the way out the module draws ($more: «Выпустить сертификат» where HTTPS is what is missing).
+     *
+     * @param list<string> $reasons what stops it, in words: the panel's for a known refusal, then the server's
+     * @param list<string> $notes what is worth knowing
+     */
+    public static function refused(string $heading, array $reasons, array $notes, string $runUrl, string $token, string $cancelUrl, string $key, string $more = ''): ?HtmlString
+    {
+        if (!class_exists(AdminPlannedAction::class) || $reasons === []) {
+            return null;
+        }
+        $warnings = [...array_map(static fn (string $text): array => ['text' => $text, 'blocking' => true], $reasons),
+            ...array_map(static fn (string $text): array => ['text' => $text, 'blocking' => false], $notes)];
+
+        return (new AdminPlannedAction(
+            question: $heading.'?',
+            runUrl: $runUrl,
+            token: $token,
+            acceptText: $heading,
+            warnings: $warnings,
+            factsTitle: self::text('plan.refused_title') ?? '',
+            cancelUrl: $cancelUrl,
+            key: 'env-'.preg_replace('/[^a-z0-9-]/', '-', strtolower($key)),
+            more: trim($more) !== '' ? [\Larena\Admin\Runtime\AdminRenderedPart::control($more)] : [],
+        ))->html();
     }
 
     /** «Удалить сайт demo.test? Отменить это нельзя.» asks its first sentence; the rest is the plate's own words. */

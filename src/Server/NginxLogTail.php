@@ -6,13 +6,19 @@ namespace Larena\Env\Server;
 
 use UnexpectedValueException;
 
-/** The last lines of a site's nginx log (simai-log-tail/1), as the gateway hands them over. */
+/**
+ * The last lines of a site's nginx log (simai-log-tail/1), as the gateway hands them over; since simai-env 1.60.0 with
+ * the server's reading of each line (`format: json` entries), null from an older server.
+ */
 final readonly class NginxLogTail
 {
     private const string TAIL_SCHEMA = 'simai-log-tail/1';
 
-    /** @param list<string> $lines */
-    public function __construct(public string $domain, public string $kind, public array $lines)
+    /**
+     * @param list<string> $lines
+     * @param list<LogEntry>|null $entries
+     */
+    public function __construct(public string $domain, public string $kind, public array $lines, public ?array $entries = null)
     {
     }
 
@@ -36,6 +42,6 @@ final readonly class NginxLogTail
             $lines[] = $line;
         }
 
-        return new self($domain, $kind, $lines);
+        return new self($domain, $kind, $lines, LogEntry::listOf($data['entries'] ?? null));
     }
 }
