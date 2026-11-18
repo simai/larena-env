@@ -224,6 +224,12 @@ final readonly class SiteAdminController
             'phpSettings' => $ask('site:php-ini-list', 'php') ? $this->extras->phpSettings($actor, $domain) : null,
             'phpExtensions' => $ask('php:extensions', 'php') && $site->php !== 'none' ? $this->extras->phpExtensions($actor, $site->php) : null,
             'databases' => $ask('db:list', 'database') ? $this->extras->databases($actor, $domain) : null,
+            // The site's database browser (simai-env 1.58.0): open until when, or what stops it, said before anyone asks.
+            'dbBrowser' => $site !== null && $tab === 'database' && $capabilities->allows('site:db-browser') ? [
+                'state' => $capabilities->allows('site:db-browser-status') ? $this->extras->dbBrowser($actor, $domain) : null,
+                'refusal' => \Larena\Env\Server\DbBrowserState::refusal($site),
+                'certificate' => $capabilities->allows(SiteOperation::CertificateIssue->command()),
+            ] : null,
             'sftpAccounts' => $sftpAccounts,
             // The domain's records through the panel's DNS provider, and whether it points here (Panel plan, stage 7).
             // The site's files (simai-env 1.39.0–1.40.0): a folder or a file open in the editor.
@@ -503,7 +509,18 @@ final readonly class SiteAdminController
         }
         $result = $this->operations->plan($actor, $operation, $domain, $input);
         if ($result->plan === null) {
-            return $this->back($request, $domain, $result->reason ?? 'answer_shape_invalid', $operation->tab(), $operation);
+            // The server's plan says only plan_failed when it will not open a database browser: the panel says why, from
+            // what it knows of the site (no database, no PHP, an alias, paused, no HTTPS).
+            $reason = $result->reason ?? 'answer_shape_invalid';
+            if ($operation === SiteOperation::DatabaseBrowse && $reason === 'plan_failed') {
+                $site = $this->sites->read($actor, $domain)->site;
+                $why = $site === null ? null : \Larena\Env\Server\DbBrowserState::refusal($site);
+
+                return NoticeRedirect::to($request, route('larena.env.admin.site', ['domain' => $domain], false).'?tab=database',
+                    (string) $this->translator->get('larena-env::admin.db_browser.refusals.'.($why ?? 'other')));
+            }
+
+            return $this->back($request, $domain, $reason, $operation->tab(), $operation);
         }
 
         return $this->views->make('larena-env::admin.plan', [

@@ -52,6 +52,10 @@ final class PanelCommands
     private const string FILE_CONTENT = '/\A[^\x00]{0,61440}\z/D';
     // What file:write and file:upload expect at the path: the sha256 read before, nothing yet, or anything.
     private const string EXPECT_SHA256 = '/\A(?:[a-f0-9]{64}|new|any)\z/D';
+    // A trash entry: its time and six hex characters (simai-env 1.57.0).
+    private const string TRASH_ID = '/\A[0-9]{8}T[0-9]{6}Z-[a-f0-9]{6}\z/D';
+    // How long a database browser stays open: 5 to 480 minutes (simai-env 1.58.0).
+    private const string BROWSER_MINUTES = '/\A(?:[5-9]|[1-9][0-9]|[1-3][0-9]{2}|4[0-7][0-9]|480)\z/D';
     private const string CHANGE_ID = '/\A[A-Za-z0-9][A-Za-z0-9._-]{0,63}\z/D';
     // The server's alerts and where it sends them (simai-env 1.31.0). A webhook is https only; a Telegram chat is its
     // id or @name; the bot's token travels as text and reaches the command as a file, shown as (stored) everywhere.
@@ -255,7 +259,7 @@ final class PanelCommands
         'panel:access' => ['args' => ['allow' => self::PANEL_ALLOW], 'required' => ['allow'], 'since' => '1.35.0', 'kind' => self::ACTION],
         // Files of a site, as its own user and inside its root only (simai-env, after 1.35.0; Panel plan 6.1, 6.2).
         // A site's files, as its own user inside its folder, links never followed (simai-env 1.39.0); an upload, a packed
-        // folder and an unpacked archive came in 1.40.0. There is no trash: a removal is final.
+        // folder and an unpacked archive came in 1.40.0; a removal goes to the site's trash from 1.57.0.
         'file:list' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH], 'required' => ['domain'], 'since' => '1.39.0', 'kind' => self::READ],
         'file:stat' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH], 'required' => ['domain', 'path'], 'since' => '1.39.0', 'kind' => self::READ],
         'file:read' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH], 'required' => ['domain', 'path'], 'since' => '1.39.0', 'kind' => self::READ],
@@ -268,6 +272,16 @@ final class PanelCommands
         'file:upload' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH, 'expect-sha256' => self::EXPECT_SHA256], 'required' => ['domain', 'path'], 'since' => '1.40.0', 'kind' => self::ACTION],
         'file:archive' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH, 'to' => self::FS_ARCHIVE], 'required' => ['domain', 'path', 'to'], 'since' => '1.40.0', 'kind' => self::ACTION],
         'file:extract' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH, 'to' => self::FS_PATH, 'overwrite' => self::YES_NO], 'required' => ['domain', 'path', 'to'], 'since' => '1.40.0', 'kind' => self::ACTION],
+        // The site's trash (simai-env 1.57.0): file:remove moves into it, entries are kept there for a while (30 days in
+        // 1.57.0), put back where they were or deleted for good, one or all.
+        'file:trash-list' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => '1.57.0', 'kind' => self::READ],
+        'file:trash-restore' => ['args' => ['domain' => self::DOMAIN, 'id' => self::TRASH_ID, 'to' => self::FS_PATH], 'required' => ['domain', 'id'], 'since' => '1.57.0', 'kind' => self::ACTION],
+        'file:trash-empty' => ['args' => ['domain' => self::DOMAIN, 'id' => self::TRASH_ID], 'required' => ['domain'], 'since' => '1.57.0', 'kind' => self::ACTION],
+        // A database browser for one site (simai-env 1.58.0): Adminer on the site's own HTTPS address, signed in to its
+        // database only, for 5 to 480 minutes. Its address is in the job's result once (ONCE_RESULT), never in its log.
+        'site:db-browser' => ['args' => ['domain' => self::DOMAIN, 'minutes' => self::BROWSER_MINUTES], 'required' => ['domain'], 'since' => '1.58.0', 'kind' => self::ACTION],
+        'site:db-browser-close' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => '1.58.0', 'kind' => self::ACTION],
+        'site:db-browser-status' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => '1.58.0', 'kind' => self::READ],
         // The site's own nginx directives, the system level's (simai-env 1.41.0): a timed change, applied once nginx takes
         // them and the site answers, then undone after two minutes unless change:confirm keeps it. Empty removes them.
         'site:nginx-custom-show' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => '1.41.0', 'kind' => self::READ],

@@ -117,7 +117,10 @@
     "src/Admin/EnvHistorySource.php",
     "src/Server/ServiceLogView.php",
     "tests/Support/admin-views/history/log.blade.php",
-    "tests/Unit/HistoryTest.php"
+    "tests/Unit/HistoryTest.php",
+    "src/Operations/DbBrowserLink.php",
+    "src/Server/DbBrowserState.php",
+    "tests/Unit/DbBrowserTest.php"
   ],
   "forbidden_files": [
     "../*"

@@ -259,6 +259,39 @@
                     @endif
                     <p>{{ __('larena-env::admin.database.secrets') }}</p>
                 @endif
+                {{-- «Открыть базу» (simai-env 1.58.0): Adminer on the site's HTTPS address for 15 minutes, an hour or four, signed in
+                     to this database only; its address is shown once, on the run's screen. Open, it says until when and offers
+                     «Закрыть»; what stops it (no database, no PHP, an alias, paused, no HTTPS) is said in words, with the
+                     certificate's own action where HTTPS is what is missing. --}}
+                @if (($dbBrowser ?? null) !== null)
+                    <div class="m-top-2 p-top-2 border-top-1 border-top-solid border-outline-variant" data-env-db-browser="{{ $dbBrowser['state']?->open ? 'open' : ($dbBrowser['refusal'] ?? 'closed') }}">
+                        <h3 class="m-top-0 text-medium">{{ __('larena-env::admin.db_browser.title') }}</h3>
+                        @if ($dbBrowser['state']?->open)
+                            <p data-env-db-browser-until>{{ __('larena-env::admin.db_browser.open_until') }}
+                                @if (\Larena\Env\Server\Moment::iso($dbBrowser['state']->expiresAt) !== null)<sf-time datetime="{{ \Larena\Env\Server\Moment::iso($dbBrowser['state']->expiresAt) }}" format="time"></sf-time>@else{{ \Larena\Env\Server\Moment::human($dbBrowser['state']->expiresAt) }}@endif
+                            </p>
+                            <p class="m-0 text-small color-on-surface-variant">{{ __('larena-env::admin.db_browser.open_note') }}</p>
+                            <p class="flex flex-wrap g-1 m-top-1">
+                                @if (in_array(\Larena\Env\Operations\SiteOperation::DatabaseBrowse, $tabOperations, true))
+                                    <button type="button" class="larena-button" data-sf-modal-open="env-op-{{ \Larena\Env\Operations\SiteOperation::DatabaseBrowse->value }}" data-env-db-browser-reopen>{{ __('larena-env::admin.db_browser.reopen') }}</button>
+                                @endif
+                                @if (in_array(\Larena\Env\Operations\SiteOperation::DatabaseBrowseClose, $tabOperations, true))
+                                    <button type="button" class="larena-button" data-sf-modal-open="env-op-{{ \Larena\Env\Operations\SiteOperation::DatabaseBrowseClose->value }}" data-env-db-browser-close>{{ __('larena-env::admin.db_browser.close') }}</button>
+                                @endif
+                            </p>
+                        @elseif ($dbBrowser['refusal'] !== null)
+                            <p role="note" data-env-db-browser-refusal="{{ $dbBrowser['refusal'] }}">{{ __('larena-env::admin.db_browser.refusals.'.$dbBrowser['refusal']) }}</p>
+                            @if ($dbBrowser['refusal'] === 'no_https' && $dbBrowser['certificate'])
+                                <p><a href="{{ route('larena.env.admin.site', ['domain' => $domain], false) }}?tab=domains&amp;action={{ \Larena\Env\Operations\SiteOperation::CertificateIssue->value }}" class="larena-button larena-button-primary" data-env-db-browser-certificate>{{ __('larena-env::admin.db_browser.certificate') }}</a></p>
+                            @endif
+                        @else
+                            <p>{{ __('larena-env::admin.db_browser.explain') }}</p>
+                            @if (in_array(\Larena\Env\Operations\SiteOperation::DatabaseBrowse, $tabOperations, true))
+                                <p><button type="button" class="larena-button larena-button-primary" data-sf-modal-open="env-op-{{ \Larena\Env\Operations\SiteOperation::DatabaseBrowse->value }}" data-env-db-browser-open>{{ __('larena-env::admin.db_browser.open') }}</button></p>
+                            @endif
+                        @endif
+                    </div>
+                @endif
             </section>
         @elseif ($tab === 'backups')
             <section class="larena-panel larena-panel-padded" data-env-backups aria-labelledby="env-site-backups">
@@ -424,6 +457,8 @@
                 <div class="flex flex-wrap g-1" data-env-operation-buttons>
                     @foreach ($tabOperations as $operation)
                         @continue(!$operation->namesSite() && ($sftpChoices[$operation->value] ?? []) === [])
+                        {{-- The database browser is offered by its own block, by its state. --}}
+                        @continue(in_array($operation, \Larena\Env\Operations\SiteOperation::BROWSER, true))
                         <button type="button" class="larena-button @if ($operation->destroys()) larena-button-danger @endif" data-sf-modal-open="env-op-{{ $operation->value }}" data-env-operation-open="{{ $operation->value }}">{{ __('larena-env::admin.operations.'.$operation->value) }}</button>
                     @endforeach
                 </div>
@@ -501,6 +536,14 @@
                                         <option value="dns">{{ __('larena-env::admin.fields.challenge_dns') }}</option>
                                     </select>
                                     <p id="env-{{ $operation->value }}-{{ $field }}-hint" class="m-0 text-small color-on-surface-variant">{{ __('larena-env::admin.fields.challenge_hint') }}</p>
+                                @elseif ($field === 'minutes')
+                                    {{-- Three terms (the server takes 5 to 480 minutes): an hour first. --}}
+                                    <select id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}" data-env-db-browser-minutes>
+                                        @foreach (['15', '60', '240'] as $minutes)
+                                            <option value="{{ $minutes }}" @if ($minutes === '60') selected @endif>{{ __('larena-env::admin.db_browser.minutes.'.$minutes) }}</option>
+                                        @endforeach
+                                    </select>
+                                    <p class="m-0 text-small color-on-surface-variant">{{ __('larena-env::admin.db_browser.minutes_hint') }}</p>
                                 @elseif ($field === 'keep')
                                     <input type="number" id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}" min="1" max="90" value="{{ $site->backupSchedule?->keep ?? '7' }}">
                                 @elseif ($field === 'code')

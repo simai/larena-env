@@ -61,6 +61,9 @@ enum SiteOperation: string
     case DatabaseDrop = 'database-drop';
     case RedirectAdd = 'redirect-add';
     case RedirectRemove = 'redirect-remove';
+    // A database browser for the site (simai-env 1.58.0): Adminer on its HTTPS address for a while, and closing it early.
+    case DatabaseBrowse = 'database-browse';
+    case DatabaseBrowseClose = 'database-browse-close';
 
     public function command(): string
     {
@@ -101,6 +104,8 @@ enum SiteOperation: string
             self::DatabaseDrop => 'site:db-drop',
             self::RedirectAdd => 'site:redirect-add',
             self::RedirectRemove => 'site:redirect-remove',
+            self::DatabaseBrowse => 'site:db-browser',
+            self::DatabaseBrowseClose => 'site:db-browser-close',
         };
     }
 
@@ -110,7 +115,7 @@ enum SiteOperation: string
         return match ($this) {
             self::CertificateIssue, self::CertificateRenew, self::NameAdd, self::NameRemove, self::RedirectAdd, self::RedirectRemove => 'domains',
             self::PhpVersion, self::PhpSetting, self::PhpSettingRemove, self::ServiceRestart, self::QueueRestart, self::ApacheOn, self::ApacheOff => 'php',
-            self::DatabaseCreate, self::DatabasePassword, self::DatabaseExport, self::DatabaseDrop => 'database',
+            self::DatabaseCreate, self::DatabasePassword, self::DatabaseExport, self::DatabaseDrop, self::DatabaseBrowse, self::DatabaseBrowseClose => 'database',
             self::Backup, self::BackupRestoreDatabase, self::BackupExtractFiles, self::BackupVerify, self::BackupSchedule => 'backups',
             self::Rollback => 'releases',
             self::SftpCreate, self::SftpAddKey, self::SftpDisable, self::SftpEnable, self::SftpRemove => 'access',
@@ -158,6 +163,8 @@ enum SiteOperation: string
             // `from` a path of the site, `to` a path of it or another address, `code` the kind of redirect.
             self::RedirectAdd => ['from', 'to', 'code'],
             self::RedirectRemove => ['from'],
+            // How long the browser stays open, in minutes: 15, 60 or 240 (the server takes 5 to 480).
+            self::DatabaseBrowse => ['minutes'],
             default => [],
         };
     }
@@ -232,6 +239,12 @@ enum SiteOperation: string
      */
     public const array NAMES = [self::NameAdd, self::NameRemove];
 
+    /**
+     * The database browser's actions: the «База данных» block offers them by its state (open: until when, and «Закрыть»),
+     * so the tab's row of action buttons leaves them out.
+     */
+    public const array BROWSER = [self::DatabaseBrowse, self::DatabaseBrowseClose];
+
     /** The fix of a check's rule: the «Проверка» block offers it on the rule's own row, never among the tab's buttons. */
     public const array CHECKS = [self::CheckFix];
 
@@ -298,6 +311,9 @@ enum SiteOperation: string
             self::DatabasePassword => $site->databaseEngine !== null && !in_array($site->profile, ['wordpress', 'bitrix'], true),
             self::DatabaseExport => $site->databaseEngine !== null,
             self::DatabaseDrop => $site->databaseEngine !== null,
+            // The browser only where the server would open it; why not is said in the «База данных» block instead.
+            self::DatabaseBrowse => \Larena\Env\Server\DbBrowserState::refusal($site) === null,
+            self::DatabaseBrowseClose => $site->databaseEngine !== null,
             // Apache serves PHP profiles only; the switch offers the other way from what the server says serves the site.
             self::ApacheOn => in_array($site->profile, SiteDetails::APACHE_PROFILES, true) && $site->webServer === 'nginx',
             self::ApacheOff => in_array($site->profile, SiteDetails::APACHE_PROFILES, true) && $site->webServer === 'apache',

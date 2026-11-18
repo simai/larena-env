@@ -26,6 +26,8 @@ final readonly class PanelJobStatus
         public ?JobSecret $secret = null,
         /** @var list<string> */
         public array $shownOnce = [],
+        // A site's database browser (site:db-browser, simai-env 1.58.0): its address given once, the same way.
+        public ?DbBrowserLink $browser = null,
     ) {
     }
 
@@ -62,6 +64,7 @@ final readonly class PanelJobStatus
             secret: is_array($data['result'] ?? null) ? JobSecret::fromData($data['result']) : null,
             shownOnce: is_array($data['result'] ?? null) && is_array($data['result']['shown_once'] ?? null)
                 ? array_values(array_filter($data['result']['shown_once'], 'is_string')) : [],
+            browser: is_array($data['result'] ?? null) ? DbBrowserLink::fromData($data['result']) : null,
         );
     }
 }

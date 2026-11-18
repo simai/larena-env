@@ -49,6 +49,14 @@ final readonly class SiteExtrasReader
         return $all === null ? null : array_values(array_filter($all, static fn (SiteDatabase $db): bool => $db->site === $domain));
     }
 
+    /** Whether the site's database browser is open, and until when (site:db-browser-status, simai-env 1.58.0). */
+    public function dbBrowser(PanelActor $actor, string $domain): ?DbBrowserState
+    {
+        $data = $this->data($actor, 'site:db-browser-status', ['domain' => $domain]);
+
+        return $data === null ? null : DbBrowserState::fromData($data);
+    }
+
     /** @return list<SftpAccount>|null the site's own SFTP accounts, from the server's list (whose own owner scope applies) */
     public function sftpAccounts(PanelActor $actor, string $domain): ?array
     {

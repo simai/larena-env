@@ -50,6 +50,10 @@ final readonly class SiteDetails
         // simai-env 1.44.0: the last copy sent to the storage away from the server.
         /** @var array{at: ?string, ok: bool, storage: ?string, backup: ?string, error: ?string}|null */
         public ?array $lastOffsite = null,
+        // simai-env 1.57.0: a paused site answers 503 and runs nothing (site:suspend).
+        public bool $suspended = false,
+        // The folder visitors see, inside the site's directory (`public`; a link to the current release where releases are).
+        public string $publicDir = 'public',
     ) {
     }
 
@@ -109,6 +113,9 @@ final readonly class SiteDetails
                 : (is_array($backups['last_verify'] ?? null) ? BackupCheck::fromData($backups['last_verify']) : null),
             webServer: in_array($data['web_server'] ?? null, ['nginx', 'apache'], true) ? $data['web_server'] : null,
             lastOffsite: self::offsite(is_array($data['last_offsite'] ?? null) ? $data['last_offsite'] : ($backups['last_offsite'] ?? null)),
+            suspended: ($data['suspended'] ?? false) === true,
+            publicDir: is_string($data['public_dir'] ?? null) && \Larena\Env\Files\FilePath::clean($data['public_dir']) !== null
+                ? (string) \Larena\Env\Files\FilePath::clean($data['public_dir']) : 'public',
         );
     }
 

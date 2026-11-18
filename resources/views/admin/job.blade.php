@@ -63,6 +63,23 @@
             @elseif (in_array('admin_password', $status->shownOnce, true))
                 <p role="note" data-env-job-secret-shown>{{ __('larena-env::admin.routes.password.shown') }}</p>
             @endif
+            {{-- A site's database browser (site:db-browser, simai-env 1.58.0): the server gives its address in this one answer
+                 and never in the log; the panel keeps none. It opens in a new tab with no referrer; later answers only say it
+                 was shown, and the site's «База данных» says until when it stays open. --}}
+            @if ($status->browser !== null)
+                <div class="larena-panel larena-panel-padded m-y-2" role="alert" data-env-job-browser data-larena-action-keep="{{ __('larena-env::admin.db_browser.keep') }}">
+                    <h3 class="m-top-0 text-medium">{{ __('larena-env::admin.db_browser.ready') }}</h3>
+                    <p>{{ __('larena-env::admin.db_browser.once') }}</p>
+                    @if ($status->browser->expiresAt !== null && \Larena\Env\Server\Moment::iso($status->browser->expiresAt) !== null)
+                        <p data-env-job-browser-until>{{ __('larena-env::admin.db_browser.until_label') }} <sf-time datetime="{{ \Larena\Env\Server\Moment::iso($status->browser->expiresAt) }}" format="time"></sf-time>@if ($status->browser->database !== null) · <span class="mono">{{ $status->browser->database }}</span>@endif</p>
+                    @endif
+                    <p class="flex flex-wrap g-1 m-top-1">
+                        <a href="{{ $status->browser->url }}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer" class="larena-button larena-button-primary" data-env-job-browser-open>{{ __('larena-env::admin.db_browser.open_link') }}</a>
+                    </p>
+                </div>
+            @elseif ($status->command === 'site:db-browser' && in_array('browser_url', $status->shownOnce, true))
+                <p role="note" data-env-job-browser-shown>{{ __('larena-env::admin.db_browser.shown') }}</p>
+            @endif
             @if ($status->state->isOver() && $status->command === 'site:add' && is_string($status->args['domain'] ?? null) && $status->state->value === 'succeeded')
                 <p><a href="{{ route('larena.env.admin.site', ['domain' => $status->args['domain']], false) }}" class="larena-button" data-env-job-next-site>{{ __('larena-env::admin.routes.to_site') }}</a></p>
             @elseif ($status->state->isOver() && \Larena\Env\Admin\JobOutcome::next($status) !== null)

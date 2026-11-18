@@ -28,10 +28,16 @@ final readonly class JobSecret
             is_string($url) && preg_match('#\Ahttps?://[^\s<>"]{1,500}\z#', $url) === 1 ? $url : null);
     }
 
+    /**
+     * The values the server gives once (its ONCE_RESULT): WordPress's administrator password (1.56.0), a database
+     * browser's address (1.58.0), a database password (1.59.0).
+     */
+    public const array ONCE = ['admin_password', 'browser_url', 'db_password'];
+
     /** Whether a gateway's answer carries a value shown once: such an answer is never written anywhere. */
     public static function in(mixed $data): bool
     {
-        return is_array($data) && is_array($data['result'] ?? null) && array_key_exists('admin_password', $data['result']);
+        return is_array($data) && is_array($data['result'] ?? null) && array_intersect(self::ONCE, array_keys($data['result'])) !== [];
     }
 
     /** Never printed by accident (var_dump, a log of the object). @return array<string, string> */

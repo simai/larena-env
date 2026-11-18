@@ -17,7 +17,7 @@ use Larena\Env\Operations\PanelJobStatus;
 final class JobOutcome
 {
     /** The words of the end, by command (`job.done.<command>`); any other says «Готово». */
-    private const array DONE = ['site:remove', 'site:db-drop', 'site:redirect-add', 'site:redirect-remove', 'ssl:letsencrypt', 'wp:install', 'profile:enable', 'profile:disable'];
+    private const array DONE = ['site:remove', 'site:db-drop', 'site:redirect-add', 'site:redirect-remove', 'ssl:letsencrypt', 'wp:install', 'profile:enable', 'profile:disable', 'site:db-browser', 'site:db-browser-close'];
 
     private function __construct()
     {
