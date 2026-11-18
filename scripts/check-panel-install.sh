@@ -274,7 +274,7 @@ assert 'data-env-mail="unchecked"' in mail and "does not answer" in mail, "a clo
 status, settings_map = get("/admin/server/settings")
 assert status == 200 and "/admin/server/settings/mail" in settings_map, "the settings' map leads to «Почта»"
 status, forgot = get("/admin/password/forgot")
-assert "larena:panel-reset-password" in forgot, "without mail the recovery page names the console's way"
+assert "simai-admin.sh panel reset-password --confirm yes" in forgot, "without mail the recovery page names the console's way"
 # A safe update (simai-env 1.32.0): simai-env has one (pinned to 9.9.0 in the set), the panel on the stand was not
 # installed by simai-env; the overview hints at it; the update is planned with what it changes.
 status, update = get("/admin/server/update")
