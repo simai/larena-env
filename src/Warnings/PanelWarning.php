@@ -17,6 +17,8 @@ final readonly class PanelWarning
      * @param array<string, string> $replace
      * @param ?string $alertId the server's alert this warning is (simai-env 1.31.0); null for one the panel worked out
      * @param ?string $state the alert's state: open, acked or resolved
+     * @param ?string $title the server's own words for it in Russian (simai-env 1.63.0), shown instead of the panel's
+     * @param ?string $line the server's line of advice or detail under the title
      */
     public function __construct(
         public string $kind,
@@ -28,6 +30,8 @@ final readonly class PanelWarning
         public ?string $state = null,
         public ?string $ackedBy = null,
         public ?string $ackedAt = null,
+        public ?string $title = null,
+        public ?string $line = null,
     ) {
     }
 

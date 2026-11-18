@@ -24,7 +24,8 @@
     </div>
 
     @if ($canOperate ?? true)
-        {{-- «Пригласить человека»: one form in the side panel (PX-67) — name, email, the first password, what they may do
+        {{-- «Пригласить человека»: one form in the side panel (PX-67) — name, email, the first password or, while the
+             panel's mail is on, an invitation by mail (C335), what they may do
              (sf-input-choice), and for «Свои сайты» their server account, new or one already on the server. The plan
              in words comes next; nothing changes before «Пригласить». --}}
         <sf-modal id="env-invite" position="inline-end" width="30rem" heading="{{ __('larena-env::admin.people.invite.heading') }}" @if ($inviteOpen ?? false) autoload @endif data-env-invite>
@@ -32,8 +33,15 @@
                 @csrf
                 <div class="flex flex-column g-2">
                     <sf-input name="name" label="{{ __('larena-env::admin.people.invite.name') }}" default-value="{{ ($inviteOld ?? [])['name'] ?? '' }}" autocomplete="off" required></sf-input>
-                    <sf-input name="email" input-type="email" label="{{ __('larena-env::admin.people.invite.email') }}" hint="{{ __('larena-env::admin.people.invite.email_hint') }}" default-value="{{ ($inviteOld ?? [])['email'] ?? '' }}" autocomplete="off" required></sf-input>
-                    <sf-input name="password" input-type="password" label="{{ __('larena-env::admin.people.invite.password') }}" hint="{{ __('larena-env::admin.people.invite.password_hint') }}" autocomplete="new-password" minlength="12" required></sf-input>
+                    <sf-input name="email" input-type="email" label="{{ __('larena-env::admin.people.invite.email') }}" hint="{{ __('larena-env::admin.people.invite.'.(($inviteByMail ?? false) ? 'email_hint_mail' : 'email_hint')) }}" default-value="{{ ($inviteOld ?? [])['email'] ?? '' }}" autocomplete="off" required></sf-input>
+                    @if ($inviteByMail ?? false)
+                        {{-- The panel's mail is on (C335, «Приглашение»): the link by mail by default, or the first password by hand. --}}
+                        <sf-input-choice name="how" label="{{ __('larena-env::admin.people.invite.how') }}" layout="list" required value="{{ (($inviteOld ?? [])['how'] ?? 'mail') === 'password' ? 'password' : 'mail' }}" data-env-invite-how
+                            items="{{ json_encode(array_map(static fn (string $how): array => ['value' => $how, 'label' => __('larena-env::admin.people.invite.hows.'.$how.'.label'), 'caption' => __('larena-env::admin.people.invite.hows.'.$how.'.caption')], ['mail', 'password']), JSON_UNESCAPED_UNICODE) }}"></sf-input-choice>
+                        <sf-input name="password" input-type="password" label="{{ __('larena-env::admin.people.invite.password') }}" hint="{{ __('larena-env::admin.people.invite.password_hint_mail') }}" autocomplete="new-password" minlength="12"></sf-input>
+                    @else
+                        <sf-input name="password" input-type="password" label="{{ __('larena-env::admin.people.invite.password') }}" hint="{{ __('larena-env::admin.people.invite.password_hint') }}" autocomplete="new-password" minlength="12" required></sf-input>
+                    @endif
                     <sf-input-choice name="level" label="{{ __('larena-env::admin.people.invite.level') }}" layout="list" required value="{{ (($inviteOld ?? [])['level'] ?? 'own') === 'all' ? 'all' : 'own' }}" data-env-invite-level
                         items="{{ json_encode(array_map(static fn (string $level): array => ['value' => $level, 'label' => __('larena-env::admin.people.invite.levels.'.$level.'.label'), 'caption' => __('larena-env::admin.people.invite.levels.'.$level.'.caption')], ['own', 'all']), JSON_UNESCAPED_UNICODE) }}"></sf-input-choice>
                     <fieldset class="m-0 p-0 flex flex-column g-2" style="border: 0;" data-env-invite-own>

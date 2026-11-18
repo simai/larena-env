@@ -13,6 +13,7 @@ use Larena\Access\Runtime\SystemRolePresetSynchronizer;
 use Larena\Env\Alerts\ServerAlert;
 use Larena\Env\Gateway\PanelActor;
 use Larena\Env\History\MetricSamples;
+use Larena\Env\Mail\WarningLetters;
 use Larena\Env\People\PersonOwners;
 use Larena\Env\Server\ServerOverviewReader;
 use Larena\Env\Server\SiteExtrasReader;
@@ -89,7 +90,8 @@ final class PanelCheckCommand extends Command
                 // Acknowledged is seen already: nobody is told again, and its open record stays so it is not news.
                 $warnings[] = $alert->state === ServerAlert::RESOLVED
                     ? new PanelWarning(PanelWarnings::RESOLVED, 'success', $warning->domain, $warning->replace, $warning->subject, $alert->id, ServerAlert::RESOLVED)
-                    : new PanelWarning($warning->kind, $warning->severity, $warning->domain, $warning->replace, $warning->subject, $alert->id, ServerAlert::OPEN);
+                    : new PanelWarning($warning->kind, $warning->severity, $warning->domain, $warning->replace, $warning->subject, $alert->id, ServerAlert::OPEN,
+                        null, null, $warning->title, $warning->line);
                 if ($alert->state === ServerAlert::RESOLVED) {
                     $ended['env:alert:'.$alert->id.':open'] = $warning->kind;
                 }
@@ -108,7 +110,11 @@ final class PanelCheckCommand extends Command
         $inbox = class_exists(NotificationInbox::class) && $container->bound(NotificationInbox::class)
             ? $container->make(NotificationInbox::class) : null;
         $told = 0;
-        if ($inbox instanceof NotificationInbox && $due !== []) {
+        $mailed = 0;
+        // The server's warnings by mail too, as «Что слать на почту» says (owner decision C335): urgent by default.
+        $letters = $container->bound(WarningLetters::class) ? $container->make(WarningLetters::class) : null;
+        $byMail = $letters instanceof WarningLetters && ($letters->takes(true) || $letters->takes(false));
+        if (($inbox instanceof NotificationInbox || $byMail) && $due !== []) {
             $whole = $container->bound(PersistentAccessStore::class)
                 ? $container->make(PersistentAccessStore::class)->subjectsWithRole(SystemRolePresetSynchronizer::ADMINISTRATOR) : [];
             $spaces = $owners->all();
@@ -116,24 +122,38 @@ final class PanelCheckCommand extends Command
             foreach ($overview->sites as $site) {
                 $siteOwners[$site->domain] = $site->owner;
             }
+            $prefix = (string) $config->get('larena-env.admin.prefix', 'admin/server');
             foreach ($due as $warning) {
                 $recipients = $whole;
                 $owner = $warning->domain === null ? null : ($siteOwners[$warning->domain] ?? null);
                 if ($owner !== null) {
                     $recipients = array_merge($recipients, array_keys(array_filter($spaces, static fn (string $space): bool => $space === $owner)));
                 }
-                $title = (string) $translator->get('larena-env::admin.warnings.'.$warning->kind, \Larena\Env\Warnings\PanelWarnings::replaceFor($warning,
-                    static fn (string $key, array $replace): string => (string) $translator->get('larena-env::admin.'.$key, $replace)));
+                // The server's own Russian title and line where it gave them (simai-env 1.63.0), else the panel's words.
+                $title = PanelWarnings::said($warning, static fn (string $key, array $replace): string => (string) $translator->get('larena-env::admin.'.$key, $replace),
+                    $translator->getLocale());
+                $line = PanelWarnings::line($warning, $translator->getLocale());
                 // What it is about: the site, or the server for the bell's group «Сервер».
                 $object = $warning->domain ?? (string) $translator->get('larena-env::admin.warnings.bar_server');
-                foreach (array_unique($recipients) as $recipient) {
+                foreach ($inbox instanceof NotificationInbox ? array_unique($recipients) : [] as $recipient) {
                     try {
-                        $inbox->record($recipient, $warning->severity, $title, null, 'env:warning:'.$warning->kind,
-                            self::href($warning, (string) $config->get('larena-env.admin.prefix', 'admin/server')), 'env:'.$warning->key(), false, $object);
+                        $inbox->record($recipient, $warning->severity, $title, $line, 'env:warning:'.$warning->kind,
+                            self::href($warning, $prefix), 'env:'.$warning->key(), false, $object);
                         $told++;
                     } catch (Throwable $error) {
                         $this->warn('not told '.$recipient.': '.$error->getMessage());
                     }
+                }
+                $urgent = $warning->severity === PanelWarning::ERROR;
+                if ($byMail && $letters->takes($urgent)) {
+                    $mailed += $letters->queue(array_values(array_unique($recipients)),
+                        (string) $translator->get('larena-env::mail.letters.warning.subject_'.($urgent ? 'urgent' : 'warning'), ['title' => $title]),
+                        (string) $translator->get('larena-env::mail.letters.warning.body', [
+                            'title' => $title,
+                            'line' => $line === null ? '' : "\n".$line,
+                            'server' => $object,
+                            'url' => rtrim((string) $config->get('app.url'), '/').self::href($warning, $prefix),
+                        ]));
                 }
             }
         }
@@ -143,8 +163,8 @@ final class PanelCheckCommand extends Command
                 $resolved += $inbox->resolve($key, (string) $translator->get('larena-env::admin.warnings.resolutions.'.self::resolution($kind)));
             }
         }
-        $this->line(sprintf('warnings: %d, new or reminded: %d, notifications: %d, resolved: %d, measured: %s, from the server: %s',
-            count($warnings), count($due), $told, $resolved, $metrics === null ? 'no' : 'yes', $alerts === null ? 'no' : 'yes'));
+        $this->line(sprintf('warnings: %d, new or reminded: %d, notifications: %d, resolved: %d, measured: %s, from the server: %s, letters: %d',
+            count($warnings), count($due), $told, $resolved, $metrics === null ? 'no' : 'yes', $alerts === null ? 'no' : 'yes', $mailed));
 
         return self::SUCCESS;
     }

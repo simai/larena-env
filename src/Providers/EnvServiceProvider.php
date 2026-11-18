@@ -90,6 +90,16 @@ final class EnvServiceProvider extends ServiceProvider
             $app->make('encrypter'),
             $app->make(PanelAudit::class),
         ));
+        // Its letters (C335, step 2): the queue the scheduler sends and the record «История» → «Почта» reads; the server's
+        // warnings by mail as «Что слать на почту» says.
+        $this->app->bind(\Larena\Env\Mail\MailLetters::class, static fn (Application $app): \Larena\Env\Mail\MailLetters => new \Larena\Env\Mail\MailLetters(
+            $app->bound('db') ? $app->make('db')->connection() : null,
+        ));
+        $this->app->bind(\Larena\Env\Mail\WarningLetters::class, static fn (Application $app): \Larena\Env\Mail\WarningLetters => new \Larena\Env\Mail\WarningLetters(
+            $app->bound('db') ? $app->make('db')->connection() : null,
+            $app->make(\Larena\Env\Mail\PanelMail::class),
+            $app->make(\Larena\Env\Mail\MailLetters::class),
+        ));
         $this->app->bind(PanelActorResolver::class, static fn (Application $app): PanelActorResolver => new PanelActorResolver(
             $app->make(\Larena\Access\Runtime\AccessOperationAuthorizer::class),
             $app->bound('db') ? $app->make(PersonOwners::class) : null,

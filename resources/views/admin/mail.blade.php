@@ -14,6 +14,10 @@
          builds the card's rows. --}}
     <section class="larena-panel p-2" style="margin: 0;" id="env-mail-now" data-env-mail="{{ $state }}" aria-label="{{ __('larena-env::mail.card.title') }}">
         @include('larena-env::admin.partials.facts', ['items' => $items, 'label' => __('larena-env::mail.card.title'), 'mark' => 'mail'])
+        @if (($checked ?? null) !== null)
+            {{-- In the reader's own time (C183): the Framework's sf-time says it in the browser's zone, not the server's UTC. --}}
+            <p class="m-0 p-x-1 p-top-1 color-on-surface-variant" data-env-mail-checked>{{ __('larena-env::mail.card.checked') }}: <sf-time datetime="{{ $checked }}" format="datetime"></sf-time></p>
+        @endif
 
         @if ($mismatch && !$edit)
             {{-- Said before the test letter (auditor's addition 2): a sender off the mailbox's domain lands in spam. --}}

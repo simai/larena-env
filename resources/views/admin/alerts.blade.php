@@ -42,7 +42,11 @@
                     @endif
                     <div class="larena-field">
                         <label for="env-alerts-target">{{ __('larena-env::admin.alerts.target') }}</label>
-                        <input type="text" id="env-alerts-target" name="target" maxlength="500" autocomplete="off" inputmode="url">
+                        <input type="text" id="env-alerts-target" name="target" maxlength="500" autocomplete="off" inputmode="url"@if (($canChooseLevels ?? false) && in_array($channel['kind'] ?? 'off', ['webhook', 'telegram'], true)) aria-describedby="env-alerts-target-keep"@endif>
+                        {{-- Only «Что слать» changed: the same channel without an address keeps the server's (simai-env 1.63.0). --}}
+                        @if (($canChooseLevels ?? false) && in_array($channel['kind'] ?? 'off', ['webhook', 'telegram'], true))
+                            <p id="env-alerts-target-keep" class="m-0 text-small color-on-surface-variant" data-env-alerts-target-keep>{{ __('larena-env::admin.alerts.target_keep') }}</p>
+                        @endif
                     </div>
                     <div class="larena-field" data-env-alerts-token>
                         <label for="env-alerts-token">{{ __('larena-env::admin.alerts.token') }}</label>

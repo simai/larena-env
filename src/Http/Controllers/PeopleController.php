@@ -17,6 +17,7 @@ use Larena\Access\Runtime\SystemRolePresetSynchronizer;
 use Larena\Admin\Assets\AdminProductAssetManifest;
 use Larena\Admin\Runtime\AdminDataviewPagePresenter;
 use Larena\Admin\Runtime\AdminPlannedAction;
+use Larena\Auth\Runtime\RegistrationActivationBoundaryService;
 use Larena\Env\Admin\AccountMoves;
 use Larena\Env\Admin\ServerPeoplePage;
 use Larena\Env\Gateway\PanelActor;
@@ -24,6 +25,9 @@ use Larena\Env\Gateway\PanelRefused;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\NoticeRedirect;
 use Larena\Env\Http\Support\PanelActorResolver;
+use Larena\Env\Mail\InvitationLetter;
+use Larena\Env\Mail\MailLetters;
+use Larena\Env\Mail\PanelMail;
 use Larena\Env\Operations\PanelOperations;
 use Larena\Env\People\PanelAudit;
 use Larena\Env\People\PanelPeople;
@@ -67,7 +71,17 @@ final readonly class PeopleController
         private ?\Larena\Env\People\SecretFileAccess $secrets = null,
         private ?AdminUserManagementService $users = null,
         private ?\Larena\Access\Runtime\AccessOperationAuthorizer $authorizer = null,
+        private ?PanelMail $mail = null,
+        private ?MailLetters $letters = null,
+        private ?RegistrationActivationBoundaryService $invitations = null,
+        private ?InvitationLetter $letter = null,
     ) {
+    }
+
+    /** «Отправить приглашение на почту» is offered: the panel's mail is on and the sign-in package can invite (C335). */
+    private function byMail(): bool
+    {
+        return $this->invitations !== null && $this->mail?->isOn() === true;
     }
 
     public function index(Request $request): mixed
@@ -78,6 +92,14 @@ final readonly class PeopleController
         $capabilities = $overview?->capabilities;
         $canOperate = $this->canOperate($request);
         $people = $this->peopleOf($user, $overview);
+        // Until when each invitation sent by mail waits for its answer (C335).
+        $invited = $this->letters?->invitedUntil() ?? [];
+        foreach ($people as &$person) {
+            if ($person['pending']) {
+                $person['until'] = $invited[mb_strtolower($person['email'])] ?? null;
+            }
+        }
+        unset($person);
         $text = $this->text();
         $byOwner = [];
         foreach ($people as $person) {
@@ -108,6 +130,8 @@ final readonly class PeopleController
             // The invitation form opens with the page after a refusal, with what was typed (never the password).
             'inviteOpen' => $request->query('invite') === '1',
             'inviteOld' => is_array($old) ? $old : [],
+            // With the panel's mail on, the invitation can go by mail (C335, «Приглашение»).
+            'inviteByMail' => $this->byMail(),
             'source' => $result->source,
             'reasonText' => $result->reason === null ? null : $this->reasonText($result->reason),
             'notice' => $request->session()->get('larena_env_notice'),
@@ -188,21 +212,27 @@ final readonly class PeopleController
             'account_name' => mb_strtolower(trim((string) $request->input('account_name'))),
             'secret' => $request->input('secret_files') === 'yes',
             'sites' => [],
+            // By mail unless the first password is set by hand; by hand only while the panel's mail is off.
+            'how' => $this->byMail() && $request->input('how') !== 'password' ? 'mail' : 'password',
         ];
-        $password = (string) $request->input('password');
+        $password = $input['how'] === 'mail' ? '' : (string) $request->input('password');
         $overview = $this->overviews->read(new PanelActor($user))->overview;
         $owners = $overview->owners ?? [];
         $invalid = match (true) {
             $input['name'] === '' || mb_strlen($input['name']) > 120 => 'name',
             filter_var($input['email'], FILTER_VALIDATE_EMAIL) === false => 'email',
-            mb_strlen($password) < 12 => 'password',
+            $input['how'] === 'password' && mb_strlen($password) < 12 => 'password',
             $input['level'] === PanelPeople::OWN && $input['account'] === 'new' && preg_match(self::ACCOUNT, $input['account_name']) !== 1 => 'account',
             $input['level'] === PanelPeople::OWN && $input['account'] === 'new' && in_array($input['account_name'], $owners, true) => 'account_taken',
             $input['level'] === PanelPeople::OWN && $input['account'] !== 'new' && !in_array($input['account'], $owners, true) => 'account',
             default => null,
         };
-        if ($invalid === null && $this->emailTaken($input['email'], $user)) {
+        // A person invited by mail who has not answered yet may be invited again: the new letter replaces the old link.
+        if ($invalid === null && $this->emailTaken($input['email'], $user, $input['how'] === 'mail')) {
             $invalid = 'email_taken';
+        }
+        if ($invalid === null && $input['how'] === 'mail') {
+            $invalid = $this->letters?->invitationRefusal($input['email']);
         }
         // The sites the new account takes in the same job: only those the server listed, never one typed in.
         if ($invalid === null && $input['level'] === PanelPeople::OWN && $input['account'] === 'new' && $overview?->capabilities?->takes('owner:create', 'sites') === true) {
@@ -242,6 +272,7 @@ final readonly class PeopleController
         $facts = [
             [$text('people.invite.fact.person'), $text('people.invite.fact.person_value', ['name' => $input['name'], 'email' => $input['email']])],
             [$text('people.invite.fact.level'), $text('people.invite.levels.'.$input['level'].'.label')],
+            [$text('people.invite.fact.how_'.$input['how']), $text('people.invite.fact.how_'.$input['how'].'_value', ['email' => $input['email']])],
         ];
         if ($newAccount !== null) {
             $facts[] = [$text('people.invite.fact.account_new'), $text('people.invite.fact.account_new_value', ['account' => $newAccount])];
@@ -281,14 +312,22 @@ final readonly class PeopleController
                 (string) $this->translator->get('larena-env::admin.people.invite.expired'));
         }
         $level = $invite['level'] === PanelPeople::ALL ? PanelPeople::ALL : PanelPeople::OWN;
-        try {
-            $made = $this->users->create(['email' => (string) $invite['email'], 'display_name' => (string) $invite['name'],
-                'password' => (string) $invite['password'], 'role' => PanelPeople::roleOf($level)], $user);
-        } catch (DomainException|InvalidArgumentException $refused) {
-            return $this->inviteAgain($request, $invite, (string) $this->translator->get('larena-env::admin.people.invite.invalid.refused',
-                ['reason' => $this->refusalText($refused->getMessage())]));
+        $byMail = ($invite['how'] ?? 'password') === 'mail';
+        if ($byMail) {
+            $subject = $this->inviteByMail($request, $invite, $level, $user);
+            if ($subject instanceof RedirectResponse) {
+                return $subject;
+            }
+        } else {
+            try {
+                $made = $this->users->create(['email' => (string) $invite['email'], 'display_name' => (string) $invite['name'],
+                    'password' => (string) $invite['password'], 'role' => PanelPeople::roleOf($level)], $user);
+            } catch (DomainException|InvalidArgumentException $refused) {
+                return $this->inviteAgain($request, $invite, (string) $this->translator->get('larena-env::admin.people.invite.invalid.refused',
+                    ['reason' => $this->refusalText($refused->getMessage())]));
+            }
+            $subject = (string) $made['subject_ref'];
         }
-        $subject = (string) $made['subject_ref'];
         $owner = is_string($invite['owner'] ?? null) ? $invite['owner'] : null;
         try {
             if ($level === PanelPeople::OWN && $owner !== null) {
@@ -306,15 +345,48 @@ final readonly class PeopleController
             $started = $this->operations->startCommand(ResolvePanelActor::of($request), 'owner:create', self::createArgs($owner, $sites));
             if ($started->jobId !== null) {
                 return NoticeRedirect::to($request, route('larena.env.admin.job', ['job' => $started->jobId], false),
-                    (string) $this->translator->get('larena-env::admin.people.invite.'.($sites === [] ? 'done_account' : 'done_sites'),
-                        ['name' => (string) $invite['name'], 'account' => $owner, 'count' => (string) count($sites)]));
+                    (string) $this->translator->get('larena-env::admin.people.invite.'.($byMail ? 'done_mail_account' : ($sites === [] ? 'done_account' : 'done_sites')),
+                        ['name' => (string) $invite['name'], 'account' => $owner, 'count' => (string) count($sites), 'email' => (string) $invite['email']]));
             }
 
             return $this->back($request, $started->reason ?? 'answer_shape_invalid', self::cardOf($subject));
         }
 
         return NoticeRedirect::to($request, self::cardOf($subject),
-            (string) $this->translator->get('larena-env::admin.people.invite.done', ['name' => (string) $invite['name']]));
+            (string) $this->translator->get('larena-env::admin.people.invite.'.($byMail ? 'done_mail' : 'done'), ['name' => (string) $invite['name'], 'email' => (string) $invite['email']]));
+    }
+
+    /**
+     * The invitation by mail (C335, «Приглашение»): the sign-in package makes the person, waiting for their answer, and
+     * its postman sends the link at once through the panel's mail; the role is theirs once they choose a password. A
+     * letter that does not leave withdraws the invitation, and the form says so.
+     *
+     * @param array<string, mixed> $invite
+     */
+    private function inviteByMail(Request $request, array $invite, string $level, string $user): string|RedirectResponse
+    {
+        $again = static fn (string $key): string => 'larena-env::admin.people.invite.'.$key;
+        if (!$this->byMail() || $this->invitations === null) {
+            return $this->inviteAgain($request, $invite, (string) $this->translator->get($again('invalid.mail_off')));
+        }
+        $refusal = $this->letters?->invitationRefusal((string) $invite['email']);
+        if ($refusal !== null) {
+            return $this->inviteAgain($request, $invite, (string) $this->translator->get($again('invalid.'.$refusal)));
+        }
+        $this->letter?->about($this->label($user, $user), (string) $this->translator->get($again('levels.'.$level.'.caption')));
+        try {
+            $result = $this->invitations->inviteUser(['email' => (string) $invite['email'], 'display_name' => (string) $invite['name'],
+                'role' => PanelPeople::roleOf($level)], $user);
+        } catch (DomainException|InvalidArgumentException $refused) {
+            return $this->inviteAgain($request, $invite, (string) $this->translator->get($again('invalid.refused'), ['reason' => $this->refusalText($refused->getMessage())]));
+        } catch (Throwable) {
+            return $this->inviteAgain($request, $invite, (string) $this->translator->get($again('mail_failed')));
+        }
+        if (!$result->succeeded() || $result->subjectRef === null) {
+            return $this->inviteAgain($request, $invite, (string) $this->translator->get($again('mail_failed')));
+        }
+
+        return $result->subjectRef;
     }
 
     /** «Заблокировать» / «Разблокировать» a person: the plan in words before anything changes. */
@@ -515,7 +587,7 @@ final readonly class PeopleController
     }
 
     /**
-     * @return list<array{id: int, subject: string, name: string, email: string, level: string, blocked: bool, owner: ?string, sites: list<string>, last: ?string, secret: bool}>
+     * @return list<array{id: int, subject: string, name: string, email: string, level: string, blocked: bool, owner: ?string, sites: list<string>, last: ?string, secret: bool, pending: bool, until?: ?string}>
      */
     private function peopleOf(string $user, ?ServerOverview $overview): array
     {
@@ -526,7 +598,7 @@ final readonly class PeopleController
         }
     }
 
-    /** @return array{id: int, subject: string, name: string, email: string, level: string, blocked: bool, owner: ?string, sites: list<string>, last: ?string, secret: bool}|null */
+    /** @return array{id: int, subject: string, name: string, email: string, level: string, blocked: bool, owner: ?string, sites: list<string>, last: ?string, secret: bool, pending: bool, until?: ?string}|null */
     private function person(string $id, string $user, ?ServerOverview $overview): ?array
     {
         if (preg_match('/\A[1-9][0-9]{0,17}\z/D', $id) !== 1) {
@@ -539,11 +611,12 @@ final readonly class PeopleController
         }
     }
 
-    private function emailTaken(string $email, string $user): bool
+    /** Whether someone signs in with this address already; one still waiting for their invitation does not count when $invitedAgain. */
+    private function emailTaken(string $email, string $user, bool $invitedAgain = false): bool
     {
         foreach ($this->peopleOf($user, null) as $person) {
             if (mb_strtolower($person['email']) === $email) {
-                return true;
+                return !($invitedAgain && $person['pending']);
             }
         }
 
@@ -558,7 +631,7 @@ final readonly class PeopleController
     /** Back to the form, open, with what was typed except the password, and the reason above it. @param array<string, mixed> $input */
     private function inviteAgain(Request $request, array $input, string $reason): RedirectResponse
     {
-        $request->session()->flash('larena_env_invite_old', array_intersect_key($input, array_flip(['name', 'email', 'level', 'account', 'account_name', 'secret', 'sites'])));
+        $request->session()->flash('larena_env_invite_old', array_intersect_key($input, array_flip(['name', 'email', 'level', 'account', 'account_name', 'secret', 'sites', 'how'])));
 
         return NoticeRedirect::to($request, route('larena.env.admin.people', [], false).'?invite=1', $reason);
     }

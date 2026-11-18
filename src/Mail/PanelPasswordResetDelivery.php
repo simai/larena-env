@@ -13,7 +13,7 @@ use Larena\Auth\ValueObjects\PasswordResetDeliveryMessage;
  * The sign-in package's postman in the panel (owner decision C335): a password reset link sent at once through the
  * panel's mail, never queued or kept (the link lives only in memory). Bound only while mail is on, so «Забыли пароль?»
  * is a real link exactly then. A letter that does not leave answers false: the sign-in package then makes the link
- * stop working.
+ * stop working. «История» → «Почта» records that it was sent and how it ended, without its text.
  */
 final readonly class PanelPasswordResetDelivery implements PasswordResetDelivery
 {
@@ -23,6 +23,7 @@ final readonly class PanelPasswordResetDelivery implements PasswordResetDelivery
         private PanelMailer $mailer,
         private Translator $translator,
         private Closure $resetUrl,
+        private ?MailLetters $letters = null,
     ) {
     }
 
@@ -39,7 +40,12 @@ final readonly class PanelPasswordResetDelivery implements PasswordResetDelivery
             'minutes' => $minutes,
         ]);
 
-        return $this->mailer->send($settings, $password, $message->email, $this->text('letters.reset.subject'), $text) === null;
+        $subject = $this->text('letters.reset.subject');
+        $reason = $this->mailer->send($settings, $password, $message->email, $subject, $text);
+        // «История» → «Почта»: that it went and how it ended, never its text or the link.
+        $this->letters?->record('reset', $message->email, $subject, $reason);
+
+        return $reason === null;
     }
 
     /** @return array<string, string> */

@@ -6,14 +6,14 @@ declare(strict_types=1);
 return [
     'navigation' => 'Mail',
     'title' => 'Mail',
-    'description' => 'How the panel sends its own letters: password recovery, and later invitations and urgent notifications.',
+    'description' => 'How the panel sends its own letters: password recovery, invitations and notifications about the server.',
     'card' => [
         'title' => 'The panel\'s mail',
         'edit' => 'Change',
         'state' => 'State',
         'password_set' => '••• set',
         'password_missing' => 'Not set',
-        'levels_hint' => 'A password recovery letter always goes while mail is on.',
+        'levels_hint' => 'Password recovery, invitations and «Your password was changed» always go while mail is on.',
         'checked' => 'Last test letter',
         'never' => 'None yet',
     ],
@@ -136,5 +136,44 @@ return [
             'subject' => 'Larena Panel: a new password',
             'body' => "Someone asked for a new password to sign in to Larena Panel with this address.\n\nTo choose a new password, open the link (it works once, within :minutes min.):\n:url\n\nIf it was not you, just delete this letter: your password stays as it is.",
         ],
+        'invitation' => [
+            'subject' => 'Larena Panel: an invitation',
+            'body' => ":inviter invites you to the Larena Panel server control panel (:panel).\n\nWhat you will be able to do: :level\n\nTo choose a password and sign in, open the link (it works once, within :hours h):\n:url\n\nIf you did not expect this invitation, just delete this letter.",
+        ],
+        'password_changed' => [
+            'subject' => 'Larena Panel: your password was changed',
+            'body' => "The password to sign in to Larena Panel (:panel) with this address was changed, and every earlier sign-in was ended.\n\nIf it was not you, tell an administrator of the panel at once: they will block the account and set a new password.",
+        ],
+        'warning' => [
+            'subject_urgent' => 'Larena Panel: urgent — :title',
+            'subject_warning' => 'Larena Panel: warning — :title',
+            'body' => ":title:line\nWhere: :server\nWhat to do and details: :url\n\nThis is a letter of Larena Panel. What goes by mail is chosen in «Settings» → «Mail».",
+        ],
     ],
+    // «History» → «Mail» (step 2): when, to whom (partly hidden), which letter, how it ended; never its text or a link.
+    'history' => [
+        'object' => 'Mail',
+        'title' => 'Letter «:subject»',
+        'to' => 'To: :to',
+        'to_label' => 'To',
+        'sent' => 'Sent',
+        'queued' => 'Waiting to be sent',
+        'retrying' => 'Not sent, try :attempt of :of: :reason',
+        'failed' => 'Not delivered: :reason',
+        'off' => 'Not delivered: mail is off',
+        'actor' => 'The panel\'s mail',
+        'kind' => 'Which letter',
+        'kinds' => [
+            'test' => 'Test',
+            'reset' => 'Password recovery',
+            'invitation' => 'Invitation',
+            'password_changed' => 'Password changed',
+            'warning' => 'Notification',
+        ],
+        'attempts' => 'Tries',
+    ],
+    // The alert bar while letters do not leave (step 2).
+    'failing' => 'Mail does not leave — check the settings',
+    'failing_go' => 'Open «Mail»',
+    'failing_source' => 'The panel\'s mail',
 ];

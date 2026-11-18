@@ -40,7 +40,7 @@ final readonly class PanelPeople
      * Every person, sorted by name, as rows: id, subject, name, email, level, blocked, owner (their server account), sites
      * (the domains of that account), last (ISO time of the last sign-in or null), secret (may view files with passwords).
      *
-     * @return list<array{id: int, subject: string, name: string, email: string, level: string, blocked: bool, owner: ?string, sites: list<string>, last: ?string, secret: bool}>
+     * @return list<array{id: int, subject: string, name: string, email: string, level: string, blocked: bool, owner: ?string, sites: list<string>, last: ?string, secret: bool, pending: bool, until?: ?string}>
      */
     public function all(string $actor, ?ServerOverview $overview): array
     {
@@ -71,6 +71,8 @@ final readonly class PanelPeople
                 'last' => $last[(int) $user['id']] ?? null,
                 // The whole server always may (SecretFileAccess::allows); a person of «свои сайты» when it is ticked.
                 'secret' => $level === self::ALL || isset($secret[$subject]),
+                // Invited by mail and not answered yet (C335): no password of their own, no level until they accept.
+                'pending' => (string) $user['status'] === 'pending_activation',
             ];
         }
         usort($rows, static fn (array $a, array $b): int => strnatcasecmp($a['name'], $b['name']));
@@ -81,7 +83,7 @@ final readonly class PanelPeople
     /**
      * One person, or null when there is no such person.
      *
-     * @return array{id: int, subject: string, name: string, email: string, level: string, blocked: bool, owner: ?string, sites: list<string>, last: ?string, secret: bool}|null
+     * @return array{id: int, subject: string, name: string, email: string, level: string, blocked: bool, owner: ?string, sites: list<string>, last: ?string, secret: bool, pending: bool, until?: ?string}|null
      */
     public function one(int $id, string $actor, ?ServerOverview $overview): ?array
     {

@@ -200,7 +200,8 @@ final readonly class EnvAdminAlertSource implements AdminAlertSource
         return new AdminAlert(
             id: self::id($warning),
             level: $warning->severity === PanelWarning::ERROR ? AdminAlertLevel::Danger : AdminAlertLevel::Warning,
-            text: $text('warnings.'.$warning->kind, PanelWarnings::replaceFor($warning, $text)),
+            // The server's own Russian title where it gave one (simai-env 1.63.0), never its English message.
+            text: PanelWarnings::said($warning, $text, $this->translator->getLocale()),
             source: $warning->domain !== null ? $text('warnings.bar_site', ['site' => $warning->domain]) : $text('warnings.bar_server'),
             action: new AdminAlertAction($text('warnings.go'), $href),
             acknowledge: $acknowledge,

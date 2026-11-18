@@ -290,4 +290,54 @@ env_assert($ackCache->get(Larena\Env\Warnings\EnvAdminAlertSource::GENERATION) =
 env_assert($alertsController->ackPlan($ack('GET', true)) instanceof Illuminate\View\View && $alertsController->ackPlan($ack('POST', false)) instanceof Illuminate\View\View,
     'The link and the plain form still show the plan.');
 
+// «Что слать» alone (simai-env 1.63.0): the same channel without an address changes only what the server sends, it keeps
+// its own address and token; another kind without an address is refused; an older server is never sent `levels`.
+$newer = new class ($recorded) implements Larena\Env\Contracts\PanelGateway {
+    /** @var list<Larena\Env\Gateway\PanelRequest> */
+    public array $asked = [];
+    public string $version = '1.63.0';
+    public function __construct(private Larena\Env\Gateway\RecordedAnswersGateway $inner) {}
+    public function ask(Larena\Env\Gateway\PanelRequest $request): Larena\Env\Gateway\PanelAnswer
+    {
+        $this->asked[] = $request;
+        $answer = $this->inner->ask($request);
+        $data = $answer->data;
+        if ($request->command === 'self:describe') {
+            $data['simai_env']['version'] = $this->version;
+        } elseif ($request->command === 'self:alerts') {
+            $data['channel'] = ['kind' => 'telegram', 'target_hint' => 'chat …4567', 'levels' => 'urgent', 'last_sent_at' => null, 'last_error' => null];
+        } else {
+            return $answer;
+        }
+
+        return Larena\Env\Gateway\PanelAnswer::fromDocument($request->requestId, ['schema' => 'simai-panel-answer/1', 'request_id' => $request->requestId,
+            'status' => 'ok', 'kind' => 'result', 'data' => $data]);
+    }
+    public function source(): string { return 'recorded'; }
+};
+$levelsController = new Larena\Env\Http\Controllers\AlertsController(new Larena\Env\Operations\PanelOperations($newer),
+    new Larena\Env\Server\ServerOverviewReader($newer), new Larena\Env\Server\SiteExtrasReader($newer), $views, $translator, $encrypter);
+$channelAsked = static function (array $input): Illuminate\Http\Request {
+    $request = Illuminate\Http\Request::create('/admin/server/alerts/channel/plan', 'POST', $input);
+    $request->attributes->set(Larena\Env\Http\Middleware\ResolvePanelActor::ATTRIBUTE, new Larena\Env\Gateway\PanelActor('admin@stand.test'));
+    $request->setLaravelSession(new Illuminate\Session\Store('panel', new Illuminate\Session\ArraySessionHandler(10)));
+
+    return $request;
+};
+$planned = static fn (): ?Larena\Env\Gateway\PanelRequest => array_values(array_filter($newer->asked,
+    static fn (Larena\Env\Gateway\PanelRequest $request): bool => $request->command === 'self:alerts-channel'))[0] ?? null;
+$onlyLevels = $levelsController->channelPlan($channelAsked(['kind' => 'telegram', 'target' => '', 'levels' => 'all']));
+env_assert($onlyLevels instanceof Illuminate\View\View && $planned()?->args === ['kind' => 'telegram', 'levels' => 'all']
+    && $onlyLevels->getData()['hidden'] === ['kind' => 'telegram', 'levels' => 'all'], 'Only «Что слать»: the current kind, no address, the levels: '.json_encode($planned()?->args));
+$newer->asked = [];
+$otherKind = $levelsController->channelPlan($channelAsked(['kind' => 'webhook', 'target' => '', 'levels' => 'all']));
+env_assert($otherKind instanceof Illuminate\Http\RedirectResponse && $planned() === null, 'Another kind needs its address.');
+$newer->version = '1.62.2';
+$older = $levelsController->channelPlan($channelAsked(['kind' => 'telegram', 'target' => '', 'levels' => 'all']));
+env_assert($older instanceof Illuminate\Http\RedirectResponse && $planned() === null, 'An older server: no levels, so an address is needed.');
+$newer->asked = [];
+$levelsController->channelPlan($channelAsked(['kind' => 'telegram', 'target' => '-1001234567', 'levels' => 'all']));
+$olderAsked = $planned();
+env_assert($olderAsked !== null && !array_key_exists('levels', $olderAsked->args), 'An older server is never sent levels.');
+
 echo "DnsTest passed\n";

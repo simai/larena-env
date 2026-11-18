@@ -207,6 +207,10 @@ $row = (array) $db->table(PanelMail::TABLE)->first();
 env_assert(!str_contains(json_encode($row, JSON_THROW_ON_ERROR), $secret) && $mail->password() === $secret && $mail->hasPassword(), 'The password is sealed and opens only to send.');
 $mail->checked('user:admin_identity:1');
 env_assert($mail->isOn() && $mail->checkedAt() !== null, 'A test letter left: mail is on.');
+$checkedMoment = \Larena\Env\Http\Controllers\PanelMailController::checkedMoment($mail->checkedAt());
+env_assert(is_string($checkedMoment) && preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+00:00$/', $checkedMoment) === 1,
+    'The last test letter goes to sf-time as a moment with its offset: the reader sees it in their own zone (C183), not «UTC».');
+env_assert(\Larena\Env\Http\Controllers\PanelMailController::checkedMoment(null) === null, 'No test letter yet: «Не было» stays in the card.');
 $moreLevels = MailSettings::fromForm(['service' => 'yandex', 'login' => 'panel@example.ru', 'from_address' => 'panel@example.ru', 'levels' => ['urgent', 'reports']]);
 env_assert($moreLevels instanceof MailSettings && $mail->save($moreLevels, null, 'user:admin_identity:1') === PanelMail::ON && $mail->settings()?->levels === ['urgent', 'reports'],
     '«Что слать» alone changed: mail stays on, no new test.');
@@ -408,5 +412,163 @@ env_assert(str_contains($command, "larena:panel-reset-password {email?") && !str
 $hint = require dirname(__DIR__, 2).'/assembly/lang/vendor/larena-auth/ru/auth.php';
 env_assert(str_contains($hint['recovery_without_mail'], 'simai-admin.sh panel reset-password') && str_contains($hint['recovery']['unavailable']['description'], 'simai-admin.sh panel reset-password'),
     'Without mail the sign-in page names the console\'s way for a panel with nobody else to ask.');
+
+// 9. Step 2: the queue of ordinary letters. The scheduler sends them each minute; a failure is tried again after 1, 5
+// and 30 minutes, then «не доставлено» and the alert bar; the text is wiped once it is done; a link never waits here.
+(require dirname(__DIR__, 2).'/database/migrations/2026_11_19_000008_create_larena_env_mail_letters_table.php')->up();
+$letters = new Larena\Env\Mail\MailLetters($db);
+$mail->checked('user:admin_identity:1');
+env_assert($mail->isOn(), 'Mail on for step 2.');
+env_assert($refuses(static fn () => $letters->queue('reset', 'a@example.ru', 'x', 'link'), 'link_not_queued')
+    && $refuses(static fn () => $letters->queue('invitation', 'a@example.ru', 'x', 'link'), 'link_not_queued'), 'A letter with a sign-in link is never queued.');
+env_assert(Larena\Env\Mail\MailLetters::masked('rim@mail.ru') === 'r***@mail.ru' && Larena\Env\Mail\MailLetters::masked('nobody') === '***', 'The address partly hidden: r***@mail.ru.');
+$caught->clear();
+$letters->queue('warning', 'Owner@Example.ru', 'Larena Panel: срочно — диск', 'Текст уведомления');
+$t0 = new DateTimeImmutable('2026-11-19 10:00:00', new DateTimeZone('UTC'));
+env_assert($letters->run($mail, $mailer, $t0) === ['sent' => 1, 'retried' => 0, 'failed' => 0] && count($caught->letters()) === 1
+    && $caught->letters()[0]->getTo()[0]->getAddress() === 'owner@example.ru', 'A waiting letter leaves on the next run.');
+$row = $db->table(Larena\Env\Mail\MailLetters::TABLE)->orderByDesc('id')->first();
+env_assert($row->state === 'sent' && $row->body === null && !$letters->failing(), 'Sent: its text is wiped.');
+$letters->queue('warning', 'owner@example.ru', 'Второе', 'Текст');
+$caught->refuse = 'Connection could not be established with host "ssl://smtp.mail.ru:465": Connection timed out';
+$runs = [];
+foreach ([0, 1, 6, 36] as $minute) {
+    $runs[] = $letters->run($mail, $mailer, $t0->modify('+'.$minute.' minutes'));
+}
+env_assert($runs[0]['retried'] === 1 && $runs[1]['retried'] === 1 && $runs[2]['retried'] === 1 && $runs[3]['failed'] === 1, 'Tried four times: at once, after 1, 5 and 30 minutes: '.json_encode($runs));
+env_assert($letters->run($mail, $mailer, $t0->modify('+40 minutes')) === ['sent' => 0, 'retried' => 0, 'failed' => 0], 'Given up: not tried again.');
+$letters->queue('warning', 'owner@example.ru', 'Третье', 'Текст');
+env_assert($letters->run($mail, $mailer, $t0->modify('+40 minutes'))['retried'] === 1
+    && $letters->run($mail, $mailer, $t0->modify('+40 minutes 30 seconds')) === ['sent' => 0, 'retried' => 0, 'failed' => 0], 'Not before its minute.');
+$givenUp = $db->table(Larena\Env\Mail\MailLetters::TABLE)->where('subject', 'Второе')->first();
+env_assert($givenUp->state === 'failed' && $givenUp->reason === 'unreachable' && (int) $givenUp->attempts === 4 && $givenUp->body === null && $letters->failing(),
+    '«Не доставлено»: the reason in a word, the text wiped, the bar says «Почта не уходит».');
+$caught->refuse = null;
+
+// The alert bar: only for those who may change the server's settings, only while mail is on, with the way to «Почта».
+$rights = new class implements Illuminate\Contracts\Config\Repository {
+    /** @var array<string, mixed> */
+    private array $items = ['larena-access.operations' => [
+        'env.server.operate' => ['target' => 'server:host', 'required_grants' => ['operate'], 'test_grants' => ['test:system' => ['host' => ['operate']], 'test:staff' => ['host' => []]]],
+    ]];
+
+    public function has($key): bool { return array_key_exists($key, $this->items); }
+    public function get($key, $default = null): mixed { return $this->items[$key] ?? $default; }
+    public function all(): array { return $this->items; }
+    public function set($key, $value = null): void { $this->items[$key] = $value; }
+    public function prepend($key, $value): void {}
+    public function push($key, $value): void {}
+};
+$authorizer = new Larena\Access\Runtime\AccessOperationAuthorizer($rights, 'testing');
+$who = static function (string $subject): Request {
+    $request = Request::create('/admin/server');
+    $request->attributes->set('larena_access_actor', $subject);
+
+    return $request;
+};
+$bar = new Larena\Env\Warnings\MailAlertSource($mail, $letters, $translator, $authorizer);
+$said = $bar->alerts($who('test:system'));
+env_assert(count($said) === 1 && $said[0]->id === 'env:mail-failing' && $said[0]->text === $lines['mail']['failing'] && $said[0]->action?->href === '/admin/server/larena.env.admin.settings.mail',
+    '«Почта не уходит — проверьте настройки», with the way to «Почта».');
+env_assert($russian['mail']['failing'] === 'Почта не уходит — проверьте настройки', 'In the plan\'s words.');
+env_assert($bar->alerts($who('test:staff')) === [], 'Not for those who may not change the settings.');
+
+// «История» → «Почта»: when, to whom (partly hidden), which, how it ended; never the text. The object «Почта» is the filter.
+$history = new Larena\Env\Admin\MailHistorySource($letters, $translator, $authorizer);
+$entries = $history->entries($who('test:system'), 50);
+$byTitle = [];
+foreach ($entries as $entry) {
+    $byTitle[$entry->title] = $entry;
+}
+env_assert(count($entries) === 3 && isset($byTitle['Letter «Второе»'], $byTitle['Letter «Третье»']), 'Every letter is a row: '.json_encode(array_keys($byTitle)));
+$lost = $byTitle['Letter «Второе»'];
+env_assert($lost->outcome === 'failed' && $lost->objectKey === 'mail' && $lost->object === 'Mail' && str_contains($lost->note, 'o***@example.ru')
+    && str_contains($lost->note, 'Not delivered') && !str_contains(json_encode($entries, JSON_THROW_ON_ERROR), 'owner@example.ru')
+    && !str_contains(json_encode($entries, JSON_THROW_ON_ERROR), 'Текст'), '«Не доставлено: причина», the address hidden, no text: '.$lost->note);
+env_assert($byTitle['Letter «Третье»']->outcome === 'running' && str_contains($byTitle['Letter «Третье»']->note, 'try 2 of 4'), 'A letter that waits says which try comes.');
+env_assert($history->entry($who('test:system'), $lost->key)?->title === $lost->title && $history->entries($who('test:staff'), 50) === [],
+    'Its card opens; others see no letters.');
+env_assert(Larena\Admin\History\AdminHistory::choices(array_combine(array_map(static fn ($entry): string => 'mail.'.$entry->key, $entries), $entries), 'object') === ['mail' => 'Mail'],
+    'The history\'s filter has «Почта».');
+
+// A letter that leaves ends «Почта не уходит»; mail switched off gives the waiting ones up without trying, and that is not
+// «Почта не уходит».
+$letters->run($mail, $mailer, $t0->modify('+42 minutes'));
+env_assert(!$letters->failing() && $bar->alerts($who('test:system')) === [], 'The next letter left: the bar is quiet.');
+$letters->queue('warning', 'owner@example.ru', 'Пока выключено', 'Текст');
+$mail->switchOff('user:admin_identity:1');
+$caught->clear();
+env_assert($letters->run($mail, $mailer, $t0->modify('+50 minutes'))['failed'] === 1 && $caught->letters() === [] && !$letters->failing(),
+    'Mail off: given up as «почта выключена», nothing sent, not «Почта не уходит».');
+$mail->checked('user:admin_identity:1');
+
+// The reset letter is recorded after it went, without its text or the link.
+$caught->clear();
+$recordingPostman = new PanelPasswordResetDelivery($mail, $mailer, $translator,
+    static fn (string $challenge, string $secret): string => 'https://panel.example.ru/admin/password/reset/'.$challenge.'?secret='.$secret, $letters);
+env_assert($recordingPostman->deliver($reset) && count($caught->letters()) === 1, 'The reset letter leaves at once.');
+$resetRow = (array) $db->table(Larena\Env\Mail\MailLetters::TABLE)->where('kind', 'reset')->first();
+env_assert($resetRow['state'] === 'sent' && $resetRow['body'] === null && !str_contains(json_encode($resetRow, JSON_THROW_ON_ERROR), 'reset-secret-1'), 'Recorded: sent, no text, no link.');
+
+// 10. The invitation by mail: at once, with who invites, what they will do and the link «Задать пароль и войти»; the link
+// lives 72 hours and is never kept; at most 20 an hour, one address again after 5 minutes.
+$invitationLetter = new Larena\Env\Mail\InvitationLetter();
+$invitationLetter->about('Анна', 'Только свои сайты');
+$invitations = new Larena\Env\Mail\PanelInvitationDelivery($mail, $mailer, $translator,
+    static fn (string $challenge, string $secret): string => 'https://panel.example.ru/admin/activate/'.$challenge.'?secret='.$secret, $invitationLetter, 'panel.example.ru', $letters);
+$caught->clear();
+$invite = new Larena\Auth\ValueObjects\ActivationDeliveryMessage('new@example.ru', 'invite_ref', 'activation-secret-1', Carbon::now()->addHours(72));
+env_assert($invitations->deliver($invite) && count($caught->letters()) === 1, 'The invitation leaves at once.');
+$inviteBody = (string) $caught->letters()[0]->getTextBody();
+env_assert(str_contains($inviteBody, 'Анна') && str_contains($inviteBody, 'Только свои сайты') && str_contains($inviteBody, 'panel.example.ru')
+    && str_contains($inviteBody, 'https://panel.example.ru/admin/activate/invite_ref?secret=activation-secret-1') && str_contains($inviteBody, '72 h'),
+    'Who invites, to which panel, what they will do, the link and its 72 hours.');
+$inviteRow = (array) $db->table(Larena\Env\Mail\MailLetters::TABLE)->where('kind', 'invitation')->first();
+env_assert($inviteRow['body'] === null && !str_contains(json_encode($inviteRow, JSON_THROW_ON_ERROR), 'activation-secret') && isset($letters->invitedUntil()['new@example.ru']),
+    'Recorded without text or link; until when it waits is known for «Люди».');
+env_assert($letters->invitationRefusal('New@example.ru') === 'invitation_again' && $letters->invitationRefusal('other@example.ru') === null, 'One address again only after 5 minutes.');
+for ($i = 0; $i < 19; $i++) {
+    $letters->record('invitation', 'p'.$i.'@example.ru', 'x', null);
+}
+env_assert($letters->invitationRefusal('other@example.ru') === 'invitations_hour', 'At most 20 invitations an hour.');
+$caught->refuse = 'Expected response codes "250/251/252" but got code "550", with message "550 5.1.1 No such user".';
+env_assert(!$invitations->deliver($invite), 'A refused letter answers false: the sign-in package withdraws the invitation.');
+$caught->refuse = null;
+$db->table(Larena\Env\Mail\MailLetters::TABLE)->where('kind', 'invitation')->delete();
+env_assert($russian['admin']['people']['invite']['hows']['mail']['label'] === 'Отправить приглашение на почту'
+    && $russian['admin']['people']['invite']['hows']['password']['label'] === 'Задать первый пароль самому'
+    && !str_contains($russian['admin']['people']['invite']['email_hint'], 'Писем панель не отправляет'), 'The choice in the plan\'s words; the old hint is gone.');
+
+// 11. «Ваш пароль изменён»: after a reset by the link (the sign-in package's event) or from the console, an ordinary letter.
+$passing = new class implements Larena\Auth\Contracts\AuthSecurityEventSink {
+    /** @var list<string> */
+    public array $types = [];
+    public function record(Larena\Auth\ValueObjects\AuthSecurityEvent $event): void { $this->types[] = $event->type; }
+};
+$changed = new Larena\Env\Mail\PasswordChangedLetter($db, $mail, $letters, $translator, 'panel.example.ru');
+$securityLetters = new Larena\Env\Mail\PanelSecurityLetters($passing, static fn (): Larena\Env\Mail\PasswordChangedLetter => $changed);
+$event = static fn (string $type): Larena\Auth\ValueObjects\AuthSecurityEvent => new Larena\Auth\ValueObjects\AuthSecurityEvent($type, 'anonymous', 'user:admin_identity:1', new DateTimeImmutable());
+$securityLetters->record($event('auth.password_recovery.requested'));
+env_assert($db->table(Larena\Env\Mail\MailLetters::TABLE)->where('kind', 'password_changed')->count() === 0, 'A request alone changes no password: no letter.');
+$securityLetters->record($event('auth.password_recovery.completed'));
+$changedRow = $db->table(Larena\Env\Mail\MailLetters::TABLE)->where('kind', 'password_changed')->first();
+env_assert($passing->types === ['auth.password_recovery.requested', 'auth.password_recovery.completed'] && $changedRow !== null
+    && $changedRow->to_address === 'owner@example.ru' && $changedRow->state === 'queued' && str_contains((string) $changedRow->body, 'panel.example.ru'),
+    'The events go on as they were; a completed recovery queues «Ваш пароль изменён» to the person.');
+env_assert(!$changed->queueFor('user:admin_identity:99') && !$changed->queueFor('nobody'), 'Nobody to write to: no letter.');
+env_assert($russian['mail']['letters']['password_changed']['subject'] === 'Larena Panel: ваш пароль изменён'
+    && str_contains($russian['mail']['letters']['password_changed']['body'], 'Если это были не вы'), '«Ваш пароль изменён; если это были не вы — …».');
+$command = (string) file_get_contents(dirname(__DIR__, 2).'/src/Console/PanelResetPasswordCommand.php');
+env_assert(str_contains($command, 'PasswordChangedLetter::class)->queueFor('), 'The console\'s reset sends the same letter.');
+
+// 12. The server's warnings by mail, as «Что слать на почту» says: urgent only by default; to active people with an address.
+$warningLetters = new Larena\Env\Mail\WarningLetters($db, $mail, $letters);
+env_assert($mail->settings()?->levels === ['urgent'] && $warningLetters->takes(true) && !$warningLetters->takes(false), 'Urgent only, as chosen.');
+env_assert($warningLetters->queue(['user:admin_identity:1', 'user:admin_identity:2', 'user:admin_identity:1', 'test:other'], 'Срочно', 'Текст') === 1,
+    'One letter per active person with an address; a blocked one gets none.');
+$mail->switchOff('user:admin_identity:1');
+env_assert(!$warningLetters->takes(true), 'Mail off: nothing by mail.');
+$checkCommand = (string) file_get_contents(dirname(__DIR__, 2).'/src/Console/PanelCheckCommand.php');
+env_assert(str_contains($checkCommand, '$letters->takes($urgent)') && str_contains($checkCommand, "'larena-env::mail.letters.warning.subject_'"), 'The panel\'s check queues them.');
 
 echo "PanelMailTest passed.\n";

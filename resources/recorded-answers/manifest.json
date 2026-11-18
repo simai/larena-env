@@ -580,11 +580,11 @@
       "status": "ok"
     },
     "self-alerts.json": {
-      "sha256": "aebceb6ca1ea9bbf3640ac1be1d877d3fac868e23568b3227dceff8debfa2141",
+      "sha256": "eb05b2605567ab1adff719c576f135a175f228dff96916c652e4654e485d113b",
       "status": "ok"
     },
     "self-alerts.owner-demo.json": {
-      "sha256": "c2239328fa27638803fbaabc0e87fb5a2ad36f7f1ed7b9bef011e68fb351d7a6",
+      "sha256": "9c73b5d38a5df17d7fb03a13ea05085d814d09cb2e140b2caf021a5d1856acc5",
       "status": "ok"
     },
     "self-commands.json": {

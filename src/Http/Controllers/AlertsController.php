@@ -237,7 +237,12 @@ final readonly class AlertsController
         }
         $target = trim((string) $request->input('target'));
         if ($target === '') {
-            return null;
+            // The same channel with only «Что слать» changed (simai-env 1.63.0): no target, the server keeps its own.
+            if (!$this->levelsOnly($request, $kind)) {
+                return null;
+            }
+
+            return [$args, $hidden];
         }
         $args['target'] = $target;
         $hidden['target'] = $target;
@@ -282,6 +287,21 @@ final readonly class AlertsController
         if ($ref !== null) {
             $this->takeToken($request, $ref);
         }
+    }
+
+    /**
+     * Whether an empty address means «keep it»: the server takes «Что слать» (1.63.0) and the chosen kind is the one it
+     * sends to now, so it changes only what it sends and keeps its address and token.
+     */
+    private function levelsOnly(Request $request, string $kind): bool
+    {
+        $actor = ResolvePanelActor::of($request);
+        $capabilities = $this->overviews->read($actor)->overview?->capabilities;
+        if ($capabilities?->takes('self:alerts-channel', 'levels') !== true || $capabilities->allows('self:alerts') !== true) {
+            return false;
+        }
+
+        return ($this->extras->alerts($actor)?->channel['kind'] ?? 'off') === $kind;
     }
 
     /**

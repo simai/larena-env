@@ -22,7 +22,7 @@ final class ServerPeoplePage
     }
 
     /**
-     * @param list<array{id: int, subject: string, name: string, email: string, level: string, blocked: bool, owner: ?string, sites: list<string>, last: ?string, secret: bool}> $people PanelPeople::all
+     * @param list<array{id: int, subject: string, name: string, email: string, level: string, blocked: bool, owner: ?string, sites: list<string>, last: ?string, secret: bool, pending: bool, until?: ?string}> $people PanelPeople::all
      * @param callable(string, array<string, string>=): string $text the panel's line for a key under larena-env::admin.
      */
     public static function of(array $people, string $actor, callable $text, bool $canOperate, ?\DateTimeImmutable $now = null): AdminDataviewPage
@@ -36,7 +36,8 @@ final class ServerPeoplePage
             columns: [
                 ['key' => 'state', 'label' => $text('people.columns.state'), 'list' => 'status', 'type' => 'choice',
                     'options' => [['value' => 'ok', 'label' => $text('people.state.ok'), 'status' => 'ok'],
-                        ['value' => 'stopped', 'label' => $text('people.state.blocked'), 'status' => 'stopped']]],
+                        ['value' => 'stopped', 'label' => $text('people.state.blocked'), 'status' => 'stopped'],
+                        ['value' => 'invited', 'label' => $text('people.state.invited'), 'status' => 'warning']]],
                 ['key' => 'name', 'label' => $text('people.columns.name'), 'role' => 'title', 'list' => 'title'],
                 ['key' => 'email', 'label' => $text('people.columns.email'), 'list' => 'supporting'],
                 ['key' => 'can', 'label' => $text('people.columns.can'), 'list' => 'fact'],
@@ -88,7 +89,7 @@ final class ServerPeoplePage
     }
 
     /**
-     * @param array{id: int, subject: string, name: string, email: string, level: string, blocked: bool, owner: ?string, sites: list<string>, last: ?string, secret: bool} $person
+     * @param array{id: int, subject: string, name: string, email: string, level: string, blocked: bool, owner: ?string, sites: list<string>, last: ?string, secret: bool, pending: bool, until?: ?string} $person
      * @return array<string, mixed>
      */
     private static function row(array $person, string $actor, callable $text, bool $canOperate, \DateTimeImmutable $now): array
@@ -101,6 +102,23 @@ final class ServerPeoplePage
         }
         if ($canOperate && !$self) {
             $actions[] = $person['blocked'] ? 'unblock' : 'block';
+        }
+
+        // Invited by mail and not answered yet (C335): «Приглашён», and until when the link works where the panel sent it.
+        if ($person['pending'] && !$person['blocked']) {
+            $until = is_string($person['until'] ?? null) ? $person['until'] : null;
+            $left = $until === null ? null : ((strtotime($until.' UTC') ?: 0) > $now->getTimestamp()
+                ? $text('people.invite.pending', ['time' => Moment::human($until)]) : $text('people.invite.pending_expired'));
+
+            return [
+                'id' => (string) $person['id'],
+                'state' => ['value' => 'invited', 'label' => $text('people.state.invited')],
+                'name' => $person['name'],
+                'email' => $person['email'],
+                'can' => ['label' => $text('people.state.invited'), 'text' => $left ?? $text('people.state.invited'), 'status' => 'warning'],
+                'last' => ['label' => $left ?? $text('people.never'), 'text' => $left ?? $text('people.never')],
+                '_actions' => ['view'],
+            ];
         }
 
         return [

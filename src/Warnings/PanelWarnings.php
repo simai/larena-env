@@ -193,8 +193,31 @@ final class PanelWarnings
             $replace += ['check' => explode(':', (string) ($alert->target ?? ''))[0], 'where' => $alert->domain !== null ? ' · '.$alert->domain : ''];
         }
 
-        return new PanelWarning($kind, $alert->severity === 'critical' || $alert->severity === 'error' ? PanelWarning::ERROR : PanelWarning::WARNING,
-            $domain, $replace, $alert->target, $alert->id, $alert->state, $alert->ackedBy, $alert->ackedAt);
+        // Urgent is an error (simai-env 1.63.0 `level`; an older server's critical); everything else a warning.
+        return new PanelWarning($kind, $alert->level === ServerAlert::URGENT ? PanelWarning::ERROR : PanelWarning::WARNING,
+            $domain, $replace, $alert->target, $alert->id, $alert->state, $alert->ackedBy, $alert->ackedAt, $alert->title, $alert->line);
+    }
+
+    /**
+     * What a warning is called on a page, in the bar and in a notification: the server's own Russian title where it gave
+     * one (simai-env 1.63.0) and the page speaks Russian, else the panel's words for its kind. Never the server's English
+     * `message`, except inside the panel's words for a kind it has no name for.
+     *
+     * @param callable(string, array<string, string>): string $text the panel's line for a key under larena-env::admin.
+     */
+    public static function said(PanelWarning $warning, callable $text, string $locale = 'ru'): string
+    {
+        if ($warning->title !== null && str_starts_with($locale, 'ru')) {
+            return $warning->title;
+        }
+
+        return $text('warnings.'.$warning->kind, self::replaceFor($warning, $text));
+    }
+
+    /** The line under it: the server's advice or detail (1.63.0), Russian like its title; null when there is none. */
+    public static function line(PanelWarning $warning, string $locale = 'ru'): ?string
+    {
+        return $warning->title !== null && str_starts_with($locale, 'ru') ? $warning->line : null;
     }
 
     /**

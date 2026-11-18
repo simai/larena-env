@@ -614,6 +614,96 @@ assert 'data-env-plan=' not in wrong and "data-env-cron" in wrong, "a minute pas
 _, other = post("/admin/server/sites/demo-php.test/cron/plan", {"_token": form_token(own_cron), "op": "add", "preset": "daily", "custom": "", "command": "x"})
 assert 'data-env-plan=' not in other and ("This site is another person&#039;s." in other or "This site is another person's." in other), "not another owner's site"
 print("both levels checked")
+
+# The panel's mail, step 2 (C335), end to end through a throwaway SMTP catcher on this machine (no letter leaves it):
+# a test letter switches mail on; «Пригласить человека» sends the link at once and never keeps it; the person chooses a
+# password by it; a reset by its link queues «Ваш пароль изменён», which the scheduler's carrier sends; «История» has
+# the letters under «Почта» with the addresses partly hidden and no text.
+import socket, threading, base64, email as mailparse, subprocess
+caught = []
+catcher = socket.socket(); catcher.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1); catcher.bind(("127.0.0.1", 0)); catcher.listen(5)
+def catch():
+    while True:
+        try:
+            client, _ = catcher.accept()
+        except OSError:
+            return
+        reader = client.makefile("rb")
+        say = lambda line: client.sendall((line + "\r\n").encode())
+        say("220 catcher ESMTP")
+        data = None
+        while True:
+            line = reader.readline()
+            if not line:
+                break
+            text = line.decode("utf-8", "replace")
+            if data is not None:
+                if text.rstrip("\r\n") == ".":
+                    caught.append(mailparse.message_from_string(data)); data = None; say("250 ok"); continue
+                data += text[1:] if text.startswith("..") else text; continue
+            verb = text[:4].upper()
+            if verb == "EHLO": say("250-catcher"); say("250 AUTH PLAIN LOGIN")
+            elif verb == "AUTH":
+                if text.split()[1:2] == ["LOGIN"]:
+                    say("334 VXNlcm5hbWU6"); reader.readline(); say("334 UGFzc3dvcmQ6"); reader.readline()
+                elif len(text.split()) < 3:
+                    say("334 "); reader.readline()
+                say("235 ok")
+            elif verb == "DATA": data = ""; say("354 go")
+            elif verb == "QUIT": say("221 bye"); break
+            else: say("250 ok")
+        client.close()
+threading.Thread(target=catch, daemon=True).start()
+def body(letter):
+    part = letter.get_payload(decode=True) if not letter.is_multipart() else letter.get_payload(0).get_payload(decode=True)
+    return part.decode("utf-8", "replace")
+jar.clear()
+_, login = get("/admin/login")
+post("/admin/login", {"_token": form_token(login), "email": email, "password": password})
+_, mail = get("/admin/server/settings/mail")
+_, mail_plan = post("/admin/server/settings/mail/plan", {"_token": form_token(mail), "service": "smtp", "host": "127.0.0.1", "port": str(catcher.getsockname()[1]),
+    "encryption": "none", "login": email, "password": "catcher-Pa55!", "from_address": email, "from_name": "", "levels[]": "urgent"})
+_, mail = post("/admin/server/settings/mail/run", {"_token": form_token(mail_plan), "plan": re.search(r'name="plan" value="([0-9a-f]{24})"', mail_plan).group(1)})
+_, mail = post("/admin/server/settings/mail/test", {"_token": form_token(mail)})
+assert 'data-env-mail="on"' in mail and len(caught) == 1, "the test letter left through the catcher: mail is on"
+_, mail = get("/admin/server/settings/mail")
+checked_line = re.search(r'data-env-mail-checked>(.*?)</p>', mail, re.S)
+assert checked_line and '<sf-time datetime="' in checked_line.group(1) and "UTC" not in checked_line.group(1), "the last test letter in the reader's own zone (C183)"
+_, people = get("/admin/server/people")
+assert "data-env-invite-how" in people, "with mail on, the invitation offers the letter"
+_, invite_plan = post("/admin/server/people/invite/plan", {"_token": form_token(people), "name": "Invited", "email": "invited@example.test", "how": "mail",
+    "password": "", "level": "all"})
+assert "invited@example.test" in invite_plan and "72" in invite_plan, "the plan says the letter and its 72 hours"
+_, invited = post("/admin/server/people/invite/run", {"_token": form_token(invite_plan), "invite": hidden(invite_plan, "invite")})
+assert len(caught) == 2 and caught[1]["To"] == "invited@example.test", ("the invitation went at once", [c["To"] for c in caught])
+link = re.search(r"https?://[^\s]+/admin/activate/[^\s]+", body(caught[1])).group(0)
+assert "Check" in body(caught[1]) and "72" in body(caught[1]), "who invites, and the 72 hours"
+_, people = get("/admin/server/people")
+assert "Invited" in people and "Waiting for an answer until" in people, "the invited person waits for their answer"
+jar.clear()
+path = urllib.parse.urlparse(link)
+_, activation = get(path.path + "?" + path.query)
+chosen = "Invited-" + secrets.token_hex(6) + "!"
+post(path.path, {"_token": form_token(activation), "password": chosen, "password_confirmation": chosen})
+_, forgot = get("/admin/password/forgot")
+post("/admin/password/forgot", {"_token": form_token(forgot), "email": "invited@example.test"})
+assert len(caught) == 3 and caught[2]["To"] == "invited@example.test", "the reset link went at once (the person chose a password by the invitation)"
+reset = urllib.parse.urlparse(re.search(r"https?://[^\s]+/admin/password/reset/[^\s]+", body(caught[2])).group(0))
+_, reset_page = get(reset.path + "?" + reset.query)
+again = "Invited-" + secrets.token_hex(6) + "!"
+post(reset.path, {"_token": form_token(reset_page), "password": again, "password_confirmation": again})
+carrier = subprocess.run(["php", "artisan", "larena:env-mail"], cwd=sys.argv[5], check=True, capture_output=True, text=True).stdout
+assert "letters sent: 1" in carrier and len(caught) == 4 and "password was changed" in caught[3]["Subject"], ("«Ваш пароль изменён» by the carrier", carrier)
+jar.clear()
+_, login = get("/admin/login")
+post("/admin/login", {"_token": form_token(login), "email": email, "password": password})
+_, history = get("/admin/history?object=mail&shown=50")
+assert "i***@example.test" in history and "c***@example.test" in history and "invited@example.test" not in history and "activate/" not in history, "«История» → «Почта»: partly hidden, no link"
+catcher.close()
+_, mail = get("/admin/server/settings/mail")
+_, off_plan = post("/admin/server/settings/mail/plan", {"_token": form_token(mail), "action": "off"})
+post("/admin/server/settings/mail/run", {"_token": form_token(off_plan), "plan": re.search(r'name="plan" value="([0-9a-f]{24})"', off_plan).group(1)})
+print("mail step 2 checked:", len(caught), "letters caught")
 PY
 python3 - "$APP/database/database.sqlite" <<'PY' >>"$LOG" 2>&1 || failed "audit"
 import sqlite3, sys

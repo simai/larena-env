@@ -222,7 +222,8 @@ $connection->table(MetricSamples::TABLE)->delete();
 $connection->table(\Larena\Notification\Runtime\NotificationInbox::TABLE)->delete();
 $alerting = new RecordedAnswersGateway(env_recorded_path());
 $fromServer = $run($alerting);
-env_assert(str_contains($fromServer, 'warnings: 1, new or reminded: 1, notifications: 1, resolved: 0, measured: no, from the server: yes'), 'The server\'s alerts: '.$fromServer);
+// The recording (simai-env 1.63.0) also keeps a resolved alert of demo-php.test for 7 days: seen, never told.
+env_assert(str_contains($fromServer, 'warnings: 2, new or reminded: 1, notifications: 1, resolved: 0, measured: no, from the server: yes'), 'The server\'s alerts: '.$fromServer);
 $annas = $inbox->list('test:anna');
 env_assert($annas->total === 1 && $annas->items[0]->source === 'env:warning:backup_failed' && $annas->items[0]->href === '/admin/server/sites/demo-owned.test?tab=backups'
     && $annas->items[0]->title === 'The last backup of demo-owned.test failed.', 'The space\'s person hears of the server\'s alert.');
@@ -281,6 +282,49 @@ env_assert($whole[1]->domain === null && $whole[2]->tab() === 'domains' && $whol
     && $whole[0]->acknowledgeable() && $whole[2]->ackedBy === 'admin@stand.test', 'Acknowledged ones say by whom; open ones can be acknowledged.');
 env_assert($kinds(PanelWarnings::fromAlerts($alerts, ['a.test'], false)) === ['certificate_alert:warning', 'server_alert:warning'], 'An owner: their sites only.');
 env_assert($alerts->channel === ['kind' => 'telegram', 'target_hint' => 'chat …4567', 'last_sent_at' => null, 'last_error' => 'timeout', 'levels' => null], 'The channel, without its token.');
+
+// simai-env 1.63.0: the server says how urgent (urgent|warning; an older one's critical is urgent, a security finding's
+// high a warning) and what it is in Russian (title, line); the panel shows the title, never the English message.
+$spoken = \Larena\Env\Alerts\ServerAlerts::fromData(['alerts' => [
+    ['id' => 'b1', 'kind' => 'disk_full', 'severity' => 'critical', 'level' => 'urgent', 'title' => 'Диск / заполнен на 96%',
+        'line' => 'Освободите место: старые копии, журналы, корзина сайтов', 'target' => '/', 'message' => 'disk / is 96% full', 'state' => 'open'],
+    ['id' => 'b2', 'kind' => 'security_risk', 'severity' => 'high', 'title' => 'Безопасность: Открыт порт MySQL', 'domain' => 'a.test',
+        'target' => 'mysql_port', 'message' => 'security: MySQL port open (a.test): 3306', 'state' => 'open'],
+    ['id' => 'b3', 'kind' => 'site_down', 'severity' => 'critical', 'domain' => 'a.test', 'message' => 'a.test does not answer', 'state' => 'open'],
+    ['id' => 'b4', 'kind' => 'backup_failed', 'severity' => 'warning', 'level' => 'bogus', 'domain' => 'a.test', 'title' => '  ', 'message' => 'failed', 'state' => 'open'],
+], 'channel' => ['kind' => 'telegram', 'target_hint' => 'chat …4567', 'levels' => 'all']]);
+env_assert(array_map(static fn ($alert): string => $alert->level, $spoken->alerts) === ['urgent', 'warning', 'urgent', 'warning'],
+    'Levels: the server\'s own, else critical is urgent and high or anything else a warning.');
+env_assert($spoken->alerts[3]->title === null && $spoken->channel['levels'] === 'all', 'An empty title is none; the channel says what it sends.');
+$spokenWarnings = PanelWarnings::fromAlerts($spoken, ['a.test'], true);
+$byId = [];
+foreach ($spokenWarnings as $warning) {
+    $byId[(string) $warning->alertId] = $warning;
+}
+$panelText = static fn (string $key, array $replace = []): string => 'panel:'.$key;
+env_assert($byId['b1']->severity === PanelWarning::ERROR && $byId['b2']->severity === PanelWarning::WARNING && $byId['b3']->severity === PanelWarning::ERROR,
+    'Urgent is red, a warning yellow.');
+env_assert(PanelWarnings::said($byId['b1'], $panelText, 'ru') === 'Диск / заполнен на 96%' && PanelWarnings::line($byId['b1'], 'ru') === 'Освободите место: старые копии, журналы, корзина сайтов',
+    'A Russian page shows the server\'s title and its line.');
+env_assert(PanelWarnings::said($byId['b3'], $panelText, 'ru') === 'panel:warnings.site_unavailable' && PanelWarnings::said($byId['b1'], $panelText, 'en') === 'panel:warnings.disk_alert'
+    && PanelWarnings::line($byId['b1'], 'en') === null, 'Without a title, or on an English page, the panel\'s own words; never the English message.');
+foreach ($spokenWarnings as $warning) {
+    env_assert(!str_contains(PanelWarnings::said($warning, static fn (string $key, array $replace = []): string => $key, 'ru'), 'security:'), 'The English message is not shown.');
+}
+
+// A resolved alert stays the same record (same id); when its condition comes back it opens again under the same id with a
+// new first_seen, and that is news again: the ledger forgot its open state while it was resolved.
+$reopenLedger = new WarningLedger($connection);
+$connection->table(WarningLedger::TABLE)->delete();
+$open = static fn (string $state, string $since): PanelWarning => PanelWarnings::fromAlert(\Larena\Env\Alerts\ServerAlert::fromData(
+    ['id' => 'c1', 'kind' => 'site_down', 'severity' => 'critical', 'level' => 'urgent', 'domain' => 'a.test', 'title' => 'Сайт a.test не отвечает',
+        'message' => 'a.test does not answer', 'state' => $state, 'first_seen' => $since]) ?? throw new RuntimeException('alert'));
+$at = PanelWarnings::now();
+env_assert(count($reopenLedger->due([$open('open', '2026-01-01T00:00:00Z')], $at, false)) === 1, 'Opened: told.');
+env_assert(count($reopenLedger->due([$open('open', '2026-01-01T00:00:00Z')], $at, false)) === 0, 'Still open: not told again.');
+$reopenLedger->due([$open('resolved', '2026-01-01T00:00:00Z')], $at, false);
+env_assert(count($reopenLedger->due([$open('open', '2026-01-02T00:00:00Z')], $at, false)) === 1, 'Back again under the same id: told again.');
+$connection->table(WarningLedger::TABLE)->delete();
 
 // The load the server kept itself: ends at its last point, in percent of the whole.
 $history = MetricHistory::fromServer('day', ['points' => [

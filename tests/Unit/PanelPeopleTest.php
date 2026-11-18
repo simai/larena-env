@@ -34,7 +34,7 @@ function people_line(array $lines, string $key, array $replace = []): string
 $text = static fn (string $key, array $replace = []): string => people_line($russian, $key, $replace);
 $person = static fn (array $over): array => array_merge(['id' => 1, 'subject' => 'user:admin_identity:1', 'name' => 'Rim',
     'email' => 'admin@example.test', 'level' => PanelPeople::ALL, 'blocked' => false, 'owner' => null, 'sites' => [], 'last' => null,
-    'secret' => true], $over);
+    'secret' => true, 'pending' => false], $over);
 $now = new DateTimeImmutable('2026-11-18T12:00:00Z');
 
 $people = [
@@ -73,6 +73,15 @@ assert($rows['4']['last']['label'] === people_line($russian, 'people.never'));
 // «Пригласить человека» is the one filled button; a reader has none, and no row actions.
 assert(count($page->headerActions) === 1 && $page->headerActions[0]['primary'] === true);
 $reader = ServerPeoplePage::of($people, 'user:admin_identity:1', $text, false, $now);
+// Invited by mail and not answered (C335): «Приглашён» and until when the link works, or that it ran out.
+$invited = ServerPeoplePage::of([$people[0], $person(['id' => 5, 'subject' => 'user:admin_identity:5', 'name' => 'Invited', 'email' => 'inv@example.test',
+    'level' => PanelPeople::ALL, 'secret' => false, 'pending' => true, 'until' => '2026-11-20 12:00:00']),
+    $person(['id' => 6, 'subject' => 'user:admin_identity:6', 'name' => 'Late', 'email' => 'late@example.test', 'level' => PanelPeople::ALL,
+        'secret' => false, 'pending' => true, 'until' => '2026-11-17 12:00:00'])], 'user:admin_identity:1', $text, true, $now);
+$invitedRows = array_column($invited->rows, null, 'id');
+assert($invitedRows['5']['state']['value'] === 'invited' && $invitedRows['5']['state']['label'] === people_line($russian, 'people.state.invited'));
+assert(str_contains(json_encode($invitedRows['5'], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE), 'Ждёт ответа до'), 'the invitation waits until a time');
+assert(str_contains(json_encode($invitedRows['6'], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE), people_line($russian, 'people.invite.pending_expired')), 'an invitation that ran out says so');
 assert($reader->headerActions === [] && $reader->quickActions === [] && $reader->rowWrites === []);
 
 // The lines both languages carry for the list, the invitation and the card.

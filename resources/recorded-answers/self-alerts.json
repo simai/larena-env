@@ -13,6 +13,9 @@
         "target": "demo-owned.test",
         "domain": "demo-owned.test",
         "severity": "warning",
+        "level": "warning",
+        "title": "Последняя копия demo-owned.test не удалась",
+        "line": null,
         "message": "the last backup of demo-owned.test failed",
         "state": "open",
         "first_seen": "2026-01-01T00:00:00Z",
@@ -20,11 +23,29 @@
         "acked_at": null,
         "acked_by": null,
         "resolved_at": null
+      },
+      {
+        "id": "5d2e8c1f0a37",
+        "kind": "site_down",
+        "target": "demo-php.test",
+        "domain": "demo-php.test",
+        "severity": "critical",
+        "level": "urgent",
+        "title": "Сайт demo-php.test не отвечает",
+        "line": null,
+        "message": "demo-php.test does not answer",
+        "state": "resolved",
+        "first_seen": "2025-12-31T22:00:00Z",
+        "last_seen": "2025-12-31T23:40:00Z",
+        "acked_at": null,
+        "acked_by": null,
+        "resolved_at": "2025-12-31T23:45:00Z"
       }
     ],
     "channel": {
       "kind": "off",
       "target_hint": null,
+      "levels": "urgent",
       "last_sent_at": null,
       "last_error": null
     }

@@ -15,6 +15,7 @@ use Larena\Admin\Runtime\AdminPlannedAction;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\NoticeRedirect;
 use Larena\Env\Mail\MailFailed;
+use Larena\Env\Mail\MailLetters;
 use Larena\Env\Mail\MailSettings;
 use Larena\Env\Mail\PanelMail;
 use Larena\Env\Mail\PanelMailer;
@@ -45,6 +46,7 @@ final readonly class PanelMailController
         private StringEncrypter $encrypter,
         private ?AccessOperationAuthorizer $authorizer = null,
         private ?Closure $email = null,
+        private ?MailLetters $letters = null,
     ) {
     }
 
@@ -59,6 +61,7 @@ final readonly class PanelMailController
             'state' => $state,
             'settings' => $settings,
             'items' => $this->items($settings, $state, $canOperate),
+            'checked' => $settings === null ? null : self::checkedMoment($this->mail->checkedAt()),
             'mismatch' => $settings?->senderMismatch() === true,
             'canOperate' => $canOperate,
             'canTest' => $canOperate && $settings !== null && $this->mail->hasPassword() && $email !== null,
@@ -164,6 +167,8 @@ final readonly class PanelMailController
         }
         $request->session()->put(self::TESTED, time());
         $reason = $this->mailer->send($settings, $password, $to, $this->text('letters.test.subject'), $this->text('letters.test.body'));
+        // «История» → «Почта»; a test letter that left also ends «Почта не уходит».
+        $this->letters?->record('test', $to, $this->text('letters.test.subject'), $reason);
         if ($reason !== null) {
             return NoticeRedirect::to($request, $back, $this->text('test.failed', ['reason' => $this->text('reasons.'.$reason)]));
         }
@@ -203,8 +208,16 @@ final readonly class PanelMailController
             ['id' => 'from', 'label' => $this->text('fields.from'), 'value' => $this->from($settings)]
                 + ($settings->senderMismatch() ? ['status' => 'warning', 'hint' => $this->text('spam_warning')] : []),
             ['id' => 'levels', 'label' => $this->text('fields.levels'), 'value' => $this->levels($settings), 'hint' => $this->text('card.levels_hint')],
-            ['id' => 'checked', 'label' => $this->text('card.checked'), 'value' => $checked === null ? $this->text('card.never') : Moment::human($checked)],
+            // The last test letter's time is the reader's own (C183): a set time goes under the card as the Framework's
+            // sf-time (the description list takes only text), so here only «Не было».
+            ...(self::checkedMoment($checked) === null ? [['id' => 'checked', 'label' => $this->text('card.checked'), 'value' => $checked === null ? $this->text('card.never') : Moment::human($checked)]] : []),
         ];
+    }
+
+    /** The last test letter's moment as ISO with its offset for sf-time to say in the reader's zone (C183), or null. */
+    public static function checkedMoment(?string $checked): ?string
+    {
+        return Moment::iso($checked);
     }
 
     /**

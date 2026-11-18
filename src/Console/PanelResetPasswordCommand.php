@@ -64,6 +64,11 @@ final class PanelResetPasswordCommand extends Command
         if ($app->bound(LoggerInterface::class)) {
             $app->make(LoggerInterface::class)->notice('пароль сброшен с консоли', ['email_hash' => hash('sha256', mb_strtolower($email))]);
         }
+        // «Ваш пароль изменён» to the person while the panel's mail is on (C335), through the queue: it carries no link.
+        $identity = $connection->table('larena_admin_identities')->where('email', mb_strtolower($email))->value('id');
+        if ($identity !== null && $app->bound(\Larena\Env\Mail\PasswordChangedLetter::class)) {
+            $app->make(\Larena\Env\Mail\PasswordChangedLetter::class)->queueFor('user:admin_identity:'.(int) $identity);
+        }
         $this->info('Пароль сброшен с консоли. Все входы этого администратора завершены — войдите с новым паролем.');
 
         return self::SUCCESS;

@@ -140,6 +140,8 @@ env_assert($adminNames === [
     'src/Admin/EnvHistorySource.php',
     // «Действие с планом» (larena/admin AdminPlannedAction): the panel's plan and its end in the admin's part.
     'src/Admin/JobOutcome.php',
+    // «История» → «Почта» (larena/admin AdminHistorySource, C335 step 2), registered only where the admin is installed.
+    'src/Admin/MailHistorySource.php',
     'src/Admin/NewSitePropertyViewPort.php',
     // The server's «Первые шаги» (larena/admin AdminFirstSteps), only where the admin is installed.
     'src/Admin/PanelFirstSteps.php',
@@ -163,8 +165,12 @@ env_assert($adminNames === [
     'src/Http/Controllers/SiteAdminController.php',
     'src/Navigation/ServerAdminNavigationContributor.php',
     'src/Providers/EnvServiceProvider.php',
+    // The panel edition composes «Почта не уходит» and «История» → «Почта» only where the admin is installed (C335).
+    'src/Providers/PanelEditionServiceProvider.php',
     'src/Server/Moment.php',
     'src/Warnings/EnvAdminAlertSource.php',
+    // «Почта не уходит — проверьте настройки» in the admin's alert bar (C335 step 2).
+    'src/Warnings/MailAlertSource.php',
 ], 'Only the admin\'s own pieces may name the admin: '.implode(', ', $adminNames));
 
 $composer = json_decode((string) file_get_contents($root.'/composer.json'), true, 512, JSON_THROW_ON_ERROR);
