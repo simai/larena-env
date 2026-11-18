@@ -556,7 +556,9 @@ final readonly class SiteAdminController
             'base' => $base,
             'problem' => $problem,
             'path' => $path,
-            'crumbs' => FilePath::crumbs($path),
+            // The folder visitors see is named so in the path, its real place on the server said under «Подробнее».
+            'crumbs' => FilePath::crumbs($path, $visitors, $text('files.visitors_folder')),
+            'serverPath' => $visitors !== null && FilePath::within($path, $visitors) ? $path : null,
             'parent' => $path === '.' ? null : FilePath::parent($path),
             'view' => $opened ? $view : null,
             'text' => is_array($textRead) ? $textRead : null,

@@ -58,6 +58,9 @@ final class PlanAction
         ])->html();
     }
 
+    /** Actions that do not destroy data but whose result the panel says in its own words: a paused site. */
+    private const array SAID_CONSEQUENCES = ['site-suspend'];
+
     /**
      * @param array<array-key, mixed> $hidden what the confirmation sends back
      * @param array{heading: string, target: ?string, cancel: string, check: ?string, warnings: array<mixed>, more: string} $screen
@@ -118,8 +121,8 @@ final class PlanAction
             runFields: $fields,
             acceptText: $destroys ? $heading : ($heading !== $command ? $heading : (self::text('plan.confirm') ?? '')),
             danger: $destroys,
-            // What deletes or replaces data says so on the plate: the panel's sentence, else the server's (simai-env 1.60.0).
-            consequence: ($destroys ? self::text('plan.consequence.'.$key) : null) ?? $plan->consequence ?? '',
+            // What deletes, replaces or stops something says so on the plate: the panel's sentence, else the server's (simai-env 1.60.0).
+            consequence: ($destroys || in_array($key, self::SAID_CONSEQUENCES, true) ? self::text('plan.consequence.'.$key) : null) ?? $plan->consequence ?? '',
             require: $destroys && $target !== null ? $target : '',
             facts: $facts,
             // What the panel knows, then what the server's check found: what would stop it, then what is worth knowing.

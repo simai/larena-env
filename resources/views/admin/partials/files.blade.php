@@ -10,7 +10,7 @@
         <div class="m-bottom-1">@include('larena-env::admin.partials.explanation', ['text' => __('larena-env::admin.files.explain')])</div>
         {{-- Where a removal goes, said before anything is removed: the site's trash and its term, or that it is final. --}}
         <p class="m-0 m-bottom-1 text-small color-on-surface-variant" data-env-files-term="{{ $files['trashKept'] ? 'trash' : 'final' }}">{{ $files['trashKept']
-            ? __('larena-env::admin.files.explain_trash', ['days' => (string) ($files['trash']['days'] ?? 7)]) : __('larena-env::admin.files.explain_final') }}</p>
+            ? __('larena-env::admin.files.explain_trash', ['days' => \Larena\Env\Admin\Plural::days((int) ($files['trash']['days'] ?? 7))]) : __('larena-env::admin.files.explain_final') }}</p>
         <nav aria-label="{{ __('larena-env::admin.files.path') }}" data-env-files-crumbs class="flex flex-wrap g-1" style="overflow-wrap: anywhere;">
             <a href="{{ $files['base'] }}&amp;path=.">{{ $domain }}</a>
             @foreach ($files['crumbs'] as $crumb)
@@ -21,13 +21,19 @@
                 <span aria-hidden="true">/</span><span>{{ basename($files['view']) }}</span>
             @endif
         </nav>
-        @if ($files['atVisitors'])
+        @if ($files['serverPath'] !== null && $files['view'] === null)
+            {{-- Where «Папка посетителей» really is (a release behind public → current), for whoever needs the path. --}}
+            <details class="m-top-1 text-small" data-env-files-server-path>
+                <summary class="color-primary" style="cursor: pointer;">{{ __('larena-env::admin.more') }}</summary>
+                <p class="m-0 m-top-1 color-on-surface-variant" style="overflow-wrap: anywhere;">{{ __('larena-env::admin.files.server_path', ['path' => $files['serverPath']]) }}
+                    @if ($files['visitorsLink'] !== null) {{ __('larena-env::admin.files.visitors_release', ['link' => $files['visitorsLink']]) }} @endif</p>
+            </details>
+        @endif
+        {{-- What visitors open from here is said on the folder, not again on each file's page. --}}
+        @if ($files['atVisitors'] && $files['view'] === null)
             {{-- PX-91: where the person is, said in words, with what a visitor would open. --}}
             <p class="m-y-1" data-env-files-visitors role="note">
                 {{ __('larena-env::admin.files.visitors_hint', ['file' => 'robots.txt', 'url' => $domain.'/robots.txt']) }}
-                @if ($files['visitorsLink'] !== null)
-                    <span class="color-on-surface-variant">{{ __('larena-env::admin.files.visitors_release', ['link' => $files['visitorsLink']]) }}</span>
-                @endif
                 <a href="{{ $files['base'] }}&amp;path=." data-env-files-root>{{ __('larena-env::admin.files.to_root') }}</a>
             </p>
         @elseif ($files['view'] === null && $files['visitors'] !== null && $files['path'] === '.')
@@ -45,7 +51,8 @@
         @if ($files['view'] !== null)
             @if ($files['secret'])
                 {{-- PX-92: a file with passwords is shown and downloaded only when the person says so. --}}
-                <p role="note" data-env-files-secret class="m-y-1"><strong>{{ __('larena-env::admin.files.secret') }}</strong> · {{ __('larena-env::admin.files.secret_note') }}</p>
+                {{-- One warning: the mark and its sentence together. --}}
+                <p role="note" data-env-files-secret class="m-y-1 flex flex-wrap items-cross-center g-1"><sf-badge status="warning" appearance="tonal" text="{{ __('larena-env::admin.files.secret') }}"></sf-badge> <span>{{ __('larena-env::admin.files.secret_note') }}</span></p>
                 @if (!$files['revealed'] && $files['allows']['read'])
                     <p><a class="larena-button" href="{{ $files['base'] }}&amp;view={{ rawurlencode($files['view']) }}&amp;reveal=1" data-env-files-reveal>{{ __('larena-env::admin.files.secret_reveal') }}</a></p>
                 @endif
@@ -101,8 +108,14 @@
                     <input type="hidden" name="folder" value="{{ $files['path'] }}">
                     <div class="larena-field">
                         <label for="env-files-upload">{{ __('larena-env::admin.files.upload_files') }}</label>
-                        {{-- The browser's own field takes files dropped on it as well as chosen (until Framework's upload posts with a form). --}}
-                        <input type="file" id="env-files-upload" name="files[]" multiple required aria-describedby="env-files-upload-note" style="min-height: 4.5rem; width: 100%; border: 1px dashed var(--sf-color-outline, currentColor); border-radius: var(--sf-radius-2, .5rem); padding: 1rem;">
+                        {{-- Temporary bridge to Framework (until its upload posts with a form): the browser's own field lies transparent
+                             over the drop zone, so a click or a drop still reaches it; the button and «Файл не выбран» are the panel's
+                             words, the names chosen said by larena/admin form-state.js (larenaFilePick), not the browser's English. --}}
+                        <div data-larena-file-pick style="position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; min-height: 4.5rem; border: 1px dashed var(--sf-color-outline, currentColor); border-radius: var(--sf-radius-2, .5rem); padding: 1rem;">
+                            <input type="file" id="env-files-upload" name="files[]" multiple required aria-describedby="env-files-upload-names env-files-upload-note" style="position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;">
+                            <span class="larena-button" aria-hidden="true">{{ __('larena-env::admin.files.choose_files') }}</span>
+                            <span id="env-files-upload-names" data-larena-file-pick-names data-empty="{{ __('larena-env::admin.files.none_chosen') }}" data-many="{{ __('larena-env::admin.files.many_chosen') }}" aria-live="polite" style="overflow-wrap: anywhere;">{{ __('larena-env::admin.files.none_chosen') }}</span>
+                        </div>
                         <p id="env-files-upload-note" class="m-0 text-small color-on-surface-variant">{{ __('larena-env::admin.files.upload_drop') }} {{ __('larena-env::admin.files.upload_note') }}</p>
                     </div>
                     <div class="flex flex-wrap items-cross-center g-2">
@@ -212,7 +225,7 @@
                 {{-- PX-95: what was removed, put back or removed for good, each the server's plan. --}}
                 <details class="m-top-2" data-env-files-trash @if ($files['trashOpen'] ?? false) open @endif>
                     <summary style="cursor: pointer;">{{ __('larena-env::admin.files.trash.summary', ['count' => (string) count($files['trash']['entries'])]) }}</summary>
-                    <p class="text-small color-on-surface-variant">{{ __('larena-env::admin.files.trash.kept', ['days' => (string) $files['trash']['days']]) }}</p>
+                    <p class="text-small color-on-surface-variant">{{ __('larena-env::admin.files.trash.kept', ['days' => \Larena\Env\Admin\Plural::days((int) $files['trash']['days'])]) }}</p>
                     @if ($files['trashView'] !== null)
                         @include('larena-admin::dataview.page', ['dataview' => $files['trashView'], 'sectionId' => 'env-site-trash', 'owner' => 'larena/env',
                             'ariaLabel' => __('larena-env::admin.files.trash.title'), 'queryUrl' => route('larena.env.admin.site', ['domain' => $domain], false),

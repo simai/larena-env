@@ -81,7 +81,7 @@ final readonly class SiteObjectMenu implements AdminObjectMenuSource
                 $items[] = $row;
             }
         }
-        $state = SiteState::of($site->answersChecked, $site->answers);
+        $state = SiteState::of($site->answersChecked, $site->answers, $site->suspended);
         $query = [];
         parse_str((string) parse_url($page, PHP_URL_QUERY), $query);
         $open = SiteAdminController::section($query['tab'] ?? null);

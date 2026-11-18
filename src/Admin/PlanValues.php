@@ -115,7 +115,8 @@ final class PlanValues
     {
         $rows = [];
         foreach ($args as $name => $value) {
-            if (($name === 'domain' && $value === $target) || in_array($name, $without, true)) {
+            // The thing acted on is said once, as «Над чем»: a site's domain or a service's or a base's name.
+            if ((in_array($name, ['domain', 'name'], true) && $value === $target) || in_array($name, $without, true)) {
                 continue;
             }
             $rows[] = ['name' => $name, 'label' => self::label($name), 'value' => self::value($name, $value)];

@@ -66,22 +66,35 @@ final class FilePath
     }
 
     /**
-     * The folders above a path, for the breadcrumb: each with its name and its own path.
+     * The folders above a path, for the breadcrumb: each with its name and its own path. The folder visitors see, where
+     * there is one, is one step named in words («Папка посетителей»), not `releases / 20261105012440` or `public`.
      *
      * @return list<array{name: string, path: string}>
      */
-    public static function crumbs(string $path): array
+    public static function crumbs(string $path, ?string $visitors = null, ?string $visitorsName = null): array
     {
         if ($path === '.') {
             return [];
         }
         $crumbs = [];
         $walked = '.';
-        foreach (explode('/', $path) as $part) {
+        $rest = $path;
+        if ($visitors !== null && $visitorsName !== null && self::within($path, $visitors)) {
+            $crumbs[] = ['name' => $visitorsName, 'path' => $visitors];
+            $walked = $visitors;
+            $rest = $path === $visitors ? '' : substr($path, strlen($visitors) + 1);
+        }
+        foreach ($rest === '' ? [] : explode('/', $rest) as $part) {
             $walked = self::join($walked, $part);
             $crumbs[] = ['name' => $part, 'path' => $walked];
         }
 
         return $crumbs;
+    }
+
+    /** Whether a path is a folder or inside it. */
+    public static function within(string $path, string $folder): bool
+    {
+        return $path === $folder || str_starts_with($path, $folder.'/');
     }
 }

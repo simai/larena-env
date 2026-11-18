@@ -163,7 +163,7 @@ final readonly class ServicesController
             'hidden' => ['op' => $op, 'name' => $name],
             // What a stop takes away: the sites and what each loses, and the server's own checks where cron goes.
             'serviceStop' => $op === 'stop' ? ['name' => $name, 'sites' => $result->plan->affected, 'server' => $result->plan->pausesServer] : null,
-            'then' => [(string) $this->translator->get('larena-env::admin.services.'.match ($op) {'stop' => 'stop_then', 'start' => 'checked_first', default => 'checked_first'})],
+            'then' => [(string) $this->translator->get('larena-env::admin.services.'.match ($op) {'stop' => 'stop_then', 'start' => 'start_then', default => 'checked_first'})],
         ]);
     }
 

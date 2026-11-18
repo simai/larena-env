@@ -255,7 +255,7 @@ $stopped = $servicesController->run($asking('/services/run', ['op' => 'stop', 'n
 env_assert(str_ends_with($stopped->getTargetUrl(), '/larena.env.admin.job/eeeeeeeeeeeeeeeeeeeeeeee') && $gateway->of('service:stop')[0]->confirm, 'Confirmed, cron stops as a job.');
 env_assert($servicesController->plan($asking('/services/plan', ['op' => 'start', 'name' => 'cron'])) instanceof RedirectResponse, 'A running service is not started again.');
 $gateway->cronActive = false;
-env_assert(!$servicesController->plan($asking('/services/plan', ['op' => 'start', 'name' => 'cron'])) instanceof RedirectResponse && $planViews->data['plan']->command === 'service:start',
+env_assert(!$servicesController->plan($asking('/services/plan', ['op' => 'start', 'name' => 'cron'])) instanceof RedirectResponse && $planViews->data['plan']->command === 'service:start' && $planViews->data['then'] === ['The service starts at once.'],
     'A stopped one is started through its plan.');
 $gateway->cronActive = true;
 
@@ -325,6 +325,9 @@ $row = array_column($sitesPage->rows, null, 'id')['paused.test'] ?? null;
 env_assert($row !== null && $row['state']['value'] !== 'error' && ($row['answers']['text'] ?? null) === $text('sites.state.paused'),
     'The list says «На паузе»: '.json_encode($row));
 
+env_assert(\Larena\Env\Admin\SiteState::of(true, 503, true) === 'paused' && \Larena\Env\Admin\SiteState::status('paused') === 'warning' && \Larena\Env\Admin\SiteState::of(true, 503) === 'error',
+    'The card and its menu say «На паузе», not «Ошибка сервера».');
+
 // 3. PHP: only what the server allows a site of this kind; 7.4 and 8.0 marked, 5.6 never offered by the panel itself.
 $profile = SiteProfile::fromData(['id' => 'generic', 'php' => ['versions' => ['8.3', '8.0', '7.4'], 'min' => '7.4', 'default' => '8.3']]);
 env_assert($profile->phpVersions === ['8.3', '8.0', '7.4'] && $profile->phpMin === '7.4', 'The kind\'s PHP bounds are the server\'s.');
@@ -356,5 +359,22 @@ $bare = \Larena\Env\Operations\PanelJobStatus::fromData(['job_id' => str_repeat(
 env_assert(\Larena\Env\Admin\JobOutcome::span($bare) === ['', ''], 'With nothing known, no times: nothing counted up to now.');
 $running = \Larena\Env\Operations\PanelJobStatus::fromData(['job_id' => str_repeat('f', 24), 'state' => 'running', 'command' => 'backup:data', 'args' => [], 'started_at' => '2026-11-18T10:00:00Z']);
 env_assert(\Larena\Env\Admin\JobOutcome::span($running) === ['2026-11-18T10:00:00+00:00', ''], 'A running job counts from its start.');
+
+// The thing acted on is said once: «Над чем cron», not again as a setting.
+env_assert(\Larena\Env\Admin\PlanValues::of(['name' => 'cron'], 'cron') === [] && count(\Larena\Env\Admin\PlanValues::of(['name' => 'shop'], 'demo.test')) === 1, 'The service\'s name is not repeated.');
+
+// 6. Files (the auditor's remarks): days in full, the visitors' folder in words, its real path kept for «Подробнее».
+$ruDays = ['one' => $ruLines['units']['day_one'], 'few' => $ruLines['units']['day_few'], 'many' => $ruLines['units']['day_many']];
+$enDays = ['one' => $lines['units']['day_one'], 'few' => $lines['units']['day_few'], 'many' => $lines['units']['day_many']];
+env_assert(\Larena\Env\Admin\Plural::of(7, $ruDays) === "7\u{00A0}дней" && \Larena\Env\Admin\Plural::of(1, $ruDays) === "1\u{00A0}день"
+    && \Larena\Env\Admin\Plural::of(3, $ruDays) === "3\u{00A0}дня" && \Larena\Env\Admin\Plural::of(11, $ruDays) === "11\u{00A0}дней"
+    && \Larena\Env\Admin\Plural::of(21, $ruDays) === "21\u{00A0}день" && \Larena\Env\Admin\Plural::of(7, $enDays, 'en') === "7\u{00A0}days" && \Larena\Env\Admin\Plural::days(7) === "7\u{00A0}days"
+    && !str_contains($ruLines['files']['explain_trash'].$ruLines['files']['trash']['kept'], 'дн.'), 'Days said in full, never «дн.».');
+$crumbs = \Larena\Env\Files\FilePath::crumbs('releases/20261105012440/wp-content', 'releases/20261105012440', 'Папка посетителей');
+env_assert($crumbs === [['name' => 'Папка посетителей', 'path' => 'releases/20261105012440'], ['name' => 'wp-content', 'path' => 'releases/20261105012440/wp-content']]
+    && \Larena\Env\Files\FilePath::crumbs('releases', 'releases/20261105012440', 'Папка посетителей') === [['name' => 'releases', 'path' => 'releases']]
+    && \Larena\Env\Files\FilePath::crumbs('public', 'public', 'Папка посетителей') === [['name' => 'Папка посетителей', 'path' => 'public']]
+    && !\Larena\Env\Files\FilePath::within('public2', 'public'), 'The visitors\' folder is one step in words: '.json_encode($crumbs, JSON_UNESCAPED_UNICODE));
+env_assert(($ruLines['files']['secret'] ?? null) === 'Секреты' && ($ruLines['files']['none_chosen'] ?? null) === 'Файл не выбран', 'A mark, not a lowercase word; the file field in Russian.');
 
 echo "ServerActionsTest passed.\n";

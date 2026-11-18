@@ -495,7 +495,7 @@ env_assert(str_contains($folder, 'stub-dataview env-site-files larena/env 2') &&
 env_assert(str_contains($folder, 'data-env-files-op="mkdir"') && str_contains($folder, 'data-env-files-op="create"') && str_contains($folder, 'data-env-files-upload')
     && str_contains($folder, 'enctype="multipart/form-data"') && str_contains($folder, 'name="files[]" multiple'), 'A new folder and file in the side panel; several files uploaded at once.');
 env_assert(str_contains($folder, 'data-env-files-service') && str_contains($folder, 'data-env-file-service="releases"') && str_contains($folder, 'data-env-file-service=".env"')
-    && str_contains($folder, 'data-env-files-trash') && str_contains($folder, 'data-env-files-trash-none') && str_contains($folder, 'data-env-files-term="trash"') && str_contains($folder, ' 30 '),
+    && str_contains($folder, 'data-env-files-trash') && str_contains($folder, 'data-env-files-trash-none') && str_contains($folder, 'data-env-files-term="trash"') && str_contains($folder, "30\u{00A0}days"),
     'The server\'s entries folded, the trash with its term.');
 $noTrash = $screen(['site' => $site, 'tab' => 'files', 'files' => ['folder' => ['entries' => [], 'truncated' => false], 'trashKept' => false] + $filesBase]);
 env_assert(str_contains($noTrash, 'data-env-files-term="final"') && !str_contains($noTrash, 'data-env-files-trash'), 'Without a trash, a removal is said to be final.');

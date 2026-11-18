@@ -11,15 +11,17 @@ namespace Larena\Env\Admin;
 final class SiteState
 {
     /** Each state and the colour it is drawn in. */
-    public const array COLORS = ['works' => 'success', 'error' => 'danger', 'down' => 'danger', 'unchecked' => 'neutral'];
+    public const array COLORS = ['works' => 'success', 'error' => 'danger', 'down' => 'danger', 'unchecked' => 'neutral', 'paused' => 'warning'];
 
     private function __construct()
     {
     }
 
-    public static function of(bool $checked, ?int $answers): string
+    public static function of(bool $checked, ?int $answers, bool $suspended = false): string
     {
         return match (true) {
+            // A paused site (site:suspend) answers 503 on purpose: «На паузе», never «Ошибка сервера».
+            $suspended => 'paused',
             !$checked => 'unchecked',
             $answers === null => 'down',
             $answers >= 500 => 'error',
@@ -30,6 +32,6 @@ final class SiteState
     /** The status word of the Framework's badge for a state. */
     public static function status(string $state): string
     {
-        return ['works' => 'success', 'unchecked' => 'info'][$state] ?? 'error';
+        return ['works' => 'success', 'unchecked' => 'info', 'paused' => 'warning'][$state] ?? 'error';
     }
 }
