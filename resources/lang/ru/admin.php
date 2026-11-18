@@ -52,7 +52,34 @@ return [
         'answers_code' => 'HTTP :code',
         'disk' => 'Диск',
         'blocked' => 'Заблокировано',
+        // The list of sites as a list of resources (C31, PX-53…PX-58): a dot and its word, the facts said only when they
+        // matter, the backup by its own time, the row's own actions.
+        'list' => [
+            'state' => 'Состояние',
+            'dot' => ['ok' => 'Всё в порядке', 'warning' => 'Есть что сделать', 'error' => 'Требует внимания', 'stopped' => 'Не проверен'],
+            'certificate_ends' => 'HTTPS :days дн.',
+            'certificate_left' => 'HTTPS :days дн.',
+            'certificate_on' => 'HTTPS есть',
+            'no_https' => 'Нет HTTPS',
+            'renew_failed' => 'Не продлился',
+            'certificate_local' => 'HTTPS не нужен',
+            'certificate_tip' => 'Адрес :zone открывается только на этом компьютере; сертификат ему не нужен.',
+            'backup_fresh' => ':ago',
+            'backup_stale' => ':ago',
+            'backup_failed' => 'Сбой копии',
+            'backup_none' => 'Копий нет',
+            'backup_not_needed' => 'Без копий',
+            'backup_tip' => 'Последняя копия :time',
+            'backup_failed_tip' => 'Копия не удалась :time',
+            'php' => 'PHP :version',
+            'visit' => 'Открыть сайт',
+            'backup' => 'Сделать копию',
+            'empty' => 'Сайтов пока нет',
+            'empty_description' => 'Сайт — это адрес и папка на сервере. Создайте первый кнопкой «Создать сайт»; WordPress можно поставить сразу.',
+        ],
     ],
+    // How long ago, the way the lists say a time (C183): the exact time is in the tooltip.
+    'ago' => ['now' => 'только что', 'minutes' => ':count мин назад', 'hours' => ':count ч назад', 'yesterday' => 'вчера', 'days' => ':count дн. назад'],
     // One tab title on every screen (block 4, texts for a newcomer; the panel's UX audit, HEAD-03): «… — Larena Panel».
     'tab_title' => ':title — Larena Panel',
     // Where a domain must lead, said the same on «Новый сайт», «Домены и HTTPS» and the setup wizard (block 4).

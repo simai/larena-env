@@ -64,6 +64,35 @@ final class Moment
         }
     }
 
+    /**
+     * How long ago, as the lists say a time (owner decision 2026-11-17, C183): «только что», «12 мин назад», «2 ч назад»,
+     * «вчера», «3 дн. назад», then the short date. It needs no time zone, so it is the reader's as much as the server's;
+     * the exact time goes in the tooltip. Null when the server wrote no time.
+     *
+     * @param callable(string, array<string, string>=): string $text the panel's line for a key under larena-env::admin.
+     */
+    public static function ago(?string $value, DateTimeImmutable $now, callable $text): ?string
+    {
+        if ($value === null || trim($value) === '') {
+            return null;
+        }
+        try {
+            $seconds = $now->getTimestamp() - (new DateTimeImmutable($value, new DateTimeZone('UTC')))->getTimestamp();
+        } catch (Exception) {
+            return null;
+        }
+        $minutes = intdiv(max(0, $seconds), 60);
+
+        return match (true) {
+            $minutes < 1 => $text('ago.now'),
+            $minutes < 60 => $text('ago.minutes', ['count' => (string) $minutes]),
+            $minutes < 24 * 60 => $text('ago.hours', ['count' => (string) intdiv($minutes, 60)]),
+            $minutes < 48 * 60 => $text('ago.yesterday'),
+            $minutes < 7 * 24 * 60 => $text('ago.days', ['count' => (string) intdiv($minutes, 24 * 60)]),
+            default => explode(' ', self::short($value, (int) $now->format('Y')))[0],
+        };
+    }
+
     /** The same, shorter where a column is narrow: this year's date without its year, «05.11 03:30 UTC». */
     public static function short(?string $value, ?int $year = null): string
     {

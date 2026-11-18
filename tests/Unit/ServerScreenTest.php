@@ -73,52 +73,52 @@ env_assert($flatten($lines['admin']) === $flatten($russian), 'en and ru must hav
 $overview = (new ServerOverviewReader(new RecordedAnswersGateway(env_recorded_path())))->read(new \Larena\Env\Gateway\PanelActor('admin@example.com'))->overview;
 env_assert($overview instanceof ServerOverview, 'The recording reads.');
 
-$page = ServerSitesPage::of($overview, $text);
+$page = ServerSitesPage::of($overview, $text, new DateTimeImmutable('2026-01-05T03:00:00Z'), [], true);
 env_assert($page->total === 4 && $page->rows !== null && $page->portUrl === null, 'The sites are rows in place.');
 env_assert(count($overview->withoutSites(['DEMO-php.test'])->sites) === 3 && count($overview->withoutSites([])->sites) === 4, 'The panel leaves its own site out.');
-env_assert($page->instanceId === 'env-server-sites' && $page->selectable === false && $page->rowWrites === [], 'The list writes nothing.');
+env_assert($page->instanceId === 'env-server-sites' && $page->selectable === false && $page->rowWrites === [] && $page->settings, 'The list writes nothing; its rows have «⋯».');
 env_assert($page->rowLinks === ['view' => '/admin/server/sites/__ID__'], 'A row opens the site\'s own screen.');
+// A list of resources (C31, PX-53…PX-58): a dot, the domain over «kind · PHP», the facts that matter, the row's actions.
+env_assert($page->layout === 'list' && $page->quickActions === ['visit', 'backup'], 'A list of resources with «Открыть сайт» and «Сделать копию» in the row.');
+env_assert(array_column($page->columns, 'list', 'key') === ['state' => 'status', 'domain' => 'title', 'profile' => 'supporting', 'php' => 'supporting', 'answers' => 'fact', 'backups' => 'fact', 'certificate' => 'fact'], 'Each column has its place in the row.');
+env_assert($page->rowActions['backup']['href'] === '/admin/server/sites/__ID__?tab=backups&action=backup' && $page->rowActions['visit']['icon'] === 'open_in_new', 'A backup is planned on the site\'s backups; the site opens itself.');
+$ids = array_column($page->rows, 'id');
+$sorted = $ids;
+natcasesort($sorted);
+env_assert($ids === array_values($sorted), 'Sorted by name, not by trouble: '.implode(', ', $ids));
 $byDomain = array_column($page->rows, null, 'id');
-env_assert(array_column($page->columns, 'key') === ['domain', 'answers', 'profile', 'certificate', 'backups'], 'Whether it works, what it runs, its certificate and its backups.');
-env_assert($byDomain['demo-owned.test']['answers'] === 'works' && !isset($byDomain['demo-owned.test']['disk']), 'It works; the disk is on its own screen.');
-$columns = (string) json_encode(array_column($page->columns, null, 'key'), JSON_UNESCAPED_UNICODE);
-env_assert(str_contains($columns, '"answers":{"key":"answers","label":"'.$text('sites.answers').'","type":"choice","options":[{"value":"works"')
-    && str_contains($columns, '{"value":"down","label":"'.$text('sites.state.down').'","color":"danger"}')
-    && str_contains($columns, '"type":"choice","options":[{"value":"generic"') && str_contains($columns, '{"value":"redirect","label":"'.$text('sites.kinds.redirect').'"}'), 'The state and the kind are coloured choices the list filters by: '.$columns);
-env_assert($byDomain['demo-php.test']['certificate'] === $text('sites.certificate_local'), 'Empty values in words; a local name is said so.');
+env_assert(!isset($byDomain['demo-owned.test']['disk']) && $byDomain['demo-owned.test']['answers'] === '', 'A site that works says nothing of it; the disk is on its own screen.');
+env_assert($byDomain['demo-php.test']['certificate']['text'] === $text('sites.list.certificate_local', ['zone' => '.test']) && !isset($byDomain['demo-php.test']['certificate']['status']), 'A local name needs no certificate, said in grey.');
+env_assert($byDomain['demo-php.test']['_links']['visit'] === 'http://demo-php.test/', 'The site opens over HTTP without a certificate.');
 // A site with its daily backup on and none yet says it has none, not «daily» (critics of 0.4.1); a redirect needs none.
-env_assert($byDomain['demo-owned.test']['backups'] === $text('backups.state.none'), 'No backup yet is said so: '.$byDomain['demo-owned.test']['backups']);
-env_assert($byDomain['demo-redirect.test']['backups'] === $text('backups.state.not_needed'), 'A redirect needs no backup.');
-env_assert(str_starts_with($byDomain['demo-php.test']['backups'], $text('backups.state.stale', ['time' => \Larena\Env\Server\Moment::short('2026-01-01T00:00:00Z')])), 'Its old newest backup is named and said old.');
-// A failure the server's alerts tell is said first, with its time, in red.
+env_assert($byDomain['demo-owned.test']['backups']['text'] === $text('sites.list.backup_none') && $byDomain['demo-owned.test']['backups']['status'] === 'warning', 'No backup yet is a warning.');
+env_assert($byDomain['demo-owned.test']['state'] === ['value' => 'warning', 'label' => $text('sites.list.backup_none')], 'The dot says the first thing to deal with: '.json_encode($byDomain['demo-owned.test']['state'], JSON_UNESCAPED_UNICODE));
+env_assert($byDomain['demo-redirect.test']['backups']['text'] === $text('sites.list.backup_not_needed') && $byDomain['demo-redirect.test']['_actions'] === ['view', 'visit', 'backups', 'domains', 'log'], 'A redirect needs no backup and offers none.');
+env_assert($byDomain['demo-php.test']['backups']['status'] === 'warning' && str_starts_with($byDomain['demo-php.test']['backups']['tip'], $text('sites.list.backup_tip', ['time' => ''])), 'An old backup is a warning, its exact time in the tooltip.');
+// A failure the server's alerts tell is said first, in red, its time in the tooltip.
 $failedPage = ServerSitesPage::of($overview, $text, null, \Larena\Env\Admin\SiteBackupSummary::failures(\Larena\Env\Alerts\ServerAlerts::fromData(
     (array) json_decode((string) file_get_contents(env_recorded_path().'/self-alerts.json'), true)['data'])));
 $failedRow = array_column($failedPage->rows ?? [], null, 'id')['demo-owned.test'];
-env_assert($failedRow['backups'] === $text('backups.state.failed', ['time' => \Larena\Env\Server\Moment::short('2026-01-01T00:00:00Z')]), 'A failed backup is named: '.$failedRow['backups']);
+env_assert($failedRow['backups']['text'] === $text('sites.list.backup_failed') && $failedRow['backups']['status'] === 'error' && $failedRow['state']['value'] === 'error', 'A failed backup is named and the dot is red.');
+env_assert($failedPage->quickActions === ['visit'] && $failedRow['_actions'] === ['view', 'visit', 'backups', 'domains', 'log'], 'Who may not act on the sites is offered no backup.');
 env_assert(\Larena\Env\Server\Moment::short('2026-01-01T00:00:00Z', 2026) === '01.01 00:00 UTC' && \Larena\Env\Server\Moment::short('2025-01-01T00:00:00Z', 2026) === '01.01.2025 00:00 UTC', 'A backup this year without its year.');
-$soon = new ServerOverview('now', '1', 'ubuntu', '24.04', [], [], [new \Larena\Env\Server\SiteSummary('a.test', 'static', 'none', 'letsencrypt', null, null, null, 9, true)]);
+$at = new DateTimeImmutable('2026-01-05T12:00:00Z');
+env_assert(\Larena\Env\Server\Moment::ago('2026-01-05T11:59:40Z', $at, $text) === $text('ago.now') && \Larena\Env\Server\Moment::ago('2026-01-05T10:00:00Z', $at, $text) === $text('ago.hours', ['count' => '2'])
+    && \Larena\Env\Server\Moment::ago('2026-01-04T10:00:00Z', $at, $text) === $text('ago.yesterday') && \Larena\Env\Server\Moment::ago('2025-12-01T10:00:00Z', $at, $text) === '01.12.2025'
+    && \Larena\Env\Server\Moment::ago(null, $at, $text) === null, 'How long ago, then the date.');
+$soon = new ServerOverview('now', '1', 'ubuntu', '24.04', [], [], [new \Larena\Env\Server\SiteSummary('a.ru', 'static', 'none', 'letsencrypt', null, null, null, 9, true)]);
 $soonRow = ServerSitesPage::of($soon, $text)->rows[0];
-// The certificate and the backup are coloured marks with their words: a backup two days old is red, a fresh one green;
-// a local name without a certificate is not red (critics 2026-11-07).
+env_assert($soonRow['certificate'] === ['label' => $text('sites.list.certificate_ends', ['days' => '9']), 'text' => $text('sites.list.certificate_ends', ['days' => '9']), 'status' => 'warning']
+    && $soonRow['php'] === '' && $soonRow['_links']['visit'] === 'https://a.ru/', 'A certificate that ends soon is a warning; a static site names no PHP.');
 $marked = new ServerOverview('now', '1', 'ubuntu', '24.04', [], [], [
-    new \Larena\Env\Server\SiteSummary('old.ru', 'generic', '8.3', 'none', null, null, null, null, true, lastBackup: '2026-01-01T00:00:00Z'),
-    new \Larena\Env\Server\SiteSummary('new.test', 'static', 'none', 'none', null, null, null, null, true, lastBackup: '2026-01-05T00:00:00Z'),
+    new \Larena\Env\Server\SiteSummary('old.ru', 'generic', '8.3', 'none', null, null, null, null, true, answers: 200, answersChecked: true, lastBackup: '2026-01-05T10:00:00Z'),
+    new \Larena\Env\Server\SiteSummary('down.test', 'static', 'none', 'none', null, null, null, null, true, answers: null, answersChecked: true, lastBackup: '2026-01-05T10:00:00Z'),
 ]);
-$markedPage = ServerSitesPage::of($marked, $text, new DateTimeImmutable('2026-01-05T12:00:00Z'));
-$markedColumns = json_decode((string) json_encode($markedPage->columns), true);
-$options = static function (string $key) use ($markedColumns): array {
-    foreach (is_array($markedColumns) ? $markedColumns : [] as $column) {
-        if (is_array($column) && ($column['key'] ?? null) === $key && is_array($column['options'] ?? null)) {
-            return array_column($column['options'], 'color', 'value');
-        }
-    }
-
-    return [];
-};
-$markedRows = array_column($markedPage->rows ?? [], null, 'id');
-env_assert(($options('backups')[$markedRows['old.ru']['backups']] ?? '') === 'danger' && ($options('backups')[$markedRows['new.test']['backups']] ?? '') === 'success'
-    && ($options('certificate')[$text('sites.certificate_none')] ?? '') === 'danger' && ($options('certificate')[$text('sites.certificate_local')] ?? '') === 'neutral', 'The backups and certificates are coloured: '.json_encode([$options('backups'), $options('certificate')]));
-env_assert($soonRow['certificate'] === $text('sites.certificate_ends', ['days' => '9']) && $soonRow['backups'] === $text('backups.state.none'), 'A certificate that ends soon is said so.');
+$markedRows = array_column(ServerSitesPage::of($marked, $text, $at)->rows ?? [], null, 'id');
+env_assert($markedRows['old.ru']['certificate']['status'] === 'error' && $markedRows['old.ru']['state']['value'] === 'error' && $markedRows['old.ru']['php'] === '8.3'
+    && $markedRows['old.ru']['backups'] === ['label' => $text('sites.list.backup_fresh', ['ago' => $text('ago.hours', ['count' => '2'])]), 'text' => $text('sites.list.backup_fresh', ['ago' => $text('ago.hours', ['count' => '2'])]),
+        'tip' => $text('sites.list.backup_tip', ['time' => \Larena\Env\Server\Moment::human('2026-01-05T10:00:00Z')])], 'A public name without HTTPS is red; a fresh backup says how long ago: '.json_encode($markedRows['old.ru'], JSON_UNESCAPED_UNICODE));
+env_assert($markedRows['down.test']['answers']['text'] === $text('sites.state.down') && $markedRows['down.test']['state'] === ['value' => 'error', 'label' => $text('sites.state.down')], 'A site that does not answer says so.');
 
 // The admin's real presenter draws the list, as the controller asks it to.
 $manager = SmartManager::withDefaults();

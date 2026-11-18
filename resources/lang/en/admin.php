@@ -52,7 +52,34 @@ return [
         'answers_code' => 'HTTP :code',
         'disk' => 'Disk',
         'blocked' => 'Blocked',
+        // The list of sites as a list of resources (C31, PX-53…PX-58): a dot and its word, the facts said only when they
+        // matter, the backup by its own time, the row's own actions.
+        'list' => [
+            'state' => 'State',
+            'dot' => ['ok' => 'All is well', 'warning' => 'Something to do', 'error' => 'Needs attention', 'stopped' => 'Not checked'],
+            'certificate_ends' => 'HTTPS :days d',
+            'certificate_left' => 'HTTPS :days d',
+            'certificate_on' => 'HTTPS on',
+            'no_https' => 'No HTTPS',
+            'renew_failed' => 'Not renewed',
+            'certificate_local' => 'No HTTPS needed',
+            'certificate_tip' => 'A :zone address opens only on this computer; it needs no certificate.',
+            'backup_fresh' => ':ago',
+            'backup_stale' => ':ago',
+            'backup_failed' => 'Backup failed',
+            'backup_none' => 'No backups',
+            'backup_not_needed' => 'No backups',
+            'backup_tip' => 'Last backup :time',
+            'backup_failed_tip' => 'Backup failed :time',
+            'php' => 'PHP :version',
+            'visit' => 'Open the site',
+            'backup' => 'Back up',
+            'empty' => 'No sites yet',
+            'empty_description' => 'A site is an address and a folder on the server. Make the first one with «New site»; WordPress can be installed right away.',
+        ],
     ],
+    // How long ago, the way the lists say a time (C183): the exact time is in the tooltip.
+    'ago' => ['now' => 'just now', 'minutes' => ':count min ago', 'hours' => ':count h ago', 'yesterday' => 'yesterday', 'days' => ':count days ago'],
     // One tab title on every screen (block 4, texts for a newcomer; the panel's UX audit, HEAD-03): «… — Larena Panel».
     'tab_title' => ':title — Larena Panel',
     // Where a domain must lead, said the same on «New site», «Domains and HTTPS» and the setup wizard (block 4).
