@@ -1,7 +1,32 @@
 # Changelog
 
-## Unreleased
+## 0.4.7 — released 2026-11-18 (the owner: q-08faf69798)
 
+Install with simai-env 1.25.0 or newer, as before; the new screens ask the server for commands of later versions, and
+a screen whose command the server lacks is not offered. Everything of this version works with simai-env 1.61.0:
+«Открыть базу» needs 1.58.0 (and the site's HTTPS); «Базы данных» and the connection data 1.59.0; «История», the logs
+with their filters, plans and runs in words, the job page and the background-action indicator 1.60.0; a file's
+preview and a refusal named in words 1.61.0. Stopping and starting a service is not in this version.
+
+- «История»: the server's runs (job:list) and people's actions in one list, in words: who started it (you, the
+  schedule, the server), how long it took, how it ended; a run that is still going marks «История» in the menu.
+- Logs of a site and of a service open on errors first, in the reader's time zone, 50 lines and «Ещё 50», filtered on
+  the server by status and priority; «Скачать журнал».
+- «Базы данных» in the menu after «Сайты» (db:list); the site's «База данных» with its name, size, «Данные для
+  подключения» (the password shown once, never kept), «Сменить пароль», «Создать базу» only when it has none.
+- «Открыть базу»: the database in the browser for 15 minutes, an hour or four, «Закрыть»; it needs the site's HTTPS,
+  and without it the panel offers «Выпустить сертификат».
+- Files: the folder visitors see first, files with passwords marked and shown only on request, «Посмотреть» (a picture
+  in place, the start of a text), a removal goes to the site's trash with «Вернуть» and «Удалить насовсем», up to 20
+  files uploaded at once.
+- Wizards: a new site in one run, enabling a site type, the server's setup and first steps, one installer for a CMS.
+- «Действие с планом»: the plan, the question, the run and its outcome in place in the side panel; plans name the
+  server's title, values, effects and checks (what stops it apart from what is worth knowing), runs show their steps
+  («2 из 5: …»), times and cancel only where the server allows it.
+- The background-action indicator: what runs and what failed since the person looked.
+- «Обновления» in settings: the versions of simai-env and of the panel always shown, «Проверить», simai-env first,
+  «Обновить» through a plan, the job screen waiting through the panel's restart.
+- The job page in words: its state large, why it failed in the server's words, «Повторить» plans the same command again.
 - Speed (audit block 5, A1; measured on the stand, simai-env 1.56.4): a site's card asks its four reads in one call of
   the server (`batch`): a site opened cold 2.4 s → 0.9 s; the list of sites asks ahead the cards of its first six sites
   after the list has gone to the browser, so the step from the list into a site is 0.2 s; a read is kept a minute
@@ -12,6 +37,7 @@
   on «Люди» a workspace without sites removed and a key for SSH added to a workspace. A removal is a danger button and its
   plan's «Удалить» asks once more in the Framework question window (sf-confirm), the target named. The server does not
   list a site's redirects to the panel yet: removing one asks for its path.
+- The assembly builds on Root f60f6066 (Framework ui-7fb26d395af2 + pro-db490626ba74).
 
 ## 0.4.6 — released 2026-11-13 (the owner: release without his stand check, q-8b1ae2df54)
 
