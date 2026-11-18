@@ -11,9 +11,16 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Contracts\Translation\Translator;
+use Larena\Auth\Contracts\PasswordResetDelivery;
+use Larena\Auth\Runtime\RejectingPasswordResetDelivery;
 use Larena\Env\Area\ServerArea;
+use Larena\Env\Console\PanelResetPasswordCommand;
 use Larena\Env\Http\Controllers\PanelEntryController;
 use Larena\Env\Http\Middleware\GuardFirstRun;
+use Larena\Env\Mail\PanelMail;
+use Larena\Env\Mail\PanelMailer;
+use Larena\Env\Mail\PanelPasswordResetDelivery;
 use Larena\Env\Panel\EnvFile;
 use Larena\Env\Panel\ReleaseAssetState;
 use Larena\Env\Panel\SetupLink;
@@ -43,13 +50,41 @@ final class PanelEditionServiceProvider extends ServiceProvider
         $router->middleware('web')->get('/', PanelEntryController::class)->name('larena.env.panel.entry');
         // The admin's own home is a developer route; in the panel its address and home link lead to the server screen.
         $router->middleware('web')->get('admin', PanelEntryController::class)->name('larena.admin.entry');
+        $this->bindPasswordResetMail();
         if ($this->app->runningInConsole()) {
+            // A new password from the server's console, for when there is no mail and nobody else to ask (C335).
+            $this->commands([PanelResetPasswordCommand::class]);
             $events->listen(CommandFinished::class, function (CommandFinished $event): void {
                 if ($event->command === 'migrate' && $event->exitCode === 0) {
                     $this->completeMigration();
                 }
             });
         }
+    }
+
+    /**
+     * The sign-in package's postman (owner decision C335): while the panel's mail is on, a password reset link goes
+     * through it and «Забыли пароль?» is a real link; otherwise the package's rejecting postman stays, and the sign-in
+     * page says whom to ask. Asked at each resolve, so switching mail on or off acts at once.
+     */
+    private function bindPasswordResetMail(): void
+    {
+        if (!interface_exists(PasswordResetDelivery::class)) {
+            return;
+        }
+        $this->app->bind(PasswordResetDelivery::class, static function (Application $app): PasswordResetDelivery {
+            $mail = $app->make(PanelMail::class);
+            if (!$mail->isOn()) {
+                return new RejectingPasswordResetDelivery();
+            }
+            /** @var Config $config */
+            $config = $app->make(Config::class);
+            $base = rtrim((string) $config->get('app.url'), '/');
+
+            return new PanelPasswordResetDelivery($mail, new PanelMailer(), $app->make(Translator::class),
+                // The panel's own address, never the visitor's Host header: a link in a letter must not be steered elsewhere.
+                static fn (string $challenge, string $secret): string => $base.$app->make('url')->route('larena.auth.admin.password.reset', ['challenge' => $challenge, 'secret' => $secret], false));
+        });
     }
 
     /**

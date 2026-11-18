@@ -84,6 +84,12 @@ final class EnvServiceProvider extends ServiceProvider
             $app->make(PanelAudit::class),
         ));
         $this->app->bind(PanelAudit::class, static fn (Application $app): PanelAudit => new PanelAudit($app));
+        // The panel's own mail (owner decision C335): its settings in the panel's database, the password sealed with the app key.
+        $this->app->bind(\Larena\Env\Mail\PanelMail::class, static fn (Application $app): \Larena\Env\Mail\PanelMail => new \Larena\Env\Mail\PanelMail(
+            $app->bound('db') ? $app->make('db')->connection() : null,
+            $app->make('encrypter'),
+            $app->make(PanelAudit::class),
+        ));
         $this->app->bind(PanelActorResolver::class, static fn (Application $app): PanelActorResolver => new PanelActorResolver(
             $app->make(\Larena\Access\Runtime\AccessOperationAuthorizer::class),
             $app->bound('db') ? $app->make(PersonOwners::class) : null,

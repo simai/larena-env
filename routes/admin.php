@@ -12,6 +12,7 @@ use Larena\Env\Http\Controllers\SecurityController;
 use Larena\Env\Http\Controllers\ServerSetupController;
 use Larena\Env\Http\Controllers\NewSiteController;
 use Larena\Env\Http\Controllers\PeopleController;
+use Larena\Env\Http\Controllers\PanelMailController;
 use Larena\Env\Http\Controllers\PanelSettingsController;
 use Larena\Env\Http\Controllers\ServerAdminController;
 use Larena\Env\Http\Controllers\ServerJobController;
@@ -71,6 +72,14 @@ $router->middleware(['access:env.server.operate'])->group(static function ($rout
     $router->post('/alerts/channel/run', [AlertsController::class, 'channelRun'])->name('larena.env.admin.alerts.channel.run');
     $router->post('/alerts/test/plan', [AlertsController::class, 'testPlan'])->name('larena.env.admin.alerts.test.plan');
     $router->post('/alerts/test/run', [AlertsController::class, 'testRun'])->name('larena.env.admin.alerts.test.run');
+});
+// The panel's own mail (owner decision C335): «Настройки» → «Почта», under the settings' address so the menu marks
+// «Настройки»; reading it is the system level's, changing it and the test letter its right to operate.
+$router->get('/settings/mail', [PanelMailController::class, 'index'])->middleware('access:env.server.read')->name('larena.env.admin.settings.mail');
+$router->middleware(['access:env.server.operate'])->group(static function ($router): void {
+    $router->post('/settings/mail/plan', [PanelMailController::class, 'plan'])->name('larena.env.admin.settings.mail.plan');
+    $router->post('/settings/mail/run', [PanelMailController::class, 'run'])->name('larena.env.admin.settings.mail.run');
+    $router->post('/settings/mail/test', [PanelMailController::class, 'test'])->middleware('throttle:6,1')->name('larena.env.admin.settings.mail.test');
 });
 // A safe update of simai-env or of the panel (simai-env 1.32.0, Panel plan 4.7): the administrator's alone.
 $router->get('/update', [UpdateController::class, 'index'])->middleware('access:env.server.read')->name('larena.env.admin.update');

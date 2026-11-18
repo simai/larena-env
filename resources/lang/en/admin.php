@@ -1193,6 +1193,11 @@ return [
         'secret_files_hint' => 'Files such as .env and wp-config.php. Opening and changing them is shown in «History».',
         // «История»: the panel's own events in words (larena-audit history_sources `words`); the file is the event's object.
         'history' => [
+            'env_mail_changed' => 'Mail settings changed',
+            'env_mail_checked' => 'Mail checked: the test letter left',
+            'env_mail_switched_off' => 'Mail switched off',
+            'env_mail_password_lost' => 'Mail switched itself off: the password cannot be read and must be entered again',
+            'env_person_password_reset_console' => 'Password reset from the server console',
             'env_secret_file_opened' => 'File with passwords opened',
             'env_secret_file_downloaded' => 'File with passwords downloaded',
             'env_secret_file_saved' => 'File with passwords changed',
@@ -2349,6 +2354,7 @@ return [
             'access_hint' => 'Panel address :url',
             'alerts' => 'Alerts',
             'alerts_off' => 'Nowhere: the server keeps its problems to itself',
+            'mail' => 'The panel\'s mail',
             'sign_in' => 'Sign-in page',
             'sign_in_value' => 'The sign-in page\'s background and look',
             'dns' => 'DNS connection',

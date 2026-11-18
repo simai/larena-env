@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Larena\Env\Dns\DnsService;
 use Larena\Env\Gateway\PanelCapabilities;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
+use Larena\Env\Mail\PanelMail;
 use Larena\Env\Security\SecurityFindings;
 use Larena\Env\Server\ServerOverviewReader;
 use Larena\Env\Server\SiteExtrasReader;
@@ -30,6 +31,7 @@ final readonly class PanelSettingsController
         private Translator $translator,
         private ?DnsService $dns = null,
         private ?Repository $config = null,
+        private ?PanelMail $mail = null,
     ) {
     }
 
@@ -55,6 +57,16 @@ final readonly class PanelSettingsController
             $kind = $capabilities->allows('self:alerts') ? ($this->extras->alerts($actor)?->channel['kind'] ?? null) : null;
             $rows[] = $this->row('alerts', $kind === null ? $this->text('panel_settings.unknown')
                 : ($kind === 'off' ? $this->text('panel_settings.rows.alerts_off') : $this->text('alerts.kinds.'.$kind)), route('larena.env.admin.alerts.channel', [], false));
+        }
+        // The panel's own mail (owner decision C335): whether it is on, and its page with the card and the test letter.
+        if ($this->mail !== null) {
+            $state = $this->mail->state();
+            $rows[] = $this->row('mail', (string) $this->translator->get('larena-env::mail.states.'.$state), route('larena.env.admin.settings.mail', [], false), null, 'open',
+                match ($state) {
+                    PanelMail::ON => 'success',
+                    PanelMail::PASSWORD_LOST => 'error',
+                    default => 'warning',
+                });
         }
         $rows[] = $this->row('sign_in', $this->text('panel_settings.rows.sign_in_value'), '/admin/settings/general');
         if ($this->dns !== null) {

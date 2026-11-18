@@ -258,6 +258,23 @@ _, hooked = post("/admin/server/alerts/channel/plan", {"_token": form_token(chan
 assert 'data-env-plan="self:alerts-channel"' in hooked and 'name="target" value="https://hooks.example.com/simai"' in hooked, "a webhook is planned"
 _, tested = post("/admin/server/alerts/test/plan", {"_token": form_token(channel)})
 assert 'data-env-plan="self:alerts-test"' in tested, "a test is planned"
+# The panel's own mail (C335): «Настройки» → «Почта» opens with the form while nothing is set up; a change is planned
+# with the spam warning and the password only as «новый», confirmed, and waits for a test letter; a test towards a closed
+# local port says the server does not answer and mail stays off. Without mail, «Забыли пароль?» names the console's way.
+status, mail = get("/admin/server/settings/mail")
+assert status == 200 and 'data-env-mail="none"' in mail and "data-env-mail-form" in mail, "the mail page with its form"
+_, mail_plan = post("/admin/server/settings/mail/plan", {"_token": form_token(mail), "service": "smtp", "host": "127.0.0.1", "port": "9",
+    "encryption": "none", "login": "box@corp.test", "password": "local-catcher-Pa55!", "from_address": "noreply@panel.test", "levels[]": "urgent"})
+assert "data-env-mail-plan" in mail_plan and "local-catcher-Pa55!" not in mail_plan and "spam" in mail_plan, "the mail change planned, the password not shown"
+plan_id = re.search(r'name="plan" value="([0-9a-f]{24})"', mail_plan).group(1)
+_, mail = post("/admin/server/settings/mail/run", {"_token": form_token(mail_plan), "plan": plan_id})
+assert 'data-env-mail="unchecked"' in mail and "data-env-mail-test" in mail and "data-env-mail-spam" in mail, "kept, waiting for the test letter"
+_, mail = post("/admin/server/settings/mail/test", {"_token": form_token(mail)})
+assert 'data-env-mail="unchecked"' in mail and "does not answer" in mail, "a closed port: in words, mail stays off"
+status, settings_map = get("/admin/server/settings")
+assert status == 200 and "/admin/server/settings/mail" in settings_map, "the settings' map leads to «Почта»"
+status, forgot = get("/admin/password/forgot")
+assert "larena:panel-reset-password" in forgot, "without mail the recovery page names the console's way"
 # A safe update (simai-env 1.32.0): simai-env has one (pinned to 9.9.0 in the set), the panel on the stand was not
 # installed by simai-env; the overview hints at it; the update is planned with what it changes.
 status, update = get("/admin/server/update")

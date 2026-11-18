@@ -64,7 +64,8 @@ env_assert($names === ['larena.env.admin.alerts.ack.open', 'larena.env.admin.ale
     'larena.env.admin.people.block', 'larena.env.admin.people.block.run', 'larena.env.admin.people.card', 'larena.env.admin.people.invite.plan', 'larena.env.admin.people.invite.run',
     'larena.env.admin.people.owners.plan', 'larena.env.admin.people.owners.run', 'larena.env.admin.people.stop', 'larena.env.admin.security',
     'larena.env.admin.security.plan', 'larena.env.admin.security.plan.open', 'larena.env.admin.security.run', 'larena.env.admin.services', 'larena.env.admin.services.plan',
-    'larena.env.admin.services.run', 'larena.env.admin.settings', 'larena.env.admin.site', 'larena.env.admin.site.cron.plan', 'larena.env.admin.site.cron.run',
+    'larena.env.admin.services.run', 'larena.env.admin.settings',
+    'larena.env.admin.settings.mail', 'larena.env.admin.settings.mail.plan', 'larena.env.admin.settings.mail.run', 'larena.env.admin.settings.mail.test', 'larena.env.admin.site', 'larena.env.admin.site.cron.plan', 'larena.env.admin.site.cron.run',
     'larena.env.admin.site.dns.plan', 'larena.env.admin.site.dns.run', 'larena.env.admin.site.files.download', 'larena.env.admin.site.files.plan', 'larena.env.admin.site.files.preview',
     'larena.env.admin.site.files.run', 'larena.env.admin.site.fix', 'larena.env.admin.site.log.download', 'larena.env.admin.site.nginx.plan', 'larena.env.admin.site.nginx.run', 'larena.env.admin.site.plan',
     'larena.env.admin.site.run', 'larena.env.admin.sites.enable.plan', 'larena.env.admin.sites.enable.run', 'larena.env.admin.sites.new',
@@ -109,16 +110,18 @@ foreach ($with['routes'] as $name => $route) {
     $serverToolChanges = $serverTools && (str_ends_with($name, '.plan') || str_ends_with($name, '.run') || $name === 'larena.env.admin.change.keep' || $name === 'larena.env.admin.security.plan.open');
     // The server's first setup is the administrator's: it leads through the server's own screens (ENV 2026-11-06).
     $setup = str_starts_with($name, 'larena.env.admin.overview.setup');
+    // The panel's own mail (C335): reading it the system level's, changing it and the test letter its right to operate.
+    $mail = str_starts_with($name, 'larena.env.admin.settings.mail');
     // Changing a site is a right of its own: a new site, a site's action and stopping a job ask for it.
-    $changes = !$people && !$dns && !$nginx && !$channel && !$update && !$serverTools && !$setup && (str_ends_with($name, '.plan') || str_ends_with($name, '.run') || str_ends_with($name, '.cancel') || str_ends_with($name, '.again')
+    $changes = !$mail && !$people && !$dns && !$nginx && !$channel && !$update && !$serverTools && !$setup && (str_ends_with($name, '.plan') || str_ends_with($name, '.run') || str_ends_with($name, '.cancel') || str_ends_with($name, '.again')
         || in_array($name, ['larena.env.admin.sites.new', 'larena.env.admin.sites.new.step', 'larena.env.admin.sites.new.submit', 'larena.env.admin.sites.port', 'larena.env.admin.sites.plan.draft', 'larena.env.admin.alerts.ack.open'], true));
     env_assert(in_array('access:env.sites.operate', $route['middleware'], true) === $changes, "{$name} asks for the wrong right.");
     // The server's overview and the people's spaces are the system level's; giving a space or acting for someone changes the server.
     $reads = in_array($name, ['larena.env.admin.overview', 'larena.env.admin.people', 'larena.env.admin.people.card', 'larena.env.admin.people.stop', 'larena.env.admin.alerts.channel',
         'larena.env.admin.update', 'larena.env.admin.services', 'larena.env.admin.firewall', 'larena.env.admin.security', 'larena.env.admin.panel.access',
-        'larena.env.admin.software', 'larena.env.admin.software.php', 'larena.env.admin.storages', 'larena.env.admin.settings'], true);
+        'larena.env.admin.software', 'larena.env.admin.software.php', 'larena.env.admin.storages', 'larena.env.admin.settings', 'larena.env.admin.settings.mail'], true);
     env_assert(in_array('access:env.server.read', $route['middleware'], true) === $reads, "{$name} asks for the wrong level.");
-    env_assert(in_array('access:env.server.operate', $route['middleware'], true) === (($people && !$reads) || $nginx || $channelChanges || $updateChanges || $serverToolChanges || $setup), "{$name} must ask for the server's right.");
+    env_assert(in_array('access:env.server.operate', $route['middleware'], true) === (($people && !$reads) || $nginx || $channelChanges || $updateChanges || $serverToolChanges || $setup || ($mail && !$reads)), "{$name} must ask for the server's right.");
 }
 env_assert($with['commands'] === [RegisterServerAreaCommand::class, PanelCheckCommand::class, \Larena\Env\Console\PanelWarmCommand::class] && $with['sites'] === 4, 'The rest does not change.');
 
@@ -150,6 +153,8 @@ env_assert($adminNames === [
     'src/Admin/SiteFilesPage.php',
     'src/Admin/SiteObjectMenu.php',
     'src/Http/Controllers/DatabasesController.php',
+    // «Почта»'s changes planned as the admin's «Действие с планом» (C335).
+    'src/Http/Controllers/PanelMailController.php',
     // «Люди», its invitation and blocking planned as the admin's «Действие с планом».
     'src/Http/Controllers/PeopleController.php',
     'src/Http/Controllers/ServerAdminController.php',

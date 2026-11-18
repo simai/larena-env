@@ -41,6 +41,18 @@ events:
     severity: notice
   - type: env.dns.record_changed
     severity: notice
+  # The panel's own mail (owner decision C335): its settings changed, checked by a test letter, switched off, or off by
+  # itself when the app key cannot open the password; a password set from the server's console. Never a value.
+  - type: env.mail.changed
+    severity: notice
+  - type: env.mail.checked
+    severity: notice
+  - type: env.mail.switched_off
+    severity: notice
+  - type: env.mail.password_lost
+    severity: notice
+  - type: env.person.password_reset_console
+    severity: notice
 forbidden_payload_fields:
   - password
   - password_hash
