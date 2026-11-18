@@ -1,0 +1,56 @@
+{
+  "schema": "simai-panel-answer/1",
+  "request_id": "fixture-plan.owner-create-sites",
+  "status": "ok",
+  "kind": "plan",
+  "data": {
+    "command": "owner:create",
+    "args": {
+      "name": "staff",
+      "sites": "demo-php.test,demo-owned.test"
+    },
+    "target": "host",
+    "description": "Create an owner account that can run several sites, optionally moving existing sites to it",
+    "effects": "write",
+    "lock": "host",
+    "applied": false,
+    "checks": {
+      "blockers": [],
+      "notes": []
+    },
+    "display": [
+      {
+        "key": "name",
+        "label": "Имя",
+        "value": "staff",
+        "words": "staff"
+      },
+      {
+        "key": "sites",
+        "label": "Сайты",
+        "value": "demo-php.test,demo-owned.test",
+        "words": "demo-php.test,demo-owned.test"
+      }
+    ],
+    "title": "Новый аккаунт на сервере staff",
+    "effects_words": "изменит настройки или файлы",
+    "consequence": null,
+    "owner": {
+      "schema": "simai-owner-create-plan/1",
+      "owner": "staff",
+      "new": true,
+      "sites": [
+        {
+          "domain": "demo-php.test",
+          "from": "its own user site-demo-php-test (no owner)"
+        },
+        {
+          "domain": "demo-owned.test",
+          "from": "owner demo"
+        }
+      ],
+      "per_site": "backup data first; files, PHP-FPM pool, cron, workers and ~/sites move; the site keeps serving; a previous owner loses SSH/SFTP to it",
+      "on_failure": "the failing site stays where it was; sites moved before it stay with the account; repeating continues"
+    }
+  }
+}

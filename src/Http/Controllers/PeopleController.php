@@ -17,6 +17,7 @@ use Larena\Access\Runtime\SystemRolePresetSynchronizer;
 use Larena\Admin\Assets\AdminProductAssetManifest;
 use Larena\Admin\Runtime\AdminDataviewPagePresenter;
 use Larena\Admin\Runtime\AdminPlannedAction;
+use Larena\Env\Admin\AccountMoves;
 use Larena\Env\Admin\ServerPeoplePage;
 use Larena\Env\Gateway\PanelActor;
 use Larena\Env\Gateway\PanelRefused;
@@ -102,6 +103,8 @@ final readonly class PeopleController
             'canRemove' => $capabilities?->allows('owner:remove') === true,
             'canAddKey' => $capabilities?->allows('owner:add-key') === true,
             'canCreateAccount' => $capabilities?->allows('owner:create') === true,
+            // The sites a new account may take in the same job (simai-env 1.63.1), each with the account it is with now.
+            'inviteSites' => $capabilities?->takes('owner:create', 'sites') === true ? AccountMoves::offered($overview->sites) : [],
             // The invitation form opens with the page after a refusal, with what was typed (never the password).
             'inviteOpen' => $request->query('invite') === '1',
             'inviteOld' => is_array($old) ? $old : [],
@@ -184,6 +187,7 @@ final readonly class PeopleController
             'account' => trim((string) $request->input('account', 'new')),
             'account_name' => mb_strtolower(trim((string) $request->input('account_name'))),
             'secret' => $request->input('secret_files') === 'yes',
+            'sites' => [],
         ];
         $password = (string) $request->input('password');
         $overview = $this->overviews->read(new PanelActor($user))->overview;
@@ -200,17 +204,35 @@ final readonly class PeopleController
         if ($invalid === null && $this->emailTaken($input['email'], $user)) {
             $invalid = 'email_taken';
         }
+        // The sites the new account takes in the same job: only those the server listed, never one typed in.
+        if ($invalid === null && $input['level'] === PanelPeople::OWN && $input['account'] === 'new' && $overview?->capabilities?->takes('owner:create', 'sites') === true) {
+            $sites = AccountMoves::chosen($request->input('sites', []), AccountMoves::offered($overview->sites));
+            if ($sites === null) {
+                $invalid = 'sites';
+            } else {
+                $input['sites'] = $sites;
+            }
+        }
+        // More than one job takes: said as the server says it, before the request (which the command table would refuse).
+        if ($invalid === null && count($input['sites']) > AccountMoves::MOST_SITES) {
+            return $this->inviteAgain($request, $input, (string) AccountMoves::refusal('owner:create', 'too_many', $this->text()));
+        }
         if ($invalid !== null) {
             return $this->inviteAgain($request, $input, (string) $this->translator->get('larena-env::admin.people.invite.invalid.'.$invalid));
         }
         $newAccount = $input['level'] === PanelPeople::OWN && $input['account'] === 'new' ? $input['account_name'] : null;
         $account = $input['level'] === PanelPeople::OWN ? ($newAccount ?? $input['account']) : null;
-        // A new server account is the server's: asked as a plan first, so a refusal is said before anyone is made.
+        // A new server account is the server's: asked as a plan first, so a refusal is said before anyone is made. With
+        // sites, the server checks every one of them now; one it would refuse stops the whole invitation, nothing is made.
+        $moves = null;
         if ($newAccount !== null) {
-            $plan = $this->operations->planCommand(ResolvePanelActor::of($request), 'owner:create', ['name' => $newAccount]);
+            $plan = $this->operations->planCommand(ResolvePanelActor::of($request), 'owner:create', self::createArgs($newAccount, $input['sites']));
             if ($plan->plan === null) {
-                return $this->inviteAgain($request, $input, $this->reasonText($plan->reason ?? 'answer_shape_invalid'));
+                $reason = $plan->reason ?? 'answer_shape_invalid';
+
+                return $this->inviteAgain($request, $input, AccountMoves::refusal('owner:create', $reason, $this->text()) ?? $this->reasonText($reason));
             }
+            $moves = $plan->plan->account;
         }
         $token = bin2hex(random_bytes(16));
         $request->session()->put(self::INVITE, $input + ['password' => $password, 'token' => $token, 'new' => $newAccount !== null,
@@ -223,6 +245,9 @@ final readonly class PeopleController
         ];
         if ($newAccount !== null) {
             $facts[] = [$text('people.invite.fact.account_new'), $text('people.invite.fact.account_new_value', ['account' => $newAccount])];
+            // Each site with the account it leaves, how it moves, and what a failed one means — from the server's plan.
+            $facts = [...$facts, ...AccountMoves::createFacts($moves ?? ['owner' => $newAccount, 'new' => true,
+                'sites' => array_map(static fn (string $domain): array => ['domain' => $domain, 'from' => null], $input['sites'])], $text)];
         } elseif ($account !== null) {
             $facts[] = [$text('people.invite.fact.account_existing'), $text('people.invite.fact.account_existing_value',
                 ['account' => $account, 'sites' => $sites === [] ? $text('people.invite.fact.no_sites') : implode(', ', $sites)])];
@@ -276,10 +301,13 @@ final readonly class PeopleController
         }
         $this->audit->record('env.person.invited', $user, $subject, ['level' => $level] + ($owner !== null ? ['owner' => $owner] : []));
         if (($invite['new'] ?? false) === true && $owner !== null) {
-            $started = $this->operations->startCommand(ResolvePanelActor::of($request), 'owner:create', ['name' => $owner]);
+            // The account and its sites in one job of the server (simai-env 1.63.1): no move of the panel's own per site.
+            $sites = array_values(array_filter(is_array($invite['sites'] ?? null) ? $invite['sites'] : [], 'is_string'));
+            $started = $this->operations->startCommand(ResolvePanelActor::of($request), 'owner:create', self::createArgs($owner, $sites));
             if ($started->jobId !== null) {
                 return NoticeRedirect::to($request, route('larena.env.admin.job', ['job' => $started->jobId], false),
-                    (string) $this->translator->get('larena-env::admin.people.invite.done_account', ['name' => (string) $invite['name'], 'account' => $owner]));
+                    (string) $this->translator->get('larena-env::admin.people.invite.'.($sites === [] ? 'done_account' : 'done_sites'),
+                        ['name' => (string) $invite['name'], 'account' => $owner, 'count' => (string) count($sites)]));
             }
 
             return $this->back($request, $started->reason ?? 'answer_shape_invalid', self::cardOf($subject));
@@ -462,6 +490,18 @@ final readonly class PeopleController
         return $input;
     }
 
+    /**
+     * owner:create's arguments: the account, and its sites joined by commas as the gateway takes them.
+     *
+     * @param list<string> $sites
+     *
+     * @return array<string, string>
+     */
+    public static function createArgs(string $account, array $sites): array
+    {
+        return ['name' => $account] + ($sites === [] ? [] : ['sites' => implode(',', $sites)]);
+    }
+
     private static function user(Request $request): string
     {
         return (string) $request->attributes->get('larena_access_actor', '');
@@ -518,7 +558,7 @@ final readonly class PeopleController
     /** Back to the form, open, with what was typed except the password, and the reason above it. @param array<string, mixed> $input */
     private function inviteAgain(Request $request, array $input, string $reason): RedirectResponse
     {
-        $request->session()->flash('larena_env_invite_old', array_intersect_key($input, array_flip(['name', 'email', 'level', 'account', 'account_name', 'secret'])));
+        $request->session()->flash('larena_env_invite_old', array_intersect_key($input, array_flip(['name', 'email', 'level', 'account', 'account_name', 'secret', 'sites'])));
 
         return NoticeRedirect::to($request, route('larena.env.admin.people', [], false).'?invite=1', $reason);
     }

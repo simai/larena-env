@@ -534,6 +534,13 @@ _, overview = get("/admin/server")
 assert any(mark in overview for mark in ('"value":"ok"', '&quot;value&quot;:&quot;ok&quot;', '\\u0022value\\u0022:\\u0022ok\\u0022')), "a site that answers says so"
 _, spaces = get("/admin/server/people")
 assert 'data-env-owner="demo"' in spaces, "the accounts are listed"
+# Sites between accounts (roles study, second wave): the recording's server (1.49.0) has neither owner:create's sites
+# (1.63.1) nor site:transfer (1.57.0), so neither is offered, and a form left from a newer page is refused in words.
+assert "data-env-invite-sites" not in spaces, "a new account's sites only where the server takes them"
+_, plain_site = get("/admin/server/sites/demo-php.test")
+assert 'data-env-operation="site-transfer"' not in plain_site, "no «Передать сайт…» where the server has no site:transfer"
+_, handed = post("/admin/server/sites/demo-php.test/plan", {"_token": form_token(plain_site), "operation": "site-transfer", "owner": "demo"})
+assert 'data-env-plan=' not in handed, "a transfer the server does not list is never planned"
 _, card = get("/admin/server/people/2")
 assert "data-env-person-block" in card, "a person, and with them their account, can be blocked on a server that has it (1.27.0)"
 

@@ -74,6 +74,9 @@ enum SiteOperation: string
     case CacheClear = 'cache-clear';
     case CertificateRemove = 'certificate-remove';
     case PhpRestore = 'php-restore';
+    // «Передать сайт…» (roles study, second wave): the site handed to another server account, the whole server's action
+    // (simai-env 1.57.0 site:transfer). The same action hands it back; a site never goes back to no account.
+    case SiteTransfer = 'site-transfer';
 
     public function command(): string
     {
@@ -122,6 +125,7 @@ enum SiteOperation: string
             self::CacheClear => 'site:cache-clear',
             self::CertificateRemove => 'ssl:remove',
             self::PhpRestore => 'site:restore-ready',
+            self::SiteTransfer => 'site:transfer',
         };
     }
 
@@ -138,7 +142,7 @@ enum SiteOperation: string
             self::SftpCreate, self::SftpAddKey, self::SftpDisable, self::SftpEnable, self::SftpRemove => 'access',
             self::CheckFix, self::BitrixRestoreReady, self::BitrixFinalize, self::WordpressInstall, self::WordpressRestoreReady,
             self::WordpressFinalize, self::LaravelFinalize, self::SiteDeploy, self::SiteRemove,
-            self::SitePause, self::SiteResume, self::CacheClear, self::PhpRestore => 'overview',
+            self::SitePause, self::SiteResume, self::CacheClear, self::PhpRestore, self::SiteTransfer => 'overview',
         };
     }
 
@@ -186,6 +190,8 @@ enum SiteOperation: string
             // The files archive and the dump are files of the site (uploaded in «Файлы»); `overwrite` replaces what is there,
             // after the server backs it up.
             self::PhpRestore => ['files', 'dump', 'overwrite'],
+            // The server account the site goes to, chosen from the server's accounts other than its own.
+            self::SiteTransfer => ['owner'],
             default => [],
         };
     }
@@ -238,7 +244,7 @@ enum SiteOperation: string
      * opens: a form of only these shows its plan under it as it is filled (the admin's «Действие с планом» preview), so
      * «Показать, что будет» is no extra press. Typed fields (a name, a key, an address) wait for «Показать, что будет».
      */
-    public const array CHOSEN = ['php', 'backup', 'time', 'keep', 'verify', 'challenge', 'minutes', 'code', 'mode', 'dump'];
+    public const array CHOSEN = ['php', 'backup', 'time', 'keep', 'verify', 'challenge', 'minutes', 'code', 'mode', 'dump', 'owner'];
 
     /** Whether the action's plan is shown under its form as the form is filled: every field is chosen, none typed. */
     public function plansAsChosen(?PanelCapabilities $capabilities = null): bool
@@ -345,7 +351,21 @@ enum SiteOperation: string
     }
 
     /** The actions of the system level alone: a site's owner is not offered them (the server refuses them too). */
-    public const array SYSTEM_ONLY = [self::ApacheOn, self::ApacheOff];
+    public const array SYSTEM_ONLY = [self::ApacheOn, self::ApacheOff, self::SiteTransfer];
+
+    /**
+     * The server accounts a site can be handed to: every account but the one it already belongs to and a blocked one
+     * (the server refuses both). Never «no account»: the server cannot give a site back to none.
+     *
+     * @param list<string> $owners the server's accounts
+     * @param list<string> $blocked the blocked ones
+     *
+     * @return list<string>
+     */
+    public static function transferChoices(?string $current, array $owners, array $blocked = []): array
+    {
+        return array_values(array_filter($owners, static fn (string $owner): bool => $owner !== $current && !in_array($owner, $blocked, true)));
+    }
 
     /** An SFTP account's own action names the account, not the site: the gateway checks it belongs to the site's owner. */
     public function namesSite(): bool
@@ -410,6 +430,8 @@ enum SiteOperation: string
             self::CertificateRemove => $site->certificate !== null,
             // The server restores only a plain PHP site so (Bitrix and WordPress have their own routes).
             self::PhpRestore => $site->profile === 'generic',
+            // An alias runs as the site it points to: that site is handed over instead.
+            self::SiteTransfer => $site->profile !== 'alias',
             default => true,
         };
     }

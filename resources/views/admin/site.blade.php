@@ -663,6 +663,15 @@
                                             <option value="{{ $code }}">{{ __('larena-env::admin.routes.values.'.$code) }}</option>
                                         @endforeach
                                     </select>
+                                @elseif ($field === 'owner')
+                                    {{-- «Передать сайт…»: the server's other accounts; never «без аккаунта», which the server cannot go back to.
+                                         Nothing is chosen for the person: the plan is asked once one is picked. --}}
+                                    <select id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}" required data-env-transfer-owner>
+                                        <option value="" disabled selected hidden>{{ __('larena-env::admin.fields.owner_choose') }}</option>
+                                        @foreach ($transferChoices ?? [] as $account)
+                                            <option value="{{ $account }}">{{ $account }}</option>
+                                        @endforeach
+                                    </select>
                                 @elseif (in_array($field, ['from', 'to'], true))
                                     <input type="text" id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}" required maxlength="500" placeholder="{{ __('larena-env::admin.fields.'.$field.'_placeholder') }}" autocomplete="off">
                                 @elseif (in_array($field, ['login', 'name', 'value'], true))
@@ -685,6 +694,8 @@
                             <p data-env-restore-note>{{ __('larena-env::admin.backups.restore_note') }}</p>
                         @elseif ($operation === \Larena\Env\Operations\SiteOperation::BackupExtractFiles)
                             <p data-env-restore-note>{{ __('larena-env::admin.backups.extract_note') }}</p>
+                        @elseif ($operation === \Larena\Env\Operations\SiteOperation::SiteTransfer)
+                            <p class="m-0" data-env-transfer-note>{{ __('larena-env::admin.transfer.'.($site->owner === null ? 'note' : 'note_from'), ['account' => $site->owner ?? '']) }}</p>
                         @elseif ($operation === \Larena\Env\Operations\SiteOperation::ApacheOn)
                             <p class="m-0" data-env-apache-note>{{ __('larena-env::admin.runtime.apache_on_note') }}</p>
                         @elseif ($operation === \Larena\Env\Operations\SiteOperation::ApacheOff)

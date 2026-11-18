@@ -35,6 +35,9 @@ final class PanelCommands
     private const string JOB_ID = '/\A[a-f0-9]{24}\z/D';
     private const string CURSOR = '/\A[0-9]{1,7}\z/D';
     private const string OWNER = '/\A[a-z][a-z0-9_-]{0,31}\z/D';
+    // The sites a new server account takes in one job (owner:create `sites`, simai-env 1.63.1): up to 50 domains joined by
+    // commas, as the gateway's DOMAIN_LIST takes them; each one is checked by the server before anything changes.
+    private const string DOMAIN_LIST = '/\A(?=.{1,4000}\z)[A-Za-z0-9.-]{3,253}(?:,[A-Za-z0-9.-]{3,253}){0,49}\z/D';
     private const string PHP = '/\A[5-9]\.[0-9]\z/D';
     // bitrix and proxy only where the server lists its profiles (self:profiles, Panel plan 5.5).
     private const string PROFILE = '/\A(?:static|generic|laravel|wordpress|node|redirect|bitrix|proxy)\z/D';
@@ -199,7 +202,10 @@ final class PanelCommands
         'site:suspend' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => '1.57.0', 'kind' => self::ACTION],
         'site:resume' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => '1.57.0', 'kind' => self::ACTION],
         'site:cache-clear' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => '1.57.0', 'kind' => self::ACTION],
-        'owner:create' => ['args' => ['name' => self::OWNER, 'pubkey' => self::PUBKEY], 'required' => ['name'], 'since' => '1.22.0', 'kind' => self::ACTION],
+        'owner:create' => ['args' => ['name' => self::OWNER, 'pubkey' => self::PUBKEY, 'sites' => self::DOMAIN_LIST], 'required' => ['name'], 'since' => '1.22.0', 'kind' => self::ACTION],
+        // A site handed to another server account (simai-env 1.57.0): a backup first, then its files, PHP pool, scheduler,
+        // workers and ~/sites; the site keeps serving, the database stays. The same action hands it back.
+        'site:transfer' => ['args' => ['domain' => self::DOMAIN, 'owner' => self::OWNER], 'required' => ['domain', 'owner'], 'since' => '1.57.0', 'kind' => self::ACTION],
         // Blocking a space: SSH, SFTP and requests as that owner stop, its sites keep serving (simai-env 1.27.0).
         'owner:block' => ['args' => ['name' => self::OWNER], 'required' => ['name'], 'since' => '1.27.0', 'kind' => self::ACTION],
         'owner:unblock' => ['args' => ['name' => self::OWNER], 'required' => ['name'], 'since' => '1.27.0', 'kind' => self::ACTION],
@@ -444,6 +450,8 @@ final class PanelCommands
         // What the server sends to its channel (study 2026-11-17, PX-43): asked of ENV in the letter of 2026-11-18; the
         // release that takes it is ENV's to confirm, until then the panel does not send it.
         'self:alerts-channel' => ['levels' => '1.63.0'],
+        // A new server account with the sites it takes, one job (simai-env 1.63.1).
+        'owner:create' => ['sites' => '1.63.1'],
     ];
 
     /**

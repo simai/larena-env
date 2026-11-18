@@ -129,6 +129,33 @@ final readonly class RecordedAnswersGateway implements PanelGateway
 
             return $this->replay($request, 'plan.site-deploy-git.json');
         }
+        // A new account with sites (simai-env 1.63.1): the set holds the plan of two sites, and the refusals of a site the
+        // server does not have and of the panel's own site; any other list is missing, never answered with that one's.
+        if ($request->command === 'owner:create' && !$request->confirm && isset($request->args['sites'])) {
+            $sites = explode(',', (string) $request->args['sites']);
+
+            return match (true) {
+                in_array('panel.localhost', $sites, true) => $this->replay($request, 'refused.owner-create.panel-site.json'),
+                array_diff($sites, ['demo-php.test', 'demo-owned.test', 'demo-static.test', 'demo-redirect.test']) !== [] => $this->replay($request, 'refused.owner-create.site-missing.json'),
+                $sites === ['demo-php.test', 'demo-owned.test'] => $this->replay($request, 'plan.owner-create-sites.json'),
+                default => $this->unavailable($request, PanelReason::RECORDING_MISSING),
+            };
+        }
+        // A site handed to another account (simai-env 1.57.0): the set holds the plan of demo-php.test to demo, and the
+        // refusal of a site handed to the account it already belongs to.
+        if ($request->command === 'site:transfer' && !$request->confirm) {
+            $site = null;
+            $describe = $this->document('self-describe.json');
+            foreach (is_array($describe) && is_array($describe['data']['sites'] ?? null) ? $describe['data']['sites'] : [] as $one) {
+                $site = is_array($one) && ($one['domain'] ?? null) === $domain ? $one : $site;
+            }
+
+            return match (true) {
+                $site !== null && ($site['owner'] ?? null) === ($request->args['owner'] ?? null) => $this->replay($request, 'refused.site-transfer.same-owner.json'),
+                $request->args === ['domain' => 'demo-php.test', 'owner' => 'demo'] => $this->replay($request, 'plan.site-transfer.json'),
+                default => $this->unavailable($request, PanelReason::RECORDING_MISSING),
+            };
+        }
         // A kind the server has switched off (node on the recording's server) is refused before a plan.
         if ($request->command === 'site:add' && ($request->args['profile'] ?? null) === 'node') {
             return $this->replay($request, 'refused.profile-disabled.json');

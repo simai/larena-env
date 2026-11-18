@@ -90,6 +90,19 @@ final class PlanAction
                     $facts[] = [$label, $value];
                 }
             }
+        } elseif ($plan->transfer !== null || ($plan->account !== null && $plan->account['sites'] !== [])) {
+            // Sites moving between server accounts (simai-env 1.57.0, 1.63.1): from whom to whom in the panel's words, not
+            // the server's values.
+            $words = static fn (string $key, array $replace = []): string => self::text($key, $replace) ?? $key;
+            if ($plan->transfer !== null) {
+                $facts[] = [self::text('plan.target') ?? 'Target', $plan->transfer['domain']];
+                $facts = [...$facts, ...AccountMoves::transferFacts($plan->transfer, $words)];
+            } elseif ($plan->account !== null) {
+                $facts[] = $plan->account['new']
+                    ? [$words('people.invite.fact.account_new'), $words('people.invite.fact.account_new_value', ['account' => $plan->account['owner']])]
+                    : [$words('people.invite.fact.account_existing'), $plan->account['owner']];
+                $facts = [...$facts, ...AccountMoves::createFacts($plan->account, $words)];
+            }
         } else {
             if ($target !== null && $target !== '') {
                 $facts[] = [self::text('plan.target') ?? 'Target', $target];

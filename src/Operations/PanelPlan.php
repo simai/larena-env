@@ -46,6 +46,14 @@ final readonly class PanelPlan
         public array $clears = [],
         // service:stop: whether the server's own checks and alerts pause with it (cron).
         public bool $pausesServer = false,
+        // owner:create with sites (simai-env 1.63.1): the account, whether it is new, and each site with the account it
+        // leaves (null: the site belonged to no account).
+        /** @var array{owner: string, new: bool, sites: list<array{domain: string, from: ?string}>}|null */
+        public ?array $account = null,
+        // site:transfer (simai-env 1.57.0): the account the site leaves (null: none), the one it goes to, whether a backup
+        // comes first, whether the site keeps serving and whether it has a database, which stays as it is.
+        /** @var array{domain: string, from: ?string, to: string, backup: bool, serving: bool, database: bool}|null */
+        public ?array $transfer = null,
     ) {
     }
 
@@ -116,7 +124,56 @@ final readonly class PanelPlan
             pausesServer: $command === 'service:stop' && is_array($data['service'] ?? null) && ($data['service']['server'] ?? false) === true,
             affected: $command === 'service:stop' ? self::affected($data['service'] ?? null) : [],
             clears: $command === 'site:cache-clear' ? self::clears($data['clear'] ?? null) : [],
+            account: $command === 'owner:create' ? self::account($data['owner'] ?? null) : null,
+            transfer: $command === 'site:transfer' ? self::transfer($data['transfer'] ?? null) : null,
         );
+    }
+
+    /**
+     * The account the server would make and the sites that move to it, each with the account it leaves: the server says
+     * `owner demo` for one, `its own user …` or `the shared user …` for a site of no account.
+     *
+     * @return array{owner: string, new: bool, sites: list<array{domain: string, from: ?string}>}|null
+     */
+    private static function account(mixed $owner): ?array
+    {
+        if (!is_array($owner) || !is_string($owner['owner'] ?? null) || $owner['owner'] === '') {
+            return null;
+        }
+        $sites = [];
+        foreach (is_array($owner['sites'] ?? null) ? $owner['sites'] : [] as $site) {
+            if (is_array($site) && is_string($site['domain'] ?? null) && $site['domain'] !== '') {
+                $sites[] = ['domain' => $site['domain'], 'from' => self::fromAccount($site['from'] ?? null)];
+            }
+        }
+
+        return ['owner' => $owner['owner'], 'new' => ($owner['new'] ?? true) !== false, 'sites' => $sites];
+    }
+
+    /** The account a site leaves, from the server's words: `owner demo` names one; anything else is no account. */
+    public static function fromAccount(mixed $from): ?string
+    {
+        return is_string($from) && preg_match('/\Aowner ([a-z][a-z0-9_-]{0,31})\z/D', trim($from), $found) === 1 ? $found[1] : null;
+    }
+
+    /** @return array{domain: string, from: ?string, to: string, backup: bool, serving: bool, database: bool}|null */
+    private static function transfer(mixed $transfer): ?array
+    {
+        if (!is_array($transfer) || !is_string($transfer['domain'] ?? null) || !is_string($transfer['to_owner'] ?? null) || $transfer['to_owner'] === '') {
+            return null;
+        }
+        $moves = array_values(array_filter(is_array($transfer['moves'] ?? null) ? $transfer['moves'] : [], 'is_string'));
+        $downtime = is_string($transfer['downtime'] ?? null) ? $transfer['downtime'] : '';
+
+        return [
+            'domain' => $transfer['domain'],
+            'from' => is_string($transfer['from_owner'] ?? null) && $transfer['from_owner'] !== '' ? $transfer['from_owner'] : null,
+            'to' => $transfer['to_owner'],
+            'backup' => is_string($transfer['backup'] ?? null) && $transfer['backup'] !== '',
+            // simai-env says «none: …» where the site keeps serving; an older answer without the field is taken as the same.
+            'serving' => $downtime === '' || str_starts_with($downtime, 'none'),
+            'database' => array_filter($moves, static fn (string $line): bool => str_starts_with($line, 'database ')) !== [],
+        ];
     }
 
     /** @return list<array{domain: string, uses: list<string>}> */

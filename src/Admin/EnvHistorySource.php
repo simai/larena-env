@@ -45,7 +45,7 @@ final readonly class EnvHistorySource implements AdminHistorySource, AdminHistor
 
     /** The arguments a specialist reads under «Подробно»: never a file's content, a token or a key. */
     private const array SAFE_ARGS = ['domain', 'name', 'id', 'php', 'target', 'path', 'backup', 'from', 'to', 'code', 'port', 'address',
-        'kind', 'mode', 'set', 'check', 'db', 'files', 'version', 'enabled', 'remove-files', 'drop-db', 'drop-db-user'];
+        'kind', 'mode', 'set', 'check', 'db', 'files', 'version', 'enabled', 'remove-files', 'drop-db', 'drop-db-user', 'owner'];
 
     public function __construct(
         private PanelActorResolver $actors,

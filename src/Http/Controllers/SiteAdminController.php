@@ -234,6 +234,11 @@ final readonly class SiteAdminController
         // A site's owner is not offered what the system level alone may do (Apache, simai-env 1.42.0).
         $operations = $actor->owner === null ? $operations : array_values(array_filter($operations,
             static fn (SiteOperation $operation): bool => !in_array($operation, SiteOperation::SYSTEM_ONLY, true)));
+        // «Передать сайт…»: to another server account, never to none; without one to hand it to, it is not offered.
+        $transferChoices = $site === null ? [] : SiteOperation::transferChoices($site->owner, $overview->owners ?? [], $overview->blockedOwners ?? []);
+        if ($transferChoices === []) {
+            $operations = array_values(array_filter($operations, static fn (SiteOperation $operation): bool => $operation !== SiteOperation::SiteTransfer));
+        }
         $ask = static fn (string $command, string $onTab): bool => $site !== null && $tab === $onTab && $capabilities->allows($command);
         $sftpAccounts = $ask('access:list', 'access') ? $this->extras->sftpAccounts($actor, $domain) : null;
         $nginx = $ask('site:nginx-custom-show', 'php') && $actor->owner === null ? $this->files?->nginxCustom($actor, $domain) : null;
@@ -278,6 +283,7 @@ final readonly class SiteAdminController
             // The site's own scheduled jobs (Panel plan 5.4), and the runs of one of them when it is opened.
             'cron' => $site !== null && $tab === 'cron' ? $this->cronTab($request, $actor, $domain, $capabilities) : null,
             'wholeServer' => $actor->owner === null,
+            'transferChoices' => $transferChoices,
             // An account's own action chooses among the accounts it suits; with none, the action is not offered.
             'sftpChoices' => array_combine(array_map(static fn (SiteOperation $operation): string => $operation->value, $operations),
                 array_map(static fn (SiteOperation $operation): array => $operation->accountChoices($sftpAccounts ?? []), $operations)),
@@ -830,7 +836,10 @@ final readonly class SiteAdminController
         }
 
         return $this->views->make('larena-env::admin.plan', [
-            'heading' => (string) $this->translator->get('larena-env::admin.operations.'.$operation->value),
+            // «Передать demo.test аккаунту demo»: the question names the site and the account.
+            'heading' => $operation === SiteOperation::SiteTransfer && isset($input['owner'])
+                ? (string) $this->translator->get('larena-env::admin.transfer.heading', ['domain' => $domain, 'account' => $input['owner']])
+                : (string) $this->translator->get('larena-env::admin.operations.'.$operation->value),
             'eyebrow' => $domain,
             'target' => $domain,
             'source' => $result->source,
@@ -858,6 +867,12 @@ final readonly class SiteAdminController
         $reasons = [];
         if ($operation === SiteOperation::DatabaseBrowse && in_array($reason, \Larena\Env\Server\DbBrowserState::REFUSALS, true)) {
             $reasons[] = (string) $this->translator->get('larena-env::admin.db_browser.refusals.'.$reason);
+        }
+        // A site's handing over refused (same_owner, owner_missing, owner_blocked, panel_site): the panel's sentence.
+        $transferRefusal = $operation === SiteOperation::SiteTransfer ? \Larena\Env\Admin\AccountMoves::refusal($operation->command(), $reason,
+            fn (string $key, array $replace = []): string => (string) $this->translator->get('larena-env::admin.'.$key, $replace)) : null;
+        if ($transferRefusal !== null) {
+            $reasons[] = $transferRefusal;
         }
         $blockers = $result->checks->blockers ?? [];
         // The panel's own sentence says it once; the server's words of the same refusal (with its console command) stand

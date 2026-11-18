@@ -210,6 +210,10 @@
       "sha256": "6db96e1f58d3b95912c28a2d0bbab9700bbbbd96745d4fcff475eb05efe0cafe",
       "status": "ok"
     },
+    "plan.owner-create-sites.json": {
+      "sha256": "f8eb19ef3407aeed7c95009b2b38c0698a0814fc8f1897888b6241f59a14e59e",
+      "status": "ok"
+    },
     "plan.owner-create.json": {
       "sha256": "a191e2ef892295d1bb96b04a218956ec87a61f39d43dae5b0600cb52047eb3a4",
       "status": "ok"
@@ -336,6 +340,10 @@
     },
     "plan.site-set-php.json": {
       "sha256": "aba65c453fa369808e07962f3ee4e36c7da14285b2404e6cf5bd12c131f9e9dc",
+      "status": "ok"
+    },
+    "plan.site-transfer.json": {
+      "sha256": "5982084efa97b174ed2dbe12b7a8e78f981587f83f59f41145f79bcb86a0ce6d",
       "status": "ok"
     },
     "plan.software-install.json": {
@@ -466,6 +474,14 @@
       "sha256": "d07d9bafcccd3aee7d100e1f42c0232d456737355b6d042365be124d2dc8a94a",
       "status": "refused"
     },
+    "refused.owner-create.panel-site.json": {
+      "sha256": "359cdf1c9fcf639a8fa72f11ab82b1ca87f1f3c96384d95371b8b70c29c00676",
+      "status": "refused"
+    },
+    "refused.owner-create.site-missing.json": {
+      "sha256": "d5ad2a04aba499ab3f3dcfbad3bbfe53bfc9948776c44bc460546299b03a2f7e",
+      "status": "refused"
+    },
     "refused.owner-scope.access-create-project.json": {
       "sha256": "b4d88d1f27de8ddf01eccd1e30386e1340212ae182d3e0093292e49dfeab13ce",
       "status": "refused"
@@ -519,6 +535,10 @@
       "sha256": "24d5662fa64085de4653ed9f61d1a45f74a778c96bc2937b3606237162276e13",
       "status": "refused",
       "recorded_from": "simai-env v1.56.1, testing/fixtures/panel/refused.profile-disabled.json"
+    },
+    "refused.site-transfer.same-owner.json": {
+      "sha256": "617a28d89afe620ac3ba639ba06b3abbd1888b52ab186a96c525797f8c48fb7d",
+      "status": "refused"
     },
     "refused.source-invalid.json": {
       "sha256": "0b6794b75d02d2fb6c881c326ee6b6e997523f44ff35ceb42150cbdda7044bd7",

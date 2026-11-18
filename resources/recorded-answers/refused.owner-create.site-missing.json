@@ -1,0 +1,15 @@
+{
+  "schema": "simai-panel-answer/1",
+  "request_id": "fixture-refused.owner-create.site-missing",
+  "status": "refused",
+  "reason": "site_missing",
+  "data": {
+    "checks": {
+      "blockers": [
+        "Domain is not configured as a site. Create it first: simai-admin.sh site add --domain gone.test ...",
+        "Site gone.test does not exist"
+      ],
+      "notes": []
+    }
+  }
+}

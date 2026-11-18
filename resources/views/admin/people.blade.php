@@ -48,6 +48,14 @@
                         @if ($canCreateAccount ?? false)
                             <sf-input name="account_name" label="{{ __('larena-env::admin.people.invite.account_name') }}" hint="{{ __('larena-env::admin.people.invite.account_name_hint') }}" default-value="{{ ($inviteOld ?? [])['account_name'] ?? '' }}" pattern="[a-z][a-z0-9_\-]{0,31}" autocomplete="off" spellcheck="false"></sf-input>
                         @endif
+                        @if (($canCreateAccount ?? false) && ($inviteSites ?? []) !== [])
+                            {{-- The sites the new account takes in the same job (simai-env 1.63.1), chosen in one searchable list
+                                 (up to fifty, the side panel stays short): each says whose it is now; the plan next says what moves
+                                 and from whom. --}}
+                            <sf-dropdown name="sites" multiple label="{{ __('larena-env::admin.people.invite.sites') }}" help="{{ __('larena-env::admin.people.invite.sites_hint') }}" placeholder="{{ __('larena-env::admin.people.invite.sites_none') }}" data-env-invite-sites
+                                value="{{ implode(',', ($inviteOld ?? [])['sites'] ?? []) }}"
+                                options="{{ json_encode(array_map(static fn (array $site): array => ['value' => $site['domain'], 'text' => $site['domain'].' · '.($site['owner'] === null ? __('larena-env::admin.people.invite.site_now_none') : __('larena-env::admin.people.invite.site_now_account', ['account' => $site['owner']]))], $inviteSites), JSON_UNESCAPED_UNICODE) }}"></sf-dropdown>
+                        @endif
                         @if ($secretFilesKept ?? false)
                             <sf-checkbox name="secret_files" value="yes" label="{{ __('larena-env::admin.people.secret_files') }}" description="{{ __('larena-env::admin.people.secret_files_hint') }}" @if ((($inviteOld ?? [])['secret'] ?? false) === true) checked @endif data-env-invite-secret></sf-checkbox>
                         @endif

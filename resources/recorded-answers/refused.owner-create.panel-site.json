@@ -1,0 +1,14 @@
+{
+  "schema": "simai-panel-answer/1",
+  "request_id": "fixture-refused.owner-create.panel-site",
+  "status": "refused",
+  "reason": "panel_site",
+  "data": {
+    "checks": {
+      "blockers": [
+        "panel.localhost is the panel's own site; it cannot be transferred to an owner."
+      ],
+      "notes": []
+    }
+  }
+}
