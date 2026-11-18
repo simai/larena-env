@@ -42,6 +42,22 @@ final class FilePath
         return $folder === '.' ? $name : $folder.'/'.$name;
     }
 
+    /**
+     * The name a copy is offered beside its original: «index-copy.php», «archive-copy.tar.gz», «assets-copy» for a folder
+     * or a name without an extension, «.env-copy» for a dot file.
+     */
+    public static function copyName(string $name): string
+    {
+        foreach (['.tar.gz', '.sql.gz', '.sql.zip'] as $double) {
+            if (strlen($name) > strlen($double) && str_ends_with(strtolower($name), $double)) {
+                return substr($name, 0, -strlen($double)).'-copy'.substr($name, -strlen($double));
+            }
+        }
+        $dot = strrpos($name, '.');
+
+        return $dot === false || $dot === 0 ? $name.'-copy' : substr($name, 0, $dot).'-copy'.substr($name, $dot);
+    }
+
     public static function parent(string $path): string
     {
         $parent = dirname($path);

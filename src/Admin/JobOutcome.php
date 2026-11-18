@@ -109,23 +109,54 @@ final class JobOutcome
         $label = $status->title ?? (is_string($status->args['domain'] ?? null) && $status->args['domain'] !== ''
             ? self::text('job.progress_of', ['domain' => $status->args['domain']]) : self::text('job.progress'));
 
-        return AdminPlannedAction::progress($label, $state, self::steps($status), $result,
-            (string) \Larena\Env\Server\Moment::iso($status->startedAt ?? $status->createdAt), (string) \Larena\Env\Server\Moment::iso($status->finishedAt),
+        [$started, $finished] = self::span($status);
+
+        return AdminPlannedAction::progress($label, $state, self::steps($status), $result, $started, $finished,
             self::where($status), $status->progress === null ? null : count(array_filter($status->steps, static fn (array $step): bool => $step['state'] === 'done')),
             $status->progress['total'] ?? null);
     }
 
     /**
-     * The steps as sf-progress-run takes them: each by its words, one not reached yet as «Шаг 3».
+     * When the run started and ended, as sf-progress-run counts «заняло» between them. A job that is over without its end
+     * (a failure the server did not stamp) ends at the last moment known of it, its last step's; with none, no times are
+     * given, so nothing is counted up to now.
+     *
+     * @return array{0: string, 1: string}
+     */
+    public static function span(PanelJobStatus $status): array
+    {
+        $started = (string) \Larena\Env\Server\Moment::iso($status->startedAt ?? $status->createdAt);
+        $finished = (string) \Larena\Env\Server\Moment::iso($status->finishedAt);
+        if ($status->state === JobState::Running || $finished !== '') {
+            return [$started, $finished];
+        }
+        $last = null;
+        foreach ($status->steps as $step) {
+            foreach ([$step['finished'], $step['started']] as $moment) {
+                $time = $moment === null ? false : strtotime($moment);
+                if ($time !== false && ($last === null || $time > $last[0])) {
+                    $last = [$time, (string) \Larena\Env\Server\Moment::iso($moment)];
+                }
+            }
+        }
+
+        return $last === null || $last[1] === '' ? ['', ''] : [$started, $last[1]];
+    }
+
+    /**
+     * The steps as sf-progress-run takes them: each by its words, one not reached yet as «Шаг 3». In a job that is over, a
+     * step left without its end is given no start either, so its time is not counted up to now.
      *
      * @return list<array{id: string, title: string, state: string, started?: string, finished?: string}>
      */
     public static function steps(PanelJobStatus $status): array
     {
         $steps = [];
+        $over = $status->state !== JobState::Running;
         foreach ($status->steps as $step) {
+            $open = $over && $step['finished'] === null;
             $steps[] = ['id' => 'step-'.$step['id'], 'title' => $step['title'] ?? self::text('job.step_waiting', ['number' => $step['id']]), 'state' => $step['state']]
-                + ($step['started'] !== null ? ['started' => (string) \Larena\Env\Server\Moment::iso($step['started'])] : [])
+                + ($step['started'] !== null && !$open ? ['started' => (string) \Larena\Env\Server\Moment::iso($step['started'])] : [])
                 + ($step['finished'] !== null ? ['finished' => (string) \Larena\Env\Server\Moment::iso($step['finished'])] : []);
         }
 

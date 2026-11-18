@@ -66,6 +66,14 @@ enum SiteOperation: string
     case DatabaseBrowseClose = 'database-browse-close';
     // The site's database connection details (simai-env 1.59.0): the password handed out once, never kept by the panel.
     case DatabaseCredentials = 'database-credentials';
+    // Cheap actions on the server's own commands (FASTPANEL comparison 2026-11-18): a site paused and resumed, its caches
+    // cleared (simai-env 1.57.0), its certificate taken off and deleted, and a plain PHP site restored from a files archive
+    // and an optional dump uploaded into the site (simai-env 1.57.1).
+    case SitePause = 'site-pause';
+    case SiteResume = 'site-resume';
+    case CacheClear = 'cache-clear';
+    case CertificateRemove = 'certificate-remove';
+    case PhpRestore = 'php-restore';
 
     public function command(): string
     {
@@ -109,6 +117,11 @@ enum SiteOperation: string
             self::DatabaseBrowse => 'site:db-browser',
             self::DatabaseBrowseClose => 'site:db-browser-close',
             self::DatabaseCredentials => 'site:db-credentials',
+            self::SitePause => 'site:suspend',
+            self::SiteResume => 'site:resume',
+            self::CacheClear => 'site:cache-clear',
+            self::CertificateRemove => 'ssl:remove',
+            self::PhpRestore => 'site:restore-ready',
         };
     }
 
@@ -116,7 +129,7 @@ enum SiteOperation: string
     public function tab(): string
     {
         return match ($this) {
-            self::CertificateIssue, self::CertificateRenew, self::NameAdd, self::NameRemove, self::RedirectAdd, self::RedirectRemove => 'domains',
+            self::CertificateIssue, self::CertificateRenew, self::CertificateRemove, self::NameAdd, self::NameRemove, self::RedirectAdd, self::RedirectRemove => 'domains',
             self::PhpVersion, self::PhpSetting, self::PhpSettingRemove, self::ServiceRestart, self::QueueRestart, self::ApacheOn, self::ApacheOff => 'php',
             self::DatabaseCreate, self::DatabasePassword, self::DatabaseExport, self::DatabaseDrop, self::DatabaseBrowse, self::DatabaseBrowseClose,
             self::DatabaseCredentials => 'database',
@@ -124,7 +137,8 @@ enum SiteOperation: string
             self::Rollback => 'releases',
             self::SftpCreate, self::SftpAddKey, self::SftpDisable, self::SftpEnable, self::SftpRemove => 'access',
             self::CheckFix, self::BitrixRestoreReady, self::BitrixFinalize, self::WordpressInstall, self::WordpressRestoreReady,
-            self::WordpressFinalize, self::LaravelFinalize, self::SiteDeploy, self::SiteRemove => 'overview',
+            self::WordpressFinalize, self::LaravelFinalize, self::SiteDeploy, self::SiteRemove,
+            self::SitePause, self::SiteResume, self::CacheClear, self::PhpRestore => 'overview',
         };
     }
 
@@ -169,6 +183,9 @@ enum SiteOperation: string
             self::RedirectRemove => ['from'],
             // How long the browser stays open, in minutes: 15, 60 or 240 (the server takes 5 to 480).
             self::DatabaseBrowse => ['minutes'],
+            // The files archive and the dump are files of the site (uploaded in «Файлы»); `overwrite` replaces what is there,
+            // after the server backs it up.
+            self::PhpRestore => ['files', 'dump', 'overwrite'],
             default => [],
         };
     }
@@ -188,13 +205,13 @@ enum SiteOperation: string
      * anyway, so a person reads a plain choice instead of «как решит сервер»; an unticked box sends no.
      */
     public const array SWITCHES = ['db', 'files', 'redirect', 'hsts', 'staging', 'wildcard', 'enabled', 'verify', 'check-dns', 'migrate',
-        'remove-files', 'drop-db', 'drop-db-user'];
+        'remove-files', 'drop-db', 'drop-db-user', 'overwrite'];
 
     /**
      * The actions that take something away for good: their button and their confirmation say so (a danger button), and
      * the plan's «Выполнить» asks once more in the Framework question window.
      */
-    public const array DESTRUCTIVE = [self::SiteRemove, self::DatabaseDrop];
+    public const array DESTRUCTIVE = [self::SiteRemove, self::DatabaseDrop, self::CertificateRemove];
 
     public function destroys(): bool
     {
@@ -255,6 +272,9 @@ enum SiteOperation: string
      */
     public const array DATABASE = [self::DatabaseCreate, self::DatabaseCredentials, self::DatabasePassword];
 
+    /** The certificate's removal: the «Сертификат» block offers it under the certificate it takes off, not the tab's row. */
+    public const array CERTIFICATE = [self::CertificateRemove];
+
     /**
      * The tab's actions its row of buttons offers: not those the «База данных» block offers by its state (the browser,
      * the database's own), nor an account's action without an account to name.
@@ -267,7 +287,7 @@ enum SiteOperation: string
     public static function inRow(array $operations, array $accountChoices = []): array
     {
         return array_values(array_filter($operations, static fn (self $operation): bool => ($operation->namesSite() || ($accountChoices[$operation->value] ?? []) !== [])
-            && !in_array($operation, self::BROWSER, true) && !in_array($operation, self::DATABASE, true)));
+            && !in_array($operation, self::BROWSER, true) && !in_array($operation, self::DATABASE, true) && !in_array($operation, self::CERTIFICATE, true)));
     }
 
     /** The fix of a check's rule: the «Проверка» block offers it on the rule's own row, never among the tab's buttons. */
@@ -345,6 +365,13 @@ enum SiteOperation: string
             self::ApacheOff => in_array($site->profile, SiteDetails::APACHE_PROFILES, true) && $site->webServer === 'apache',
             self::BackupRestoreDatabase => $site->backups !== [] && $site->databaseEngine !== null,
             self::BackupExtractFiles, self::BackupVerify => $site->backups !== [],
+            // A paused site is resumed, a working one paused; a site that only forwards visitors has nothing to pause or clear.
+            self::SitePause => !$site->suspended && !in_array($site->profile, ['redirect', 'alias'], true),
+            self::SiteResume => $site->suspended,
+            self::CacheClear => !in_array($site->profile, ['redirect', 'alias', 'proxy'], true),
+            self::CertificateRemove => $site->certificate !== null,
+            // The server restores only a plain PHP site so (Bitrix and WordPress have their own routes).
+            self::PhpRestore => $site->profile === 'generic',
             default => true,
         };
     }
@@ -367,6 +394,8 @@ enum SiteOperation: string
             self::DatabaseExport => ['db' => 'yes', 'files' => 'no'],
             self::ApacheOn => ['enable' => 'yes'],
             self::ApacheOff => ['enable' => 'no'],
+            // «Удалить сертификат» deletes it, not only takes it off the site.
+            self::CertificateRemove => ['delete-cert' => 'yes'],
             default => [],
         };
         foreach ($this->fields() as $field) {

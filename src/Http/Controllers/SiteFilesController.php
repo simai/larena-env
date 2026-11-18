@@ -39,7 +39,7 @@ final readonly class SiteFilesController
 {
     /** The changes of the «Файлы» tab and the gateway command of each. */
     public const array FILE_OPERATIONS = ['write' => 'file:write', 'create' => 'file:write', 'upload' => 'file:upload', 'mkdir' => 'file:mkdir',
-        'rename' => 'file:rename', 'remove' => 'file:remove', 'archive' => 'file:archive', 'extract' => 'file:extract',
+        'rename' => 'file:rename', 'copy' => 'file:copy', 'remove' => 'file:remove', 'archive' => 'file:archive', 'extract' => 'file:extract',
         'trash-restore' => 'file:trash-restore', 'trash-empty' => 'file:trash-empty'];
     /** The most files one upload sends, each its own plan and job. */
     public const int UPLOAD_MAX_FILES = 20;
@@ -412,6 +412,9 @@ final readonly class SiteFilesController
             case 'mkdir':
                 return $folder === null || $name === null ? null : $args + ['path' => FilePath::join($folder, $name)];
             case 'rename':
+                return !$entry || $name === null ? null : $args + ['path' => $path, 'to' => FilePath::join(FilePath::parent($path), $name)];
+            case 'copy':
+                // A copy beside the original under the name given (simai-env 1.57.0 file:copy refuses an existing one).
                 return !$entry || $name === null ? null : $args + ['path' => $path, 'to' => FilePath::join(FilePath::parent($path), $name)];
             case 'archive':
                 $format = in_array($request->input('format'), self::ARCHIVE_FORMATS, true) ? (string) $request->input('format') : 'zip';

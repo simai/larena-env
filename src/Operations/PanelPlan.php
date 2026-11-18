@@ -37,6 +37,15 @@ final readonly class PanelPlan
         public ?string $effectsWords = null,
         public ?string $consequence = null,
         public ?PlanChecks $checks = null,
+        // service:stop (simai-env 1.62.0): the sites that lose something while the service is stopped, and what each loses
+        // (scheduler, cache, sessions, queue, workers).
+        /** @var list<array{domain: string, uses: list<string>}> */
+        public array $affected = [],
+        // site:cache-clear (simai-env 1.57.0): each cache, whether it will be cleared or is skipped, and why.
+        /** @var list<array{name: string, state: string, reason: ?string}> */
+        public array $clears = [],
+        // service:stop: whether the server's own checks and alerts pause with it (cron).
+        public bool $pausesServer = false,
     ) {
     }
 
@@ -100,8 +109,42 @@ final readonly class PanelPlan
             display: self::display($data['display'] ?? null),
             effectsWords: self::words($data['effects_words'] ?? null),
             consequence: self::words($data['consequence'] ?? null),
-            checks: PlanChecks::fromData($data['checks'] ?? null),
+            // A stop's notes repeat in the server's English what the panel says itself from `service` (the sites, the server's
+            // own checks); its blockers stay.
+            checks: $command === 'service:stop' && is_array($data['service'] ?? null)
+                ? new PlanChecks(PlanChecks::fromData($data['checks'] ?? null)->blockers ?? [], []) : PlanChecks::fromData($data['checks'] ?? null),
+            pausesServer: $command === 'service:stop' && is_array($data['service'] ?? null) && ($data['service']['server'] ?? false) === true,
+            affected: $command === 'service:stop' ? self::affected($data['service'] ?? null) : [],
+            clears: $command === 'site:cache-clear' ? self::clears($data['clear'] ?? null) : [],
         );
+    }
+
+    /** @return list<array{domain: string, uses: list<string>}> */
+    private static function affected(mixed $service): array
+    {
+        $sites = [];
+        foreach (is_array($service) && is_array($service['sites'] ?? null) ? $service['sites'] : [] as $site) {
+            if (is_array($site) && is_string($site['domain'] ?? null) && $site['domain'] !== '') {
+                $sites[] = ['domain' => $site['domain'], 'uses' => array_values(array_filter(is_array($site['uses'] ?? null) ? $site['uses'] : [],
+                    static fn (mixed $use): bool => is_string($use) && preg_match('/\A[a-z_]{1,32}\z/D', $use) === 1))];
+            }
+        }
+
+        return $sites;
+    }
+
+    /** @return list<array{name: string, state: string, reason: ?string}> */
+    private static function clears(mixed $items): array
+    {
+        $clears = [];
+        foreach (is_array($items) ? $items : [] as $item) {
+            if (is_array($item) && is_string($item['name'] ?? null) && preg_match('/\A[a-z_]{1,32}\z/D', $item['name']) === 1) {
+                $clears[] = ['name' => $item['name'], 'state' => ($item['state'] ?? null) === 'planned' ? 'planned' : 'skipped',
+                    'reason' => is_string($item['reason'] ?? null) && $item['reason'] !== '' ? $item['reason'] : null];
+            }
+        }
+
+        return $clears;
     }
 
     private static function words(mixed $value): ?string

@@ -116,6 +116,9 @@ final readonly class SecurityController
             'mcp' => $capabilities->allows('mcp:status') ? $this->extras->mcp($actor) : null,
             'mcpSupported' => $capabilities->allows('mcp:status'),
             'owners' => $read->overview->owners ?? [],
+            // «Обновите PHP»: the sites on a version that no longer gets security fixes (PhpSupport, owner msg-93e8e022).
+            'outdatedPhp' => array_values(array_filter($read->overview->sites ?? [],
+                static fn (\Larena\Env\Server\SiteSummary $site): bool => preg_match('/\A[5-9]\.[0-9]\z/D', $site->php) === 1 && \Larena\Env\Software\PhpSupport::outdated($site->php))),
             'notice' => $request->session()->get('larena_env_notice'),
         ]);
     }

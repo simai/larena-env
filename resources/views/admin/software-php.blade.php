@@ -24,6 +24,9 @@
                         <div class="grow min-w-0" style="flex-basis: 14rem;">
                             <div class="flex flex-wrap items-cross-center g-1">
                                 <span class="mono">PHP {{ $version->version }}</span>
+                                @if (\Larena\Env\Software\PhpSupport::outdated($version->version, $version->outdated))
+                                    <sf-badge appearance="tonal" status="warning" text="{{ __('larena-env::admin.php_outdated.mark') }}" data-env-php-outdated></sf-badge>
+                                @endif
                                 <sf-badge appearance="tonal" status="{{ $version->fpmActive ? 'success' : 'error' }}" @if (!$version->fpmActive) role="alert" @endif
                                     text="{{ $version->fpmActive ? __('larena-env::admin.software.php.fpm_running') : __('larena-env::admin.software.php.fpm_stopped') }}"></sf-badge>
                                 @if ($version->native)
@@ -75,7 +78,13 @@
         <section class="larena-panel larena-panel-padded" data-env-php-install aria-labelledby="env-php-install">
             <h2 id="env-php-install" class="text-2">{{ __('larena-env::admin.software.php.install_title') }}</h2>
             @if ($php->installable === [])
-                <p class="m-0" data-env-php-installable="none">{{ __('larena-env::admin.software.php.nothing_to_install') }}</p>
+                {{-- Older versions come from a source the server connects (ondrej/php): without it the list is empty, and saying
+                     «all installed» would be untrue (FASTPANEL comparison 2026-11-18). --}}
+                @if ($php->sourceMissing())
+                    <p class="m-0" data-env-php-installable="no-source">{{ $php->installableWords ?? __('larena-env::admin.software.php.no_source') }}</p>
+                @else
+                    <p class="m-0" data-env-php-installable="none">{{ __('larena-env::admin.software.php.nothing_to_install') }}</p>
+                @endif
             @else
                 <form method="post" action="{{ route('larena.env.admin.software.php.plan', [], false) }}" class="larena-form" data-env-php-op="install">
                     @csrf
@@ -84,7 +93,7 @@
                         <label for="env-php-install-version">{{ __('larena-env::admin.software.php.version') }}</label>
                         <select class="larena-control-floor" id="env-php-install-version" name="php">
                             @foreach ($php->installable as $installable)
-                                <option value="{{ $installable }}">PHP {{ $installable }}</option>
+                                <option value="{{ $installable }}">PHP {{ \Larena\Env\Software\PhpSupport::label($installable, __('larena-env::admin.php_outdated.mark')) }}</option>
                             @endforeach
                         </select>
                     </div>

@@ -48,6 +48,22 @@
             @endif
         </section>
 
+        {{-- «Обновите PHP» (owner decision msg-93e8e022): a site may run PHP 7.4 or 8.0, but it gets no security fixes. --}}
+        @if (($outdatedPhp ?? []) !== [])
+            <section class="larena-panel larena-panel-padded" data-env-security-php="{{ count($outdatedPhp) }}" aria-labelledby="env-security-php">
+                <h2 id="env-security-php" class="text-2">{{ __('larena-env::admin.php_outdated.advice_title') }}</h2>
+                <p>{{ __('larena-env::admin.php_outdated.advice') }}</p>
+                <ul class="m-0 p-0" style="list-style: none;">
+                    @foreach ($outdatedPhp as $outdated)
+                        <li class="flex flex-wrap items-cross-center content-main-between g-1 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-security-php-site="{{ $outdated->domain }}">
+                            <span class="min-w-0" style="overflow-wrap: anywhere;">{{ __('larena-env::admin.php_outdated.advice_site', ['domain' => $outdated->domain, 'php' => $outdated->php]) }}</span>
+                            <a class="larena-button larena-control-floor" href="{{ route('larena.env.admin.site', ['domain' => $outdated->domain], false) }}?tab=php&amp;action={{ \Larena\Env\Operations\SiteOperation::PhpVersion->value }}">{{ __('larena-env::admin.php_outdated.advice_go') }}</a>
+                        </li>
+                    @endforeach
+                </ul>
+            </section>
+        @endif
+
         {{-- The findings as the overview counts them (SecurityFindings): one line per check with its sites under it, the
              local names' HTTPS in one quiet line, the panel's own address with who may open the panel (critics of 0.4.1). --}}
         <section class="larena-panel larena-panel-padded" data-env-security-problems="{{ count($findings->problems()) }}" aria-labelledby="env-security-problems">

@@ -20,7 +20,7 @@ final class PlanValues
      * The commands that take something away for good (audit block 5, A2): the plan's «Выполнить» is a danger button and
      * asks once more in the Framework question window.
      */
-    public const array DESTRUCTIVE = ['site:remove', 'site:db-drop', 'owner:remove'];
+    public const array DESTRUCTIVE = ['site:remove', 'site:db-drop', 'owner:remove', 'ssl:remove'];
 
     public static function destroys(string $command): bool
     {

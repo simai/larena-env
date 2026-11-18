@@ -10,7 +10,12 @@
     {{-- The site's state at a glance in the page's head: whether it works, what it runs, its certificate. --}}
     @section('heading-meta')
         <span class="flex flex-wrap items-cross-center g-1" data-env-site-state="{{ \Larena\Env\Admin\SiteState::of($site->answersChecked, $site->answers) }}">
-            <sf-badge status="{{ \Larena\Env\Admin\SiteState::status(\Larena\Env\Admin\SiteState::of($site->answersChecked, $site->answers)) }}" appearance="tonal" text="{{ __('larena-env::admin.sites.state.'.\Larena\Env\Admin\SiteState::of($site->answersChecked, $site->answers)) }}"></sf-badge>
+            @if ($site->suspended)
+                {{-- A paused site answers 503 on purpose (site:suspend): «На паузе», not «Ошибка сервера». --}}
+                <sf-badge status="warning" appearance="tonal" text="{{ __('larena-env::admin.site.paused') }}" data-env-site-paused></sf-badge>
+            @else
+                <sf-badge status="{{ \Larena\Env\Admin\SiteState::status(\Larena\Env\Admin\SiteState::of($site->answersChecked, $site->answers)) }}" appearance="tonal" text="{{ __('larena-env::admin.sites.state.'.\Larena\Env\Admin\SiteState::of($site->answersChecked, $site->answers)) }}"></sf-badge>
+            @endif
             <sf-badge appearance="outline" text="{{ in_array($site->profile, ['php', 'generic'], true) && $site->php !== 'none' ? 'PHP '.$site->php : __('larena-env::admin.new_site.profiles.'.$site->profile).($site->php !== 'none' ? ' · PHP '.$site->php : '') }}"></sf-badge>
             @if ($site->certificate !== null)
                 <sf-badge status="{{ $site->certificate->daysLeft !== null && $site->certificate->daysLeft < \Larena\Env\Warnings\PanelWarnings::CERTIFICATE_DAYS ? 'warning' : 'success' }}" appearance="tonal"
@@ -41,11 +46,14 @@
         @if ($tab === 'overview')
             <section class="larena-panel larena-panel-padded" data-env-state="ok" aria-labelledby="env-site-facts">
                 <h2 id="env-site-facts" class="text-2">{{ __('larena-env::admin.site.facts') }}</h2>
+                @if ($site->suspended)
+                    <p role="note" data-env-site-paused-note>{{ __('larena-env::admin.site.paused_note') }}</p>
+                @endif
                 <dl class="m-0" style="display: block;" data-env-facts>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-answers="{{ $site->answersChecked ? ($site->answers ?? 'none') : 'unchecked' }}"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.answers') }}</dt><dd class="m-0 min-w-0 text-end">{{ __('larena-env::admin.sites.state.'.\Larena\Env\Admin\SiteState::of($site->answersChecked, $site->answers)) }}{{ $site->answers !== null ? ' · '.__('larena-env::admin.sites.answers_code', ['code' => (string) $site->answers]) : '' }}</dd></div>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.owner') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->owner ?? __('larena-env::admin.access.own_account') }}</dd></div>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.profile') }}</dt><dd class="m-0 min-w-0 text-end">{{ __('larena-env::admin.new_site.profiles.'.$site->profile) }}</dd></div>
-                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.php') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->php === 'none' ? __('larena-env::admin.site.php_none') : $site->php }}</dd></div>
+                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.php') }}</dt><dd class="m-0 min-w-0 text-end" data-env-site-php="{{ $site->php }}">{{ $site->php === 'none' ? __('larena-env::admin.site.php_none') : $site->php }}@if ($site->php !== 'none' && \Larena\Env\Software\PhpSupport::outdated($site->php)) <sf-badge status="warning" appearance="tonal" text="{{ __('larena-env::admin.php_outdated.mark') }}" data-env-php-outdated></sf-badge>@endif</dd></div>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.ssl') }}</dt><dd class="m-0 min-w-0 text-end" data-env-https="{{ $site->certificate === null ? 'none' : 'on' }}">{{ $site->certificate === null ? __('larena-env::admin.sites.https_none') : ($site->certificate->daysLeft === null ? __('larena-env::admin.sites.https_on') : __('larena-env::admin.sites.https_yes', ['days' => (string) $site->certificate->daysLeft])) }}</dd></div>
                     @if ($site->databaseEngine !== null)
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.database') }}</dt><dd class="m-0 min-w-0 text-end">{{ __('larena-env::admin.new_site.engines.'.$site->databaseEngine) === 'larena-env::admin.new_site.engines.'.$site->databaseEngine ? $site->databaseEngine : __('larena-env::admin.new_site.engines.'.$site->databaseEngine) }}</dd></div>
@@ -192,6 +200,11 @@
                     @if ($site->certificate->endsSoon())
                         <p data-env-certificate-warning role="alert">{{ __('larena-env::admin.certificate.ends_soon') }}</p>
                     @endif
+                    {{-- «Удалить сертификат» (ssl:remove) under the certificate it takes off, through «Действие с планом»: the
+                         question asks the domain typed, as for what cannot be undone. --}}
+                    @if (in_array(\Larena\Env\Operations\SiteOperation::CertificateRemove, $tabOperations, true))
+                        <p class="m-top-2 m-bottom-0"><button type="button" class="larena-button larena-button-danger" data-sf-modal-open="env-op-{{ \Larena\Env\Operations\SiteOperation::CertificateRemove->value }}" data-env-certificate-remove>{{ __('larena-env::admin.operations.certificate-remove') }}</button></p>
+                    @endif
                 @endif
             </section>
             @include('larena-env::admin.partials.site-dns', ['siteDns' => $siteDns ?? null])
@@ -199,7 +212,7 @@
             <section class="larena-panel larena-panel-padded" data-env-runtime aria-labelledby="env-site-runtime">
                 <h2 id="env-site-runtime" class="text-2">{{ __('larena-env::admin.runtime.title') }}</h2>
                 <dl class="m-0" style="display: block;" data-env-facts>
-                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.php') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->php === 'none' ? __('larena-env::admin.site.php_none') : $site->php }}</dd></div>
+                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.php') }}</dt><dd class="m-0 min-w-0 text-end" data-env-site-php="{{ $site->php }}">{{ $site->php === 'none' ? __('larena-env::admin.site.php_none') : $site->php }}@if ($site->php !== 'none' && \Larena\Env\Software\PhpSupport::outdated($site->php)) <sf-badge status="warning" appearance="tonal" text="{{ __('larena-env::admin.php_outdated.mark') }}" data-env-php-outdated></sf-badge>@endif</dd></div>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.runtime.service') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->service ?? '—' }}</dd></div>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.runtime.workers') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->workers === [] ? '—' : implode(', ', $site->workers) }}</dd></div>
                     @if ($site->webServer !== null)
@@ -496,6 +509,27 @@
                                 <details class="m-y-1" data-env-certificate-more>
                                 <summary class="color-primary" style="cursor: pointer;">{{ __('larena-env::admin.more') }}</summary>
                             @endif
+                            {{-- «Восстановить из архива»: the archive and the dump are files of the site's root, chosen from a list. --}}
+                            @if ($operation === \Larena\Env\Operations\SiteOperation::PhpRestore && in_array($field, ['files', 'dump'], true))
+                                @if ($field === 'files' && ($restoreCopies['files'] ?? []) === [])
+                                    <p data-env-restore-none>{{ __('larena-env::admin.restore.none') }}</p>
+                                    <p><a href="{{ route('larena.env.admin.site', ['domain' => $domain], false) }}?tab=files&amp;path=." class="larena-button" data-env-restore-files>{{ __('larena-env::admin.restore.to_files') }}</a></p>
+                                @elseif (($restoreCopies['files'] ?? []) !== [])
+                                    <div class="larena-field" data-env-restore-field="{{ $field }}">
+                                        <label for="env-{{ $operation->value }}-{{ $field }}">{{ __('larena-env::admin.restore.'.$field) }}</label>
+                                        <select id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}" @if ($field === 'files') required @endif>
+                                            @if ($field === 'dump')
+                                                <option value="">{{ __('larena-env::admin.restore.no_dump') }}</option>
+                                            @endif
+                                            @foreach ($restoreCopies[$field === 'files' ? 'files' : 'dumps'] as $found)
+                                                <option value="{{ $found }}">{{ $found }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                @endif
+                                @continue
+                            @endif
+                            @continue($operation === \Larena\Env\Operations\SiteOperation::PhpRestore && $field === 'overwrite' && ($restoreCopies['files'] ?? []) === [])
                             @if (in_array($field, \Larena\Env\Operations\SiteOperation::SWITCHES, true))
                                 <div class="larena-field" data-env-switch="{{ $field }}">
                                     <input type="hidden" name="{{ $field }}" value="no">
@@ -520,7 +554,7 @@
                                 @elseif ($field === 'php')
                                     <select id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}" required>
                                         @foreach ($phpVersions as $version)
-                                            <option value="{{ $version }}" @if ($version === $site->php) selected @endif>{{ $version }}</option>
+                                            <option value="{{ $version }}" @if ($version === $site->php) selected @endif>{{ \Larena\Env\Software\PhpSupport::label($version, __('larena-env::admin.php_outdated.mark')) }}</option>
                                         @endforeach
                                     </select>
                                 @elseif ($field === 'backup')
@@ -600,11 +634,21 @@
                                     <a href="{{ route('larena.env.admin.site', ['domain' => $domain], false) }}?tab=backups" data-env-remove-backup>{{ __('larena-env::admin.operations.make_backup') }}</a>
                                 @endif
                             </p>
+                        @elseif ($operation === \Larena\Env\Operations\SiteOperation::SitePause)
+                            <p class="m-0" data-env-pause-note>{{ __('larena-env::admin.operations.site_pause_note') }}</p>
+                        @elseif ($operation === \Larena\Env\Operations\SiteOperation::SiteResume)
+                            <p class="m-0" data-env-pause-note>{{ __('larena-env::admin.operations.site_resume_note') }}</p>
+                        @elseif ($operation === \Larena\Env\Operations\SiteOperation::CacheClear)
+                            <p class="m-0" data-env-cache-note>{{ __('larena-env::admin.operations.cache_clear_note') }}</p>
+                        @elseif ($operation === \Larena\Env\Operations\SiteOperation::CertificateRemove)
+                            <p class="m-0" role="note" data-env-certificate-remove-note>{{ __('larena-env::admin.operations.certificate_remove_note') }}</p>
+                        @elseif ($operation === \Larena\Env\Operations\SiteOperation::PhpRestore && ($restoreCopies['files'] ?? []) !== [])
+                            <p class="m-0" data-env-restore-note>{{ __('larena-env::admin.restore.note') }}</p>
                         @elseif ($operation === \Larena\Env\Operations\SiteOperation::RedirectRemove)
                             <p class="m-0 text-small color-on-surface-variant" data-env-redirect-note>{{ __('larena-env::admin.operations.redirect_remove_note') }}</p>
                         @endif
                         <div class="larena-form-actions">
-                            <button type="submit" class="larena-button">{{ __('larena-env::admin.operations.plan') }}</button>
+                            <button type="submit" class="larena-button" @if ($operation === \Larena\Env\Operations\SiteOperation::PhpRestore && ($restoreCopies['files'] ?? []) === []) disabled @endif>{{ __('larena-env::admin.operations.plan') }}</button>
                         </div>
                     </form>
                     </div>

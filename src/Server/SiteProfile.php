@@ -21,6 +21,10 @@ final readonly class SiteProfile
         public string $db = 'no',
         /** @var list<SiteRoute> the ways a site of this kind is made (simai-env 1.56.0); none from an older server */
         public array $routes = [],
+        /** @var list<string>|null the PHP versions a site of this kind may run on this server (`php.versions`), none for a kind without PHP */
+        public ?array $phpVersions = null,
+        // The lowest PHP version the server allows a site of this kind (`php.min`, simai-env 1.56.0).
+        public ?string $phpMin = null,
     ) {
     }
 
@@ -73,7 +77,13 @@ final readonly class SiteProfile
             }
         }
 
+        $php = is_array($data['php'] ?? null) ? $data['php'] : null;
+        $versions = is_array($php['versions'] ?? null) ? array_values(array_filter($php['versions'],
+            static fn (mixed $version): bool => is_string($version) && preg_match('/\A[5-9]\.[0-9]\z/D', $version) === 1)) : null;
+        $min = is_string($php['min'] ?? null) && preg_match('/\A[5-9]\.[0-9]\z/D', $php['min']) === 1 ? $php['min'] : null;
+
         return new self($name, is_string($data['description'] ?? null) ? $data['description'] : null, $args,
-            is_string($data['title'] ?? null) ? $data['title'] : null, in_array($db, ['no', 'optional', 'required'], true) ? $db : 'no', $routes);
+            is_string($data['title'] ?? null) ? $data['title'] : null, in_array($db, ['no', 'optional', 'required'], true) ? $db : 'no', $routes,
+            $versions, $min);
     }
 }

@@ -339,7 +339,9 @@ final class NewSitePropertyViewPort extends PropertyViewPort
                 $fields[] = new PropertyField($key, 'boolean', 1, $label, readonly: $readonly, default: ($input['default'] ?? 'no') === 'yes');
             } elseif ($input['kind'] === 'choice' && is_array($values) && $values !== []) {
                 $fields[] = new PropertyField($key, 'choice', 1, $label, ['options' => array_map(fn (string $value): array => ['value' => $value,
-                    'label' => $this->text('routes.values.'.$value, $value)], $values)], required: $input['required'], readonly: $readonly,
+                    // An old PHP is marked «устарела, небезопасна» (PhpSupport, owner msg-93e8e022).
+                    'label' => $input['name'] === 'php' ? \Larena\Env\Software\PhpSupport::label($value, $this->text('php_outdated.mark', 'outdated, unsafe'))
+                        : $this->text('routes.values.'.$value, $value)], $values)], required: $input['required'], readonly: $readonly,
                     default: $input['default'] !== null && in_array($input['default'], $values, true) ? $input['default'] : null);
             } else {
                 $fields[] = new PropertyField($key, 'string', 1, $label, ['max_length' => $input['kind'] === 'url' ? 500 : 200]
@@ -395,7 +397,8 @@ final class NewSitePropertyViewPort extends PropertyViewPort
         if (in_array('php', $groups, true)) {
             $versions = $profile?->values('php') ?? (is_array($overview?->phpVersions) ? $overview->phpVersions : []);
             $default = $profile?->args['php']['default'] ?? null;
-            $fields[] = new PropertyField('php', 'choice', 1, $this->text('new_site.php', 'PHP version'), ['options' => $choices($versions)],
+            $fields[] = new PropertyField('php', 'choice', 1, $this->text('new_site.php', 'PHP version'), ['options' => array_map(fn (string $version): array => ['value' => $version,
+                'label' => \Larena\Env\Software\PhpSupport::label($version, $this->text('php_outdated.mark', 'outdated, unsafe'))], $versions)],
                 readonly: $readonly, hint: $this->hint('new_site.php_default_hint'), default: is_string($default) && in_array($default, $versions, true) ? $default : null);
         }
         if (in_array('database', $groups, true)) {

@@ -25,7 +25,7 @@ return [
     ],
     'sites' => [
         'title' => 'Sites',
-        'state' => ['works' => 'Works', 'error' => 'Server error', 'down' => 'Not answering', 'unchecked' => 'Not checked'],
+        'state' => ['works' => 'Works', 'error' => 'Server error', 'down' => 'Not answering', 'unchecked' => 'Not checked', 'paused' => 'Paused'],
         'count' => 'Sites',
         'table_view' => 'Table view',
         'domain' => 'Domain',
@@ -117,6 +117,10 @@ return [
         'tabs_label' => 'The site\'s sections',
         'open' => 'Open the site',
         'no_https' => 'No HTTPS',
+        // A paused site (site:suspend, simai-env 1.57.0): visitors see «temporarily unavailable», nothing of it runs.
+        'paused' => 'Paused',
+        'paused_note' => 'The site is paused: visitors see a «temporarily unavailable» page, its scheduler and background workers are stopped.',
+        'paused_since' => 'since :time',
         'tabs' => ['overview' => 'Overview', 'domains' => 'Domains and HTTPS', 'files' => 'Files', 'database' => 'Database', 'backups' => 'Backups', 'cron' => 'Scheduler', 'access' => 'SFTP access', 'log' => 'Site log', 'releases' => 'Releases', 'php' => 'PHP and web server'],
     ],
     'names' => [
@@ -224,6 +228,7 @@ return [
         'refresh' => 'Refresh',
     ],
     'fields' => [
+        'overwrite' => 'Replace the files and the database if they are there (the server backs them up first)',
         'minutes' => 'For how long',
         'verify' => 'Check each backup after it is made',
         'email' => 'Email for mail about the certificate',
@@ -277,7 +282,8 @@ return [
         'php-setting-remove' => 'Return a setting to the server\'s default',
         'database-create' => 'Create a database',
         'database-password' => 'Change the database password',
-        'database-export' => 'Export the database',
+        // It makes a backup copy of the database on the server (a file to download waits for simai-env 1.64).
+        'database-export' => 'Make a copy of the database',
         'sftp-create' => 'New SFTP access',
         'sftp-add-key' => 'Add a key to an access',
         'sftp-disable' => 'Turn an access off',
@@ -308,6 +314,16 @@ return [
         'database_drop_note' => 'The database and all its data are removed; the site no longer sees them. This cannot be undone — make a backup first.',
         'make_backup' => 'Make a backup',
         'redirect_remove_note' => 'Give the path the site redirects from now, for example /old-page.',
+        // Cheap actions on the server's own commands (FASTPANEL comparison 2026-11-18).
+        'site-pause' => 'Pause the site',
+        'site-resume' => 'Resume the site',
+        'cache-clear' => 'Clear the cache',
+        'certificate-remove' => 'Remove the certificate',
+        'php-restore' => 'Restore from an archive',
+        'site_pause_note' => 'Visitors see a «temporarily unavailable» page. The site\'s scheduler, background workers and PHP stop; files and the database stay as they are. Resume it here.',
+        'site_resume_note' => 'Everything the pause stopped starts again, and the site opens again.',
+        'cache_clear_note' => 'The server clears this site\'s PHP cache, its web server cache and its application cache where it has them. Other sites are not touched.',
+        'certificate_remove_note' => 'The certificate is deleted and the site opens over HTTP only. A new one can be issued again.',
     ],
     'plan' => [
         'refused_title' => 'Why the server will not do it',
@@ -318,6 +334,7 @@ return [
             'site-remove' => 'The site cannot be brought back. If you still need it, make a backup first.',
             'site-db-drop' => 'The database cannot be brought back. If you still need the data, make a backup first.',
             'owner-remove' => 'The workspace cannot be brought back.',
+            'ssl-remove' => 'The site will open over HTTP only. A new certificate can be issued again in this section.',
         ],
         'said' => [
             'profile-enable' => [
@@ -362,6 +379,7 @@ return [
             'site-remove' => 'Remove the site :target? This cannot be undone.',
             'site-db-drop' => 'Remove the database of :target? This cannot be undone.',
             'owner-remove' => 'Remove the workspace :target? This cannot be undone.',
+            'ssl-remove' => 'Remove the certificate of :target? The site stops opening over HTTPS.',
         ],
         'replaces' => 'What is replaced',
         'replaces_database' => 'The database of :domain is replaced by the one in the backup of :time (:size). The server first saves the current database as an ordinary backup, so this can be undone.',
@@ -416,11 +434,12 @@ return [
                 'name_add' => 'New name :name for :domain', 'name_remove' => 'Name :name removed from :domain', 'redirect_add' => 'Redirect on :domain',
                 'redirect_remove' => 'Redirect removed on :domain', 'check_fix' => 'Fixing a check on :domain', 'set_php' => 'Changing PHP of :domain',
                 'php_ini_set' => 'PHP setting on :domain', 'php_ini_unset' => 'PHP setting reset on :domain', 'apache' => '.htaccess support on :domain',
-                'service_restart' => 'Restarting the service of :domain', 'nginx_custom' => 'Own web server directives of :domain'],
+                'service_restart' => 'Restarting the service of :domain', 'nginx_custom' => 'Own web server directives of :domain',
+                'suspend' => 'Pausing :domain', 'resume' => 'Resuming :domain', 'cache_clear' => 'Clearing the caches of :domain', 'restore_ready' => 'Restoring :domain from an archive'],
             'backup' => ['data' => 'Backup of :domain', 'data_restore' => 'Restoring :domain from a backup', 'data_schedule' => 'Backup schedule of :domain',
                 'data_verify' => 'Checking a backup of :domain', 'storage_add' => 'New backup storage', 'storage_remove' => 'Removing a backup storage',
                 'storage_fetch' => 'Fetching a backup from storage', 'storage_test' => 'Checking a backup storage'],
-            'ssl' => ['letsencrypt' => 'HTTPS certificate for :domain', 'renew' => 'Renewing the certificate of :domain'],
+            'ssl' => ['letsencrypt' => 'HTTPS certificate for :domain', 'renew' => 'Renewing the certificate of :domain', 'remove' => 'Removing the certificate of :domain'],
             'wp' => ['install' => 'Installing WordPress on :domain', 'finalize' => 'Setting up WordPress on :domain', 'restore_ready' => 'Restoring WordPress on :domain'],
             'bitrix' => ['finalize' => 'Setting up Bitrix on :domain', 'restore_ready' => 'Checking a Bitrix backup on :domain'],
             'laravel' => ['finalize' => 'Setting up Laravel on :domain'],
@@ -430,12 +449,12 @@ return [
             'access' => ['create_project' => 'New SFTP access for :domain', 'add_key' => 'SFTP access key', 'disable' => 'SFTP access turned off',
                 'enable' => 'SFTP access turned on', 'remove' => 'SFTP access removed'],
             'profile' => ['enable' => 'Site kind «:id» turned on', 'disable' => 'Site kind «:id» turned off'],
-            'file' => ['upload' => 'Uploading a file to :domain', 'extract' => 'Unpacking an archive on :domain', 'archive' => 'Archiving files of :domain', 'remove' => 'Removing a file on :domain'],
+            'file' => ['copy' => 'Copying a file on :domain', 'upload' => 'Uploading a file to :domain', 'extract' => 'Unpacking an archive on :domain', 'archive' => 'Archiving files of :domain', 'remove' => 'Removing a file on :domain'],
             'cron' => ['job_add' => 'New scheduled task of :domain', 'job_remove' => 'Scheduled task removed on :domain',
                 'job_enable' => 'Scheduled task turned on on :domain', 'job_disable' => 'Scheduled task turned off on :domain'],
             'php' => ['install' => 'Installing PHP :php', 'remove' => 'Removing PHP :php', 'update' => 'Updating PHP', 'extension' => 'PHP extension'],
             'software' => ['install' => 'Installing :name', 'remove' => 'Removing :name', 'update' => 'Updating :name'],
-            'service' => ['restart' => 'Restarting service :name', 'reload' => 'Reloading service :name'],
+            'service' => ['restart' => 'Restarting service :name', 'reload' => 'Reloading service :name', 'stop' => 'Stopping service :name', 'start' => 'Starting service :name'],
             'self' => ['update' => 'Updating the server', 'alerts_ack' => 'Server warning accepted', 'alerts_channel' => 'Warning channel',
                 'alerts_test' => 'Testing warnings', 'firewall_ensure' => 'Checking server protection'],
             'security' => ['scan' => 'Security check', 'files_scan' => 'Checking files', 'fix' => 'Security fix', 'level' => 'Protection level',
@@ -518,6 +537,12 @@ return [
         ],
     ],
     'reasons' => [
+        // simai-env 1.57.0 / 1.62.0: named refusals of a pause, a cache clearing and a service's stop.
+        'critical' => 'This service cannot be stopped: sites stop working without it. It can only be restarted.',
+        'already_suspended' => 'The site is already paused.',
+        'not_suspended' => 'The site is not paused: there is nothing to resume.',
+        'panel_site' => 'This is the panel\'s own site: it cannot be paused.',
+        'profile_unsupported' => 'A site of this kind has no cache of its own: there is nothing to clear.',
         'setup_plan_expired' => 'The plan is out of date (it is kept for 15 minutes). Fill the step in again.',
         'setup_login_needed' => 'Sign-in with a code is not on yet. Open the sign-in settings, turn it on and come back.',
         'setup_alerts_needed' => 'Choose where to send and give the address or the chat.',
@@ -1277,6 +1302,7 @@ return [
         'overwrite' => 'Replace a file of the same name',
         'upload_note' => 'Up to 1 GB, and no more than the panel\'s PHP accepts. Unticked, a file of the same name is not replaced.',
         'new_name' => 'New name',
+        'copy_name' => 'Name of the copy',
         'format' => 'Format',
         'extract_to' => 'Into folder',
         'extract_overwrite' => 'Replace files',
@@ -1286,7 +1312,7 @@ return [
         'replaces_extract' => 'Files of the same names in :to are replaced.',
         'replaces_nginx' => 'The site\'s own nginx directives are replaced. If you do not confirm the change within two minutes, the previous ones come back by themselves.',
         'operations' => [
-            'write' => 'Save the file', 'create' => 'Make the file', 'upload' => 'Upload the file', 'mkdir' => 'Make the folder', 'rename' => 'Rename',
+            'write' => 'Save the file', 'create' => 'Make the file', 'upload' => 'Upload the file', 'mkdir' => 'Make the folder', 'rename' => 'Rename', 'copy' => 'Copy',
             'remove' => 'Remove', 'archive' => 'Pack', 'extract' => 'Unpack', 'nginx-save' => 'Apply the nginx directives', 'trash-restore' => 'Put back from the trash', 'trash-empty' => 'Remove from the trash', 'nginx-clear' => 'Remove the nginx directives',
         ],
         'reasons' => [
@@ -1390,6 +1416,31 @@ return [
         'env_first' => 'Update simai-env first: it pins the panel\'s version.',
         'panel_restarts' => 'The panel restarts during the update: this screen waits for it and shows the outcome. The update cannot be stopped.',
     ],
+    // One site's caches (site:cache-clear, simai-env 1.57.0): what the plan clears and what it skips.
+    'cache' => [
+        'title' => 'What is cleared',
+        'names' => ['opcache' => 'PHP cache (OPcache)', 'nginx_cache' => 'Web server cache', 'framework' => 'Application cache'],
+        'planned' => 'cleared',
+        'skipped_none' => 'the site has none',
+        'skipped' => 'skipped',
+    ],
+    // A plain PHP site restored from an archive of its files and a dump uploaded into the site (site:restore-ready, 1.57.1).
+    'restore' => [
+        'files' => 'Archive of the site\'s files (.zip, .tar.gz, .tgz, .tar)',
+        'dump' => 'Database dump (.sql, .sql.gz, .sql.zip)',
+        'no_dump' => 'No database',
+        'none' => 'There is no archive in the site\'s root. Upload the files archive and, if needed, a database dump in «Files», then come back here.',
+        'to_files' => 'Open «Files»',
+        'note' => 'The server unpacks the archive into the site and loads the dump into its database. If files or data are there already, tick the replacement: the server backs them up first. The archive and the dump then go to the site\'s trash.',
+    ],
+    // PHP 7.4 and 8.0 (owner decision via the auditor, msg-93e8e022): allowed, marked old and unsafe; 5.6 never.
+    'php_outdated' => [
+        'mark' => 'outdated, unsafe',
+        'advice_title' => 'Update PHP',
+        'advice' => 'These sites run an old PHP version. It no longer gets security fixes: move the site to a newer PHP when it is ready.',
+        'advice_site' => ':domain — PHP :php',
+        'advice_go' => 'Change the PHP version',
+    ],
     'services' => [
         'navigation' => 'Services',
         'title' => 'Services',
@@ -1431,7 +1482,18 @@ return [
         'since' => 'Running since :since',
         'not_at_boot' => 'Does not start by itself with the server',
         'config_failed' => 'The settings of :name have an error, so the server did not restart it: the service keeps running as it was. Fix the settings and try again; the lines below say what is wrong.',
-        'operations' => ['restart' => 'Restart :name', 'reload' => 'Reread the settings of :name'],
+        'operations' => ['restart' => 'Restart :name', 'reload' => 'Reread the settings of :name', 'stop' => 'Stop :name', 'start' => 'Start :name'],
+        // simai-env 1.62.0: a service sites can do without for a while (Redis, cron) is stopped and started again.
+        'stop' => 'Stop',
+        'start' => 'Start',
+        'critical' => 'Sites do not work without this service: it can only be restarted.',
+        'refusals' => ['critical' => ':name cannot be stopped: sites stop working without it. It can only be restarted.'],
+        'stop_sites' => 'While the service is stopped, these sites lose:',
+        'stop_no_sites' => 'No site uses this service.',
+        'stop_server' => 'The server\'s own checks and alerts stop too.',
+        'stop_until' => 'The service does not start by itself: start it with «Start». After a reboot of the server it starts.',
+        'stop_then' => 'The service stops at once. To turn it on again, use «Start» on this screen.',
+        'uses' => ['scheduler' => 'scheduler', 'cache' => 'cache', 'sessions' => 'sessions', 'queue' => 'queue', 'workers' => 'background workers'],
     ],
     'software' => [
         'overview' => [
@@ -1589,6 +1651,7 @@ return [
             'include_common' => 'With the usual extensions (mbstring, intl, gd, curl and others)',
             'install_note' => 'The sites stay on their versions, and so does the php command.',
             'nothing_to_install' => 'Every version the server can install is already installed.',
+            'no_source' => 'Older versions are not available: their source is not connected.',
             'operations' => [
                 'install' => 'Install PHP :php',
                 'update' => 'Update PHP :php',

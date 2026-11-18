@@ -54,7 +54,7 @@
                                         @csrf
                                         <input type="hidden" name="op" value="restart">
                                         <input type="hidden" name="name" value="{{ $service->name }}">
-                                        <button type="submit" class="larena-button{{ $service->isActive() || $service->isUnused() ? '' : ' larena-button-primary' }} larena-control-floor">{{ __('larena-env::admin.services.restart') }}</button>
+                                        <button type="submit" class="larena-button{{ $service->isActive() || $service->isUnused() || ($allows['start'] ?? false) ? '' : ' larena-button-primary' }} larena-control-floor">{{ __('larena-env::admin.services.restart') }}</button>
                                     </form>
                                 @endif
                                 @if ($allows['reload'] && $service->canReload)
@@ -63,6 +63,24 @@
                                         <input type="hidden" name="op" value="reload">
                                         <input type="hidden" name="name" value="{{ $service->name }}">
                                         <button type="submit" class="larena-button larena-control-floor">{{ __('larena-env::admin.services.reload') }}</button>
+                                    </form>
+                                @endif
+                                {{-- simai-env 1.62.0: a service sites can do without for a while (Redis, cron) stopped and started again;
+                                     a critical one (nginx, PHP-FPM, the databases) is never offered «Остановить», only a restart. --}}
+                                @if (($allows['stop'] ?? false) && $service->stoppable())
+                                    <form method="post" action="{{ route('larena.env.admin.services.plan', [], false) }}" class="m-0" data-env-service-op="stop">
+                                        @csrf
+                                        <input type="hidden" name="op" value="stop">
+                                        <input type="hidden" name="name" value="{{ $service->name }}">
+                                        <button type="submit" class="larena-button larena-control-floor">{{ __('larena-env::admin.services.stop') }}</button>
+                                    </form>
+                                @endif
+                                @if (($allows['start'] ?? false) && $service->startable())
+                                    <form method="post" action="{{ route('larena.env.admin.services.plan', [], false) }}" class="m-0" data-env-service-op="start">
+                                        @csrf
+                                        <input type="hidden" name="op" value="start">
+                                        <input type="hidden" name="name" value="{{ $service->name }}">
+                                        <button type="submit" class="larena-button larena-button-primary larena-control-floor">{{ __('larena-env::admin.services.start') }}</button>
                                     </form>
                                 @endif
                                 @if ($allows['log'])

@@ -490,7 +490,10 @@ env_assert(str_contains($page, 'data-env-php-version="8.3"') && str_contains($pa
     && substr_count($page, 'data-env-php-op="update"') === 2 && str_contains($page, 'data-env-php-updates="1"') && str_contains($page, 'data-env-php-native')
     && str_contains($page, 'PHP is stopped') && !str_contains($page, 'PHP-FPM is stopped') && str_contains($page, '<option value="8.5">') && str_contains($page, 'data-env-php-op="install"'),
     'Each version, its sites and fixes, removal only where free, and the install form: '.$page);
-env_assert(str_contains($phpPage([]), 'data-env-php-installable="none"'), 'Nothing left to install, said in words.');
+// Nothing to install while the server has only its system's PHP: the older versions' source is not connected, said so
+// rather than «all installed» (FASTPANEL comparison 2026-11-18); with another version there, nothing is left indeed.
+env_assert(str_contains($phpPage([]), 'data-env-php-installable="no-source"') && str_contains($phpPage([]), 'source is not connected'), 'No source for older versions, said in words.');
+env_assert(str_contains($phpPage(['php' => new \Larena\Env\Software\PhpVersions('8.3', $two->versions, [])]), 'data-env-php-installable="none"'), 'Nothing left to install, said in words.');
 $readOnlyPhp = $phpPage(['allows' => ['install' => false, 'update' => false, 'remove' => false, 'extension' => false]]);
 env_assert(!str_contains($readOnlyPhp, 'data-env-php-op') && str_contains($readOnlyPhp, 'data-env-php-extensions-link'), 'Without the right, the state only.');
 $withExtensions = $phpPage(['extensionsOf' => '8.3', 'extensions' => [new \Larena\Env\Server\PhpExtension('curl', true), new \Larena\Env\Server\PhpExtension('imagick', false)]]);

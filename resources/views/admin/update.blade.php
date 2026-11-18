@@ -10,7 +10,8 @@
 
     {{-- «Обновления» among the panel's settings (owner 2026-11-18): the order of the two updates, «Проверить» (the server is
          asked again what each would bring), then simai-env and the panel. --}}
-    <div class="flex flex-wrap items-cross-center content-main-between g-1 m-bottom-2" data-env-update-head>
+    {{-- After a notice («Сервер проверил обновления») the order line keeps the panels' gap rather than touching it. --}}
+    <div class="flex flex-wrap items-cross-center content-main-between g-1 m-bottom-2 @if (($notice ?? null) !== null || ($source ?? null) === 'recorded' || ($acting ?? null) !== null) m-top-2 @endif" data-env-update-head>
         <p class="m-0 color-on-surface-variant" data-env-update-order>{{ __('larena-env::admin.update.order') }}</p>
         @if (($supported ?? false) && ($canUpdate ?? false) && ($checkUrl ?? null) !== null)
             <form method="post" action="{{ $checkUrl }}" class="m-0" data-env-update-check>

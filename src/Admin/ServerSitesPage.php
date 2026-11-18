@@ -93,7 +93,8 @@ final class ServerSitesPage
         $backups = self::backup($backup, $now, $text);
         // The dot is the worst of what the row says; its word is the first thing to deal with.
         $reasons = [];
-        if ($answers === 'down' || $answers === 'error') {
+        // A paused site answers 503 on purpose (site:suspend): said «На паузе», never as a site that fails.
+        if (!$site->suspended && ($answers === 'down' || $answers === 'error')) {
             $reasons[] = ['error', $text('sites.state.'.$answers)];
         }
         foreach ([$backups, $certificate] as $fact) {
@@ -102,7 +103,8 @@ final class ServerSitesPage
             }
         }
         usort($reasons, static fn (array $a, array $b): int => array_search($b[0], self::DOTS, true) <=> array_search($a[0], self::DOTS, true));
-        [$dot, $word] = $reasons[0] ?? ($answers === 'unchecked' ? ['stopped', $text('sites.state.unchecked')] : ['ok', $text('sites.state.works')]);
+        [$dot, $word] = $reasons[0] ?? ($site->suspended ? ['stopped', $text('sites.state.paused')]
+            : ($answers === 'unchecked' ? ['stopped', $text('sites.state.unchecked')] : ['ok', $text('sites.state.works')]));
         $keeps = $backup['state'] !== SiteBackupSummary::NOT_NEEDED;
 
         return [
@@ -113,7 +115,8 @@ final class ServerSitesPage
             // «WordPress · PHP 8.3»; a plain PHP site is «PHP · 8.3», not «PHP · PHP 8.3».
             'php' => preg_match('/^\d+(\.\d+)*$/', $site->php) === 1 ? ($site->profile === 'generic' ? $site->php : $text('sites.list.php', ['version' => $site->php])) : '',
             // Said only when the site does not answer: «Работает» in every row said nothing (PX-54).
-            'answers' => $answers === 'down' || $answers === 'error' ? ['label' => $text('sites.state.'.$answers), 'text' => $text('sites.state.'.$answers), 'status' => 'error'] : '',
+            'answers' => $site->suspended ? ['label' => $text('sites.state.paused'), 'text' => $text('sites.state.paused'), 'status' => 'warning']
+                : ($answers === 'down' || $answers === 'error' ? ['label' => $text('sites.state.'.$answers), 'text' => $text('sites.state.'.$answers), 'status' => 'error'] : ''),
             'backups' => $backups,
             'certificate' => $certificate,
             // The site itself, over HTTPS where it has a certificate.

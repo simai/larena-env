@@ -179,6 +179,8 @@ final class PanelCommands
             'hsts' => self::YES_NO, 'staging' => self::YES_NO, 'challenge' => self::CHALLENGE, 'wildcard' => self::YES_NO],
             'required' => ['domain', 'email'], 'since' => '1.21.0', 'kind' => self::ACTION],
         'ssl:renew' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => '1.21.0', 'kind' => self::ACTION],
+        // The site's certificate taken off, and deleted with `delete-cert`: the site answers over HTTP only.
+        'ssl:remove' => ['args' => ['domain' => self::DOMAIN, 'delete-cert' => self::YES_NO], 'required' => ['domain'], 'since' => '1.57.0', 'kind' => self::ACTION],
         'backup:data' => ['args' => ['domain' => self::DOMAIN, 'db' => self::YES_NO, 'files' => self::YES_NO],
             'required' => ['domain'], 'since' => '1.21.0', 'kind' => self::ACTION],
         'site:deploy-rollback' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => '1.21.0', 'kind' => self::ACTION],
@@ -191,6 +193,11 @@ final class PanelCommands
             'websockets' => self::YES_NO, 'bitrix-files' => self::BITRIX_FILES, 'ssl' => self::YES_NO, 'ssl-email' => self::EMAIL, 'ssl-redirect' => self::YES_NO],
             'required' => ['domain'], 'since' => '1.22.0', 'kind' => self::ACTION],
         'site:set-php' => ['args' => ['domain' => self::DOMAIN, 'php' => self::PHP], 'required' => ['domain', 'php'], 'since' => '1.22.0', 'kind' => self::ACTION],
+        // A site paused (a 503 page, its scheduler, jobs, workers and pool stopped, data untouched) and resumed, and one site's
+        // caches cleared (simai-env 1.57.0).
+        'site:suspend' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => '1.57.0', 'kind' => self::ACTION],
+        'site:resume' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => '1.57.0', 'kind' => self::ACTION],
+        'site:cache-clear' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => '1.57.0', 'kind' => self::ACTION],
         'owner:create' => ['args' => ['name' => self::OWNER, 'pubkey' => self::PUBKEY], 'required' => ['name'], 'since' => '1.22.0', 'kind' => self::ACTION],
         // Blocking a space: SSH, SFTP and requests as that owner stop, its sites keep serving (simai-env 1.27.0).
         'owner:block' => ['args' => ['name' => self::OWNER], 'required' => ['name'], 'since' => '1.27.0', 'kind' => self::ACTION],
@@ -250,6 +257,10 @@ final class PanelCommands
         'service:list' => ['args' => [], 'required' => [], 'since' => '1.33.0', 'kind' => self::READ],
         'service:restart' => ['args' => ['name' => self::SERVICE], 'required' => ['name'], 'since' => '1.33.0', 'kind' => self::ACTION],
         'service:reload' => ['args' => ['name' => self::SERVICE], 'required' => ['name'], 'since' => '1.33.0', 'kind' => self::ACTION],
+        // A service sites can do without for a while (Redis, cron) stopped and started again (simai-env 1.62.0); the critical
+        // ones are refused `critical` and only restart.
+        'service:stop' => ['args' => ['name' => self::SERVICE], 'required' => ['name'], 'since' => '1.62.0', 'kind' => self::ACTION],
+        'service:start' => ['args' => ['name' => self::SERVICE], 'required' => ['name'], 'since' => '1.62.0', 'kind' => self::ACTION],
         'service:log' => ['args' => ['name' => self::SERVICE, 'lines' => self::LOG_LINES, 'format' => self::LOG_FORMAT, 'priority' => self::PRIORITY], 'required' => ['name'], 'since' => '1.33.0', 'kind' => self::READ],
         'self:profiles' => ['args' => [], 'required' => [], 'since' => '1.33.0', 'kind' => self::READ],
         // A bundled kind of site switched on or off by the administrator (simai-env 1.57.5): the new-site wizard offers a
@@ -283,6 +294,8 @@ final class PanelCommands
             'required' => ['domain', 'path', 'content'], 'since' => '1.39.0', 'kind' => self::ACTION],
         'file:mkdir' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH], 'required' => ['domain', 'path'], 'since' => '1.39.0', 'kind' => self::ACTION],
         'file:rename' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH, 'to' => self::FS_PATH], 'required' => ['domain', 'path', 'to'], 'since' => '1.39.0', 'kind' => self::ACTION],
+        // A copy of a file or a folder inside the site, links copied as links; an existing target is refused (simai-env 1.57.0).
+        'file:copy' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH, 'to' => self::FS_PATH], 'required' => ['domain', 'path', 'to'], 'since' => '1.57.0', 'kind' => self::ACTION],
         'file:remove' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH], 'required' => ['domain', 'path'], 'since' => '1.39.0', 'kind' => self::ACTION],
         'file:upload' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH, 'expect-sha256' => self::EXPECT_SHA256], 'required' => ['domain', 'path'], 'since' => '1.40.0', 'kind' => self::ACTION],
         'file:archive' => ['args' => ['domain' => self::DOMAIN, 'path' => self::FS_PATH, 'to' => self::FS_ARCHIVE], 'required' => ['domain', 'path', 'to'], 'since' => '1.40.0', 'kind' => self::ACTION],
@@ -324,6 +337,9 @@ final class PanelCommands
             'required' => ['domain', 'title', 'admin-user', 'admin-email'], 'since' => '1.56.0', 'kind' => self::ACTION],
         'wp:restore-ready' => ['args' => ['domain' => self::DOMAIN, 'files' => self::SITE_FOLDER, 'dump' => self::SITE_FOLDER, 'overwrite' => self::YES_NO],
             'required' => ['domain', 'files', 'dump'], 'since' => '1.56.0', 'kind' => self::ACTION],
+        // A plain PHP site from a files archive and an optional dump, both files of the site (simai-env 1.57.1).
+        'site:restore-ready' => ['args' => ['domain' => self::DOMAIN, 'files' => self::SITE_FOLDER, 'dump' => self::SITE_FOLDER, 'overwrite' => self::YES_NO],
+            'required' => ['domain', 'files'], 'since' => '1.57.1', 'kind' => self::ACTION],
         'wp:finalize' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => '1.56.0', 'kind' => self::ACTION],
         'laravel:finalize' => ['args' => ['domain' => self::DOMAIN, 'migrate' => self::YES_NO], 'required' => ['domain'], 'since' => '1.56.0', 'kind' => self::ACTION],
         // A release deployed from Git, the deploy step of the Laravel repository route (simai-env 1.56.2's route; the gateway

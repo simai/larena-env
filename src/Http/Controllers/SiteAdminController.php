@@ -227,7 +227,11 @@ final readonly class SiteAdminController
             'tab' => $tab,
             'tabs' => $tabs,
             'doctor' => $doctor,
-            'phpVersions' => $tab === 'php' ? ($overview->phpVersions ?? []) : [],
+            // Only the versions the server allows a site of this kind (self:profiles `php`), each old one marked (PhpSupport).
+            'phpVersions' => $tab === 'php' && $site !== null ? \Larena\Env\Software\PhpSupport::forSite($this->profileOf($actor, $site->profile, $capabilities),
+                $overview->phpVersions ?? [], $site->php) : [],
+            // «Восстановить из архива» (simai-env 1.57.1): the archives and dumps found in the site's root.
+            'restoreCopies' => $tab === 'overview' && in_array(SiteOperation::PhpRestore, $operations, true) ? $this->restoreCopies($actor, $domain, $capabilities) : null,
             'phpSettings' => $ask('site:php-ini-list', 'php') ? $this->extras->phpSettings($actor, $domain) : null,
             'phpExtensions' => $ask('php:extensions', 'php') && $site->php !== 'none' ? $this->extras->phpExtensions($actor, $site->php) : null,
             'databases' => $ask('db:list', 'database') ? $this->extras->databases($actor, $domain) : null,
@@ -371,6 +375,54 @@ final readonly class SiteAdminController
         ];
     }
 
+    /** The server's kind of this site (self:profiles), for the PHP versions it allows; none from a server without it. */
+    private function profileOf(PanelActor $actor, string $name, PanelCapabilities $capabilities): ?\Larena\Env\Server\SiteProfile
+    {
+        foreach ($capabilities->allows('self:profiles') ? ($this->profiles?->profiles($actor) ?? []) : [] as $profile) {
+            if ($profile->name === $name) {
+                return $profile;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * The files of the site's root a restore can take (site:restore-ready): archives of files and database dumps, by the
+     * names the server accepts. Null where the server cannot list the site's files.
+     *
+     * @return array{files: list<string>, dumps: list<string>}|null
+     */
+    private function restoreCopies(PanelActor $actor, string $domain, PanelCapabilities $capabilities): ?array
+    {
+        if (!$capabilities->allows('file:list') || $this->files === null) {
+            return null;
+        }
+        $root = $this->files->folder($actor, $domain, '.');
+        if (!is_array($root)) {
+            return null;
+        }
+        $files = [];
+        $dumps = [];
+        foreach ($root['entries'] as $entry) {
+            if ($entry->type !== 'file') {
+                continue;
+            }
+            $name = $entry->name;
+            // Only the names the command table sends as a site's file.
+            if (preg_match('/\A[A-Za-z0-9._-]{1,255}\z/D', $name) !== 1) {
+                continue;
+            }
+            if (preg_match('/\.sql(?:\.gz|\.zip)?\z/i', $name) === 1) {
+                $dumps[] = $name;
+            } elseif (preg_match('/\.(?:zip|tar\.gz|tgz|tar)\z/i', $name) === 1) {
+                $files[] = $name;
+            }
+        }
+
+        return ['files' => $files, 'dumps' => $dumps];
+    }
+
     /**
      * A refusal of a name's action in words: the names' own first (a name taken by another site, a name the server does
      * not take or one past the twenty a site may have), then the gateway's.
@@ -495,7 +547,7 @@ final readonly class SiteAdminController
             ? \Illuminate\Container\Container::getInstance()->make(\Larena\Admin\Runtime\AdminDataviewPagePresenter::class) : null);
         $present = static fn (\Larena\Admin\Runtime\AdminDataviewPage $page): ?array => $presenter?->present($page, \Larena\Admin\Assets\AdminProductAssetManifest::dataviewActivation());
         // A change asked from a row's «⋯» (rename, pack, unpack) opens its form in the side panel with the page.
-        $entryOp = in_array($request->query('op'), ['rename', 'archive', 'extract'], true) && $allows[(string) $request->query('op')]
+        $entryOp = in_array($request->query('op'), SiteFilesPage::ENTRY_OPERATIONS, true) && $allows[(string) $request->query('op')]
             ? FilePath::clean($request->query('entry')) : null;
 
         return [

@@ -40,6 +40,32 @@
         <p role="note" data-env-plan-resource-warning="{{ $warning }}">{{ __('larena-env::admin.routes.resources.warnings.'.$warning) === 'larena-env::admin.routes.resources.warnings.'.$warning ? __('larena-env::admin.routes.resources.warnings.other') : __('larena-env::admin.routes.resources.warnings.'.$warning) }}</p>
     @endforeach
 @endif
+{{-- A service's stop (simai-env 1.62.0): the sites that lose something while it is stopped, and what each loses. --}}
+@if (($serviceStop ?? null) !== null)
+    @if ($serviceStop['sites'] === [])
+        <p data-env-plan-stop-sites="0">{{ __('larena-env::admin.services.stop_no_sites') }}</p>
+    @else
+        <h3 class="m-top-2 m-bottom-1 text-medium">{{ __('larena-env::admin.services.stop_sites') }}</h3>
+        <dl class="m-0" style="display: block;" data-env-plan-stop-sites="{{ count($serviceStop['sites']) }}">
+            @foreach ($serviceStop['sites'] as $affected)
+                <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-plan-stop-site="{{ $affected['domain'] }}"><dt class="min-w-0" style="overflow-wrap: anywhere;">{{ $affected['domain'] }}</dt><dd class="m-0 min-w-0 text-end color-on-surface-variant">{{ implode(', ', array_map(static fn (string $use): string => __('larena-env::admin.services.uses.'.$use) === 'larena-env::admin.services.uses.'.$use ? $use : __('larena-env::admin.services.uses.'.$use), $affected['uses'])) }}</dd></div>
+            @endforeach
+        </dl>
+    @endif
+    @if ($serviceStop['server'])
+        <p role="note" data-env-plan-stop-server>{{ __('larena-env::admin.services.stop_server') }}</p>
+    @endif
+    <p class="color-on-surface-variant" data-env-plan-stop-until>{{ __('larena-env::admin.services.stop_until') }}</p>
+@endif
+{{-- One site's caches (simai-env 1.57.0): what will be cleared, and what is skipped and why. --}}
+@if (($plan ?? null) instanceof \Larena\Env\Operations\PanelPlan && $plan->clears !== [])
+    <h3 class="m-top-2 m-bottom-1 text-medium">{{ __('larena-env::admin.cache.title') }}</h3>
+    <dl class="m-0" style="display: block;" data-env-plan-clears>
+        @foreach ($plan->clears as $clear)
+            <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-plan-clear="{{ $clear['name'] }}" data-env-plan-clear-state="{{ $clear['state'] }}"><dt class="color-on-surface-variant">{{ __('larena-env::admin.cache.names.'.$clear['name']) === 'larena-env::admin.cache.names.'.$clear['name'] ? $clear['name'] : __('larena-env::admin.cache.names.'.$clear['name']) }}</dt><dd class="m-0 min-w-0 text-end">{{ $clear['state'] === 'planned' ? __('larena-env::admin.cache.planned') : ($clear['reason'] === 'none' || $clear['reason'] === null ? __('larena-env::admin.cache.skipped_none') : __('larena-env::admin.cache.skipped')) }}</dd></div>
+        @endforeach
+    </dl>
+@endif
 @foreach ($then ?? [] as $after)
     <p data-env-plan-then>{{ $after }}</p>
 @endforeach

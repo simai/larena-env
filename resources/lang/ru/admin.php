@@ -25,7 +25,7 @@ return [
     ],
     'sites' => [
         'title' => 'Сайты',
-        'state' => ['works' => 'Работает', 'error' => 'Ошибка сервера', 'down' => 'Не отвечает', 'unchecked' => 'Не проверен'],
+        'state' => ['works' => 'Работает', 'error' => 'Ошибка сервера', 'down' => 'Не отвечает', 'unchecked' => 'Не проверен', 'paused' => 'На паузе'],
         'count' => 'Сайтов',
         'table_view' => 'Вид таблицы',
         'domain' => 'Домен',
@@ -117,6 +117,10 @@ return [
         'tabs_label' => 'Разделы сайта',
         'open' => 'Открыть сайт',
         'no_https' => 'Без HTTPS',
+        // A paused site (site:suspend, simai-env 1.57.0): visitors see «временно недоступен», nothing of it runs.
+        'paused' => 'На паузе',
+        'paused_note' => 'Сайт на паузе: посетители видят страницу «Сайт временно недоступен», его планировщик и фоновые задачи остановлены.',
+        'paused_since' => 'с :time',
         'tabs' => ['overview' => 'Обзор', 'domains' => 'Домены и HTTPS', 'files' => 'Файлы', 'database' => 'База данных', 'backups' => 'Резервные копии', 'cron' => 'Планировщик', 'access' => 'SFTP и SSH', 'log' => 'Журнал сайта', 'releases' => 'Выпуски', 'php' => 'PHP и веб-сервер'],
     ],
     'names' => [
@@ -226,6 +230,7 @@ return [
         'refresh' => 'Обновить',
     ],
     'fields' => [
+        'overwrite' => 'Заменить файлы и базу, если они уже есть (сервер сначала сделает копию)',
         'minutes' => 'На сколько открыть',
         'verify' => 'Проверять копию после создания',
         'email' => 'Почта для писем о сертификате',
@@ -279,7 +284,8 @@ return [
         'php-setting-remove' => 'Вернуть настройку сервера',
         'database-create' => 'Создать базу данных',
         'database-password' => 'Сменить пароль базы',
-        'database-export' => 'Выгрузить базу',
+        // It makes a backup copy of the database on the server (a file to download waits for simai-env 1.64).
+        'database-export' => 'Сделать копию базы',
         'sftp-create' => 'Новый доступ SFTP',
         'sftp-add-key' => 'Добавить ключ доступу',
         'sftp-disable' => 'Выключить доступ',
@@ -310,6 +316,16 @@ return [
         'database_drop_note' => 'База и все её данные будут удалены, сайт перестанет их видеть. Отменить нельзя — сначала сделайте копию.',
         'make_backup' => 'Сделать копию',
         'redirect_remove_note' => 'Укажите путь, с которого сейчас переадресует сайт, например /old-page.',
+        // Cheap actions on the server's own commands (FASTPANEL comparison 2026-11-18).
+        'site-pause' => 'Поставить на паузу',
+        'site-resume' => 'Снять с паузы',
+        'cache-clear' => 'Очистить кеш',
+        'certificate-remove' => 'Удалить сертификат',
+        'php-restore' => 'Восстановить из архива',
+        'site_pause_note' => 'Посетители увидят страницу «Сайт временно недоступен». Планировщик, фоновые задачи и PHP сайта остановятся; файлы и база не меняются. Снять с паузы можно здесь же.',
+        'site_resume_note' => 'Запустится всё, что остановила пауза, и сайт снова откроется.',
+        'cache_clear_note' => 'Сервер очистит кеш PHP этого сайта, его кеш веб-сервера и кеш приложения, если они есть. Другие сайты не затронуты.',
+        'certificate_remove_note' => 'Сертификат будет удалён, и сайт станет открываться только по HTTP. Новый можно выпустить снова.',
     ],
     'plan' => [
         'refused_title' => 'Почему сервер не станет это делать',
@@ -320,6 +336,7 @@ return [
             'site-remove' => 'Вернуть сайт будет нельзя. Если он ещё нужен, сначала сделайте копию.',
             'site-db-drop' => 'Вернуть базу будет нельзя. Если данные ещё нужны, сначала сделайте копию.',
             'owner-remove' => 'Вернуть рабочее место будет нельзя.',
+            'ssl-remove' => 'Сайт будет открываться только по HTTP. Новый сертификат можно выпустить снова в этом же разделе.',
         ],
         'said' => [
             'profile-enable' => [
@@ -364,6 +381,7 @@ return [
             'site-remove' => 'Удалить сайт :target? Отменить это нельзя.',
             'site-db-drop' => 'Удалить базу данных сайта :target? Отменить это нельзя.',
             'owner-remove' => 'Удалить рабочее место :target? Отменить это нельзя.',
+            'ssl-remove' => 'Удалить сертификат сайта :target? Сайт перестанет открываться по HTTPS.',
         ],
         'replaces' => 'Что заменится',
         'replaces_database' => 'База сайта :domain заменится базой из копии от :time (:size). Сначала сервер сохранит текущую базу обычной копией, так что это можно отменить.',
@@ -418,11 +436,12 @@ return [
                 'name_add' => 'Новое имя :name для :domain', 'name_remove' => 'Убрано имя :name у :domain', 'redirect_add' => 'Переадресация на :domain',
                 'redirect_remove' => 'Убрана переадресация :domain', 'check_fix' => 'Исправление замечания на :domain', 'set_php' => 'Смена PHP на :domain',
                 'php_ini_set' => 'Настройка PHP на :domain', 'php_ini_unset' => 'Возврат настройки PHP на :domain', 'apache' => 'Поддержка .htaccess на :domain',
-                'service_restart' => 'Перезапуск службы :domain', 'nginx_custom' => 'Свои директивы веб-сервера :domain'],
+                'service_restart' => 'Перезапуск службы :domain', 'nginx_custom' => 'Свои директивы веб-сервера :domain',
+                'suspend' => 'Пауза сайта :domain', 'resume' => 'Сайт :domain снят с паузы', 'cache_clear' => 'Очистка кеша :domain', 'restore_ready' => 'Восстановление сайта :domain из архива'],
             'backup' => ['data' => 'Копия сайта :domain', 'data_restore' => 'Восстановление из копии :domain', 'data_schedule' => 'Расписание копий :domain',
                 'data_verify' => 'Проверка копии :domain', 'storage_add' => 'Новое хранилище копий', 'storage_remove' => 'Удаление хранилища копий',
                 'storage_fetch' => 'Загрузка копии из хранилища', 'storage_test' => 'Проверка хранилища копий'],
-            'ssl' => ['letsencrypt' => 'Сертификат HTTPS для :domain', 'renew' => 'Продление сертификата :domain'],
+            'ssl' => ['letsencrypt' => 'Сертификат HTTPS для :domain', 'renew' => 'Продление сертификата :domain', 'remove' => 'Удаление сертификата :domain'],
             'wp' => ['install' => 'Установка WordPress на :domain', 'finalize' => 'Настройка WordPress на :domain', 'restore_ready' => 'Восстановление WordPress на :domain'],
             'bitrix' => ['finalize' => 'Настройка Битрикс на :domain', 'restore_ready' => 'Проверка копии Битрикс на :domain'],
             'laravel' => ['finalize' => 'Настройка Laravel на :domain'],
@@ -432,12 +451,12 @@ return [
             'access' => ['create_project' => 'Новый доступ SFTP для :domain', 'add_key' => 'Ключ доступа SFTP', 'disable' => 'Выключен доступ SFTP',
                 'enable' => 'Включён доступ SFTP', 'remove' => 'Удалён доступ SFTP'],
             'profile' => ['enable' => 'Включён вид сайта «:id»', 'disable' => 'Выключен вид сайта «:id»'],
-            'file' => ['upload' => 'Загрузка файла на :domain', 'extract' => 'Распаковка архива на :domain', 'archive' => 'Архив файлов :domain', 'remove' => 'Удаление файла на :domain'],
+            'file' => ['copy' => 'Копия файла на :domain', 'upload' => 'Загрузка файла на :domain', 'extract' => 'Распаковка архива на :domain', 'archive' => 'Архив файлов :domain', 'remove' => 'Удаление файла на :domain'],
             'cron' => ['job_add' => 'Новая задача планировщика :domain', 'job_remove' => 'Удалена задача планировщика :domain',
                 'job_enable' => 'Включена задача планировщика :domain', 'job_disable' => 'Выключена задача планировщика :domain'],
             'php' => ['install' => 'Установка PHP :php', 'remove' => 'Удаление PHP :php', 'update' => 'Обновление PHP', 'extension' => 'Расширение PHP'],
             'software' => ['install' => 'Установка программы :name', 'remove' => 'Удаление программы :name', 'update' => 'Обновление программы :name'],
-            'service' => ['restart' => 'Перезапуск службы :name', 'reload' => 'Перечитана настройка службы :name'],
+            'service' => ['restart' => 'Перезапуск службы :name', 'reload' => 'Перечитана настройка службы :name', 'stop' => 'Остановка службы :name', 'start' => 'Запуск службы :name'],
             'self' => ['update' => 'Обновление сервера', 'alerts_ack' => 'Предупреждение сервера принято', 'alerts_channel' => 'Канал предупреждений',
                 'alerts_test' => 'Проверка предупреждений', 'firewall_ensure' => 'Проверка защиты сервера'],
             'security' => ['scan' => 'Проверка безопасности', 'files_scan' => 'Проверка файлов', 'fix' => 'Исправление безопасности', 'level' => 'Уровень защиты',
@@ -520,6 +539,12 @@ return [
         ],
     ],
     'reasons' => [
+        // simai-env 1.57.0 / 1.62.0: named refusals of a pause, a cache clearing and a service's stop.
+        'critical' => 'Эту службу нельзя остановить: без неё сайты перестанут работать. Её можно только перезапустить.',
+        'already_suspended' => 'Сайт уже на паузе.',
+        'not_suspended' => 'Сайт не на паузе: включать нечего.',
+        'panel_site' => 'Это сайт самой панели: его нельзя поставить на паузу.',
+        'profile_unsupported' => 'У сайта этого вида нет своего кеша: очищать нечего.',
         'setup_plan_expired' => 'План устарел (он хранится 15 минут). Заполните шаг заново.',
         'setup_login_needed' => 'Вход с кодом ещё не включён. Откройте настройку входа, включите его и вернитесь.',
         'setup_alerts_needed' => 'Выберите, куда отправлять, и укажите адрес или чат.',
@@ -1279,6 +1304,7 @@ return [
         'overwrite' => 'Заменить файл с тем же именем',
         'upload_note' => 'До 1 ГБ, но не больше, чем принимает PHP панели. Без отметки файл с тем же именем не заменится.',
         'new_name' => 'Новое имя',
+        'copy_name' => 'Имя копии',
         'format' => 'Формат',
         'extract_to' => 'В папку',
         'extract_overwrite' => 'Заменять файлы',
@@ -1288,7 +1314,7 @@ return [
         'replaces_extract' => 'Файлы в :to с теми же именами заменятся.',
         'replaces_nginx' => 'Собственные директивы nginx сайта заменятся. Если не подтвердить изменение за две минуты, прежние директивы вернутся сами.',
         'operations' => [
-            'write' => 'Сохранить файл', 'create' => 'Создать файл', 'upload' => 'Загрузить файл', 'mkdir' => 'Создать папку', 'rename' => 'Переименовать',
+            'write' => 'Сохранить файл', 'create' => 'Создать файл', 'upload' => 'Загрузить файл', 'mkdir' => 'Создать папку', 'rename' => 'Переименовать', 'copy' => 'Копировать',
             'remove' => 'Удалить', 'archive' => 'Упаковать', 'extract' => 'Распаковать', 'nginx-save' => 'Применить директивы nginx', 'trash-restore' => 'Вернуть из корзины', 'trash-empty' => 'Удалить из корзины', 'nginx-clear' => 'Убрать директивы nginx',
         ],
         'reasons' => [
@@ -1392,6 +1418,31 @@ return [
         'env_first' => 'Сначала обновите simai-env: в нём закреплена версия панели.',
         'panel_restarts' => 'Во время обновления панель перезапустится: экран сам дождётся её и покажет итог. Остановить обновление нельзя.',
     ],
+    // One site's caches (site:cache-clear, simai-env 1.57.0): what the plan clears and what it skips.
+    'cache' => [
+        'title' => 'Что будет очищено',
+        'names' => ['opcache' => 'Кеш PHP (OPcache)', 'nginx_cache' => 'Кеш веб-сервера', 'framework' => 'Кеш приложения'],
+        'planned' => 'очистится',
+        'skipped_none' => 'нет у сайта',
+        'skipped' => 'пропускается',
+    ],
+    // A plain PHP site restored from an archive of its files and a dump uploaded into the site (site:restore-ready, 1.57.1).
+    'restore' => [
+        'files' => 'Архив файлов сайта (.zip, .tar.gz, .tgz, .tar)',
+        'dump' => 'Дамп базы (.sql, .sql.gz, .sql.zip)',
+        'no_dump' => 'Без базы',
+        'none' => 'В корне сайта нет архива. Загрузите архив файлов и, если нужно, дамп базы в разделе «Файлы», затем вернитесь сюда.',
+        'to_files' => 'Открыть «Файлы»',
+        'note' => 'Сервер распакует архив в сайт и загрузит дамп в его базу. Если там уже есть файлы или данные, отметьте замену: сервер сначала сделает копию. Архив и дамп потом уйдут в корзину сайта.',
+    ],
+    // PHP 7.4 and 8.0 (owner decision via the auditor, msg-93e8e022): allowed, marked old and unsafe; 5.6 never.
+    'php_outdated' => [
+        'mark' => 'устарела, небезопасна',
+        'advice_title' => 'Обновите PHP',
+        'advice' => 'Эти сайты работают на старой версии PHP. Она больше не получает исправлений безопасности: переведите сайт на PHP новее, когда он будет готов.',
+        'advice_site' => ':domain — PHP :php',
+        'advice_go' => 'Сменить версию PHP',
+    ],
     'services' => [
         'navigation' => 'Службы',
         'title' => 'Службы',
@@ -1433,7 +1484,18 @@ return [
         'since' => 'Работает с :since',
         'not_at_boot' => 'Не запускается сама при старте сервера',
         'config_failed' => 'В настройках :name ошибка, поэтому сервер не стал её перезапускать: служба работает как раньше. Исправьте настройки и попробуйте снова; ниже видно, что не так.',
-        'operations' => ['restart' => 'Перезапустить :name', 'reload' => 'Перечитать настройки :name'],
+        'operations' => ['restart' => 'Перезапустить :name', 'reload' => 'Перечитать настройки :name', 'stop' => 'Остановить :name', 'start' => 'Запустить :name'],
+        // simai-env 1.62.0: a service sites can do without for a while (Redis, cron) is stopped and started again.
+        'stop' => 'Остановить',
+        'start' => 'Запустить',
+        'critical' => 'Без этой службы сайты не работают: её можно только перезапустить.',
+        'refusals' => ['critical' => ':name нельзя остановить: без этой службы сайты перестанут работать. Её можно только перезапустить.'],
+        'stop_sites' => 'Пока служба остановлена, сайты потеряют:',
+        'stop_no_sites' => 'Сайты эту службу не используют.',
+        'stop_server' => 'Проверки и оповещения самого сервера тоже не будут работать.',
+        'stop_until' => 'Служба не запустится сама: включите её кнопкой «Запустить». После перезагрузки сервера она запустится.',
+        'stop_then' => 'Служба остановится сразу. Включить её снова — кнопка «Запустить» на этом экране.',
+        'uses' => ['scheduler' => 'планировщик', 'cache' => 'кеш', 'sessions' => 'сессии', 'queue' => 'очередь', 'workers' => 'фоновые задачи'],
     ],
     'software' => [
         'overview' => [
@@ -1591,6 +1653,7 @@ return [
             'include_common' => 'С обычными расширениями (mbstring, intl, gd, curl и другими)',
             'install_note' => 'Сайты останутся на своих версиях, команда php тоже.',
             'nothing_to_install' => 'Все версии, которые сервер может поставить, уже установлены.',
+            'no_source' => 'Старые версии недоступны: не подключён источник.',
             'operations' => [
                 'install' => 'Установить PHP :php',
                 'update' => 'Обновить PHP :php',

@@ -206,8 +206,10 @@ final class PanelWarnings
     {
         $domain = $site->domain;
         $warnings = [];
-        // A site the server could not reach, or that answered with a server error.
-        if ($site->answersChecked && $site->answers === null) {
+        // A site the server could not reach, or that answered with a server error; a paused one answers 503 on purpose.
+        if ($site->suspended) {
+            // Nothing to say: the person paused it.
+        } elseif ($site->answersChecked && $site->answers === null) {
             $warnings[] = new PanelWarning(self::SITE_DOWN, PanelWarning::ERROR, $domain, ['domain' => $domain]);
         } elseif ($site->answers !== null && $site->answers >= 500) {
             $warnings[] = new PanelWarning(self::SITE_ERROR, PanelWarning::ERROR, $domain, ['domain' => $domain, 'code' => (string) $site->answers]);

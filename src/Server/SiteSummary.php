@@ -28,6 +28,8 @@ final readonly class SiteSummary
         // simai-env 1.30.0: the server's last check of a copy, and whether the certificate's last renewal failed.
         public ?BackupCheck $lastVerify = null,
         public bool $certificateRenewFailed = false,
+        // simai-env 1.57.0: the site is paused (site:suspend); it answers 503 on purpose.
+        public bool $suspended = false,
     ) {
     }
 
@@ -62,6 +64,7 @@ final readonly class SiteSummary
             lastVerify: is_array($site['last_verify'] ?? null) ? BackupCheck::fromData($site['last_verify']) : null,
             certificateRenewFailed: is_array($site['certificate'] ?? null) && is_array($site['certificate']['last_renew'] ?? null)
                 && ($site['certificate']['last_renew']['ok'] ?? null) === false,
+            suspended: ($site['suspended'] ?? false) === true,
         );
     }
 }

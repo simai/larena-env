@@ -26,12 +26,15 @@ use Larena\Env\Server\SiteExtrasReader;
  * emergency needs from a phone, so the screen is a list of short rows with large buttons. The server checks nginx's
  * and PHP-FPM's settings before it restarts or reloads them (nginx -t, php-fpm -t); a failed check fails the job and
  * leaves the service running as it was. Only the services the server has are listed (service:list, simai-env 1.33.0),
- * and a reload is offered only where the server says the service can reread its settings.
+ * and a reload is offered only where the server says the service can reread its settings. Since simai-env 1.62.0 a service
+ * sites can do without for a while (Redis, cron) can be stopped and started again: «Остановить» only where the server says
+ * `can_stop` and never for a critical one (nginx, PHP-FPM, the databases), whose stop the server refuses `critical` and
+ * the panel says in words; the plan lists the sites that lose something while it is stopped.
  */
 final readonly class ServicesController
 {
     /** What a service's row offers, and the gateway command of each. */
-    public const array OPERATIONS = ['restart' => 'service:restart', 'reload' => 'service:reload'];
+    public const array OPERATIONS = ['restart' => 'service:restart', 'reload' => 'service:reload', 'stop' => 'service:stop', 'start' => 'service:start'];
     /** How many of the journal's last lines are read. */
     private const int LOG_LINES = 500;
 
@@ -86,6 +89,8 @@ final readonly class ServicesController
             'allows' => [
                 'restart' => $canOperate && $capabilities?->allows('service:restart') === true,
                 'reload' => $canOperate && $capabilities?->allows('service:reload') === true,
+                'stop' => $canOperate && $capabilities?->allows('service:stop') === true,
+                'start' => $canOperate && $capabilities?->allows('service:start') === true,
                 'log' => $capabilities?->allows('service:log') === true,
             ],
             'logOf' => is_string($logOf) && in_array($logOf, $names, true) ? $logOf : null,
@@ -118,12 +123,32 @@ final readonly class ServicesController
     public function plan(Request $request): mixed
     {
         $actor = ResolvePanelActor::of($request);
-        [$op, $name] = $this->asked($request, $actor);
+        [$op, $name] = $this->asked($request, $actor, true);
         if ($op === null || $name === null) {
             return $this->back($request, 'not_allowed');
         }
         $result = $this->operations->planCommand($actor, self::OPERATIONS[$op], ['name' => $name]);
         if ($result->plan === null) {
+            // A stop the server will not plan (a critical service, simai-env 1.62.0) is said in words in the same window,
+            // its button off, rather than as a line on the list.
+            if ($op === 'stop' && $result->said()) {
+                $reason = $result->reason ?? 'plan_failed';
+                $key = 'larena-env::admin.services.refusals.'.$reason;
+                $known = (string) $this->translator->get($key, ['name' => HostService::label($name)]);
+
+                return $this->views->make('larena-env::admin.plan', [
+                    'heading' => (string) $this->translator->get('larena-env::admin.services.operations.stop', ['name' => $name]),
+                    'eyebrow' => (string) $this->translator->get('larena-env::admin.services.title'),
+                    'runUrl' => route('larena.env.admin.services.run', [], false),
+                    'cancelUrl' => route('larena.env.admin.services', [], false),
+                    'refused' => [$known !== $key ? $known : ($result->checks->blockers[0] ?? $result->detail ?? $this->reasonText($reason))],
+                    'refusedNotes' => [],
+                    'refusedReason' => $reason,
+                    'refusedKey' => 'refused-service-stop',
+                    'refusedMore' => '',
+                ]);
+            }
+
             return $this->back($request, $result->reason ?? 'answer_shape_invalid');
         }
 
@@ -136,7 +161,9 @@ final readonly class ServicesController
             'runUrl' => route('larena.env.admin.services.run', [], false),
             'cancelUrl' => route('larena.env.admin.services', [], false),
             'hidden' => ['op' => $op, 'name' => $name],
-            'then' => [(string) $this->translator->get('larena-env::admin.services.checked_first')],
+            // What a stop takes away: the sites and what each loses, and the server's own checks where cron goes.
+            'serviceStop' => $op === 'stop' ? ['name' => $name, 'sites' => $result->plan->affected, 'server' => $result->plan->pausesServer] : null,
+            'then' => [(string) $this->translator->get('larena-env::admin.services.'.match ($op) {'stop' => 'stop_then', 'start' => 'checked_first', default => 'checked_first'})],
         ]);
     }
 
@@ -162,7 +189,7 @@ final readonly class ServicesController
      *
      * @return array{0: ?string, 1: ?string}
      */
-    private function asked(Request $request, PanelActor $actor): array
+    private function asked(Request $request, PanelActor $actor, bool $planning = false): array
     {
         $op = $request->input('op');
         $name = $request->input('name');
@@ -171,7 +198,13 @@ final readonly class ServicesController
             return [null, null];
         }
         foreach ($this->services($actor, $overview) as $service) {
-            if ($service->name === $name && ($op !== 'reload' || $service->canReload)) {
+            if ($service->name === $name && match ($op) {
+                'reload' => $service->canReload,
+                // A critical service's stop is asked of the server only to be refused in its words (`critical`), never run.
+                'stop' => $service->stoppable() || ($planning && $service->critical),
+                'start' => $service->startable(),
+                default => true,
+            }) {
                 return [$op, $service->name];
             }
         }

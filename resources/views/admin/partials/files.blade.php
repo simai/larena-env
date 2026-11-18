@@ -180,6 +180,12 @@
                                     <label for="env-files-new-name">{{ __('larena-env::admin.files.new_name') }}</label>
                                     <input type="text" id="env-files-new-name" name="name" value="{{ $files['entryOp']['name'] }}" required maxlength="255">
                                 </div>
+                            @elseif ($files['entryOp']['op'] === 'copy')
+                                {{-- A copy beside the original (simai-env 1.57.0 file:copy): «index-copy.php» offered, any free name taken. --}}
+                                <div class="larena-field">
+                                    <label for="env-files-copy-name">{{ __('larena-env::admin.files.copy_name') }}</label>
+                                    <input type="text" id="env-files-copy-name" name="name" value="{{ \Larena\Env\Files\FilePath::copyName($files['entryOp']['name']) }}" required maxlength="255">
+                                </div>
                             @elseif ($files['entryOp']['op'] === 'archive')
                                 <div class="larena-field">
                                     <label for="env-files-format">{{ __('larena-env::admin.files.format') }}</label>

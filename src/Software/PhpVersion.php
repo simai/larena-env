@@ -24,6 +24,8 @@ final readonly class PhpVersion
         public ?string $packageVersion,
         public array $updates,
         public bool $removable,
+        // The server's own word that the version is old and unsafe (`outdated` or `deprecated`), where it gives one.
+        public ?bool $outdated = null,
     ) {
     }
 
@@ -38,6 +40,7 @@ final readonly class PhpVersion
 
         return new self($version, ($data['fpm_active'] ?? false) === true, $strings($data['sites'] ?? null), ($data['native'] ?? false) === true,
             ($data['cli_default'] ?? false) === true, is_string($data['package_version'] ?? null) && $data['package_version'] !== '' ? $data['package_version'] : null,
-            $strings($data['updates'] ?? null), ($data['removable'] ?? false) === true);
+            $strings($data['updates'] ?? null), ($data['removable'] ?? false) === true,
+            is_bool($data['outdated'] ?? null) ? $data['outdated'] : (is_bool($data['deprecated'] ?? null) ? $data['deprecated'] : null));
     }
 }

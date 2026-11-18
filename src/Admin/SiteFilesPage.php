@@ -23,6 +23,9 @@ final class SiteFilesPage
     /** The entries of a site's root that are the server's, not the site's: folded under «Служебные» (PX-91). */
     public const array SERVICE = ['releases', 'current', 'shared', '.simai-trash', '.simai', '.simai-env'];
 
+    /** A row's changes under «⋯» that open their form in the side panel: rename, copy (simai-env 1.57.0), pack, unpack. */
+    public const array ENTRY_OPERATIONS = ['rename', 'copy', 'archive', 'extract'];
+
     private function __construct()
     {
     }
@@ -59,9 +62,9 @@ final class SiteFilesPage
                 'label' => $text($trash ? 'files.to_trash' : 'files.remove')]] : [],
             quickActions: ($allows['download'] ?? false) ? ['look', 'download'] : ['look'],
             rowActions: ['look' => ['label' => $text('files.look'), 'icon' => 'visibility', 'href' => $site.'?tab=files&open=__ID__']]
-                + array_combine(['rename', 'archive', 'extract'], array_map(static fn (string $op): array => ['label' => $text('files.operations.'.$op).'…',
-                    'icon' => ['rename' => 'edit', 'archive' => 'archive', 'extract' => 'unarchive'][$op],
-                    'href' => $site.'?tab=files&path='.rawurlencode($path).'&op='.$op.'&entry=__ID__'], ['rename', 'archive', 'extract'])),
+                + array_combine(self::ENTRY_OPERATIONS, array_map(static fn (string $op): array => ['label' => $text('files.operations.'.$op).'…',
+                    'icon' => ['rename' => 'edit', 'copy' => 'content_copy', 'archive' => 'archive', 'extract' => 'unarchive'][$op],
+                    'href' => $site.'?tab=files&path='.rawurlencode($path).'&op='.$op.'&entry=__ID__'], self::ENTRY_OPERATIONS)),
             emptyText: $text('files.empty'),
             emptyDescription: $text('files.empty_description'),
         );
@@ -127,7 +130,7 @@ final class SiteFilesPage
         if ($file && !$secret && ($allows['download'] ?? false)) {
             $actions[] = 'download';
         }
-        foreach (['rename', 'archive'] as $op) {
+        foreach (['rename', 'copy', 'archive'] as $op) {
             if ($allows[$op] ?? false) {
                 $actions[] = $op;
             }
@@ -152,7 +155,7 @@ final class SiteFilesPage
             // A file with passwords stands out, and its row offers no download: it is downloaded from its own page, asked first.
             'mark' => $secret ? ['label' => $text('files.secret'), 'text' => $text('files.secret'), 'status' => 'warning', 'tip' => $text('files.secret_tip')] : '',
             // A link is shown, never followed: nothing opens it.
-            '_actions' => $entry->type === 'link' ? array_values(array_intersect($actions, ['rename', 'delete'])) : $actions,
+            '_actions' => $entry->type === 'link' ? array_values(array_intersect($actions, ['rename', 'copy', 'delete'])) : $actions,
         ];
     }
 
