@@ -406,7 +406,7 @@ $command = (string) file_get_contents(dirname(__DIR__, 2).'/src/Console/PanelRes
 env_assert(str_contains($command, "larena:panel-reset-password {email?") && !str_contains($command, '{--password') && str_contains($command, '->secret(')
     && str_contains($command, "'пароль сброшен с консоли'"), 'The command asks the password from the keyboard, never as an argument, and logs without it.');
 $hint = require dirname(__DIR__, 2).'/assembly/lang/vendor/larena-auth/ru/auth.php';
-env_assert(str_contains($hint['recovery_without_mail'], 'php artisan larena:panel-reset-password') && str_contains($hint['recovery']['unavailable']['description'], 'larena:panel-reset-password'),
+env_assert(str_contains($hint['recovery_without_mail'], 'simai-admin.sh panel reset-password') && str_contains($hint['recovery']['unavailable']['description'], 'simai-admin.sh panel reset-password'),
     'Without mail the sign-in page names the console\'s way for a panel with nobody else to ask.');
 
 echo "PanelMailTest passed.\n";

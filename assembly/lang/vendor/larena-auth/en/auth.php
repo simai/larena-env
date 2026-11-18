@@ -7,8 +7,8 @@ return [
     // The sign-in page's tab title, in the panel's one format «page — application» (the panel's UX audit, HEAD-03).
     'title' => 'Sign in — Larena Panel',
     // «Забыли пароль?» until the panel sends mail (owner decision C335): whom to ask, and the server's console when
-    // there is nobody else (`larena:panel-reset-password`); no link that leads nowhere.
-    'recovery_without_mail' => 'Ask another administrator of the panel: they will set you a new password. If there is no other administrator, set the password on the server: sign in over SSH, open the panel\'s folder and run «php artisan larena:panel-reset-password» — it asks for the address and the new password.',
+    // there is nobody else (`simai-admin.sh panel reset-password`, which runs `larena:panel-reset-password`); no link that leads nowhere.
+    'recovery_without_mail' => 'Ask another administrator of the panel: they will set you a new password. If there is no other administrator, set the password on the server: sign in to the server over SSH and run «sudo /root/simai-env/simai-admin.sh panel reset-password» — it asks for the address and the new password.',
     // While mail is off: the console's way too (auditor's addition to C335), the same words on the recovery page itself.
     'recovery' => [
         'request' => [
@@ -16,7 +16,7 @@ return [
         ],
         'unavailable' => [
             'heading' => 'The panel\'s mail is not set up',
-            'description' => 'A link for a new password cannot be sent. Ask another administrator of the panel. If there is none, set the password on the server: sign in over SSH, open the panel\'s folder and run «php artisan larena:panel-reset-password».',
+            'description' => 'A link for a new password cannot be sent. Ask another administrator of the panel. If there is none, set the password on the server: sign in to the server over SSH and run «sudo /root/simai-env/simai-admin.sh panel reset-password» — it asks for the address and the new password.',
         ],
     ],
     'users' => ['navigation' => 'Panel users'],
