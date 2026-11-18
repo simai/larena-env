@@ -389,14 +389,17 @@ foreach (['env.secret_file.opened', 'env.secret_file.downloaded', 'env.secret_fi
     env_assert(str_contains($audit, 'type: '.$type), "{$type} is declared.");
 }
 
-// The person's row on «Владельцы сайтов»: the tick, on for whom it is on.
-$people = (string) $factory->make('larena-env::admin.people', ['people' => [
-    ['subject' => 'staff@stand.test', 'label' => 'Staff', 'owner' => 'demo', 'secretFiles' => false],
-    ['subject' => 'trusted@stand.test', 'label' => 'Trusted', 'owner' => 'demo', 'secretFiles' => true],
-], 'secretFilesKept' => true, 'owners' => ['demo'], 'blockedOwners' => [], 'ownerDisk' => [], 'canBlock' => false, 'canRemove' => false, 'canAddKey' => false,
-    'ownerSites' => [], 'source' => 'recorded', 'reasonText' => null, 'notice' => null])->render();
-env_assert(substr_count($people, 'name="secret_files" value="yes"') === 2 && preg_match_all('/name="secret_files" value="yes"[^>]*checked/', $people) === 1
-    && str_contains($people, e($lines['people']['secret_files'])), 'Each person\'s row has the tick, checked for the one it is on for.');
+// «Люди» (roles study part 7): the tick is asked in «Пригласить человека» and on the person's card, on for whom it is on.
+$invite = (string) $factory->make('larena-env::admin.people', ['secretFilesKept' => true, 'canOperate' => true, 'owners' => ['demo'],
+    'canCreateAccount' => true, 'source' => 'recorded', 'reasonText' => null, 'notice' => null])->render();
+env_assert(substr_count($invite, 'name="secret_files" value="yes"') === 1 && !str_contains($invite, 'data-env-invite-secret checked')
+    && str_contains($invite, e($lines['people']['secret_files'])) && str_contains($invite, 'data-env-invite-form'), 'The invitation asks the tick, off.');
+$card = static fn (bool $secret): string => (string) $factory->make('larena-env::admin.people-card', ['person' => ['id' => 7, 'subject' => 'user:admin_identity:7',
+    'name' => 'Trusted', 'email' => 'trusted@stand.test', 'level' => 'own', 'blocked' => false, 'owner' => 'demo', 'sites' => ['demo-owned.test'], 'last' => null, 'secret' => $secret],
+    'self' => false, 'can' => 'Own sites: 1', 'canSaid' => 'x', 'last' => 'never', 'lastIso' => null, 'canOperate' => true, 'owners' => ['demo'], 'ownerSites' => ['demo' => 1],
+    'secretFilesKept' => true, 'canAddKey' => false, 'notice' => null])->render();
+env_assert(preg_match('/name="secret_files" value="yes"[^>]*checked/', $card(true)) === 1 && preg_match('/name="secret_files" value="yes"[^>]*checked/', $card(false)) === 0
+    && str_contains($card(true), 'name="subject" value="user:admin_identity:7"'), 'The card has the tick, checked for the one it is on for.');
 $secrets->set('trusted@stand.test', false, 'admin@stand.test');
 env_assert(!$secrets->allows($trusted) && $last($sink->events())->type === 'env.person.secret_files_disallowed', 'Unticked: off again, and said in «История».');
 
@@ -550,5 +553,17 @@ env_assert($filled['rows'][0]['who'] === $lines['runs']['by_schedule'] && $fille
     'Who started it, how it ended, its own page.');
 $filledPage = (string) $factory->make('larena-env::admin.site', $historyCard->show($filledRequest, $domain)->getData())->render();
 env_assert(substr_count($filledPage, 'data-env-site-history-row=') === 5 && !str_contains($filledPage, 'data-env-site-history-pending'), 'The part shows the five runs.');
+
+// Equal runs one after another are one row «×N» with the newest's time and page (panel audit 2026-11-18).
+$run = static fn (string $title, string $href, string $state = 'succeeded', string $who = ''): array => ['title' => $title, 'state' => $state, 'who' => $who, 'href' => $href];
+$runs = [];
+foreach ([$run('Очистка корзины', '/j/3'), $run('Очистка корзины', '/j/2'), $run('Очистка корзины', '/j/1'), $run('Очистка корзины', '/j/0', 'failed'),
+    $run('Сайт снят с паузы', '/j/-1'), $run('Очистка корзины', '/j/-2')] as $one) {
+    $runs = SiteAdminController::addRun($runs, $one);
+}
+env_assert(array_column($runs, 'times') === [3, 1, 1, 1] && $runs[0]['href'] === '/j/3' && $runs[1]['state'] === 'failed',
+    'Three equal runs in a row are one row ×3 keeping the newest; a different end or a run between starts a new row: '.json_encode($runs, JSON_UNESCAPED_UNICODE));
+$timesPage = (string) $factory->make('larena-env::admin.site', ['siteHistory' => ['pending' => false, 'url' => '', 'all' => '', 'rows' => [['title' => 'Очистка корзины', 'state' => 'succeeded', 'status' => 'success', 'words' => 'Готово', 'ago' => null, 'time' => '', 'who' => '', 'href' => '/j/3', 'times' => 3]]]] + $historyCard->show($filledRequest, $domain)->getData())->render();
+env_assert(substr_count($timesPage, 'data-env-site-history-row=') === 1 && str_contains($timesPage, 'data-env-site-history-times="3"') && str_contains($timesPage, '×3'), 'The row says ×3.');
 
 echo "SecretFilesTest passed.\n";

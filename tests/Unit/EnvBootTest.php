@@ -61,6 +61,7 @@ env_assert($names === ['larena.env.admin.alerts.ack.open', 'larena.env.admin.ale
     'larena.env.admin.home', 'larena.env.admin.index', 'larena.env.admin.job', 'larena.env.admin.job.again', 'larena.env.admin.job.again.run', 'larena.env.admin.job.cancel', 'larena.env.admin.overview',
     'larena.env.admin.overview.setup', 'larena.env.admin.overview.setup.submit', 'larena.env.admin.panel.access', 'larena.env.admin.panel.address.plan',
     'larena.env.admin.panel.address.run', 'larena.env.admin.people', 'larena.env.admin.people.act', 'larena.env.admin.people.assign',
+    'larena.env.admin.people.block', 'larena.env.admin.people.block.run', 'larena.env.admin.people.card', 'larena.env.admin.people.invite.plan', 'larena.env.admin.people.invite.run',
     'larena.env.admin.people.owners.plan', 'larena.env.admin.people.owners.run', 'larena.env.admin.people.stop', 'larena.env.admin.security',
     'larena.env.admin.security.plan', 'larena.env.admin.security.plan.open', 'larena.env.admin.security.run', 'larena.env.admin.services', 'larena.env.admin.services.plan',
     'larena.env.admin.services.run', 'larena.env.admin.settings', 'larena.env.admin.site', 'larena.env.admin.site.cron.plan', 'larena.env.admin.site.cron.run',
@@ -113,7 +114,7 @@ foreach ($with['routes'] as $name => $route) {
         || in_array($name, ['larena.env.admin.sites.new', 'larena.env.admin.sites.new.step', 'larena.env.admin.sites.new.submit', 'larena.env.admin.sites.port', 'larena.env.admin.sites.plan.draft', 'larena.env.admin.alerts.ack.open'], true));
     env_assert(in_array('access:env.sites.operate', $route['middleware'], true) === $changes, "{$name} asks for the wrong right.");
     // The server's overview and the people's spaces are the system level's; giving a space or acting for someone changes the server.
-    $reads = in_array($name, ['larena.env.admin.overview', 'larena.env.admin.people', 'larena.env.admin.people.stop', 'larena.env.admin.alerts.channel',
+    $reads = in_array($name, ['larena.env.admin.overview', 'larena.env.admin.people', 'larena.env.admin.people.card', 'larena.env.admin.people.stop', 'larena.env.admin.alerts.channel',
         'larena.env.admin.update', 'larena.env.admin.services', 'larena.env.admin.firewall', 'larena.env.admin.security', 'larena.env.admin.panel.access',
         'larena.env.admin.software', 'larena.env.admin.software.php', 'larena.env.admin.storages', 'larena.env.admin.settings'], true);
     env_assert(in_array('access:env.server.read', $route['middleware'], true) === $reads, "{$name} asks for the wrong level.");
@@ -142,11 +143,15 @@ env_assert($adminNames === [
     'src/Admin/PlanAction.php',
     // «Базы данных» in the admin's shared data view (simai-env 1.59.0 db:list).
     'src/Admin/ServerDatabasesPage.php',
+    // «Люди» in the admin's shared data view (roles study part 7).
+    'src/Admin/ServerPeoplePage.php',
     'src/Admin/ServerSitesPage.php',
     // A site's folder and its trash in the admin's shared data view (files study PX-93, PX-94).
     'src/Admin/SiteFilesPage.php',
     'src/Admin/SiteObjectMenu.php',
     'src/Http/Controllers/DatabasesController.php',
+    // «Люди», its invitation and blocking planned as the admin's «Действие с планом».
+    'src/Http/Controllers/PeopleController.php',
     'src/Http/Controllers/ServerAdminController.php',
     // The setup's breadcrumbs, only where the admin is installed.
     'src/Http/Controllers/ServerSetupController.php',

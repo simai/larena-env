@@ -35,12 +35,19 @@ $router->get('/overview', [ServerAdminController::class, 'overview'])->middlewar
 $router->middleware(['access:env.server.read'])->group(static function ($router): void {
     $router->get('/people', [PeopleController::class, 'index'])->name('larena.env.admin.people');
     $router->post('/people/stop', [PeopleController::class, 'stop'])->name('larena.env.admin.people.stop');
+    // A person's card (roles study part 7, PX-79): what they may do in words, their sites, account, keys, last sign-in.
+    $router->get('/people/{person}', [PeopleController::class, 'card'])->where('person', '[1-9][0-9]{0,17}')->name('larena.env.admin.people.card');
 });
 $router->middleware(['access:env.server.operate'])->group(static function ($router): void {
     $router->post('/people/assign', [PeopleController::class, 'assign'])->name('larena.env.admin.people.assign');
     $router->post('/people/act', [PeopleController::class, 'actAs'])->name('larena.env.admin.people.act');
     $router->post('/people/owners/plan', [PeopleController::class, 'planOwner'])->name('larena.env.admin.people.owners.plan');
     $router->post('/people/owners/run', [PeopleController::class, 'runOwner'])->name('larena.env.admin.people.owners.run');
+    // «Пригласить человека» with its plan, and blocking a person (roles study part 7, PX-67).
+    $router->post('/people/invite/plan', [PeopleController::class, 'invitePlan'])->name('larena.env.admin.people.invite.plan');
+    $router->post('/people/invite/run', [PeopleController::class, 'inviteRun'])->name('larena.env.admin.people.invite.run');
+    $router->get('/people/{person}/block', [PeopleController::class, 'blockPlan'])->where('person', '[1-9][0-9]{0,17}')->name('larena.env.admin.people.block');
+    $router->post('/people/{person}/block', [PeopleController::class, 'blockRun'])->where('person', '[1-9][0-9]{0,17}')->name('larena.env.admin.people.block.run');
 });
 // DNS through the provider's API (Panel plan, stage 7): the zones and the connection are the system level's.
 $router->middleware(['access:env.dns.read'])->group(static function ($router): void {

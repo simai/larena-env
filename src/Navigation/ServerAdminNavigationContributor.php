@@ -35,7 +35,7 @@ final class ServerAdminNavigationContributor implements AdminNavigationContribut
         $rows = [new AdminNavigationDescriptor(
             id: 'env.people',
             ownerPackage: $this->ownerPackage(),
-            label: 'Spaces',
+            label: 'People',
             routeName: 'larena.env.admin.people',
             routeUri: '/admin/server/people',
             category: 'operations',
@@ -50,7 +50,7 @@ final class ServerAdminNavigationContributor implements AdminNavigationContribut
             surface: 'product',
             labelKey: 'larena-env::admin.people.navigation',
             activeRoutePattern: 'larena.env.admin.people*',
-            icon: 'workspaces',
+            icon: 'group',
         ), new AdminNavigationDescriptor(
             id: 'env.server.overview',
             ownerPackage: $this->ownerPackage(),

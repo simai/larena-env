@@ -467,9 +467,10 @@
         @elseif ($tab === 'access')
             <section class="larena-panel larena-panel-padded" data-env-access aria-labelledby="env-site-access">
                 <h2 id="env-site-access" class="text-2">{{ __('larena-env::admin.access.title') }}</h2>
+                {{-- One line «Работает от аккаунта» (roles study PX-68): the server's account the site runs as, and whether it is
+                     the site's own; «Рабочее место» and «Чей сайт» said the same twice. --}}
                 <dl class="m-0" style="display: block;" data-env-facts>
-                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.owner') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->owner ?? __('larena-env::admin.access.own_account') }}</dd></div>
-                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.access.runs_as') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->runsAs ?? '—' }}</dd></div>
+                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-runs-as><dt class="color-on-surface-variant">{{ __('larena-env::admin.access.runs_as') }}</dt><dd class="m-0 min-w-0 text-end"><span class="mono">{{ $site->owner ?? $site->runsAs ?? '—' }}</span>@if ($site->owner === null) <span class="color-on-surface-variant">· {{ __('larena-env::admin.access.own_account') }}</span>@endif</dd></div>
                 </dl>
                 <p>{{ __('larena-env::admin.access.explain') }}</p>
                 @if ($sftpAccounts !== null)
@@ -479,10 +480,42 @@
                     @else
                         <ul class="m-0 p-0" style="list-style: none;">
                             @foreach ($sftpAccounts as $account)
+                                {{-- Each access with its own actions (roles study PX-71): a key, off or on, remove; each leads to its plan
+                                     with the access already chosen. The time is the reader's own (sf-time), not the server's UTC. --}}
                                 <li class="flex flex-wrap items-cross-center g-1 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-sftp="{{ $account->login }}" data-env-sftp-path="{{ $account->path ?? '' }}">
-                                    <span class="mono">{{ $account->login }}</span>
-                                    <sf-badge appearance="tonal" status="{{ $account->enabled ? 'success' : 'neutral' }}" text="{{ $account->enabled ? __('larena-env::admin.access.on') : __('larena-env::admin.access.off') }}"></sf-badge>
-                                    <span class="grow min-w-0 text-small color-on-surface-variant" style="overflow-wrap: anywhere;">{{ __('larena-env::admin.access.by_key') }}@if ($account->path !== null) · {{ __('larena-env::admin.access.lands', ['path' => $account->path]) }}@endif @if ($account->createdAt !== null) · {{ __('larena-env::admin.access.created', ['when' => \Larena\Env\Server\Moment::human($account->createdAt)]) }}@endif</span>
+                                    <div class="grow min-w-0" style="flex-basis: 16rem;">
+                                        <div class="flex flex-wrap items-cross-center g-1"><span class="mono" style="overflow-wrap: anywhere;">{{ $account->login }}</span>
+                                        <sf-badge appearance="tonal" status="{{ $account->enabled ? 'success' : 'neutral' }}" text="{{ $account->enabled ? __('larena-env::admin.access.on') : __('larena-env::admin.access.off') }}"></sf-badge></div>
+                                        <div class="text-small color-on-surface-variant" style="overflow-wrap: anywhere;">{{ __('larena-env::admin.access.by_key') }}@if ($account->path !== null) · {{ __('larena-env::admin.access.lands', ['path' => $account->path]) }}@endif @if ($account->createdAt !== null) · {{ __('larena-env::admin.access.created', ['when' => '']) }}@if (\Larena\Env\Server\Moment::iso($account->createdAt) !== null)<sf-time datetime="{{ \Larena\Env\Server\Moment::iso($account->createdAt) }}" format="auto"></sf-time>@else{{ \Larena\Env\Server\Moment::human($account->createdAt) }}@endif @endif</div>
+                                    </div>
+                                    <div class="flex flex-wrap items-cross-center g-1" data-env-sftp-actions="{{ $account->login }}">
+                                        @foreach ([\Larena\Env\Operations\SiteOperation::SftpAddKey, \Larena\Env\Operations\SiteOperation::SftpDisable, \Larena\Env\Operations\SiteOperation::SftpEnable, \Larena\Env\Operations\SiteOperation::SftpRemove] as $rowOperation)
+                                            @continue(!in_array($rowOperation, $tabOperations ?? [], true) || !in_array($account, $rowOperation->accountChoices([$account]), true))
+                                            @if ($rowOperation === \Larena\Env\Operations\SiteOperation::SftpAddKey)
+                                                <button type="button" class="larena-button larena-control-floor" data-sf-modal-open="env-sftp-key-{{ $loop->parent->index }}" data-env-sftp-action="{{ $rowOperation->value }}">{{ __('larena-env::admin.access.row.'.$rowOperation->value) }}</button>
+                                                <sf-modal id="env-sftp-key-{{ $loop->parent->index }}" position="inline-end" width="28rem" heading="{{ __('larena-env::admin.operations.sftp-add-key') }}">
+                                                    <form method="post" action="{{ route('larena.env.admin.site.plan', ['domain' => $domain], false) }}" class="larena-form m-0" style="padding: 0; box-shadow: none; background: none; border: 0; border-radius: 0;">
+                                                        @csrf
+                                                        <input type="hidden" name="operation" value="{{ $rowOperation->value }}">
+                                                        <input type="hidden" name="login" value="{{ $account->login }}">
+                                                        <p class="m-0 m-bottom-1"><span class="mono">{{ $account->login }}</span></p>
+                                                        <div class="larena-field">
+                                                            <label for="env-sftp-key-{{ $loop->parent->index }}-pubkey">{{ __('larena-env::admin.fields.pubkey') }}</label>
+                                                            <textarea id="env-sftp-key-{{ $loop->parent->index }}-pubkey" name="pubkey" rows="3" required></textarea>
+                                                        </div>
+                                                        <div class="larena-form-actions"><button type="submit" class="larena-button">{{ __('larena-env::admin.operations.plan') }}</button></div>
+                                                    </form>
+                                                </sf-modal>
+                                            @else
+                                                <form method="post" action="{{ route('larena.env.admin.site.plan', ['domain' => $domain], false) }}" class="m-0">
+                                                    @csrf
+                                                    <input type="hidden" name="operation" value="{{ $rowOperation->value }}">
+                                                    <input type="hidden" name="login" value="{{ $account->login }}">
+                                                    <button type="submit" class="larena-button larena-control-floor @if ($rowOperation->destroys()) larena-button-danger @endif" data-env-sftp-action="{{ $rowOperation->value }}">{{ __('larena-env::admin.access.row.'.$rowOperation->value) }}</button>
+                                                </form>
+                                            @endif
+                                        @endforeach
+                                    </div>
                                 </li>
                             @endforeach
                         </ul>

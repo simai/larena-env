@@ -20,16 +20,14 @@ return [
             'sites' => ['label' => 'larena-env::admin.menu.sites', 'icon' => 'dns', 'level' => 'site', 'kind' => 'row', 'row' => 'env.server'],
             // Both levels: the sites' databases (simai-env 1.59.0 db:list), each opening its site's «База данных».
             'databases' => ['label' => 'larena-env::admin.menu.databases', 'icon' => 'database', 'level' => 'site', 'kind' => 'row', 'row' => 'env.databases'],
-            // The system level: people, the server, the panel's own settings.
-            'users' => ['label' => 'larena-env::admin.menu.users', 'icon' => 'group', 'level' => 'install', 'kind' => 'root'],
+            // The system level: people, the server, the panel's own settings. «Люди» is one screen (roles study part 7,
+            // PX-69): the people with what each may do, the invitation and their server accounts.
+            'users' => ['label' => 'larena-env::admin.menu.users', 'icon' => 'group', 'level' => 'install', 'kind' => 'row', 'row' => 'env.people'],
             'server' => ['label' => 'larena-env::admin.menu.server', 'icon' => 'memory', 'level' => 'install', 'kind' => 'root'],
             'settings' => ['label' => 'larena-env::admin.menu.settings', 'icon' => 'settings', 'level' => 'install', 'kind' => 'root'],
         ],
         'group_roots' => [],
         'row_roots' => [
-            // People and the spaces they work in (Panel plan 2.4): their roles and blocking, then their owners.
-            'auth.users' => 'users',
-            'env.people' => 'users',
             'env.server.overview' => 'server',
             // DNS through the provider's API (Panel plan, stage 7): the zones beside the server, the connection among the settings.
             'env.dns' => 'server',
@@ -61,7 +59,9 @@ return [
         // sign-in diagnostics are a report for developers (its address still opens); the backgrounds belong to the
         // sign-in page («Страница входа», the general settings page), which links to them and is marked on their page.
         'headings' => false,
-        'hidden_rows' => ['auth.diagnostics'],
+        // The users' screen of the CMS is not the panel's (PX-69): «Люди» invites, blocks and changes people; its address
+        // still opens, for a password reset.
+        'hidden_rows' => ['auth.diagnostics', 'auth.users'],
         'folded_rows' => ['admin.site_backgrounds' => 'admin.settings_general'],
     ],
 ];

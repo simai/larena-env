@@ -38,7 +38,7 @@
                 <sf-badge size="1" appearance="tonal" activity="{{ \Larena\Env\Admin\JobOutcome::activity($status) }}" text="{{ \Larena\Env\Admin\JobOutcome::stateWords($status) }}"></sf-badge>
             </p>
             {{-- What became, in words (PX-6): «Сайт demo.test удалён», not «Готово» with who started it. --}}
-            <h2 id="env-job" class="text-2">{{ $status->state->isOver() ? \Larena\Env\Admin\JobOutcome::heading($status) : ($status->title ?? __('larena-env::admin.job.states.running')) }}</h2>
+            <h2 id="env-job" class="text-2">{{ $status->state->isOver() ? \Larena\Env\Admin\JobOutcome::heading($status) : \Larena\Env\Admin\EnvHistorySource::words($status, static fn (string $key, array $replace = []): mixed => __($key, $replace)) }}</h2>
             {{-- The run on the Framework's sf-progress-run (PX-7, PX-11): no steps from the server yet, so a bar without a per
                  cent while it runs, what became once over; «Свернуть» leaves it to the corner. --}}
             {{ \Larena\Env\Admin\JobOutcome::progress($status) }}

@@ -12,6 +12,13 @@ events:
     severity: notice
   - type: env.person.owner_released
     severity: notice
+  # «Пригласить человека» and blocking a person from «Люди» (roles study part 7): who did it, never the password.
+  - type: env.person.invited
+    severity: notice
+  - type: env.person.blocked
+    severity: notice
+  - type: env.person.unblocked
+    severity: notice
   - type: env.acting_as.started
     severity: notice
   - type: env.acting_as.stopped

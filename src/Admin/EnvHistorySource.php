@@ -257,6 +257,17 @@ final readonly class EnvHistorySource implements AdminHistorySource, AdminHistor
     /** What the job does and over what, in words: «Копия сайта demo.test»; a command without words says the object. */
     public static function title(PanelJobStatus $status, Translator $translator): string
     {
+        return self::words($status, static fn (string $key, array $replace = []): mixed => $translator->get($key, $replace));
+    }
+
+    /**
+     * The same, through any line reader (a view's __()): a running job's heading names it in the panel's words too, not
+     * the server's (roles study PX-68: «Новый аккаунт на сервере tpetrov», not the server's «Новый владелец»).
+     *
+     * @param callable(string, array<string, string>): mixed $get
+     */
+    public static function words(PanelJobStatus $status, callable $get): string
+    {
         // The panel's own words first (its sentences name the site); the server's title (1.60.0) for a command it has none for.
         $replace = [];
         foreach ($status->args as $name => $value) {
@@ -265,7 +276,7 @@ final readonly class EnvHistorySource implements AdminHistorySource, AdminHistor
             }
         }
         $key = 'larena-env::admin.runs.commands.'.str_replace([':', '-'], ['.', '_'], $status->command);
-        $line = $translator->get($key, $replace);
+        $line = $get($key, $replace);
         if (is_string($line) && $line !== $key && !str_contains($line, ':')) {
             return $line;
         }
@@ -274,7 +285,9 @@ final readonly class EnvHistorySource implements AdminHistorySource, AdminHistor
         }
         $domain = $replace['domain'] ?? '';
 
-        return (string) $translator->get($domain !== '' ? 'larena-env::admin.runs.other_site' : 'larena-env::admin.runs.other', ['domain' => $domain]);
+        $other = $get($domain !== '' ? 'larena-env::admin.runs.other_site' : 'larena-env::admin.runs.other', ['domain' => $domain]);
+
+        return is_string($other) ? $other : '';
     }
 
     /** Who started it, in words: «Вы», a person of the panel by name, the schedule, or the server itself. */

@@ -166,7 +166,8 @@ assert roots == ["sites", "databases", "users", "server", "settings", "admin.his
 children = {item["key"]: [row["key"] for row in item.get("children", []) if row.get("kind") == "page"] for item in items}
 # The services came with simai-env 1.33.0, the firewall and who reaches the panel with 1.35.0.
 assert sorted(children["server"]) == ["env.dns", "env.firewall", "env.security", "env.server.overview", "env.services", "env.software", "env.software.php", "env.storages"], children
-assert sorted(children["users"]) == ["auth.users", "env.people"], children
+# «Люди» is one row, the panel's people (roles study part 7, PX-67): no second «Пользователи» screen beside it.
+assert children["users"] == [] and next(item for item in items if item["key"] == "users").get("href") == "/admin/server/people", items
 # «Настройки» opens with the map of its sections and their values (study part 8, PX-81).
 assert sorted(children["settings"]) == ["admin.settings_general", "env.alerts.channel", "env.dns.connection", "env.panel.access", "env.settings", "env.update"], children
 assert children["settings"][0] == "env.settings", children
@@ -180,7 +181,7 @@ for href in hrefs:
 print("menu rows open:", hrefs)
 assert "/admin/server/software" in hrefs and "/admin/server/software/php" in hrefs, "the server's software and PHP rows, listed by the server"
 
-# The breadcrumbs name the page's own place: Users › Site owners and Server › Overview, never the package's «Sites».
+# The breadcrumbs name the page's own place: People and Server › Overview, never the package's «Sites».
 def crumbs(html):
     tag = re.search(r'<sf-breadcrumbs\b[^>]*>', html)
     assert tag, "breadcrumbs are drawn"
@@ -188,7 +189,7 @@ def crumbs(html):
     assert found, "breadcrumbs carry their items"
     return [item.get("label") for item in json.loads(html_lib.unescape(found.group(1)))]
 import html as html_lib
-for path, expected in (("/admin/server/people", ["Users", "Site owners"]), ("/admin/server/overview", ["Server", "Overview"])):
+for path, expected in (("/admin/server/people", ["People"]), ("/admin/server/overview", ["Server", "Overview"])):
     _, page = get(path)
     labels = crumbs(page)
     assert labels[1:] == expected, (path, labels)
@@ -300,11 +301,11 @@ subprocess.run(["php", sys.argv[3] + "/make-staff.php", sys.argv[4]], check=True
 def hidden(html, name):
     return re.search(r'name="' + re.escape(name) + r'" value="([^"]+)"', html).group(1)
 status, people = get("/admin/server/people")
-assert status == 200 and 'data-env-person="user:admin_identity:2"' in people, "the person of the user level is listed"
+assert status == 200 and "staff@example.test" in people and "data-env-invite-form" in people, "the person of the user level is listed, and the invitation is there"
 staff = "user:admin_identity:2"
 post("/admin/server/people/assign", {"_token": form_token(people), "subject": staff, "owner": "demo"})
-_, people = get("/admin/server/people")
-assert re.search(r'<option value="demo"\s+selected', people), "the person's space is saved"
+_, people = get("/admin/server/people/2")
+assert 'data-env-person-card="2"' in people and re.search(r'<sf-dropdown name="owner"[^>]*value="demo"', people), "the person's account is saved"
 post("/admin/server/people/act", {"_token": form_token(people), "subject": staff})
 _, acting = get("/admin/server")
 assert 'data-env-acting="demo"' in acting and "demo-owned.test" in acting and "demo-php.test" not in acting, "looking as the person: only their space"
@@ -515,7 +516,9 @@ _, overview = get("/admin/server")
 # The site's row is a dot (lists study PX-54): a site that answers and has nothing to deal with is «ok».
 assert any(mark in overview for mark in ('"value":"ok"', '&quot;value&quot;:&quot;ok&quot;', '\\u0022value\\u0022:\\u0022ok\\u0022')), "a site that answers says so"
 _, spaces = get("/admin/server/people")
-assert 'data-env-owner="demo"' in spaces and 'name="action" value="block"' in spaces, "a space can be blocked on a server that has it (1.27.0)"
+assert 'data-env-owner="demo"' in spaces, "the accounts are listed"
+_, card = get("/admin/server/people/2")
+assert "data-env-person-block" in card, "a person, and with them their account, can be blocked on a server that has it (1.27.0)"
 
 # The person signs in: their space only, no system screen.
 jar.clear()
@@ -524,7 +527,7 @@ _, home = post("/admin/login", {"_token": form_token(login), "email": "staff@exa
 status, sites = get("/admin/server")
 assert status == 200 and "demo-owned.test" in sites and "demo-php.test" not in sites, "the person sees their own owner's sites"
 status, other = get("/admin/server/sites/demo-php.test")
-assert "another workspace" in other, "another owner's site is refused by the server"
+assert "another person&#039;s" in other or "another person's" in other, "another owner's site is refused by the server"
 for path in ("/admin/server/people", "/admin/server/overview", "/admin/server/dns", "/admin/server/dns/connection", "/admin/server/alerts/channel",
         "/admin/server/update"):
     try:
@@ -585,7 +588,7 @@ assert 'data-env-plan="cron:job-add"' in adding and 'name="args[schedule]" value
 _, wrong = post("/admin/server/sites/demo-owned.test/cron/plan", {"_token": form_token(own_cron), "op": "add", "preset": "custom", "custom": "61 * * * *", "command": "x"})
 assert 'data-env-plan=' not in wrong and "data-env-cron" in wrong, "a minute past 59 is refused before any plan"
 _, other = post("/admin/server/sites/demo-php.test/cron/plan", {"_token": form_token(own_cron), "op": "add", "preset": "daily", "custom": "", "command": "x"})
-assert 'data-env-plan=' not in other and "This site is in another workspace." in other, "not another owner's site"
+assert 'data-env-plan=' not in other and ("This site is another person&#039;s." in other or "This site is another person's." in other), "not another owner's site"
 print("both levels checked")
 PY
 python3 - "$APP/database/database.sqlite" <<'PY' >>"$LOG" 2>&1 || failed "audit"

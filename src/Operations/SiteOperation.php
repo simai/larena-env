@@ -303,6 +303,12 @@ enum SiteOperation: string
     public const array RUNTIME = [self::PhpVersion];
 
     /**
+     * An SFTP access's own actions: offered on the access's row with the access chosen (roles study PX-71), not among the
+     * tab's buttons, where the access had to be picked again in the form.
+     */
+    public const array PER_ACCESS = [self::SftpAddKey, self::SftpDisable, self::SftpEnable, self::SftpRemove];
+
+    /**
      * The tab's actions its row of buttons offers: not those the «База данных» block offers by its state (the browser,
      * the database's own), nor an account's action without an account to name.
      *
@@ -314,7 +320,7 @@ enum SiteOperation: string
     public static function inRow(array $operations, array $accountChoices = []): array
     {
         return array_values(array_filter($operations, static fn (self $operation): bool => ($operation->namesSite() || ($accountChoices[$operation->value] ?? []) !== [])
-            && !in_array($operation, self::BROWSER, true) && !in_array($operation, self::DATABASE, true) && !in_array($operation, self::CERTIFICATE, true)
+            && !in_array($operation, self::PER_ACCESS, true) && !in_array($operation, self::BROWSER, true) && !in_array($operation, self::DATABASE, true) && !in_array($operation, self::CERTIFICATE, true)
             && !in_array($operation, self::RUNTIME, true)));
     }
 
