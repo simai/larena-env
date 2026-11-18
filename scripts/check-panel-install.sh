@@ -131,12 +131,16 @@ def get(path):
     with web.open(base + path) as answer:
         return answer.status, answer.read().decode()
 def form_token(html):
-    return re.search(r'name="_token" value="([^"]+)"', html).group(1)
+    found = re.search(r'name="_token" value="([^"]+)"', html) or re.search(r'<meta name="csrf-token" content="([^"]+)"', html)
+    return found.group(1)
 def post(path, fields, headers=None):
     request = urllib.request.Request(base + path, data=urllib.parse.urlencode(fields).encode(), headers=headers or {})
     with web.open(request) as answer:
         return answer.status, answer.read().decode()
 _, setup = get("/?setup=" + token)
+# The installer is a wizard (dec-83b7d143b782): its first step is the check; the administrator step carries the form.
+if not re.search(r'name="_token" value="|<meta name="csrf-token"', setup):
+    _, setup = get("/admin/setup?step=owner")
 email, password = "check@example.test", "Check-" + secrets.token_hex(8) + "!"
 post("/admin/setup", {"_token": form_token(setup), "display_name": "Check", "email": email, "password": password,
     "password_confirmation": password, "site_locale": "en", "site_timezone": "UTC"})
@@ -293,31 +297,49 @@ assert 'data-env-acting="demo"' in acting and "demo-owned.test" in acting and "d
 post("/admin/server/people/stop", {"_token": form_token(acting)})
 _, whole = get("/admin/server")
 assert 'data-env-acting' not in whole and "demo-php.test" in whole, "back to the whole server"
+# «Новый сайт» is a five-step wizard (dec-83b7d143b782): the kind, the address and settings, the plan in words, the run,
+# the result; each step on its own page, the wizard's values kept in the session between them.
+def new_field(html, name):
+    return 'data-env-new-field="' + name + '"' in html
+def new_kind(profile):
+    # The kind step's answer leads to the address step, which asks only what that kind takes.
+    _, page = get("/admin/server/sites/new")
+    _, address = post("/admin/server/sites/new/kind/answer", {"_token": form_token(page), "profile": profile})
+    assert 'data-env-new-site="address"' in address, ("the kind leads to its address step", profile)
+    return address
+def new_review(address, fields):
+    _, review = post("/admin/server/sites/new/address/answer", dict({"_token": form_token(address)}, **fields))
+    assert 'data-env-new-site="review"' in review and 'data-env-new-plan="site:add"' in review and "data-env-new-fact" in review, ("the plan in words", fields)
+    return review
 status, wizard = get("/admin/server/sites/new")
-assert status == 200 and "data-env-new-owner" in wizard, "the wizard, with whose the site is"
-assert re.search(r'name="daily-backup" value="yes" data-env-new-daily-backup\s+checked', wizard), "a new site gets its daily backup by default"
-# The kinds from the server (self:profiles, simai-env 1.33.0): with 1C-Bitrix and an app on a port.
-# simai-env 1.56.1 lists no node kind (turned off on the server); a kind it lists but the panel cannot lead is greyed.
+assert status == 200 and 'data-env-new-site="kind"' in wizard and "data-env-new-kinds" in wizard, "the wizard opens on the kind"
+# The kinds from the server (self:profiles, simai-env 1.33.0): with 1C-Bitrix and an app on a port; each says what it is
+# (a kind the panel cannot lead says why). simai-env 1.56.1 lists no node kind (turned off on the server).
+kinds = {item["value"]: item for item in json.loads(markup.unescape(re.search(r'<sf-input-choice\b[^>]*\bitems="([^"]*)"', wizard).group(1)))}
 for kind in ("static", "generic", "laravel", "wordpress", "redirect", "bitrix", "proxy"):
-    assert ('data-env-profile-hint="' + kind + '"' in wizard or 'data-env-profile-unavailable="' + kind + '"' in wizard), ("each kind says what it is", kind)
+    assert kind in kinds and kinds[kind].get("caption"), ("each kind says what it is", kind)
 # Panel 0.4.6 (audit block 4): the wizard opens on WordPress, the kind most people come for.
-assert 'data-env-new-profile="wordpress"' in wizard, "the wizard opens on WordPress"
-_, static = get("/admin/server/sites/new?profile=static")
-assert 'data-env-new-profile="static"' in static and 'data-env-field=' not in static, "a static site asks for no PHP, database or target"
-_, laravel = get("/admin/server/sites/new?profile=laravel")
-# simai-env 1.56.1: a kind with routes asks what its route takes (PHP, the database engine), with the route's steps.
-assert 'data-env-new-profile="laravel"' in laravel and ((all('data-env-route-field="' + field + '"' in laravel for field in ("php", "db-engine")) and "data-env-route-steps=" in laravel)
-    or all('data-env-field="' + field + '"' in laravel for field in ("php", "database", "engine"))) and 'data-env-field="redirect"' not in laravel, "Laravel asks for PHP and a database"
-_, redirect = get("/admin/server/sites/new?profile=redirect")
-assert ('data-env-field="redirect"' in redirect or 'data-env-route-field="redirect-to"' in redirect) and 'data-env-field="php"' not in redirect and 'data-env-route-field="php"' not in redirect, "a redirect asks only where to"
-_, proxy = get("/admin/server/sites/new?profile=proxy")
-assert ('data-env-field="proxy"' in proxy or 'data-env-route-field="upstream-port"' in proxy) and 'name="upstream-port"' in proxy and 'data-env-field="php"' not in proxy and 'data-env-route-field="php"' not in proxy and "data-env-new-daily-backup" not in proxy, "an app on a port asks for the port only"
+assert re.search(r'<sf-input-choice\b[^>]*\bvalue="wordpress"', wizard), "the wizard opens on WordPress"
+static = new_kind("static")
+# Whose the site is: asked of the whole server's administrator; a new site gets its daily backup by default.
+assert new_field(static, "owner"), "the wizard, with whose the site is"
+assert re.search(r'<sf-checkbox name="daily-backup"[^>]*\schecked[\s>]', static), "a new site gets its daily backup by default"
+assert new_field(static, "domain") and not any(new_field(static, name) for name in ("php", "create-db", "db-note", "redirect-to", "upstream-port")), "a static site asks for no PHP, database or target"
+laravel = new_kind("laravel")
+# simai-env 1.56.1: a kind with routes asks what its route takes (PHP; the database said or switched), its steps in the plan.
+assert new_field(laravel, "php") and (new_field(laravel, "db-note") or new_field(laravel, "create-db")) and not new_field(laravel, "redirect-to"), "Laravel asks for PHP and a database"
+php = re.search(r'<sf-dropdown name="php"[^>]*\bvalue="([^"]*)"', laravel).group(1)
+new_review(laravel, {"domain": "app.test", "php": php, "create-db": "yes"})
+redirect = new_kind("redirect")
+assert new_field(redirect, "redirect-to") and not new_field(redirect, "php"), "a redirect asks only where to"
+proxy = new_kind("proxy")
+assert new_field(proxy, "upstream-port") and not new_field(proxy, "php") and not new_field(proxy, "daily-backup"), "an app on a port asks for the port only"
+new_review(proxy, {"domain": "demo-proxy.test", "upstream-port": "3000", "websockets": "yes"})
+# The plan screen behind the wizard (drafts and the property view's port lead to it) takes the same arguments.
 _, proxied = post("/admin/server/sites/new/plan", {"_token": form_token(proxy), "domain": "demo-proxy.test", "profile": "proxy", "upstream-port": "3000", "websockets": "yes"})
 assert 'data-env-plan="site:add"' in proxied and 'name="upstream-port" value="3000"' in proxied, "an app on a port is planned"
 # The same fields in the Framework property view, over the new site's port: record.create plans site:add and leads to
-# the plan screen, which is the one the form shows.
-# With routes (simai-env 1.56.1) the collection names the chosen way too: env.new_site.laravel.<route>.
-assert re.search(r'<sf-view-properties collection="env\.new_site\.laravel(\.[a-z-]+)?" mode="create"', laravel) and "data-larena-record-fallback" in laravel, "the property view, the form its fallback"
+# the plan screen. With routes (simai-env 1.56.1) the collection names the chosen way too: env.new_site.laravel.<route>.
 def port(payload):
     request = urllib.request.Request(base + "/admin/server/sites/new/port", data=json.dumps(payload).encode(),
         headers={"Content-Type": "application/json", "Accept": "application/json", "X-CSRF-TOKEN": csrf})
@@ -338,15 +360,19 @@ _, drafted = get(created["record"]["address"])
 assert 'data-env-plan="site:add"' in drafted and 'name="profile" value="laravel"' in drafted and 'name="create-db" value="yes"' in drafted, "the draft's plan screen"
 wrong = port({"scope_ref": "scope:server", "intent": "record.create", "payload": {"collection": "env.new_site.proxy", "values": {"domain": "a.test", "upstream_port": 443}}})
 assert wrong.get("answer") == "refused" and "upstream_port" in wrong.get("errors", {}), ("port 443 said under the port", wrong)
-_, bitrix = get("/admin/server/sites/new?profile=bitrix")
+bitrix = new_kind("bitrix")
 # simai-env 1.56.1: 1C-Bitrix offers two ways (new, restore from a copy); the new one asks PHP and plans the installer.
-assert 'data-env-route="new"' in bitrix and 'data-env-route="restore"' in bitrix and 'data-env-route-field="php"' in bitrix, "1C-Bitrix asks PHP, a database and its installer"
+assert 'data-env-new-way="new"' in bitrix and 'data-env-new-way="restore"' in bitrix and new_field(bitrix, "php"), "1C-Bitrix asks PHP, a database and its installer"
+new_review(bitrix, {"domain": "demo-bitrix.test", "route": "new", "php": "8.3"})
 _, bitrixed = post("/admin/server/sites/new/plan", {"_token": form_token(bitrix), "domain": "demo-bitrix.test", "profile": "bitrix", "route": "new", "php": "8.3"})
 assert 'data-env-plan="site:add"' in bitrixed and 'name="bitrix-files" value="setup"' in bitrixed, "a 1C-Bitrix site is planned with its installer"
-_, planned = post("/admin/server/sites/new/plan", {"_token": form_token(wizard), "domain": "new.test", "profile": "static", "daily-backup": "yes"})
-# simai-env 1.30.0 makes the daily backup with the site: no backup:data-schedule after it.
-assert 'data-env-plan="site:add"' in planned and 'name="backup" value="yes"' in planned and "data-env-plan-then" not in planned, "a new site is planned with its daily backup"
-_, made = post("/admin/server/sites/new/run", {"_token": form_token(planned), "domain": "new.test", "profile": "static", "daily-backup": "yes", "backup": "yes"})
+# simai-env 1.30.0 makes the daily backup with the site: no backup:data-schedule after it, in the plan or the run.
+static = new_kind("static")
+planned = new_review(static, {"domain": "new.test", "daily-backup": "yes"})
+_, plain = post("/admin/server/sites/new/plan", {"_token": form_token(static), "domain": "new.test", "profile": "static", "daily-backup": "yes"})
+assert 'name="backup" value="yes"' in plain and "data-env-plan-then" not in plain, "a new site is planned with its daily backup"
+_, made = post("/admin/server/sites/new/review/answer", {"_token": form_token(planned), "wizard-action": "run"})
+assert 'data-env-new-site="run"' in made and "data-env-new-run=" in made, "the wizard runs the site's plan"
 assert "daily backup is being turned on" not in made, "the daily backup came with the site, nothing is turned on after"
 # DNS lives in «Домены и HTTPS» and nginx in «PHP и веб-сервер» (the panel's UX audit): old links open there;
 # «Выпуски» shows only for a site that has releases.
