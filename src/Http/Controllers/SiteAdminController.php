@@ -441,7 +441,8 @@ final readonly class SiteAdminController
             $folder = $this->files->folder($actor, $domain, $open);
             if (is_array($folder)) {
                 $path = $open;
-            } elseif ($folder === 'not_a_directory') {
+            } elseif ($folder === 'not_a_directory' || self::isFile($this->files->stat($actor, $domain, $open))) {
+                // Some servers refuse listing a file with a general failure: what the entry is, is asked on its own.
                 [$view, $folder] = [$open, null];
             }
         }
@@ -512,6 +513,11 @@ final readonly class SiteAdminController
             'allows' => $allows,
             'formats' => SiteFilesController::ARCHIVE_FORMATS,
         ];
+    }
+
+    private static function isFile(FileEntry|string $entry): bool
+    {
+        return $entry instanceof FileEntry && $entry->type === 'file';
     }
 
     /**
