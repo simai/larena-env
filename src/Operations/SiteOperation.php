@@ -233,6 +233,27 @@ enum SiteOperation: string
         return array_diff($fields, self::SWITCHES) === [];
     }
 
+    /**
+     * The fields chosen from a list or a tick, each with a value the form starts on, or picked from a list the person
+     * opens: a form of only these shows its plan under it as it is filled (the admin's «Действие с планом» preview), so
+     * «Показать, что будет» is no extra press. Typed fields (a name, a key, an address) wait for «Показать, что будет».
+     */
+    public const array CHOSEN = ['php', 'backup', 'time', 'keep', 'verify', 'challenge', 'minutes', 'code', 'mode', 'dump'];
+
+    /** Whether the action's plan is shown under its form as the form is filled: every field is chosen, none typed. */
+    public function plansAsChosen(?PanelCapabilities $capabilities = null): bool
+    {
+        $fields = $capabilities === null ? $this->fields() : $this->fieldsOn($capabilities);
+        foreach ($fields as $field) {
+            $listed = $field === 'login' && !$this->namesSite();
+            if (!$listed && !in_array($field, self::SWITCHES, true) && !in_array($field, self::CHOSEN, true)) {
+                return false;
+            }
+        }
+
+        return $fields !== [] && !$this->asksNothing($capabilities);
+    }
+
     /** Whether a yes-or-no field starts ticked for this site. */
     public static function switchedOn(string $field, ?\Larena\Env\Server\SiteDetails $site): bool
     {
@@ -276,6 +297,12 @@ enum SiteOperation: string
     public const array CERTIFICATE = [self::CertificateRemove];
 
     /**
+     * The PHP version's change: «PHP и веб-сервер» offers it on the «PHP 8.3» line at the tab's top, not in the row at its
+     * end (FASTPANEL comparison 2026-11-18: the main action was under forty lines of extensions).
+     */
+    public const array RUNTIME = [self::PhpVersion];
+
+    /**
      * The tab's actions its row of buttons offers: not those the «База данных» block offers by its state (the browser,
      * the database's own), nor an account's action without an account to name.
      *
@@ -287,7 +314,8 @@ enum SiteOperation: string
     public static function inRow(array $operations, array $accountChoices = []): array
     {
         return array_values(array_filter($operations, static fn (self $operation): bool => ($operation->namesSite() || ($accountChoices[$operation->value] ?? []) !== [])
-            && !in_array($operation, self::BROWSER, true) && !in_array($operation, self::DATABASE, true) && !in_array($operation, self::CERTIFICATE, true)));
+            && !in_array($operation, self::BROWSER, true) && !in_array($operation, self::DATABASE, true) && !in_array($operation, self::CERTIFICATE, true)
+            && !in_array($operation, self::RUNTIME, true)));
     }
 
     /** The fix of a check's rule: the «Проверка» block offers it on the rule's own row, never among the tab's buttons. */

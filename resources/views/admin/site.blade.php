@@ -212,7 +212,13 @@
             <section class="larena-panel larena-panel-padded" data-env-runtime aria-labelledby="env-site-runtime">
                 <h2 id="env-site-runtime" class="text-2">{{ __('larena-env::admin.runtime.title') }}</h2>
                 <dl class="m-0" style="display: block;" data-env-facts>
-                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.php') }}</dt><dd class="m-0 min-w-0 text-end" data-env-site-php="{{ $site->php }}">{{ $site->php === 'none' ? __('larena-env::admin.site.php_none') : $site->php }}@if ($site->php !== 'none' && \Larena\Env\Software\PhpSupport::outdated($site->php)) <sf-badge status="warning" appearance="tonal" text="{{ __('larena-env::admin.php_outdated.mark') }}" data-env-php-outdated></sf-badge>@endif</dd></div>
+                    {{-- The version and its change on one line at the tab's top (FASTPANEL comparison 2026-11-18): no scrolling
+                         past the extensions to reach the tab's main action. --}}
+                    <div class="flex items-cross-center content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.php') }}</dt><dd class="flex flex-wrap items-cross-center content-main-end g-1 m-0 min-w-0 text-end" data-env-site-php="{{ $site->php }}"><span>{{ $site->php === 'none' ? __('larena-env::admin.site.php_none') : 'PHP '.$site->php }}</span>@if ($site->php !== 'none' && \Larena\Env\Software\PhpSupport::outdated($site->php)) <sf-badge status="warning" appearance="tonal" text="{{ __('larena-env::admin.php_outdated.mark') }}" data-env-php-outdated></sf-badge>@endif
+                        @if (in_array(\Larena\Env\Operations\SiteOperation::PhpVersion, $tabOperations, true))
+                            <button type="button" class="larena-button larena-button-primary" data-sf-modal-open="env-op-{{ \Larena\Env\Operations\SiteOperation::PhpVersion->value }}" data-env-php-change>{{ __('larena-env::admin.operations.php-version') }}</button>
+                        @endif
+                    </dd></div>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.runtime.service') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->service ?? '—' }}</dd></div>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.runtime.workers') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->workers === [] ? '—' : implode(', ', $site->workers) }}</dd></div>
                     @if ($site->webServer !== null)
@@ -235,9 +241,11 @@
                 </section>
             @endif
             @if ($phpExtensions !== null)
+                {{-- Forty lines a person rarely reads: folded to their count, «Расширения: 40 ›» (FASTPANEL comparison 2026-11-18). --}}
                 <section class="larena-panel larena-panel-padded" data-env-php-extensions aria-labelledby="env-site-php-extensions">
-                    <h2 id="env-site-php-extensions" class="text-2">{{ __('larena-env::admin.runtime.extensions', ['php' => $site->php]) }}</h2>
-                    <ul class="m-0 p-0 grid g-x-3 grid-col-1 md:grid-col-2" style="list-style: none;">
+                    <details data-env-php-extensions-fold>
+                    <summary class="color-primary" style="cursor: pointer;"><h2 id="env-site-php-extensions" class="text-2 m-0" style="display: inline;">{{ __('larena-env::admin.runtime.extensions_count', ['php' => $site->php, 'count' => (string) count($phpExtensions)]) }}</h2></summary>
+                    <ul class="m-0 m-top-1 p-0 grid g-x-3 grid-col-1 md:grid-col-2" style="list-style: none;">
                         @foreach ($phpExtensions as $extension)
                             <li class="flex items-cross-center content-main-between g-1 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-php-extension="{{ $extension->name }}">
                                 <span class="mono min-w-0" style="overflow-wrap: anywhere;">{{ $extension->name }}</span>
@@ -245,6 +253,7 @@
                             </li>
                         @endforeach
                     </ul>
+                    </details>
                 </section>
             @endif
             {{-- The site's own nginx directives, the system level's, beside PHP and the web server (owner decision 2026-11-05). --}}
@@ -306,11 +315,16 @@
                                     <button type="button" class="larena-button" data-sf-modal-open="env-op-{{ \Larena\Env\Operations\SiteOperation::DatabaseBrowseClose->value }}" data-env-db-browser-close>{{ __('larena-env::admin.db_browser.close') }}</button>
                                 @endif
                             </p>
+                        @elseif ($dbBrowser['refusal'] === 'no_https')
+                            {{-- No button that leads into a refusal: what is needed, and the certificate's own action right away. --}}
+                            <p class="flex flex-wrap items-cross-center g-1" role="note" data-env-db-browser-refusal="no_https">
+                                <span>{{ __('larena-env::admin.db_browser.need_https') }}</span>
+                                @if ($dbBrowser['certificate'])
+                                    <a href="{{ route('larena.env.admin.site', ['domain' => $domain], false) }}?tab=domains&amp;action={{ \Larena\Env\Operations\SiteOperation::CertificateIssue->value }}" class="larena-button larena-button-primary" data-env-db-browser-certificate>{{ __('larena-env::admin.db_browser.certificate') }}</a>
+                                @endif
+                            </p>
                         @elseif ($dbBrowser['refusal'] !== null)
                             <p role="note" data-env-db-browser-refusal="{{ $dbBrowser['refusal'] }}">{{ __('larena-env::admin.db_browser.refusals.'.$dbBrowser['refusal']) }}</p>
-                            @if ($dbBrowser['refusal'] === 'no_https' && $dbBrowser['certificate'])
-                                <p><a href="{{ route('larena.env.admin.site', ['domain' => $domain], false) }}?tab=domains&amp;action={{ \Larena\Env\Operations\SiteOperation::CertificateIssue->value }}" class="larena-button larena-button-primary" data-env-db-browser-certificate>{{ __('larena-env::admin.db_browser.certificate') }}</a></p>
-                            @endif
                         @else
                             <p>{{ __('larena-env::admin.db_browser.explain') }}</p>
                             @if (in_array(\Larena\Env\Operations\SiteOperation::DatabaseBrowse, $tabOperations, true))
@@ -496,7 +510,7 @@
                          An action with nothing to fill asks its question at once; ?action=<code> opens it with the page (PX-15). --}}
                     <sf-modal id="env-op-{{ $operation->value }}" position="inline-end" width="28rem" heading="{{ __('larena-env::admin.operations.'.$operation->value) }}" @if (($openAction ?? null) === $operation->value) autoload @endif>
                     <div data-larena-action-host>
-                    <form method="post" action="{{ route('larena.env.admin.site.plan', ['domain' => $domain], false) }}" class="larena-form m-0" style="padding: 0; box-shadow: none; background: none; border: 0; border-radius: 0;" data-env-operation="{{ $operation->value }}" data-larena-action-form @if ($operation->asksNothing(($capabilities ?? null) === null ? null : $capabilities, ($personEmail ?? null) !== null)) data-larena-action-auto @endif>
+                    <form method="post" action="{{ route('larena.env.admin.site.plan', ['domain' => $domain], false) }}" class="larena-form m-0" style="padding: 0; box-shadow: none; background: none; border: 0; border-radius: 0;" data-env-operation="{{ $operation->value }}" data-larena-action-form @if ($operation->asksNothing(($capabilities ?? null) === null ? null : $capabilities, ($personEmail ?? null) !== null)) data-larena-action-auto @elseif ($operation->plansAsChosen(($capabilities ?? null) === null ? null : $capabilities) && !($operation === \Larena\Env\Operations\SiteOperation::PhpVersion && array_diff($phpVersions ?? [], [$site->php]) === [])) data-larena-action-preview @endif>
                         @csrf
                         <input type="hidden" name="operation" value="{{ $operation->value }}">
                         @foreach (($capabilities ?? null) === null ? $operation->fields() : $operation->fieldsOn($capabilities) as $field)
@@ -552,11 +566,23 @@
                                         <p class="m-0 text-small color-on-surface-variant">{{ __('larena-env::admin.fields.email_hint') }}</p>
                                     @endif
                                 @elseif ($field === 'php')
-                                    <select id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}" required>
+                                    {{-- No version is chosen for the person: the plan is asked once one is picked (the form plans as it
+                                         changes); with no other version on the server, the way to install one. --}}
+                                    <select id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}" required @if (array_diff($phpVersions, [$site->php]) === []) disabled @endif data-env-php-choice>
+                                        <option value="" disabled @if (array_diff($phpVersions, [$site->php]) !== []) selected @endif hidden>{{ __('larena-env::admin.runtime.choose_php') }}</option>
                                         @foreach ($phpVersions as $version)
-                                            <option value="{{ $version }}" @if ($version === $site->php) selected @endif>{{ \Larena\Env\Software\PhpSupport::label($version, __('larena-env::admin.php_outdated.mark')) }}</option>
+                                            <option value="{{ $version }}" @if ($version === $site->php) disabled @if (array_diff($phpVersions, [$site->php]) === []) selected @endif @endif>{{ \Larena\Env\Software\PhpSupport::label($version, __('larena-env::admin.php_outdated.mark')) }}@if ($version === $site->php) · {{ __('larena-env::admin.runtime.php_current') }}@endif</option>
                                         @endforeach
                                     </select>
+                                    @if (array_diff($phpVersions, [$site->php]) === [])
+                                        <p class="m-0 m-top-1" data-env-php-install-hint>{{ __('larena-env::admin.runtime.php_other') }}
+                                            @if ($wholeServer ?? false)
+                                                <a href="{{ route('larena.env.admin.software.php', [], false) }}" data-env-php-install-link>{{ __('larena-env::admin.runtime.php_install') }}</a>
+                                            @else
+                                                {{ __('larena-env::admin.runtime.php_ask_admin') }}
+                                            @endif
+                                        </p>
+                                    @endif
                                 @elseif ($field === 'backup')
                                     <select id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}" required>
                                         @foreach ($site->backups as $backup)
@@ -647,8 +673,9 @@
                         @elseif ($operation === \Larena\Env\Operations\SiteOperation::RedirectRemove)
                             <p class="m-0 text-small color-on-surface-variant" data-env-redirect-note>{{ __('larena-env::admin.operations.redirect_remove_note') }}</p>
                         @endif
-                        {{-- With no archive in the site's folder there is nothing to plan: only the way to «Файлы». --}}
-                        @unless ($operation === \Larena\Env\Operations\SiteOperation::PhpRestore && ($restoreCopies['files'] ?? []) === [])
+                        {{-- With no archive in the site's folder there is nothing to plan: only the way to «Файлы»; nor with no other PHP
+                             version on the server: only the way to install one. --}}
+                        @unless (($operation === \Larena\Env\Operations\SiteOperation::PhpRestore && ($restoreCopies['files'] ?? []) === []) || ($operation === \Larena\Env\Operations\SiteOperation::PhpVersion && array_diff($phpVersions ?? [], [$site->php]) === []))
                         <div class="larena-form-actions">
                             <button type="submit" class="larena-button">{{ __('larena-env::admin.operations.plan') }}</button>
                         </div>

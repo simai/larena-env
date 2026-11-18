@@ -729,6 +729,14 @@ final readonly class SiteAdminController
             $reasons[] = (string) $this->translator->get('larena-env::admin.db_browser.refusals.'.$reason);
         }
         $blockers = $result->checks->blockers ?? [];
+        // The panel's own sentence says it once; the server's words of the same refusal (with its console command) stand
+        // under «Подробнее», not as a second warning (FASTPANEL comparison 2026-11-18).
+        $server = '';
+        if ($reasons !== []) {
+            $server = implode(' ', array_values(array_unique(array_filter(array_map('trim', array_merge($blockers, [$result->detail ?? ''])),
+                static fn (string $text): bool => $text !== ''))));
+            $blockers = [];
+        }
         // A refusal the panel has its own sentence for, and nothing more from the server: said as before, on the tab.
         $key = 'larena-env::admin.reasons.'.$reason;
         $known = (string) $this->translator->get($key) !== $key;
@@ -770,6 +778,7 @@ final readonly class SiteAdminController
             'refusedReason' => $reason,
             'refusedKey' => 'refused-'.$operation->value,
             'refusedMore' => $more,
+            'refusedServer' => $server,
         ]);
     }
 

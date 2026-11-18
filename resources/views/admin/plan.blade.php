@@ -18,7 +18,7 @@
         {{-- An action the server will not plan (simai-env 1.60.0 checks, 1.61.0 named refusals): the same window, what stops
              it in words above the button, which stays off, and the way out where there is one. --}}
         <section class="larena-panel larena-panel-padded" data-env-plan-refused="{{ $refusedReason }}" aria-label="{{ $heading }}">
-            {{ \Larena\Env\Admin\PlanAction::refused($heading, $refused, $refusedNotes, $runUrl, csrf_token(), $cancelUrl, $refusedKey, $refusedMore) }}
+            {{ \Larena\Env\Admin\PlanAction::refused($heading, $refused, $refusedNotes, $runUrl, csrf_token(), $cancelUrl, $refusedKey, $refusedMore, $refusedServer ?? '') }}
         </section>
     @else
     <section class="larena-panel larena-panel-padded" data-env-plan="{{ $plan->command }}" data-env-confirm="{{ $plan->command }}" aria-label="{{ $heading }}">

@@ -697,6 +697,7 @@ return [
         'open_link' => 'Open the database in a new tab',
         'keep' => 'The database link will not be shown again. Close?',
         'shown' => 'The database link has been shown already. Need a new one? Open the database again.',
+        'need_https' => 'The site needs HTTPS',
         'certificate' => 'Get a certificate',
         'refusals' => [
             'no_database' => 'The site has no database of its own: there is nothing to open.',
@@ -705,7 +706,7 @@ return [
             'suspended' => 'The site is paused. Resume it to open the database.',
             'no_driver' => 'The site\'s PHP has no driver for this database, and viewing works through it. Add the driver to the site\'s PHP.',
             'engine_unsupported' => 'Viewing in the browser does not work with this kind of database.',
-            'no_https' => 'The database opens over HTTPS only, and the site has no certificate. Get a certificate first.',
+            'no_https' => 'The database opens over HTTPS only, and the site has no certificate.',
             'other' => 'The server did not open the database. Check that the site has its own database, PHP with its driver and an HTTPS certificate.',
         ],
     ],
@@ -910,7 +911,7 @@ return [
         'used' => ':used of :total (:percent%)',
         'checked_at' => 'Measured at',
     ],
-    'runtime' => ['title' => 'PHP and services', 'service' => 'Service', 'workers' => 'Queue workers', 'settings' => 'php.ini settings', 'settings_none' => 'This site has no settings of its own.', 'extensions' => 'Extensions of PHP :php', 'on' => 'on', 'off' => 'off', 'web_server' => 'Web server', 'web_servers' => ['nginx' => 'Standard', 'apache' => 'With .htaccess support'], 'apache_on_note' => 'For sites that need .htaccess. The first time, the server installs Apache; nginx stays in front, so HTTPS, access and own directives work as before. If the site stops answering after the switch, the server puts everything back.', 'apache_off_note' => 'Only nginx serves the site again; .htaccess rules stop applying.'],
+    'runtime' => ['extensions_count' => 'Extensions: :count', 'choose_php' => 'Choose a version', 'php_current' => 'now', 'php_other' => 'Need another version?', 'php_install' => 'Install it on the server ›', 'php_ask_admin' => 'The server administrator installs it.', 'title' => 'PHP and services', 'service' => 'Service', 'workers' => 'Queue workers', 'settings' => 'php.ini settings', 'settings_none' => 'This site has no settings of its own.', 'extensions' => 'Extensions of PHP :php', 'on' => 'on', 'off' => 'off', 'web_server' => 'Web server', 'web_servers' => ['nginx' => 'Standard', 'apache' => 'With .htaccess support'], 'apache_on_note' => 'For sites that need .htaccess. The first time, the server installs Apache; nginx stays in front, so HTTPS, access and own directives work as before. If the site stops answering after the switch, the server puts everything back.', 'apache_off_note' => 'Only nginx serves the site again; .htaccess rules stop applying.'],
     'releases' => ['title' => 'Releases', 'in_place' => 'This site is not deployed by releases: its files are changed in place.'],
     'access' => [
         'title' => 'Access',
@@ -1678,6 +1679,9 @@ return [
             'install_note' => 'The sites stay on their versions, and so does the php command.',
             'nothing_to_install' => 'Every version the server can install is already installed.',
             'no_source' => 'Older versions are not available: their source is not connected.',
+            'no_source_why' => 'Why, and what to do',
+            'no_source_help' => 'Older PHP versions come from a separate package source (ondrej/php). The server connects it only when it installs such a version, so until then it does not know which versions there are and this list is empty. There is no «Connect the source» button yet: the server has no such command.',
+            'no_source_console' => 'What to do now: install the version you need in the server console — the source connects itself and the other versions appear here.',
             'operations' => [
                 'install' => 'Install PHP :php',
                 'update' => 'Update PHP :php',

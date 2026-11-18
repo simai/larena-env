@@ -32,12 +32,17 @@ final readonly class DbBrowserState
     }
 
     /**
-     * What stops the browser on this site, as far as the panel knows it without asking: no database of its own. Every
-     * other reason (no PHP, an alias, paused, no HTTPS, no driver) the server names when it refuses the plan
-     * (simai-env 1.61.0), so the panel no longer works it out from the site's description.
+     * What stops the browser on this site, as far as the panel knows it without asking: no database of its own, or no
+     * certificate — the browser opens on the site's HTTPS address, so «Открыть базу» would only lead to a refusal three
+     * presses later (FASTPANEL comparison 2026-11-18); the hint and «Получить сертификат» are shown at once instead. Every
+     * other reason (no PHP, an alias, paused, no driver) the server names when it refuses the plan (simai-env 1.61.0).
      */
     public static function refusal(SiteDetails $site): ?string
     {
-        return $site->databaseEngine === null ? 'no_database' : null;
+        if ($site->databaseEngine === null) {
+            return 'no_database';
+        }
+
+        return $site->certificate === null ? 'no_https' : null;
     }
 }

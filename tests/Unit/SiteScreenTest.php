@@ -240,7 +240,21 @@ env_assert(SiteOperation::BackupRestoreDatabase->arguments('demo-php.test', ['ba
     === ['domain' => 'demo-php.test', 'db' => 'yes', 'files' => 'no', 'backup' => 'b1'], 'Restoring the database never touches the files.');
 env_assert(SiteOperation::DatabaseExport->command() === 'backup:data' && SiteOperation::DatabaseExport->arguments('demo-php.test', [])
     === ['domain' => 'demo-php.test', 'db' => 'yes', 'files' => 'no'], 'A database dump is a backup without the files.');
-env_assert(str_contains($php, 'data-env-operation="php-version"') && preg_match('/<option value="8\.3"\s+selected\s*>/', $php) === 1, 'PHP offers the server\'s versions, the current one chosen.');
+// The PHP change on the «PHP 8.3» line at the tab's top, not in the row at its end; the extensions folded to their count
+// (FASTPANEL comparison 2026-11-18). With the site's version alone on the server: nothing to plan, the way to install one.
+env_assert(str_contains($php, 'data-env-php-change') && !str_contains($php, 'data-env-operation-open="php-version"')
+    && strpos($php, 'data-env-php-change') < strpos($php, 'data-env-php-extensions'), 'The PHP change stands on the version\'s line, above the extensions.');
+env_assert(str_contains($php, 'data-env-php-extensions-fold') && str_contains($php, 'Extensions: 1'), 'The extensions are folded to their count.');
+env_assert(str_contains($php, 'data-env-operation="php-version"') && preg_match('/<option value="8\.3"\s+disabled\s+selected\s*>/', $php) === 1
+    && str_contains($php, 'data-env-php-install-hint') && preg_match('/data-env-operation="php-version" data-larena-action-form\s+data-larena-action-preview/', $php) !== 1,
+    'One version on the server: the current one shown, nothing to plan, «Нужна другая версия?».');
+$phpMany = $screen(['site' => $site, 'tab' => 'php', 'tabOperations' => $onTab('php', $older), 'phpVersions' => ['8.4', '8.3'], 'wholeServer' => true]);
+env_assert(preg_match('/<option value="" disabled\s+selected\s+hidden>/', $phpMany) === 1 && preg_match('/<option value="8\.3"\s+disabled\s*>/', $phpMany) === 1
+    && str_contains($phpMany, '<option value="8.4"') && !str_contains($phpMany, 'data-env-php-install-hint')
+    && preg_match('/data-env-operation="php-version" data-larena-action-form\s+data-larena-action-preview/', $phpMany) === 1,
+    'Other versions: none chosen for the person, and the plan shows under the choice as soon as one is picked.');
+$phpAlone = $screen(['site' => $site, 'tab' => 'php', 'tabOperations' => $onTab('php', $older), 'wholeServer' => true]);
+env_assert(str_contains($phpAlone, 'data-env-php-install-link') && str_contains($phpAlone, 'larena.env.admin.software.php'), 'The whole server is led to «Сервер → PHP».');
 env_assert(!str_contains($php, 'data-env-operation="queue-restart"'), 'And nothing the site cannot be asked for.');
 // A plan's arguments and values in words (block 4): a kind, a database, a language, never the server's names.
 $words = \Larena\Env\Admin\PlanValues::of(['domain' => 'new.test', 'profile' => 'wordpress', 'create-db' => 'yes', 'db-engine' => 'mysql', 'locale' => 'en_US', 'admin-user' => 'admin'], 'new.test');

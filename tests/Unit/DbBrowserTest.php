@@ -156,16 +156,22 @@ foreach (['4', '481', '0', '60 ', 'x', '1000'] as $minutes) {
 }
 env_assert(!(new PanelCapabilities('1.57.0'))->allows('site:db-browser') && (new PanelCapabilities('1.58.0'))->allows('site:db-browser-close'), 'Offered from 1.58.0 only.');
 
-// What stops it: the panel knows only that a site has no database; every other reason is the server's (simai-env 1.61.0).
+// What stops it: the panel knows that a site has no database, or no certificate (the browser opens over HTTPS: the hint
+// and «Получить сертификат» at once, FASTPANEL comparison 2026-11-18); every other reason is the server's (simai-env 1.61.0).
 $site = static fn (array $over = []): SiteDetails => SiteDetails::fromDescription($over + ['schema' => 'simai-site/1', 'domain' => 'shop.example.com', 'profile' => 'generic',
     'php' => '8.3', 'ssl' => 'letsencrypt', 'database' => ['engine' => 'mysql'], 'certificate' => ['names' => ['shop.example.com'], 'days_left' => 60]]);
 env_assert(DbBrowserState::refusal($site()) === null && DbBrowserState::refusal($site(['database' => null])) === 'no_database', 'Without a database there is nothing to open.');
 env_assert(DbBrowserState::refusal($site(['php' => 'none'])) === null && DbBrowserState::refusal($site(['profile' => 'alias'])) === null
-    && DbBrowserState::refusal($site(['suspended' => true])) === null && DbBrowserState::refusal($site(['ssl' => 'none', 'certificate' => null])) === null,
-    'No PHP, an alias, paused, no HTTPS: no longer worked out from the description; the server names them.');
+    && DbBrowserState::refusal($site(['suspended' => true])) === null,
+    'No PHP, an alias, paused: no longer worked out from the description; the server names them.');
+env_assert(DbBrowserState::refusal($site(['ssl' => 'none', 'certificate' => null])) === 'no_https'
+    && DbBrowserState::refusal($site(['ssl' => 'none', 'certificate' => null, 'database' => null])) === 'no_database', 'No certificate: no HTTPS, said before anyone asks.');
 env_assert(SiteOperation::DatabaseBrowse->suitsSite($site()) && SiteOperation::DatabaseBrowse->suitsSite($site(['ssl' => 'none', 'certificate' => null]))
     && !SiteOperation::DatabaseBrowse->suitsSite($site(['database' => null]))
-    && SiteOperation::DatabaseBrowse->tab() === 'database' && SiteOperation::DatabaseBrowse->fields() === ['minutes'] && SiteOperation::DatabaseBrowseClose->asksNothing(),
+    && SiteOperation::DatabaseBrowse->tab() === 'database' && SiteOperation::DatabaseBrowse->fields() === ['minutes'] && SiteOperation::DatabaseBrowseClose->asksNothing()
+    && SiteOperation::DatabaseBrowse->plansAsChosen() && SiteOperation::PhpVersion->plansAsChosen() && SiteOperation::BackupSchedule->plansAsChosen()
+    && !SiteOperation::DatabaseBrowseClose->plansAsChosen() && !SiteOperation::RedirectAdd->plansAsChosen() && !SiteOperation::SftpCreate->plansAsChosen()
+    && SiteOperation::SftpDisable->plansAsChosen(),
     'Offered on «База данных» wherever there is a database; closing asks nothing.');
 foreach (SiteOperation::DatabaseBrowse->arguments('shop.example.com', ['minutes' => '15', 'other' => 'x']) as $name => $value) {
     env_assert(in_array($name, ['domain', 'minutes'], true), 'Only the domain and the minutes are sent.');
@@ -243,9 +249,9 @@ env_assert(str_contains($open, 'data-env-db-browser="open"') && str_contains($op
     && str_contains($open, 'data-env-db-browser-close') && !str_contains($open, '.simai-db'), 'Open: until when and «Закрыть», never the address.');
 $noHttps = $card(['site' => $site(['ssl' => 'none', 'certificate' => null]), 'tabOperations' => [SiteOperation::DatabaseBrowseClose],
     'dbBrowser' => ['state' => new DbBrowserState(false, null), 'refusal' => 'no_https', 'certificate' => true]]);
-env_assert(str_contains($noHttps, 'data-env-db-browser-refusal="no_https"') && str_contains($noHttps, $text('db_browser.refusals.no_https'))
+env_assert(str_contains($noHttps, 'data-env-db-browser-refusal="no_https"') && str_contains($noHttps, $text('db_browser.need_https'))
     && str_contains($noHttps, 'data-env-db-browser-certificate') && str_contains($noHttps, 'action=certificate-issue') && !str_contains($noHttps, 'data-env-db-browser-open'),
-    'No HTTPS: said, with «Выпустить сертификат».');
+    'No HTTPS: «Нужен HTTPS сайта» with «Получить сертификат», and no button that leads into a refusal.');
 foreach (['no_database', 'no_php', 'alias', 'suspended'] as $why) {
     $refused = $card(['site' => $site(), 'tabOperations' => [], 'dbBrowser' => ['state' => null, 'refusal' => $why, 'certificate' => true]]);
     env_assert(str_contains($refused, 'data-env-db-browser-refusal="'.$why.'"') && str_contains($refused, htmlspecialchars($text('db_browser.refusals.'.$why), ENT_QUOTES)) && !str_contains($refused, 'data-env-db-browser-certificate'), "Refused {$why}: said in words.");

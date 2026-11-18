@@ -82,6 +82,14 @@
                      «all installed» would be untrue (FASTPANEL comparison 2026-11-18). --}}
                 @if ($php->sourceMissing())
                     <p class="m-0" data-env-php-installable="no-source">{{ $php->installableWords ?? __('larena-env::admin.software.php.no_source') }}</p>
+                    {{-- Not a dead end (FASTPANEL comparison 2026-11-18): simai-env has no command that only connects the source
+                         (1.62.1 adds it while installing a version), so the panel says why and what to do instead of a button. --}}
+                    <details class="m-top-1" data-env-php-no-source-help>
+                        <summary class="color-primary" style="cursor: pointer;">{{ __('larena-env::admin.software.php.no_source_why') }}</summary>
+                        <p class="m-0 m-top-1">{{ __('larena-env::admin.software.php.no_source_help') }}</p>
+                        <p class="m-0 m-top-1">{{ __('larena-env::admin.software.php.no_source_console') }}</p>
+                        <p class="m-0 m-top-1"><code class="mono" style="overflow-wrap: anywhere;">simai-admin.sh php install --php 8.2 --confirm yes</code></p>
+                    </details>
                 @else
                     <p class="m-0" data-env-php-installable="none">{{ __('larena-env::admin.software.php.nothing_to_install') }}</p>
                 @endif

@@ -185,6 +185,12 @@ env_assert($refused->plan === null && $refused->said() && $refused->checks?->blo
 $window = (string) PlanAction::refused('Create a database', $refused->checks->blockers, $refused->checks->notes, '/run', 'token', '/cancel', 'refused-database-create');
 env_assert(str_contains($window, 'A static site has no database') && str_contains($window, 'data-larena-action-warnings="blocking"') && preg_match('/\bdisabled\b/', $window) === 1,
     'The refusal in the same window, the button off.');
+// The panel's one sentence above; the server's own words (a console command among them) only under «Подробнее»
+// (FASTPANEL comparison 2026-11-18).
+$said = (string) PlanAction::refused('Open the database', ['The database opens over HTTPS only.'], [], '/run', 'token', '/cancel', 'refused-database-browse', '',
+    'shop.example.com has no HTTPS certificate (ssl letsencrypt --domain shop.example.com)');
+env_assert(substr_count($said, 'data-larena-action-warning="blocking"') === 1 && str_contains($said, 'data-larena-action-more')
+    && strpos($said, 'ssl letsencrypt') > strpos($said, 'data-larena-action-more'), 'The server\'s words under «Подробнее», one sentence above.');
 // E. A refusal named by the server (1.61.0): the reason itself, and its detail, kept for the panel's words.
 $browser = $operations->plan($admin, SiteOperation::DatabaseBrowse, 'shop.example.com', ['minutes' => '15']);
 env_assert($browser->plan === null && $browser->reason === 'no_https' && $browser->detail === 'the site has no certificate'

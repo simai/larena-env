@@ -150,8 +150,10 @@ final class PlanAction
      *
      * @param list<string> $reasons what stops it, in words: the panel's for a known refusal, then the server's
      * @param list<string> $notes what is worth knowing
+     * @param string $server the server's own words of the refusal (a console command among them), under «Подробнее» where
+     *                       the panel already says it in one sentence (FASTPANEL comparison 2026-11-18)
      */
-    public static function refused(string $heading, array $reasons, array $notes, string $runUrl, string $token, string $cancelUrl, string $key, string $more = ''): ?HtmlString
+    public static function refused(string $heading, array $reasons, array $notes, string $runUrl, string $token, string $cancelUrl, string $key, string $more = '', string $server = ''): ?HtmlString
     {
         if (!class_exists(AdminPlannedAction::class) || $reasons === []) {
             return null;
@@ -166,6 +168,7 @@ final class PlanAction
             acceptText: $heading,
             warnings: $warnings,
             factsTitle: self::text('plan.refused_title') ?? '',
+            detailsText: trim($server),
             cancelUrl: $cancelUrl,
             key: 'env-'.preg_replace('/[^a-z0-9-]/', '-', strtolower($key)),
             more: trim($more) !== '' ? [\Larena\Admin\Runtime\AdminRenderedPart::control($more)] : [],
