@@ -485,7 +485,8 @@ _, logged = get("/admin/server/sites/demo-static.test?tab=log&log=access&q=curl&
 assert "data-larena-log" in logged and 'data-larena-log-row="success"' in logged, "the log narrows"
 assert "data-larena-log-raw" in logged and "data-env-log-download" in logged, "each line keeps its raw text, and the log downloads"
 _, overview = get("/admin/server")
-assert any(mark in overview for mark in ('"works"', '&quot;works&quot;', '\\u0022works\\u0022')), "a site that answers says so"
+# The site's row is a dot (lists study PX-54): a site that answers and has nothing to deal with is «ok».
+assert any(mark in overview for mark in ('"value":"ok"', '&quot;value&quot;:&quot;ok&quot;', '\\u0022value\\u0022:\\u0022ok\\u0022')), "a site that answers says so"
 _, spaces = get("/admin/server/people")
 assert 'data-env-owner="demo"' in spaces and 'name="action" value="block"' in spaces, "a space can be blocked on a server that has it (1.27.0)"
 
