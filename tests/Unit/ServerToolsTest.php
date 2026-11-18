@@ -416,26 +416,24 @@ $job = $factory->make('larena-env::admin.job', ['jobId' => 'fixture', 'source' =
     'now' => new DateTimeImmutable()])->render();
 env_assert(str_contains($job, 'data-env-timed-change="c7"') && str_contains($job, 'data-env-timed-keep="c7"') && str_contains($job, 'name="kind" value="firewall"'), 'The job of a timed change offers to keep it: '.$job);
 
-$wizard = $factory->make('larena-env::admin.new-site', ['profiles' => ['static', 'proxy', 'bitrix'], 'phpProfiles' => [], 'phpVersions' => ['8.3'], 'owners' => null,
-    'old' => [], 'notice' => null, 'kind' => 'proxy', 'serverProfiles' => [
-        'static' => ['label' => 'Static files', 'hint' => 'Files.', 'groups' => []],
-        'proxy' => ['label' => 'App on a port', 'hint' => 'A port.', 'groups' => ['proxy']],
-        'bitrix' => ['label' => '1C-Bitrix', 'hint' => 'Bitrix.', 'groups' => ['php', 'database']]]])->render();
-env_assert(substr_count($wizard, 'data-env-profile=') === 3 && str_contains($wizard, 'data-env-field="proxy"') && str_contains($wizard, 'name="upstream-port"')
-    && !str_contains($wizard, 'data-env-field="php"') && str_contains($wizard, 'App on a port'), 'A proxy asks for the local port only: '.$wizard);
-
-$bitrixWizard = $factory->make('larena-env::admin.new-site', ['profiles' => ['bitrix', 'proxy'], 'phpProfiles' => [], 'phpVersions' => ['8.3'], 'owners' => null,
-    'old' => [], 'notice' => null, 'kind' => 'bitrix', 'dailyBackup' => true, 'serverProfiles' => [
-        'bitrix' => ['label' => '1C-Bitrix', 'hint' => 'Bitrix.', 'groups' => ['php', 'database', 'bitrix'], 'backup' => true],
-        'proxy' => ['label' => 'App on a port', 'hint' => 'A port.', 'groups' => ['proxy'], 'backup' => false]]])->render();
-env_assert(str_contains($bitrixWizard, 'data-env-field="bitrix-files"') && substr_count($bitrixWizard, '<option value="setup"') === 1 && str_contains($bitrixWizard, 'restore.php')
-    && str_contains($bitrixWizard, 'data-env-new-daily-backup') && !str_contains($bitrixWizard, 'name="upstream-port"'), 'A 1C-Bitrix site asks for its installer: '.$bitrixWizard);
-$proxyWizard = $factory->make('larena-env::admin.new-site', ['profiles' => ['bitrix', 'proxy'], 'phpProfiles' => [], 'phpVersions' => ['8.3'], 'owners' => null,
-    'old' => [], 'notice' => null, 'kind' => 'proxy', 'dailyBackup' => true, 'serverProfiles' => [
-        'bitrix' => ['label' => '1C-Bitrix', 'hint' => 'Bitrix.', 'groups' => ['php', 'database', 'bitrix'], 'backup' => true],
-        'proxy' => ['label' => 'App on a port', 'hint' => 'A port.', 'groups' => ['proxy'], 'backup' => false]]])->render();
-env_assert(str_contains($proxyWizard, 'name="upstream-port"') && !str_contains($proxyWizard, 'data-env-new-daily-backup') && !str_contains($proxyWizard, 'bitrix-files'),
-    'An app on a port holds nothing to back up.');
+// «Новый сайт», its run and its result: one Framework progress for the site, its database, WordPress and HTTPS; the password once.
+$newSiteView = static fn (array $data): string => $factory->make('larena-env::admin.new-site', $data + ['kind' => 'wordpress', 'kinds' => [], 'disabled' => [], 'routes' => null,
+    'route' => null, 'values' => [], 'errors' => [], 'notice' => null, 'states' => ['kind' => 'done', 'address' => 'done', 'review' => 'done'], 'canEnable' => false, 'serverIp' => null,
+    'message' => null, 'stepState' => '', 'refresh' => false])->render();
+$running = $newSiteView(['step' => 'run', 'stepState' => 'running', 'runSteps' => [['id' => 'site', 'title' => 'Site and database', 'state' => 'done'], ['id' => 'wp', 'title' => 'WordPress', 'state' => 'running']],
+    'runState' => 'running', 'runLabel' => 'Making the site', 'runResult' => '', 'runMessage' => null, 'runFailedJob' => null, 'runStarted' => '2026-11-18T10:00:00Z']);
+env_assert(str_contains($running, '<sf-progress-run') && str_contains($running, 'run-state="running"') && str_contains($running, 'state="running"') && !str_contains($running, 'data-env-new-run-log'),
+    'The run on the Framework\'s progress: '.$running);
+$failedRun = $newSiteView(['step' => 'run', 'stepState' => 'error', 'runSteps' => [], 'runState' => 'failed', 'runLabel' => 'Making the site', 'runResult' => 'WordPress did not install.',
+    'runMessage' => null, 'runFailedJob' => 'j9', 'runStarted' => '']);
+env_assert(str_contains($failedRun, 'data-env-new-run-log') && str_contains($failedRun, 'state="error"') && str_contains($failedRun, 'result-text="WordPress did not install."'), 'A failed step says where to read why.');
+$done = static fn (?\Larena\Env\Operations\JobSecret $secret, bool $shown): string => $newSiteView(['step' => 'done', 'domain' => 'demo-wp.test', 'secret' => $secret, 'secretShown' => $shown,
+    'siteUrl' => 'https://demo-wp.test/', 'wpLogin' => 'https://demo-wp.test/wp-login.php', 'cardUrl' => '/admin/server/sites/demo-wp.test', 'then' => [], 'over' => true]);
+$withSecret = $done(new \Larena\Env\Operations\JobSecret('admin', 's3cret-Pass', null), false);
+env_assert(str_contains($withSecret, 'data-env-job-secret') && str_contains($withSecret, '<sf-button-copy value="s3cret-Pass"') && str_contains($withSecret, 'data-env-new-wp-login')
+    && str_contains($withSecret, 'data-env-new-card') && str_contains($withSecret, 'data-env-new-open-site'), 'The result: the password once with «Скопировать», then where to go: '.$withSecret);
+$later = $done(null, true);
+env_assert(!str_contains($later, 's3cret-Pass') && str_contains($later, 'data-env-job-secret-shown'), 'Read again, the password is not there.');
 $brokenJob = $factory->make('larena-env::admin.job', ['jobId' => 'j1', 'source' => 'recorded', 'status' => $failed, 'log' => null, 'refused' => false, 'reasonText' => null,
     'notice' => null, 'change' => null, 'configFailed' => 'nginx'])->render();
 env_assert(str_contains($brokenJob, 'data-env-job-config-failed="nginx"') && str_contains($brokenJob, 'keeps running as it was'), 'A broken configuration said in words: '.$brokenJob);

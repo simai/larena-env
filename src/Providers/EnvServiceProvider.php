@@ -152,6 +152,21 @@ final class EnvServiceProvider extends ServiceProvider
                     ));
                 });
             }
+            // «Первые шаги» on the server's overview (owner decision dec-83b7d143b782), where the admin draws them.
+            if (interface_exists(\Larena\Admin\Contracts\AdminFirstStepsSource::class)) {
+                $app = $this->app;
+                $this->callAfterResolving(\Larena\Admin\FirstSteps\AdminFirstSteps::class, static function (\Larena\Admin\FirstSteps\AdminFirstSteps $steps) use ($app, $config): void {
+                    $host = parse_url((string) $config->get('app.url'), PHP_URL_HOST);
+                    $steps->register('larena/env', new \Larena\Env\Admin\PanelFirstSteps(
+                        $app->make(PanelActorResolver::class),
+                        $app->make(ServerOverviewReader::class),
+                        $app->make(\Larena\Env\Http\Controllers\ServerSetupController::class),
+                        $app->make(\Illuminate\Contracts\Translation\Translator::class),
+                        $app->bound(\Larena\Access\Runtime\AccessOperationAuthorizer::class) ? $app->make(\Larena\Access\Runtime\AccessOperationAuthorizer::class) : null,
+                        is_string($host) ? [$host] : [],
+                    ));
+                });
+            }
             // A site's sections in the menu's second column (port 1.1.0 `context`), where the admin draws one.
             if (class_exists(\Larena\Admin\Navigation\AdminObjectMenus::class)) {
                 $app = $this->app;

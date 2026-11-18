@@ -21,6 +21,11 @@
             <p>{{ $reasonText }}</p>
         </section>
     @elseif ($section === 'overview')
+        {{-- «Первые шаги» (owner decision dec-83b7d143b782): the first site first, then the rest of the server's setup;
+             each item opens its own action. The admin draws them; gone once hidden or all done. --}}
+        @if (function_exists('app') && class_exists(\Larena\Admin\FirstSteps\AdminFirstSteps::class) && app()->bound(\Larena\Admin\FirstSteps\AdminFirstSteps::class))
+            {{ app(\Larena\Admin\FirstSteps\AdminFirstSteps::class)->html(request(), 'server') }}
+        @endif
         {{-- State first, details after (owner-approved prototype, 2026-11-02): what needs a person, a waiting update, the
              measures as tiles, then the server and its services, then the load over time. --}}
         @if (($metrics ?? null) !== null)

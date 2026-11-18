@@ -14,7 +14,7 @@
         @foreach ($wizard as $key => $one)
             <sf-wizard-step name="{{ $key }}" label="{{ __('larena-env::admin.setup.step.'.$key.'.name') }}"
                 href="{{ route('larena.env.admin.overview.setup', ['step' => $key], false) }}"
-                description="{{ __('larena-env::admin.setup.step.'.$key.'.why') }}" optional
+                description="{{ __('larena-env::admin.setup.step.'.$key.'.why') }}" @if ($key !== \Larena\Env\Http\Controllers\ServerSetupController::LOGIN) optional @endif
                 type="{{ $one['type'] }}" @if ($one['state'] !== '') state="{{ $one['state'] }}" @endif
                 @if ($one['action'] !== '') action-text="{{ $one['action'] }}" @endif
                 @if ($one['message'] !== null) message="{{ $one['message'] }}" @endif
@@ -34,11 +34,12 @@
                 @endif
             </sf-wizard-step>
         @endforeach
+        @if ($withFinish ?? true)
         <sf-wizard-step name="finish" label="{{ __('larena-env::admin.setup.finish.name') }}" type="result"
             href="{{ route('larena.env.admin.overview.setup', ['step' => 'finish'], false) }}" description="{{ __('larena-env::admin.setup.finish.why') }}" data-env-setup-step="finish">
             @if ($step === 'finish')
                 <ul class="m-0 p-0" style="list-style: none;" data-env-setup-summary>
-                    @foreach ($states as $key => $state)
+                    @foreach (array_intersect_key($states, $wizard) as $key => $state)
                         <li class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-setup-summary-step="{{ $key }}">
                             <span>{{ __('larena-env::admin.setup.step.'.$key.'.name') }}</span>
                             <sf-badge appearance="tonal" status="{{ $state === 'done' ? 'success' : '' }}" text="{{ __('larena-env::admin.setup.state.'.$state) }}"></sf-badge>
@@ -48,5 +49,6 @@
                 <p class="m-0 m-t-2">{{ __('larena-env::admin.setup.finish.rest') }}</p>
             @endif
         </sf-wizard-step>
+        @endif
     </sf-wizard>
 @endsection

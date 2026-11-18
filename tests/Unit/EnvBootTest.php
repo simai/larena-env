@@ -66,7 +66,8 @@ env_assert($names === ['larena.env.admin.alerts.ack.open', 'larena.env.admin.ale
     'larena.env.admin.services.run', 'larena.env.admin.site', 'larena.env.admin.site.cron.plan', 'larena.env.admin.site.cron.run',
     'larena.env.admin.site.dns.plan', 'larena.env.admin.site.dns.run', 'larena.env.admin.site.files.download', 'larena.env.admin.site.files.plan',
     'larena.env.admin.site.files.run', 'larena.env.admin.site.nginx.plan', 'larena.env.admin.site.nginx.run', 'larena.env.admin.site.plan',
-    'larena.env.admin.site.run', 'larena.env.admin.sites.new', 'larena.env.admin.sites.plan', 'larena.env.admin.sites.plan.draft',
+    'larena.env.admin.site.run', 'larena.env.admin.sites.enable.plan', 'larena.env.admin.sites.enable.run', 'larena.env.admin.sites.new',
+    'larena.env.admin.sites.new.step', 'larena.env.admin.sites.new.submit', 'larena.env.admin.sites.plan', 'larena.env.admin.sites.plan.draft',
     'larena.env.admin.sites.port', 'larena.env.admin.sites.run', 'larena.env.admin.software', 'larena.env.admin.software.php',
     'larena.env.admin.software.php.plan', 'larena.env.admin.software.php.run', 'larena.env.admin.software.plan', 'larena.env.admin.software.run',
     'larena.env.admin.storages', 'larena.env.admin.storages.plan', 'larena.env.admin.storages.run', 'larena.env.admin.update',
@@ -109,7 +110,7 @@ foreach ($with['routes'] as $name => $route) {
     $setup = str_starts_with($name, 'larena.env.admin.overview.setup');
     // Changing a site is a right of its own: a new site, a site's action and stopping a job ask for it.
     $changes = !$people && !$dns && !$nginx && !$channel && !$update && !$serverTools && !$setup && (str_ends_with($name, '.plan') || str_ends_with($name, '.run') || str_ends_with($name, '.cancel')
-        || in_array($name, ['larena.env.admin.sites.new', 'larena.env.admin.sites.port', 'larena.env.admin.sites.plan.draft', 'larena.env.admin.alerts.ack.open'], true));
+        || in_array($name, ['larena.env.admin.sites.new', 'larena.env.admin.sites.new.step', 'larena.env.admin.sites.new.submit', 'larena.env.admin.sites.port', 'larena.env.admin.sites.plan.draft', 'larena.env.admin.alerts.ack.open'], true));
     env_assert(in_array('access:env.sites.operate', $route['middleware'], true) === $changes, "{$name} asks for the wrong right.");
     // The server's overview and the people's spaces are the system level's; giving a space or acting for someone changes the server.
     $reads = in_array($name, ['larena.env.admin.overview', 'larena.env.admin.people', 'larena.env.admin.people.stop', 'larena.env.admin.alerts.channel',
@@ -134,6 +135,8 @@ env_assert($adminNames === [
     // «Действие с планом» (larena/admin AdminPlannedAction): the panel's plan and its end in the admin's part.
     'src/Admin/JobOutcome.php',
     'src/Admin/NewSitePropertyViewPort.php',
+    // The server's «Первые шаги» (larena/admin AdminFirstSteps), only where the admin is installed.
+    'src/Admin/PanelFirstSteps.php',
     'src/Admin/PlanAction.php',
     'src/Admin/ServerSitesPage.php',
     'src/Admin/SiteObjectMenu.php',

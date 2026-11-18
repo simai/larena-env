@@ -42,6 +42,9 @@ final readonly class ServerSetupController
 
     public const string FINISH = 'finish';
 
+    /** The one step the first sign-in goes through: the password and the sign-in code, checked by the step itself. */
+    public const string LOGIN = 'login';
+
     /** The steps that change the server, with the command each runs. */
     public const array COMMANDS = [
         'address' => 'panel:domain',
@@ -70,14 +73,27 @@ final readonly class ServerSetupController
         private Factory $views,
         private Router $router,
         private ?AccessOperationAuthorizer $authorizer = null,
+        private ?\Larena\Env\Contracts\PanelGateway $gateway = null,
     ) {
+    }
+
+    /**
+     * The steps the wizard shows (owner decision dec-83b7d143b782, 2026-11-17): after the first sign-in only «Пароль и
+     * вход» and the result; the rest is in «Первые шаги» on the overview, each item opening its own step alone.
+     *
+     * @return list<string>
+     */
+    public static function visible(string $step): array
+    {
+        return in_array($step, [self::LOGIN, self::FINISH], true) || !array_key_exists($step, ServerSetup::STEPS) ? [self::LOGIN] : [$step];
     }
 
     public function show(Request $request, ?string $step = null): mixed
     {
         $actor = ResolvePanelActor::of($request);
         $capabilities = $this->capabilities($actor);
-        $states = $this->states($actor);
+        $this->prefetch($actor, $capabilities);
+        $states = $this->states($actor, $request);
         $named = $step;
         $step = $this->step($step, $states);
         // A step the wizard has not goes to the step it opens on, under its own address (critics 2026-11-07).
@@ -127,13 +143,17 @@ final readonly class ServerSetupController
             'phase' => $phase,
             'message' => $message,
             'states' => $states,
-            'wizard' => self::wizard($step, $phase, $states, $message, fn (string $key): string => $this->text($key)),
+            'wizard' => array_intersect_key(self::wizard($step, $phase, $states, $message, fn (string $key): string => $this->text($key)), array_flip(self::visible($step))),
+            // The result step closes the short first-run wizard; an item opened from «Первые шаги» ends on its own step.
+            'withFinish' => self::visible($step) === [self::LOGIN],
             'overviewUrl' => route('larena.env.admin.overview', [], false),
             'plan' => $plan,
             'job' => is_string($job) ? $job : null,
             'data' => $this->data($actor, $step, $capabilities),
             'capabilities' => $capabilities,
             'loginUrl' => $this->router->has('larena.auth.admin.security.index') ? route('larena.auth.admin.security.index', [], false) : null,
+            // What the sign-in step checks: the code on (true), off (false) or not known here (null).
+            'mfa' => $step === self::LOGIN ? $this->mfaEnabled($request) : null,
         ]);
 
         // A change still under way: the browser asks again in a few seconds (no script in the page).
@@ -188,7 +208,7 @@ final readonly class ServerSetupController
     public function submit(Request $request, string $step): RedirectResponse
     {
         $actor = ResolvePanelActor::of($request);
-        $states = $this->states($actor);
+        $states = $this->states($actor, $request);
         if ($step === self::FINISH || !array_key_exists($step, ServerSetup::STEPS)) {
             return new RedirectResponse(route('larena.env.admin.overview', [], false));
         }
@@ -235,6 +255,10 @@ final readonly class ServerSetupController
         if ($step === 'updates' && $intent === 'update') {
             $phase = 'form';
         }
+        if ($step === self::LOGIN && $this->mfaEnabled($request) === false) {
+            // The step checks what it asks (PX-22): without the sign-in code it stays, and says what is missing.
+            return $this->here($request, $step, [], 'setup_login_needed');
+        }
         if ($command === null || $phase !== 'form') {
             // A step that only shows (the sign-in's, or one the server already has): read, so it is done.
             if ($states[$step] !== ServerSetup::DONE) {
@@ -263,9 +287,58 @@ final readonly class ServerSetupController
     }
 
     /** @return array<string, string> */
-    public function states(PanelActor $actor): array
+    public function states(PanelActor $actor, ?Request $request = null): array
     {
-        return ServerSetup::states($this->setup->marks(), $this->doneOnServer($actor));
+        $done = $this->doneOnServer($actor);
+        if ($request !== null && $this->mfaEnabled($request) !== null) {
+            $done[self::LOGIN] = $this->mfaEnabled($request) === true;
+        }
+
+        return ServerSetup::states($this->setup->marks(), $done);
+    }
+
+    /**
+     * Whether the person signed in has the sign-in code on (larena/auth, where it is installed); null when the panel
+     * cannot tell, and the step is then done once read, as before.
+     */
+    public function mfaEnabled(Request $request): ?bool
+    {
+        $store = 'Larena\\Auth\\Contracts\\MfaMethodStore';
+        $container = \Illuminate\Container\Container::getInstance();
+        // The person as the admin shell reads them: the session's entry, else the access actor.
+        $entry = $request->attributes->get('larena_auth_entry_object');
+        $subject = is_object($entry) && property_exists($entry, 'subjectRef') ? $entry->subjectRef : $request->attributes->get('larena_access_actor');
+        if (!interface_exists($store) || !$container->bound($store) || !is_string($subject)
+            || preg_match('/\Auser:admin_identity:([1-9][0-9]{0,17})\z/D', $subject, $match) !== 1) {
+            return null;
+        }
+        try {
+            // The store reads under a lock, so only inside a transaction (stand 2026-11-18: outside one it refused).
+            $methods = $container->make($store);
+            $identity = (int) $match[1];
+
+            return $container->make('db')->connection()->transaction(static fn (): bool => $methods->findEnabledByIdentity($identity) !== null);
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * The four reads the steps' states need, asked together where the server can (stand 2026-11-18: one by one they
+     * were 1.6 s of the first view).
+     */
+    private function prefetch(PanelActor $actor, PanelCapabilities $capabilities): void
+    {
+        if (!$this->gateway instanceof \Larena\Env\Gateway\CachingPanelGateway) {
+            return;
+        }
+        $reads = [];
+        foreach (['self:alerts', 'panel:address', 'security:status', 'backup:storage-list'] as $command) {
+            if ($capabilities->allows($command)) {
+                $reads[] = \Larena\Env\Gateway\PanelRequest::read($actor, $command);
+            }
+        }
+        $this->gateway->prefetch($reads);
     }
 
     /** @return array<string, ?string> each step's place in the wizard */
@@ -395,16 +468,18 @@ final readonly class ServerSetupController
             return $step;
         }
 
-        return ServerSetup::next($states) ?? self::FINISH;
+        return ($states[self::LOGIN] ?? ServerSetup::TODO) === ServerSetup::TODO ? self::LOGIN : self::FINISH;
     }
 
     /** @param array<string, string> $states the step after this one, or the result */
     private function next(string $step, array $states): RedirectResponse
     {
-        $keys = array_keys(ServerSetup::STEPS);
-        $after = $keys[array_search($step, $keys, true) + 1] ?? self::FINISH;
+        // The short wizard ends on its result; a step opened from «Первые шаги» goes back to them.
+        if ($step !== self::LOGIN) {
+            return new RedirectResponse(route('larena.env.admin.overview', [], false));
+        }
 
-        return new RedirectResponse(route('larena.env.admin.overview.setup', ['step' => $after], false));
+        return new RedirectResponse(route('larena.env.admin.overview.setup', ['step' => self::FINISH], false));
     }
 
     /** @param array<string, string> $query */

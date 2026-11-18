@@ -132,6 +132,12 @@ $router->middleware(['access:env.sites.operate'])->group(static function ($route
     // The new site's fields in the Framework property view (its port), and the plan of what it was filled for.
     $router->post('/sites/new/port', [NewSiteController::class, 'port'])->name('larena.env.admin.sites.port');
     $router->get('/sites/new/plan/{draft}', [NewSiteController::class, 'planDraft'])->where('draft', 'draft-[0-9a-f]{16}')->name('larena.env.admin.sites.plan.draft');
+    // «Новый сайт» on the Framework's wizard (owner decision dec-83b7d143b782): a page per step, its form posting to it.
+    $router->get('/sites/new/{step}', [NewSiteController::class, 'step'])->where('step', 'address|review|run|done')->name('larena.env.admin.sites.new.step');
+    $router->post('/sites/new/{step}/answer', [NewSiteController::class, 'submit'])->where('step', 'kind|address|review|run|done')->name('larena.env.admin.sites.new.submit');
+    // A switched-off kind of site switched on from the wizard (simai-env 1.57.5), planned and confirmed in the side panel.
+    $router->post('/sites/new/enable/plan', [NewSiteController::class, 'enablePlan'])->name('larena.env.admin.sites.enable.plan');
+    $router->post('/sites/new/enable/run', [NewSiteController::class, 'enableRun'])->name('larena.env.admin.sites.enable.run');
     $router->post('/sites/{domain}/plan', [SiteAdminController::class, 'plan'])->where('domain', $domain)->name('larena.env.admin.site.plan');
     $router->post('/sites/{domain}/run', [SiteAdminController::class, 'run'])->where('domain', $domain)->name('larena.env.admin.site.run');
     // A site's own domain pointed at this server, at either level (Panel plan, stage 7).

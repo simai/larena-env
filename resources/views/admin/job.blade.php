@@ -30,9 +30,10 @@
         <section class="larena-panel larena-panel-padded" data-env-job="{{ $status->jobId }}" data-env-job-state="{{ $status->state->value }}" aria-labelledby="env-job">
             {{-- What became, in words (PX-6): «Сайт demo.test удалён», not «Готово» with who started it. --}}
             <h2 id="env-job" class="text-2">{{ $status->state->isOver() ? \Larena\Env\Admin\JobOutcome::heading($status) : __('larena-env::admin.job.states.running') }}</h2>
+            {{-- The run on the Framework's sf-progress-run (PX-7, PX-11): no steps from the server yet, so a bar without a per
+                 cent while it runs, what became once over; «Свернуть» leaves it to the corner. --}}
+            {{ \Larena\Env\Admin\JobOutcome::progress($status) }}
             @if (! $status->state->isOver())
-                {{-- No steps from the server yet: a bar without a per cent (until the Framework's sf-progress-run, PX-7). --}}
-                <sf-progress-bar indeterminate label="{{ __('larena-env::admin.job.states.running') }}"></sf-progress-bar>
                 <p class="m-top-1" data-env-job-running>{{ __('larena-env::admin.job.running') }}</p>
             @endif
             @if (($configFailed ?? null) !== null)

@@ -25,6 +25,9 @@ final class PlanAction
     private const array SAID = [
         'site:remove' => ['site' => false, 'config' => false, 'remove-files' => true, 'drop-db' => true, 'drop-db-user' => true],
         'site:db-drop' => ['db' => false, 'site' => false],
+        // A kind of site switched on or off (simai-env 1.57.5): what it changes, in words.
+        'profile:enable' => ['kind' => false, 'sites' => false],
+        'profile:disable' => ['kind' => false, 'sites' => false],
     ];
 
     private function __construct()

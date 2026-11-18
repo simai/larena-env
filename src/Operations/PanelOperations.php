@@ -98,6 +98,37 @@ final readonly class PanelOperations
     }
 
     /** Where a started action stands and what it has printed after the cursor the screen last saw. */
+    /**
+     * The jobs the server lists (job:list, its last 100), by id: their state without their result, so a value given once
+     * (WordPress's password) stays for the screen that shows it. Null when the list cannot be read.
+     *
+     * @return array<string, PanelJobStatus>|null
+     */
+    public function jobs(PanelActor $actor): ?array
+    {
+        try {
+            $answer = $this->gateway->ask(PanelRequest::read($actor, 'job:list'));
+        } catch (PanelRefused) {
+            return null;
+        }
+        if (SiteDetailsReader::failureOf($answer) !== null) {
+            return null;
+        }
+        $jobs = [];
+        foreach (is_array($answer->data['jobs'] ?? null) ? $answer->data['jobs'] : [] as $item) {
+            try {
+                $status = is_array($item) ? PanelJobStatus::fromData($item) : null;
+            } catch (UnexpectedValueException) {
+                $status = null;
+            }
+            if ($status !== null) {
+                $jobs[$status->jobId] = $status;
+            }
+        }
+
+        return $jobs;
+    }
+
     public function view(PanelActor $actor, string $jobId, int $after = 0): JobViewResult
     {
         $source = $this->gateway->source();

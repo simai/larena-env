@@ -29,8 +29,6 @@ final readonly class ServerAdminController
         private Translator $translator,
         private AdminDataviewPagePresenter $dataviews,
         private \Illuminate\Contracts\Config\Repository $config,
-        // The container leaves an optional unbound class out, so the setup's steps are asked for outright.
-        private ServerSetupController $setupSteps,
         private SecurityController $security,
         private ?\Larena\Access\Runtime\AccessOperationAuthorizer $authorizer = null,
         private ?\Larena\Env\Server\SiteExtrasReader $extras = null,
@@ -175,7 +173,9 @@ final readonly class ServerAdminController
     {
         $allows = static fn (string $command): bool => $overview?->capabilities?->allows($command) === true;
         $reads = [];
-        foreach (['self:metrics', 'service:list', 'self:alerts'] as $command) {
+        // The security check, the panel's address and the backup storages are read by the recommended actions and the
+        // «Первые шаги» (about 0.4-0.8 s each one by one, stand 2026-11-18): asked in the same batch, not after it.
+        foreach (['self:metrics', 'service:list', 'self:alerts', 'security:status', 'panel:address', 'backup:storage-list'] as $command) {
             if ($allows($command)) {
                 $reads[] = \Larena\Env\Gateway\PanelRequest::read($actor, $command);
             }
@@ -218,7 +218,8 @@ final readonly class ServerAdminController
             $security === null ? [] : $this->security->words($security), $fixes,
             route('larena.env.admin.security', [], false), route('larena.env.admin.security.plan', [], false),
             static fn (string $domain): string => route('larena.env.admin.site', ['domain' => $domain], false),
-            $canOperate ? $this->setupSteps->states($actor) : [], $canOperate ? $this->setupSteps->links() : [],
+            // The setup's steps are «Первые шаги» now (owner decision dec-83b7d143b782), not recommended actions.
+            [], [],
             $updates, route('larena.env.admin.software', [], false).'#update', $text, route('larena.env.admin.panel.access', [], false));
     }
 

@@ -119,7 +119,7 @@ $location = static fn (mixed $response): string => $response instanceof Redirect
 // The first step not done opens; a step's fields are in it.
 $controller->show($request(), 'protection');
 env_assert($views->data['step'] === 'protection' && $views->data['phase'] === 'form' && $views->data['wizard']['protection']['type'] === 'form'
-    && count($views->data['wizard']) === 6 && array_key_exists('level', $views->data['data']), 'The level step takes its choice in the wizard.');
+    && count($views->data['wizard']) === 1 && array_key_exists('level', $views->data['data']), 'A step opened from «Первые шаги» shows only itself, its choice in the wizard.');
 
 // A step the wizard has not goes to the step it opens on.
 env_assert($location($controller->show($request(), 'nosuch')) === '/admin/server/overview/setup/'.array_key_first(Larena\Env\Setup\ServerSetup::STEPS), 'An unknown step goes to the right address: '.$location($controller->show($request(), 'nosuch')));
@@ -148,14 +148,16 @@ $controller->show($request(), 'protection');
 env_assert($views->data['phase'] === 'result' && $views->data['wizard']['protection']['state'] === 'done' && $setup->marks()['protection'] === ServerSetup::DONE
     && !isset($session->get('larena_env_setup', [])['protection']), 'The run went through: the step is done, nothing waits.');
 $on = $controller->submit($request('POST', ['phase' => 'result', 'wizard-action' => 'next']), 'protection');
-env_assert($location($on) === '/admin/server/overview/setup/backups', 'Next goes to the following step: '.$location($on));
+env_assert($location($on) === '/admin/server/overview', 'A step opened from «Первые шаги» goes back to the overview: '.$location($on));
 
 // Put off; read; the last step leads to the result, the result to the overview.
-env_assert($location($controller->submit($request('POST', ['phase' => 'form', 'wizard-action' => 'skip']), 'backups')) === '/admin/server/overview/setup/updates'
+env_assert($location($controller->submit($request('POST', ['phase' => 'form', 'wizard-action' => 'skip']), 'backups')) === '/admin/server/overview'
     && $setup->marks()['backups'] === ServerSetup::SKIPPED, 'A step is put off.');
-env_assert($location($controller->submit($request('POST', ['phase' => 'info', 'wizard-action' => 'next']), 'login')) === '/admin/server/overview/setup/address'
-    && $setup->marks()['login'] === ServerSetup::DONE, 'The sign-in step is read and done.');
-env_assert($location($controller->submit($request('POST', ['phase' => 'info', 'wizard-action' => 'next']), 'updates')) === '/admin/server/overview/setup/finish', 'Then the result.');
+env_assert($location($controller->submit($request('POST', ['phase' => 'info', 'wizard-action' => 'next']), 'login')) === '/admin/server/overview/setup/finish'
+    && $setup->marks()['login'] === ServerSetup::DONE, 'The sign-in step of the short wizard leads to its result.');
+env_assert($location($controller->submit($request('POST', ['phase' => 'info', 'wizard-action' => 'next']), 'updates')) === '/admin/server/overview', 'Another step goes back to the overview.');
+$controller->show($request(), 'login');
+env_assert(array_keys($views->data['wizard']) === ['login'] && $views->data['withFinish'] === true, 'The short wizard after the first run: the sign-in step and the result.');
 env_assert($location($controller->submit($request('POST', ['wizard-action' => 'done']), 'finish')) === '/admin/server/overview', 'The result leads to the overview.');
 
 // Only who may change the server changes it.

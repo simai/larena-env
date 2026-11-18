@@ -304,23 +304,28 @@ $newSite = (new PanelOperations($gateway))->planCommand(new PanelActor($user), '
 env_assert($newSite->plan instanceof PanelPlan && $newSite->plan->command === 'site:add', 'A new site is planned like any action.');
 env_assert((new PanelOperations($gateway))->planCommand(new PanelActor($user), 'site:add', ['domain' => 'new.test', 'profile' => 'mail'])->reason
     === PanelReason::INVALID_ARGUMENT, 'A profile simai-env does not have is refused before the request leaves.');
-$wizard = $factory->make('larena-env::admin.new-site', ['profiles' => \Larena\Env\Http\Controllers\NewSiteController::PROFILES,
-    'phpProfiles' => ['generic'], 'phpVersions' => ['8.3'], 'owners' => ['demo'], 'old' => [], 'notice' => null, 'source' => 'recorded'])->render();
-env_assert(substr_count($wizard, 'data-env-profile=') === 6 && str_contains($wizard, 'data-env-new-owner') && preg_match('/<option value="demo"\s*>/', $wizard) === 1, 'The wizard: the kinds and, for the whole server, whose the site is.');
-$kindWizard = static fn (string $kind): string => $factory->make('larena-env::admin.new-site', ['profiles' => \Larena\Env\Http\Controllers\NewSiteController::PROFILES,
-    'phpProfiles' => ['generic', 'laravel', 'wordpress'], 'phpVersions' => ['8.3'], 'owners' => null, 'old' => [], 'notice' => null, 'kind' => $kind])->render();
-env_assert(substr_count($kindWizard('static'), 'data-env-profile-hint=') === 6 && !str_contains($kindWizard('static'), 'data-env-field='), 'Each kind says what it is; a static site asks nothing more.');
-env_assert(str_contains($kindWizard('laravel'), 'data-env-field="php"') && str_contains($kindWizard('laravel'), 'data-env-field="database"')
-    && !str_contains($kindWizard('laravel'), 'data-env-field="redirect"') && str_contains($kindWizard('laravel'), 'data-env-new-profile="laravel"'), 'Laravel asks for PHP and a database.');
-env_assert(str_contains($kindWizard('redirect'), 'data-env-field="redirect"') && !str_contains($kindWizard('redirect'), 'data-env-field="php"'), 'A redirect asks only where to.');
-$ownWizard = $factory->make('larena-env::admin.new-site', ['profiles' => ['static'], 'phpProfiles' => [], 'phpVersions' => [], 'owners' => null,
-    'old' => [], 'notice' => null])->render();
-env_assert(!str_contains($ownWizard, 'data-env-new-owner') && str_contains($ownWizard, 'data-env-new-own-space'), 'A person\'s site is in their space.');
-env_assert(!str_contains($ownWizard, 'data-env-new-daily-backup'), 'No daily backup offered where the server cannot set one.');
-$backedUp = $factory->make('larena-env::admin.new-site', ['profiles' => ['static'], 'phpProfiles' => [], 'phpVersions' => [], 'owners' => null,
-    'old' => [], 'notice' => null, 'dailyBackup' => true])->render();
-env_assert(preg_match('/name="daily-backup" value="yes" data-env-new-daily-backup\s+checked/', $backedUp) === 1
-    && str_contains($backedUp, 'name="daily-backup" value="no"'), 'A new site gets its daily backup unless it is turned off.');
+$wizardView = static fn (array $data): string => $factory->make('larena-env::admin.new-site', $data + ['step' => 'kind', 'kind' => 'wordpress',
+    'kinds' => [['value' => 'wordpress', 'label' => 'WordPress', 'caption' => 'A blog.', 'badge' => 'often'], ['value' => 'static', 'label' => 'Static', 'caption' => 'Files.']],
+    'disabled' => [], 'routes' => null, 'route' => null, 'values' => [], 'errors' => [], 'notice' => null, 'states' => [], 'canEnable' => false, 'serverIp' => null,
+    'message' => null, 'stepState' => '', 'refresh' => false])->render();
+$wizard = $wizardView([]);
+env_assert(str_contains($wizard, '<sf-wizard place="pages"') && substr_count($wizard, '<sf-wizard-step ') === 5 && str_contains($wizard, '<sf-input-choice name="profile"')
+    && str_contains($wizard, 'layout="tile"') && !str_contains($wizard, 'data-env-new-disabled') && !str_contains($wizard, '<sf-modal'), 'The wizard: the kinds as tiles, nothing to switch on.');
+// A kind switched off on the server: «Включить» for the whole server, its plan in the side panel over the wizard.
+$off = $wizardView(['disabled' => ['bitrix' => '1C-Bitrix'], 'canEnable' => true]);
+env_assert(str_contains($off, 'data-env-new-disabled-kind="bitrix"') && str_contains($off, 'data-sf-modal-open="env-enable-bitrix"') && str_contains($off, '<sf-modal id="env-enable-bitrix"')
+    && str_contains($off, 'data-larena-action-auto') && str_contains($off, 'name="id" value="bitrix"'), 'A switched-off kind is switched on by plan: '.$off);
+env_assert(!str_contains($wizardView(['disabled' => ['bitrix' => '1C-Bitrix'], 'canEnable' => false]), 'data-env-new-enable'), 'Only the whole server switches a kind on.');
+// The address: whose site only to the whole server; the daily backup ticked unless it is turned off.
+$fieldsView = $wizardView(['step' => 'address', 'states' => ['kind' => 'done'], 'fields' => [
+    ['name' => 'domain', 'kind' => 'text', 'label' => 'Domain', 'required' => true, 'value' => '', 'placeholder' => 'example.com', 'hint' => ''],
+    ['name' => 'db-note', 'kind' => 'note', 'label' => '', 'value' => 'The database is made for it.'],
+    ['name' => 'daily-backup', 'kind' => 'check', 'label' => 'Daily backup', 'value' => 'yes', 'hint' => ''],
+    ['name' => 'owner', 'kind' => 'choice', 'label' => 'Workspace', 'value' => '', 'options' => [['value' => 'demo', 'text' => 'demo']], 'hint' => 'Only the server.']],
+    'errors' => ['domain' => 'Not a domain.']]);
+env_assert(str_contains($fieldsView, 'data-env-new-field="owner"') && preg_match('/<sf-checkbox name="daily-backup" value="yes"[^>]*checked/', $fieldsView) === 1
+    && str_contains($fieldsView, 'The database is made for it.') && str_contains($fieldsView, 'error-message="Not a domain."') && str_contains($fieldsView, 'state="done"'),
+    'The address: the fields the kind asks, the error under its field: '.$fieldsView);
 
 // The job: where it stands, what it printed, and a way to stop it while it runs.
 $view = (new PanelOperations($gateway))->view(new PanelActor($user), '000000000000000000000000');
@@ -335,12 +340,14 @@ env_assert(str_contains($unknown, 'data-env-state="missing"') && str_contains($u
 $done = $job(['status' => $view->status, 'log' => $view->log]);
 env_assert(str_contains($done, 'data-env-job-state="succeeded"') && str_contains($done, 'Data backup'), 'A finished job shows its output.');
 env_assert(!str_contains($done, 'data-env-job-cancel') && !str_contains($done, 'Read on'), 'A finished job is neither stopped nor read on.');
+// Its progress becomes the summary on the Framework's sf-progress-run: what became, no «Свернуть» (PX-7, PX-11).
+env_assert(str_contains($done, 'run-state="done"') && !str_contains($done, 'minimizable'), 'A finished job\'s progress says it is done: '.$done);
 
 $running = new PanelJobStatus('000000000000000000000000', JobState::Running, 'ssl:renew', ['domain' => 'demo-php.test'], null, '2026-01-01T00:00:00Z', $user);
 $live = $job(['status' => $running, 'log' => new PanelJobLog('000000000000000000000000', JobState::Running, ['working'], 1)]);
 // A running job follows itself (a live region, PX-7) and asks before it stops, saying what stays done (PX-9).
 env_assert(str_contains($live, 'data-env-job-cancel') && str_contains($live, 'data-larena-live="/admin/server/larena.env.admin.job/000000000000000000000000"')
-    && str_contains($live, 'data-larena-confirm-submit="'.$text('job.cancel_ask').'"') && str_contains($live, '<sf-progress-bar indeterminate')
+    && str_contains($live, 'data-larena-confirm-submit="'.$text('job.cancel_ask').'"') && str_contains($live, '<sf-progress-run ') && str_contains($live, 'run-state="running"') && !str_contains($live, ' total=')
     && !str_contains($live, 'after=1') && !str_contains($live, 'data-larena-action-outcome'), 'A running job follows itself and asks before it stops.');
 // Its end says what became, the next step and the local time; who started it is the journal's (PX-6).
 env_assert(str_contains($done, 'data-larena-action-outcome="000000000000000000000000"') && str_contains($done, 'data-larena-action-status="success"')
@@ -467,7 +474,7 @@ env_assert(str_contains($nginxIdle, 'name="op" value="nginx-save"') && str_conta
 $noNginx = $screen(['site' => $site, 'tab' => 'php', 'wholeServer' => true, 'nginxSupported' => false, 'nginx' => null, 'nginxProblem' => null, 'nginxAllows' => ['save' => false, 'keep' => false]]);
 env_assert(str_contains($noNginx, 'data-env-nginx-unsupported') && !str_contains($noNginx, 'data-env-nginx-op'), 'No directives command: said, nothing offered.');
 
-foreach (['site', 'plan', 'job', 'new-site', 'people', 'partials/notes', 'partials/history', 'partials/files', 'partials/nginx', 'dns/connection', 'dns/index', 'dns/zone', 'dns/record-form', 'dns/plan', 'update', 'partials/update-plan', 'services', 'firewall', 'panel-access', 'partials/cron', 'partials/timed-change'] as $view) {
+foreach (['site', 'plan', 'job', 'new-site', 'new-site/kind', 'new-site/address', 'new-site/review', 'new-site/run', 'new-site/done', 'people', 'partials/notes', 'partials/history', 'partials/files', 'partials/nginx', 'dns/connection', 'dns/index', 'dns/zone', 'dns/record-form', 'dns/plan', 'update', 'partials/update-plan', 'services', 'firewall', 'panel-access', 'partials/cron', 'partials/timed-change'] as $view) {
     $source = (string) file_get_contents(dirname(__DIR__, 2).'/resources/views/admin/'.$view.'.blade.php');
     env_assert(!str_contains($source, '{!!') && preg_match('/<style\b|<script\b|@php\b/i', $source) !== 1, "The {$view} view prints nothing raw and holds no script.");
 }

@@ -100,7 +100,13 @@
     "src/Http/Controllers/SoftwarePhpController.php",
     "src/Software/",
     "tests/Unit/EnvBootTest.php",
-    "docs/product/licensing-and-cloud.md"
+    "docs/product/licensing-and-cloud.md",
+    "src/Admin/PanelFirstSteps.php",
+    "resources/views/admin/new-site/kind.blade.php",
+    "resources/views/admin/new-site/address.blade.php",
+    "resources/views/admin/new-site/review.blade.php",
+    "resources/views/admin/new-site/run.blade.php",
+    "resources/views/admin/new-site/done.blade.php"
   ],
   "forbidden_files": [
     "../*"

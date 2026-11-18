@@ -145,6 +145,26 @@ final readonly class SiteExtrasReader
         return $this->list($actor, 'self:profiles', [], 'profiles', SiteProfile::fromData(...));
     }
 
+    /**
+     * The bundled kinds of site the administrator switched off (self:profiles `disabled`, simai-env 1.57.5), by id with
+     * the server's title: the new-site wizard offers each with «Включить». Empty from an older server.
+     *
+     * @return array<string, string>
+     */
+    public function disabledProfiles(PanelActor $actor): array
+    {
+        $data = $this->data($actor, 'self:profiles', []);
+        $disabled = [];
+        foreach (is_array($data['disabled'] ?? null) ? $data['disabled'] : [] as $one) {
+            $id = is_array($one) ? ($one['id'] ?? null) : null;
+            if (is_string($id) && preg_match('/\A[a-z][a-z0-9-]{0,31}\z/D', $id) === 1) {
+                $disabled[$id] = is_string($one['title'] ?? null) && $one['title'] !== '' ? $one['title'] : $id;
+            }
+        }
+
+        return $disabled;
+    }
+
     /** @return list<\Larena\Env\Cron\CronJob>|null a site's own scheduled jobs (Panel plan 5.4); an owner's own sites only */
     public function cronJobs(PanelActor $actor, string $domain): ?array
     {

@@ -277,31 +277,30 @@ $siteCard = static fn (PanelGateway $gateway, ?array $words = null): SiteAdminCo
 $current = new ServingGateway($recorded, $listed);
 $notice = static fn (Request $request): string => (string) $request->session()->get('larena_env_notice');
 
-// «Создать сайт», 1C-Bitrix: the kind's two ways, the chosen one's steps, the fields it asks and the archive put later.
-$page = (string) $newSite($current)->create($asking('/admin/server/sites/new?profile=bitrix&route=restore'))->render();
-env_assert(str_contains($page, 'data-env-new-routes') && str_contains($page, 'data-env-route="new"') && preg_match('/data-env-route="restore"\s+aria-current="true"/', $page) === 1,
-    'Bitrix: new and restore, the restore chosen: '.$page);
-env_assert(preg_match('#<ol class="m-0" data-env-route-steps="restore">\s*<li>Make the site</li>\s*<li>Put the files into the site\S+s folder</li>\s*<li>Check the backup</li>\s*'
-    .'<li>Restore the copy in the browser</li>\s*<li>Finish the setup</li>\s*<li>Check the site</li>\s*</ol>#', $page) === 1, 'Its steps in words.');
-env_assert(str_contains($page, 'name="route" value="restore"') && str_contains($page, 'data-env-route-field="php"') && !str_contains($page, 'name="bitrix-files"')
-    && str_contains($page, 'data-env-route-file>Backup archive: put it into the site') && str_contains($page, 'collection="env.new_site.bitrix.restore"'),
-    'PHP asked, the installer set by the way, the archive put later; the property view over the route\'s collection.');
-// WordPress: what wp:install takes is asked now and offered again at its step; generic PHP's restore is planned only.
-$wordpress = (string) $newSite($current)->create($asking('/admin/server/sites/new?profile=wordpress'))->render();
-env_assert(preg_match('/data-env-route="new"\s+aria-current="true"/', $wordpress) === 1 && str_contains($wordpress, 'data-env-route-field="title" data-env-route-later')
-    && str_contains($wordpress, 'data-env-route-field="admin-email" data-env-route-later') && str_contains($wordpress, 'password is shown once'), 'WordPress\'s new site: the title and administrator asked.');
-$generic = (string) $newSite($current)->create($asking('/admin/server/sites/new?profile=generic&route=restore'))->render();
-env_assert(str_contains($generic, 'data-env-route-unavailable="restore"') && str_contains($generic, 'Not on this server yet.') && preg_match('/data-env-route="new"\s+aria-current="true"/', $generic) === 1
-    && !str_contains($generic, 'data-env-route="restore"'), 'A planned way is greyed with its reason and never chosen.');
-$static = (string) $newSite($current)->create($asking('/admin/server/sites/new?profile=static&route=repo'))->render();
-env_assert(!str_contains($static, 'data-env-route-unavailable="repo"') && !str_contains($static, 'data-env-route="repo"') && !str_contains($static, 'The panel cannot send this archive yet.'), 'A way only a later panel can send is not offered at all.');
+// «Новый сайт» on the Framework's wizard: the kind, the address and settings, what will be done, the run, the result.
+$wizardSession = static fn (array $values): Store => tap(new Store('panel', new ArraySessionHandler(10)), static fn (Store $one) => $one->put('larena_env.new_site_wizard', ['values' => $values, 'run' => null]));
+$address = static fn (PanelGateway $gateway, array $values, string $query = ''): string => (string) $newSite($gateway)->step($asking('/admin/server/sites/new/address'.$query, 'GET', [], $wizardSession($values)), 'address')->render();
 $first = (string) $newSite($current)->create($asking('/admin/server/sites/new'))->render();
-env_assert(preg_match('/data-env-profile="wordpress"\s+aria-current="true"/', $first) === 1 && strpos($first, 'data-env-profile="wordpress"') < strpos($first, 'data-env-profile="static"'), 'WordPress comes first and is chosen by default.');
-$laravel = (string) $newSite($current)->create($asking('/admin/server/sites/new?profile=laravel'))->render();
-env_assert(str_contains($laravel, '<li>Deploy the application</li>') && !str_contains($laravel, 'outside the panel') && str_contains($laravel, 'data-env-route-field="git" data-env-route-later')
-    && str_contains($laravel, 'data-env-route-field="ref" data-env-route-later') && str_contains($laravel, 'data-env-route-field="db-engine"'),
-    'Laravel: the repository and its ref asked now for the deploy step the panel leads: '.$laravel);
-// A kind none of whose ways can be made now is shown with the reason, never as a link.
+env_assert(str_contains($first, '<sf-wizard place="pages"') && substr_count($first, '<sf-wizard-step ') === 5 && str_contains($first, 'data-env-new-kinds')
+    && str_contains($first, 'value="wordpress"') && strpos($first, '&quot;value&quot;:&quot;wordpress&quot;') < strpos($first, '&quot;value&quot;:&quot;static&quot;')
+    && str_contains($first, 'id="env-new-site-form"') && substr_count($first, '<form ') === 1, 'Five steps, the kind first as tiles, WordPress first and chosen: '.$first);
+// 1C-Bitrix: the kind's two ways, the chosen one's fields; the installer set by the way.
+$page = $address($current, ['profile' => 'bitrix'], '?route=restore');
+env_assert(str_contains($page, 'data-env-new-ways') && str_contains($page, 'data-env-new-way="new"') && preg_match('/appearance="default"[^>]*data-env-new-way="restore"/', $page) === 1
+    && str_contains($page, 'name="route" value="restore"') && str_contains($page, 'data-env-new-field="php"') && !str_contains($page, 'name="bitrix-files"')
+    && str_contains($page, 'Backup archive: put it into the site'),
+    'Bitrix: new and restore, the restore chosen, PHP asked: '.$page);
+// The database in words where the kind always has one (PX-20).
+env_assert(str_contains($page, 'data-env-new-field="db-note"') && !str_contains($page, 'name="create-db"'), 'A kind that needs a database says it is made.');
+// WordPress: the title, the administrator and the language by name; whose site only to the whole server.
+$wordpress = $address($current, ['profile' => 'wordpress']);
+env_assert(str_contains($wordpress, 'data-env-new-field="title"') && str_contains($wordpress, 'data-env-new-field="admin-email"') && str_contains($wordpress, 'input-type="email"')
+    && preg_match('/<sf-dropdown name="locale"[^>]*data-env-new-field="locale"/', $wordpress) === 1 && !str_contains($wordpress, '&quot;text&quot;:&quot;ru_RU&quot;'),
+    'WordPress\'s new site: the title, the administrator, the language by its name: '.$wordpress);
+// An optional database is a switch.
+$generic = $address($current, ['profile' => 'generic']);
+env_assert(str_contains($generic, '<sf-switch name="create-db"') && !str_contains($generic, 'data-env-new-field="db-note"'), 'A database the kind may have is a switch: '.$generic);
+// A kind none of whose ways can be made now is a greyed tile with the reason; the first available one is chosen.
 $noRedirect = new ServingGateway($recorded, $listed, true, static function (array $document): array {
     foreach ($document['data']['profiles'] as $index => $profile) {
         if ($profile['id'] === 'redirect') {
@@ -312,14 +311,45 @@ $noRedirect = new ServingGateway($recorded, $listed, true, static function (arra
     return $document;
 });
 $kinds = (string) $newSite($noRedirect)->create($asking('/admin/server/sites/new?profile=redirect'))->render();
-env_assert(str_contains($kinds, 'data-env-profile-unavailable="redirect"') && !str_contains($kinds, 'data-env-profile="redirect"') && str_contains($kinds, 'None of its ways can be made')
-    && preg_match('/data-env-profile="wordpress"\s+aria-current="true"/', $kinds) === 1, 'An unavailable kind: its reason; the first available one is chosen.');
+env_assert(preg_match('/&quot;value&quot;:&quot;redirect&quot;[^}]*&quot;disabled&quot;:true/', $kinds) === 1 && str_contains($kinds, 'None of its ways can be made')
+    && str_contains($kinds, 'value="wordpress"'), 'An unavailable kind: its reason; the first available one is chosen: '.$kinds);
+// The kind's answer: an unknown kind is refused in the step; a kind leads to the address.
+$kindSession = new Store('panel', new ArraySessionHandler(10));
+$went = $newSite($current)->submit($asking('/admin/server/sites/new/kind/answer', 'POST', ['profile' => 'wordpress'], $kindSession), 'kind');
+env_assert($went->headers->get('Location') === route('larena.env.admin.sites.new.step', ['step' => 'address'], false) && ($kindSession->get('larena_env.new_site_wizard')['values']['profile'] ?? null) === 'wordpress', 'The kind leads to the address.');
+$refusedKind = $newSite($current)->submit($asking('/admin/server/sites/new/kind/answer', 'POST', ['profile' => 'mail'], $kindSession), 'kind');
+env_assert($refusedKind->headers->get('Location') === route('larena.env.admin.sites.new', [], false) && is_string($kindSession->get('larena_env.new_site_wizard_errors')['profile'] ?? null), 'A kind the server has not is refused.');
+// A later step without the earlier ones goes back to the kind.
+env_assert($newSite($current)->step($asking('/admin/server/sites/new/review'), 'review') instanceof RedirectResponse, 'What will be done needs the address first.');
 
-// An older server (no routes in self:profiles): the screen as it was, with nothing refused.
+// A domain the server already has a site on is said at its field before anything runs.
+$takenSession = new Store('panel', new ArraySessionHandler(10));
+$takenSession->put('larena_env.new_site_wizard', ['values' => ['profile' => 'static'], 'run' => null]);
+$taken = $newSite($current)->submit($asking('/admin/server/sites/new/address/answer', 'POST', ['domain' => 'demo-php.test', 'route' => 'new'], $takenSession), 'address');
+env_assert($taken->headers->get('Location') === route('larena.env.admin.sites.new.step', ['step' => 'address'], false)
+    && ($takenSession->get('larena_env.new_site_wizard_errors')['domain'] ?? null) === $lines['new_site']['invalid']['domain_taken'], 'A taken domain is refused at its field.');
+// The whole way: the address planned by the server, what will be done in words, one run, the result.
+$flowSession = new Store('panel', new ArraySessionHandler(10));
+$flowSession->put('larena_env.new_site_wizard', ['values' => ['profile' => 'wordpress'], 'run' => null]);
+$answered = $newSite($current)->submit($asking('/admin/server/sites/new/address/answer', 'POST', ['domain' => 'demo-wp.test', 'route' => 'new', 'php' => '8.3', 'title' => 'Demo WordPress',
+    'admin-user' => 'admin', 'admin-email' => 'admin@stand.test', 'locale' => 'ru_RU', 'daily-backup' => 'yes'], $flowSession), 'address');
+env_assert($answered->headers->get('Location') === route('larena.env.admin.sites.new.step', ['step' => 'review'], false), 'The address planned goes to what will be done: '.json_encode($flowSession->get('larena_env.new_site_wizard_errors')));
+$review = (string) $newSite($current)->step($asking('/admin/server/sites/new/review', 'GET', [], $flowSession), 'review')->render();
+env_assert(str_contains($review, 'data-env-new-plan="site:add"') && substr_count($review, 'data-env-new-fact') >= 4 && str_contains($review, 'action-text=')
+    && str_contains($review, 'data-wizard-step="address"'), 'What will be done: the facts in words, each with its change: '.$review);
+$started = $newSite($current)->submit($asking('/admin/server/sites/new/review/answer', 'POST', ['wizard-action' => 'run'], $flowSession), 'review');
+$run = $flowSession->get('larena_env.new_site_wizard')['run'] ?? null;
+env_assert($started->headers->get('Location') === route('larena.env.admin.sites.new.step', ['step' => 'run'], false) && is_array($run) && is_string($run['steps'][0]['job'] ?? null)
+    && $run['steps'][0]['command'] === 'site:add' && in_array('wp:install', array_column($run['steps'], 'command'), true), 'One run: the site first, WordPress after it.');
+$running = $newSite($current)->step($asking('/admin/server/sites/new/run', 'GET', [], $flowSession), 'run');
+$runPage = (string) ($running instanceof \Illuminate\Http\Response ? $running->getContent() : $running->render());
+env_assert(str_contains($runPage, '<sf-progress-run') && str_contains($runPage, 'data-env-new-run='), 'The run on the Framework\'s progress: '.$runPage);
+
+// An older server (no routes in self:profiles): the fields by the kind's groups, nothing refused.
 $older = new ServingGateway($recorded, null, false);
-$plain = (string) $newSite($older)->create($asking('/admin/server/sites/new?profile=bitrix'))->render();
-env_assert(!str_contains($plain, 'data-env-new-routes') && !str_contains($plain, 'data-env-route') && str_contains($plain, 'name="bitrix-files"') && str_contains($plain, 'data-env-field="php"')
-    && str_contains($plain, 'collection="env.new_site.bitrix"') && !str_contains($plain, 'data-env-notice') && !str_contains($plain, 'data-env-profile-unavailable'), 'Without routes: the form as before.');
+$plain = $address($older, ['profile' => 'bitrix']);
+env_assert(!str_contains($plain, 'data-env-new-ways') && str_contains($plain, 'name="bitrix-files"') && str_contains($plain, 'data-env-new-field="php"') && !str_contains($plain, 'data-env-notice'),
+    'Without routes: the fields by the kind: '.$plain);
 $plainRun = $newSite($older)->plan($asking('/admin/server/sites/new/plan', 'POST', ['domain' => 'new-bitrix.test', 'profile' => 'bitrix', 'bitrix-files' => 'setup', 'route' => 'new']));
 env_assert($plainRun instanceof \Illuminate\View\View && ($plainRun->getData()['hidden']['bitrix-files'] ?? null) === 'setup' && !isset($plainRun->getData()['hidden']['route']),
     'A route a server does not list is not sent.');

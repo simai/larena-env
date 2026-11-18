@@ -173,7 +173,8 @@ final class PanelCommands
         'site:add' => ['args' => ['domain' => self::DOMAIN, 'profile' => self::PROFILE, 'php' => self::PHP, 'owner' => self::OWNER,
             'create-db' => self::YES_NO, 'db-engine' => self::ENGINE, 'redirect-to' => self::ORIGIN, 'redirect-code' => self::CODE,
             'redirect-path' => self::KEEP_DROP, 'backup' => self::YES_NO, 'upstream-port' => self::PORT, 'upstream-path' => self::UPSTREAM_PATH,
-            'websockets' => self::YES_NO, 'bitrix-files' => self::BITRIX_FILES], 'required' => ['domain'], 'since' => '1.22.0', 'kind' => self::ACTION],
+            'websockets' => self::YES_NO, 'bitrix-files' => self::BITRIX_FILES, 'ssl' => self::YES_NO, 'ssl-email' => self::EMAIL, 'ssl-redirect' => self::YES_NO],
+            'required' => ['domain'], 'since' => '1.22.0', 'kind' => self::ACTION],
         'site:set-php' => ['args' => ['domain' => self::DOMAIN, 'php' => self::PHP], 'required' => ['domain', 'php'], 'since' => '1.22.0', 'kind' => self::ACTION],
         'owner:create' => ['args' => ['name' => self::OWNER, 'pubkey' => self::PUBKEY], 'required' => ['name'], 'since' => '1.22.0', 'kind' => self::ACTION],
         // Blocking a space: SSH, SFTP and requests as that owner stop, its sites keep serving (simai-env 1.27.0).
@@ -234,6 +235,10 @@ final class PanelCommands
         'service:reload' => ['args' => ['name' => self::SERVICE], 'required' => ['name'], 'since' => '1.33.0', 'kind' => self::ACTION],
         'service:log' => ['args' => ['name' => self::SERVICE, 'lines' => self::LINES], 'required' => ['name'], 'since' => '1.33.0', 'kind' => self::READ],
         'self:profiles' => ['args' => [], 'required' => [], 'since' => '1.33.0', 'kind' => self::READ],
+        // A bundled kind of site switched on or off by the administrator (simai-env 1.57.5): the new-site wizard offers a
+        // switched-off one with «Включить»; the server refuses to switch off a core kind or one that sites still use.
+        'profile:enable' => ['args' => ['id' => self::PROFILE], 'required' => ['id'], 'since' => '1.57.5', 'kind' => self::ACTION],
+        'profile:disable' => ['args' => ['id' => self::PROFILE], 'required' => ['id'], 'since' => '1.57.5', 'kind' => self::ACTION],
         'cron:list' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => '1.34.0', 'kind' => self::READ],
         'cron:job-add' => ['args' => ['domain' => self::DOMAIN, 'schedule' => self::CRON_SCHEDULE, 'command' => self::CRON_COMMAND],
             'required' => ['domain', 'schedule', 'command'], 'since' => '1.34.0', 'kind' => self::ACTION],
@@ -374,7 +379,9 @@ final class PanelCommands
     private const array ARGUMENTS_SINCE = [
         // A new site's daily backup and the check of each scheduled copy (simai-env 1.30.0).
         // An app on a local port and a 1C-Bitrix site's installer (simai-env 1.33.0).
-        'site:add' => ['backup' => '1.30.0', 'upstream-port' => '1.33.0', 'upstream-path' => '1.33.0', 'websockets' => '1.33.0', 'bitrix-files' => '1.33.0'],
+        'site:add' => ['backup' => '1.30.0', 'upstream-port' => '1.33.0', 'upstream-path' => '1.33.0', 'websockets' => '1.33.0', 'bitrix-files' => '1.33.0',
+            // A site and its certificate in one job (simai-env 1.58.0).
+            'ssl' => '1.58.0', 'ssl-email' => '1.58.0', 'ssl-redirect' => '1.58.0'],
         'backup:data-schedule' => ['verify' => '1.30.0'],
         // A Bitrix backup already on the server or at an https address (simai-env 1.56.0).
         'bitrix:restore-ready' => ['source' => '1.56.0', 'url' => '1.56.0'],
