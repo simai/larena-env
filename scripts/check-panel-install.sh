@@ -133,10 +133,17 @@ def get(path):
 def form_token(html):
     found = re.search(r'name="_token" value="([^"]+)"', html) or re.search(r'<meta name="csrf-token" content="([^"]+)"', html)
     return found.group(1)
+landed = [""]
 def post(path, fields, headers=None):
     request = urllib.request.Request(base + path, data=urllib.parse.urlencode(fields).encode(), headers=headers or {})
     with web.open(request) as answer:
+        landed[0] = answer.geturl()
         return answer.status, answer.read().decode()
+def run_page(done):
+    # A run's address leads to «История», which opens the run in its side panel (dec-d9f352569fd1); the check reads
+    # the run itself, as the side panel does (a query keeps the run's page).
+    opened = urllib.parse.parse_qs(urllib.parse.urlparse(landed[0]).query).get("open")
+    return get(opened[0] + "?after=0")[1] if opened else done
 _, setup = get("/?setup=" + token)
 # The installer is a wizard (dec-83b7d143b782): its first step is the check; the administrator step carries the form.
 if not re.search(r'name="_token" value="|<meta name="csrf-token"', setup):
@@ -155,7 +162,7 @@ with web.open(request) as answer:
 items = menu.get("navigation", menu).get("items", [])
 roots = [item["key"] for item in items]
 print("menu roots:", roots)
-assert roots == ["sites", "journal", "users", "server", "settings"], roots
+assert roots == ["sites", "users", "server", "settings", "admin.history"], roots
 children = {item["key"]: [row["key"] for row in item.get("children", []) if row.get("kind") == "page"] for item in items}
 # The services came with simai-env 1.33.0, the firewall and who reaches the panel with 1.35.0.
 assert sorted(children["server"]) == ["env.dns", "env.firewall", "env.security", "env.server.overview", "env.services", "env.software", "env.software.php", "env.storages"], children
@@ -433,7 +440,7 @@ def plan_and_run(path, fields):
     action, hidden = confirm_fields(planned)
     hidden["_token"] = form_token(planned)
     _, done = post(action, hidden)
-    return planned, done
+    return planned, run_page(done)
 _, files = get("/admin/server/sites/demo-php.test?tab=files")
 assert 'data-env-files="on"' in files and 'data-env-file="public"' in files and 'data-env-file="notes.txt"' in files, "a site's folder"
 assert 'data-env-files-op="upload"' in files and 'data-env-files-op="mkdir"' in files and 'data-env-files-op="remove"' in files, "its changes"
@@ -472,9 +479,11 @@ assert 'data-env-operation="sftp-enable"' not in sftp, "an access that is on is 
 _, off = post("/admin/server/sites/demo-owned.test/plan", {"_token": form_token(sftp), "operation": "sftp-disable", "login": "demo-staff"})
 assert 'data-env-plan="access:disable"' in off, "turning an access off is planned"
 print("sftp:", "ok")
-_, logged = get("/admin/server/sites/demo-static.test?tab=log&q=curl&group=2xx&lines=500")
-assert "data-env-log-rows" in logged and 'data-env-log-row="200"' in logged, "the log narrows"
-assert "larena-table-stack" in logged and 'data-label="' in logged, "the log reads as cards on a phone"
+_, problems = get("/admin/server/sites/demo-static.test?tab=log")
+assert 'data-env-log="problems"' in problems, "the site's log opens on its problems"
+_, logged = get("/admin/server/sites/demo-static.test?tab=log&log=access&q=curl&group=2xx")
+assert "data-larena-log" in logged and 'data-larena-log-row="success"' in logged, "the log narrows"
+assert "data-larena-log-raw" in logged and "data-env-log-download" in logged, "each line keeps its raw text, and the log downloads"
 _, overview = get("/admin/server")
 assert any(mark in overview for mark in ('"works"', '&quot;works&quot;', '\\u0022works\\u0022')), "a site that answers says so"
 _, spaces = get("/admin/server/people")
