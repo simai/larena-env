@@ -117,7 +117,7 @@ return [
         'tabs_label' => 'The site\'s sections',
         'open' => 'Open the site',
         'no_https' => 'No HTTPS',
-        'tabs' => ['overview' => 'Overview', 'domains' => 'Domains and HTTPS', 'files' => 'Files', 'database' => 'Databases', 'backups' => 'Backups', 'cron' => 'Scheduler', 'access' => 'SFTP access', 'log' => 'Site log', 'releases' => 'Releases', 'php' => 'PHP and web server'],
+        'tabs' => ['overview' => 'Overview', 'domains' => 'Domains and HTTPS', 'files' => 'Files', 'database' => 'Database', 'backups' => 'Backups', 'cron' => 'Scheduler', 'access' => 'SFTP access', 'log' => 'Site log', 'releases' => 'Releases', 'php' => 'PHP and web server'],
     ],
     'names' => [
         'title' => 'Site names',

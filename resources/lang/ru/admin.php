@@ -117,7 +117,7 @@ return [
         'tabs_label' => 'Разделы сайта',
         'open' => 'Открыть сайт',
         'no_https' => 'Без HTTPS',
-        'tabs' => ['overview' => 'Обзор', 'domains' => 'Домены и HTTPS', 'files' => 'Файлы', 'database' => 'Базы данных', 'backups' => 'Резервные копии', 'cron' => 'Планировщик', 'access' => 'SFTP и SSH', 'log' => 'Журнал сайта', 'releases' => 'Выпуски', 'php' => 'PHP и веб-сервер'],
+        'tabs' => ['overview' => 'Обзор', 'domains' => 'Домены и HTTPS', 'files' => 'Файлы', 'database' => 'База данных', 'backups' => 'Резервные копии', 'cron' => 'Планировщик', 'access' => 'SFTP и SSH', 'log' => 'Журнал сайта', 'releases' => 'Выпуски', 'php' => 'PHP и веб-сервер'],
     ],
     'names' => [
         'title' => 'Имена сайта',
