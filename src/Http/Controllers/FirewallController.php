@@ -90,6 +90,9 @@ final readonly class FirewallController
             'panelAddress' => $page === 'panel_access' && $capabilities->allows('panel:address') ? $this->extras->panelAddress($actor) : null,
             'addressAllows' => array_map(static fn (string $command): bool => $canOperate && $capabilities->allows($command), PanelAddressController::OPERATIONS),
             'notice' => $request->session()->get('larena_env_notice'),
+            // The card whose change is open in place, and a long value shown whole (study part 8, PX-82).
+            'edit' => in_array($request->query('edit'), ['address', 'access'], true) ? $request->query('edit') : null,
+            'show' => $request->query('show') === 'fingerprint' ? 'fingerprint' : null,
         ]);
     }
 

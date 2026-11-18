@@ -1,0 +1,4 @@
+{{-- Problems and what to do about them as the Framework's attention list (sf-list-attention, C37) in its group mode: a
+     disclosure group per severity, «Пройдено» closed after them, the time of the checks in the reader's own zone. $items
+     and $passed as the component takes them, given to it as its JSON island (escaped for a script element). --}}
+<sf-list-attention group="severity" label="{{ $label ?? '' }}" heading-level="2" empty-text="{{ $emptyText ?? '' }}" @if (($checkedAt ?? null) !== null) checked-at="{{ $checkedAt }}" @endif limit="0" data-env-attention="{{ $mark ?? '' }}"><script type="application/json" data-sf-settings>{!! json_encode(['items' => array_values($items), 'passed' => array_values($passed ?? [])], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) !!}</script></sf-list-attention>

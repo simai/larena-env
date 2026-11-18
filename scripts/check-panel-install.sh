@@ -167,7 +167,9 @@ children = {item["key"]: [row["key"] for row in item.get("children", []) if row.
 # The services came with simai-env 1.33.0, the firewall and who reaches the panel with 1.35.0.
 assert sorted(children["server"]) == ["env.dns", "env.firewall", "env.security", "env.server.overview", "env.services", "env.software", "env.software.php", "env.storages"], children
 assert sorted(children["users"]) == ["auth.users", "env.people"], children
-assert sorted(children["settings"]) == ["admin.settings_general", "env.alerts.channel", "env.dns.connection", "env.panel.access", "env.update"], children
+# «Настройки» opens with the map of its sections and their values (study part 8, PX-81).
+assert sorted(children["settings"]) == ["admin.settings_general", "env.alerts.channel", "env.dns.connection", "env.panel.access", "env.settings", "env.update"], children
+assert children["settings"][0] == "env.settings", children
 # Plain lists (the panel's UX audit): no group headings in any root.
 assert not [row for item in items for row in item.get("children", []) if row.get("kind") in ("heading", "divider")], "no group headings"
 assert "site-switch" not in json.dumps(menu.get("capabilities", [])), "the panel has no site switcher"
@@ -246,8 +248,11 @@ assert "data-env-plan-replaces" in restore, "a restore says what it replaces"
 assert "data-env-verify-field" in backups and 'data-env-last-verify="ok"' in backups, "the schedule checks each copy, the last check is said"
 assert "01.01.2026 00:00 UTC" in backups, "the card reads its times as a person does"
 # Where the server sends its alerts (simai-env 1.31.0): the channel now, a change by plan, a test.
+# The channel is a card «значение · Изменить» (study part 8, PX-82): the form opens in place on ?edit=channel.
 status, channel = get("/admin/server/alerts/channel")
-assert status == 200 and 'data-env-alerts-channel="off"' in channel and "data-env-alerts-form" in channel and "data-env-alerts-test" in channel, "the alerts' channel"
+assert status == 200 and 'data-env-alerts-channel="off"' in channel and "data-env-alerts-form" not in channel and "data-env-alerts-test" in channel, "the alerts' channel"
+status, channel = get("/admin/server/alerts/channel?edit=channel")
+assert status == 200 and "data-env-alerts-form" in channel, "the alerts' channel opened for a change"
 _, hooked = post("/admin/server/alerts/channel/plan", {"_token": form_token(channel), "kind": "webhook", "target": "https://hooks.example.com/simai"})
 assert 'data-env-plan="self:alerts-channel"' in hooked and 'name="target" value="https://hooks.example.com/simai"' in hooked, "a webhook is planned"
 _, tested = post("/admin/server/alerts/test/plan", {"_token": form_token(channel)})

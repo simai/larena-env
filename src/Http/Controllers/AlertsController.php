@@ -125,6 +125,8 @@ final readonly class AlertsController
             'supported' => $capabilities?->allows('self:alerts-channel') === true,
             'canTest' => $capabilities?->allows('self:alerts-test') === true,
             'channel' => $alerts?->channel,
+            // The change open in place under the card (study part 8, PX-82).
+            'edit' => $request->query('edit') === 'channel' ? 'channel' : null,
             'notice' => $request->session()->get('larena_env_notice'),
         ]);
     }

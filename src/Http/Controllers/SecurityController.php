@@ -19,6 +19,7 @@ use Larena\Env\Operations\PanelOperations;
 use Larena\Env\Security\GeoStatus;
 use Larena\Env\Security\SecurityFindings;
 use Larena\Env\Security\SecurityStatus;
+use Larena\Env\Security\SecurityTodo;
 use Larena\Env\Server\ServerOverviewReader;
 use Larena\Env\Server\SiteExtrasReader;
 
@@ -92,11 +93,38 @@ final readonly class SecurityController
         }
         asort($countries, SORT_LOCALE_STRING);
 
+        $words = $status === null ? [] : $this->words($status);
+        // Counted and grouped as the overview's recommended actions count them, not by the server's summary (critics of 0.4.1).
+        $findings = $status === null ? null : SecurityFindings::of($status, $this->config === null ? [$request->getHost()] : ServerAdminController::panelHosts($request, $this->config));
+        // «Обновите PHP» (owner decision msg-93e8e022): a site may run PHP 7.4 or 8.0, but it gets no security fixes.
+        $outdatedPhp = array_values(array_filter($read->overview->sites ?? [],
+            static fn (\Larena\Env\Server\SiteSummary $site): bool => preg_match('/\A[5-9]\.[0-9]\z/D', $site->php) === 1 && \Larena\Env\Software\PhpSupport::outdated($site->php)));
+        $todo = null;
+        if ($findings !== null) {
+            // The page as a list of things to do (study part 8, PX-83, C37): each finding once, the outdated PHP one row.
+            $todo = SecurityTodo::of($findings, $words, $fixes,
+                fn (string $key, array $replace = []): string => (string) $this->translator->get('larena-env::admin.'.$key, $replace),
+                static fn (string $name, array $parameters = []): string => route($name, $parameters, false));
+            if ($outdatedPhp !== []) {
+                $one = count($outdatedPhp) === 1 ? $outdatedPhp[0]->domain : null;
+                $todo['items'][] = ['id' => 'php-outdated', 'status' => 'warning', 'title' => $this->text('php_outdated.advice_title'), 'text' => $this->text('php_outdated.advice'),
+                    'source' => $this->text('security.title'),
+                    'affected' => $one !== null ? $one : (string) $this->translator->get('larena-env::admin.actions.sites', ['count' => (string) count($outdatedPhp)]),
+                    'action' => ['label' => $this->text('php_outdated.advice_go'), 'href' => $one !== null
+                        ? route('larena.env.admin.site', ['domain' => $one], false).'?tab=php&action='.\Larena\Env\Operations\SiteOperation::PhpVersion->value
+                        : route('larena.env.admin.security', ['finding' => 'php-outdated'], false).'#env-security-sites']];
+            }
+        }
+        $edit = $request->query('edit');
+
         return $this->views->make('larena-env::admin.security', [
             'source' => $read->source,
-            'words' => $status === null ? [] : $this->words($status),
-            // Counted and grouped as the overview's recommended actions count them, not by the server's summary (critics of 0.4.1).
-            'findings' => $status === null ? null : SecurityFindings::of($status, $this->config === null ? [$request->getHost()] : ServerAdminController::panelHosts($request, $this->config)),
+            'words' => $words,
+            'findings' => $findings,
+            'todo' => $todo,
+            // A finding's sites opened under the list, and a protection setting opened in place (study part 8, PX-83).
+            'finding' => is_string($request->query('finding')) ? $request->query('finding') : null,
+            'edit' => in_array($edit, ['level', 'geo', 'mcp', 'files', 'vulnerabilities'], true) ? $edit : null,
             'engines' => array_map(fn (string $engine): string => $this->known('security.engines.'.$engine) ?? $engine, $files->engines ?? []),
             'supported' => $supported,
             'status' => $status,
@@ -117,8 +145,7 @@ final readonly class SecurityController
             'mcpSupported' => $capabilities->allows('mcp:status'),
             'owners' => $read->overview->owners ?? [],
             // «Обновите PHP»: the sites on a version that no longer gets security fixes (PhpSupport, owner msg-93e8e022).
-            'outdatedPhp' => array_values(array_filter($read->overview->sites ?? [],
-                static fn (\Larena\Env\Server\SiteSummary $site): bool => preg_match('/\A[5-9]\.[0-9]\z/D', $site->php) === 1 && \Larena\Env\Software\PhpSupport::outdated($site->php))),
+            'outdatedPhp' => $outdatedPhp,
             'notice' => $request->session()->get('larena_env_notice'),
         ]);
     }

@@ -8,44 +8,16 @@
 @section('content')
     @include('larena-env::admin.partials.notes')
 
-    {{-- Where the server sends its alerts (simai-env 1.31.0), the system level's. The bot token is never shown. State first:
-         where they go and whether the last one went, then the change and the test beside it. --}}
-    <div class="grid g-2 grid-col-1 lg:grid-col-2" style="align-items: start;">
-        <section class="larena-panel p-2" style="margin: 0;" data-env-alerts-channel="{{ $supported ? ($channel['kind'] ?? 'off') : 'unsupported' }}" aria-labelledby="env-alerts-now">
-            <div class="flex flex-wrap items-cross-center content-main-between g-1 m-bottom-1">
-                <h2 id="env-alerts-now" class="m-0 text-2">{{ __('larena-env::admin.alerts.now') }}</h2>
-                @if ($supported)
-                    <sf-badge status="{{ ($channel['last_error'] ?? null) !== null ? 'error' : (($channel['kind'] ?? 'off') === 'off' ? 'warning' : 'success') }}" appearance="tonal"
-                        text="{{ ($channel['last_error'] ?? null) !== null ? __('larena-env::admin.alerts.state_failing') : __('larena-env::admin.alerts.kinds.'.($channel['kind'] ?? 'off')) }}"></sf-badge>
-                @endif
-            </div>
-            @if (!$supported)
-                <p class="m-0 color-on-surface-variant" data-env-alerts-unsupported>{{ __('larena-env::admin.alerts.unsupported') }}</p>
-            @else
-                <dl class="m-0" style="display: block;" data-env-facts>
-                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.alerts.kind') }}</dt><dd class="m-0" style="text-align: end;">{{ __('larena-env::admin.alerts.kinds.'.($channel['kind'] ?? 'off')) }}</dd></div>
-                    @if (($channel['target_hint'] ?? null) !== null)
-                        <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.alerts.target_hint') }}</dt><dd class="m-0 min-w-0" style="text-align: end; overflow-wrap: anywhere;">{{ $channel['target_hint'] }}</dd></div>
-                    @endif
-                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-alerts-last-sent><dt class="color-on-surface-variant">{{ __('larena-env::admin.alerts.last_sent') }}</dt><dd class="m-0" style="text-align: end;">{{ ($channel['last_sent_at'] ?? null) === null ? __('larena-env::admin.alerts.never') : \Larena\Env\Server\Moment::human($channel['last_sent_at']) }}</dd></div>
-                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-alerts-last-error><dt class="color-on-surface-variant">{{ __('larena-env::admin.alerts.last_error') }}</dt><dd class="m-0 min-w-0{{ ($channel['last_error'] ?? null) !== null ? ' color-error' : '' }}" style="text-align: end; overflow-wrap: anywhere;" @if (($channel['last_error'] ?? null) !== null) role="alert" @endif>{{ $channel['last_error'] ?? __('larena-env::admin.alerts.no_error') }}</dd></div>
-                </dl>
-                @if ($canTest)
-                    <div class="flex flex-wrap items-cross-center g-2 p-top-2 m-top-1 border-top-1 border-top-solid border-outline-variant" aria-labelledby="env-alerts-test">
-                        <p class="grow m-0 color-on-surface-variant" style="flex-basis: 14rem;"><strong id="env-alerts-test" class="color-on-surface">{{ __('larena-env::admin.alerts.test') }}.</strong> {{ __('larena-env::admin.alerts.test_explain') }}</p>
-                        <form method="post" action="{{ route('larena.env.admin.alerts.test.plan', [], false) }}" class="m-0" data-env-alerts-test>
-                            @csrf
-                            <button type="submit" class="larena-button">{{ __('larena-env::admin.alerts.test') }}</button>
-                        </form>
-                    </div>
-                @endif
-            @endif
-        </section>
-
-        @if ($supported)
-            <section class="larena-panel p-2" style="margin: 0;" aria-labelledby="env-alerts-change">
-                <h2 id="env-alerts-change" class="m-top-0 text-2">{{ __('larena-env::admin.alerts.change') }}</h2>
-                <form method="post" action="{{ route('larena.env.admin.alerts.channel.plan', [], false) }}" class="larena-form" data-env-alerts-form>
+    {{-- Where the server sends its alerts (simai-env 1.31.0), the system level's, as one card «значение · Изменить» (study
+         part 8, PX-82): where they go, whether the last one went, «Изменить» opening the change in place (?edit=channel),
+         planned and confirmed, acting at once (PX-90). The bot token is never shown. The test beside it. --}}
+    <section class="larena-panel p-2" style="margin: 0;" id="env-alerts-now" data-env-alerts-channel="{{ $supported ? ($channel['kind'] ?? 'off') : 'unsupported' }}" aria-label="{{ __('larena-env::admin.alerts.now') }}">
+        @if (!$supported)
+            <p class="m-0 p-1 color-on-surface-variant" data-env-alerts-unsupported>{{ __('larena-env::admin.alerts.unsupported') }}</p>
+        @else
+            @include('larena-env::admin.partials.facts', ['items' => \Larena\Env\Admin\AlertsCard::items($channel, true), 'label' => __('larena-env::admin.alerts.now'), 'mark' => 'alerts'])
+            @if (($edit ?? null) === 'channel')
+                <form method="post" action="{{ route('larena.env.admin.alerts.channel.plan', [], false) }}" class="larena-form p-x-1 p-top-1" data-env-alerts-form>
                     @csrf
                     <div class="larena-field">
                         <label for="env-alerts-kind">{{ __('larena-env::admin.alerts.kind') }}</label>
@@ -64,9 +36,24 @@
                         <input type="password" id="env-alerts-token" name="token" maxlength="100" autocomplete="off">
                     </div>
                     <div class="color-on-surface-variant text-small m-bottom-1">@include('larena-env::admin.partials.explanation', ['text' => __('larena-env::admin.alerts.token_help')])</div>
-                    <div class="larena-form-actions"><button type="submit" class="larena-button larena-button-primary">{{ __('larena-env::admin.alerts.plan') }}</button></div>
+                    <p class="m-0 text-small color-on-surface-variant" data-env-settings-when="alerts">{{ __('larena-env::admin.alerts.card.when') }}</p>
+                    <div class="flex flex-wrap items-cross-center g-1 m-t-2">
+                        <button type="submit" class="larena-button larena-button-primary larena-control-floor">{{ __('larena-env::admin.alerts.plan') }}</button>
+                        <a href="{{ route('larena.env.admin.alerts.channel', [], false) }}" class="larena-button larena-control-floor" data-env-edit-cancel>{{ __('larena-env::admin.alerts.card.cancel') }}</a>
+                    </div>
                 </form>
-            </section>
+            @else
+                <p class="m-0 p-x-1 p-top-1 text-small color-on-surface-variant" data-env-settings-when="alerts">{{ __('larena-env::admin.alerts.card.when') }}</p>
+            @endif
+            @if ($canTest)
+                <div class="flex flex-wrap items-cross-center g-2 p-x-1 p-top-2 m-top-1 border-top-1 border-top-solid border-outline-variant">
+                    <p class="grow m-0 color-on-surface-variant" style="flex-basis: 14rem;"><strong class="color-on-surface">{{ __('larena-env::admin.alerts.test') }}.</strong> {{ __('larena-env::admin.alerts.test_explain') }}</p>
+                    <form method="post" action="{{ route('larena.env.admin.alerts.test.plan', [], false) }}" class="m-0" data-env-alerts-test>
+                        @csrf
+                        <button type="submit" class="larena-button larena-control-floor">{{ __('larena-env::admin.alerts.test') }}</button>
+                    </form>
+                </div>
+            @endif
         @endif
-    </div>
+    </section>
 @endsection

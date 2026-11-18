@@ -353,17 +353,35 @@ env_assert($byIp !== null && $byIp->ipUrlOnPort(9443) === 'https://203.0.113.5:9
     && \Larena\Env\Panel\PanelAddress::fromData(['schema' => 'other']) === null
     && \Larena\Env\Panel\PanelAddress::fromData(['schema' => 'simai-panel-address/1', 'url' => 'javascript:alert(1)'])?->url === null, 'The panel address read, a stray link refused.');
 $allAddress = ['domain' => true, 'domain-remove' => true, 'port' => true, 'ip-access' => true];
-$ipPage = $panelPage(['panelAddress' => $byIp, 'addressAllows' => $allAddress]);
+// Two cards «значение · Изменить» (study part 8, PX-82): the address's changes open in place on «Изменить» (?edit=address).
+$ipCard = $panelPage(['panelAddress' => $byIp, 'addressAllows' => $allAddress]);
+env_assert(str_contains($ipCard, 'data-env-facts="panel-address"') && str_contains($ipCard, 'data-env-facts="panel-access"') && str_contains($ipCard, '?edit=address#env-panel-address')
+    && str_contains($ipCard, 'AB:CD:EF') && !str_contains($ipCard, 'data-env-panel-address-op='), 'The address as a card, its changes behind «Изменить»: '.$ipCard);
+$ipPage = $panelPage(['panelAddress' => $byIp, 'addressAllows' => $allAddress, 'edit' => 'address']);
 env_assert(str_contains($ipPage, 'data-env-panel-address="ip"') && str_contains($ipPage, 'AB:CD:EF') && str_contains($ipPage, '203.0.113.5')
     && str_contains($ipPage, 'data-env-panel-address-op="domain"') && str_contains($ipPage, 'data-env-panel-address-op="port"')
     && !str_contains($ipPage, 'data-env-panel-address-op="ip-access"'), 'By IP only: attach a domain, move the port, the address by IP cannot be turned off: '.$ipPage);
 $withDomain = \Larena\Env\Panel\PanelAddress::fromData(['schema' => 'simai-panel-address/1', 'ip' => '203.0.113.5', 'port' => 8500, 'ip_access' => true,
     'ip_url' => 'https://203.0.113.5:8500', 'domain' => 'panel.example.com', 'domain_ssl' => true, 'domain_url' => 'https://panel.example.com', 'url' => 'https://panel.example.com']);
-$domainPage = $panelPage(['panelAddress' => $withDomain, 'addressAllows' => $allAddress]);
+$domainPage = $panelPage(['panelAddress' => $withDomain, 'addressAllows' => $allAddress, 'edit' => 'address']);
 env_assert(str_contains($domainPage, 'data-env-panel-address="domain"') && str_contains($domainPage, 'data-env-panel-address-op="domain-remove"')
     && str_contains($domainPage, 'data-env-panel-address-op="ip-access"') && !str_contains($domainPage, 'data-env-panel-address-op="domain"'), 'A domain with a certificate: detach it or turn the address by IP off: '.$domainPage);
-$readOnly = $panelPage(['panelAddress' => $byIp, 'addressAllows' => array_map(static fn (): bool => false, $allAddress)]);
-env_assert(str_contains($readOnly, 'data-env-panel-address-url') && !str_contains($readOnly, 'data-env-panel-address-op='), 'Without the right only the address is shown.');
+$readOnly = $panelPage(['panelAddress' => $byIp, 'addressAllows' => array_map(static fn (): bool => false, $allAddress), 'edit' => 'address']);
+env_assert(str_contains($readOnly, 'data-env-panel-address-url') && !str_contains($readOnly, 'data-env-panel-address-op=') && !str_contains($readOnly, '?edit=address'), 'Without the right only the address is shown.');
+// A long fingerprint folds to its start, «Показать» shows the whole (PX-82).
+$longSha = implode(':', array_fill(0, 32, 'AB'));
+$folded = \Larena\Env\Admin\PanelAccessCards::address(\Larena\Env\Panel\PanelAddress::fromData(['schema' => 'simai-panel-address/1', 'ip' => '203.0.113.5', 'port' => 8500,
+    'ip_access' => true, 'ip_url' => 'https://203.0.113.5:8500', 'ip_certificate' => ['sha256' => $longSha], 'url' => 'https://203.0.113.5:8500']), true, false);
+$shown = \Larena\Env\Admin\PanelAccessCards::address(\Larena\Env\Panel\PanelAddress::fromData(['schema' => 'simai-panel-address/1', 'ip' => '203.0.113.5', 'port' => 8500,
+    'ip_access' => true, 'ip_url' => 'https://203.0.113.5:8500', 'ip_certificate' => ['sha256' => $longSha], 'url' => 'https://203.0.113.5:8500']), true, true);
+$print = static fn (array $items): array => array_values(array_filter($items, static fn (array $item): bool => ($item['id'] ?? '') === 'fingerprint'))[0];
+env_assert($print($folded)['value'] === 'AB:AB:AB:AB…' && str_contains($print($folded)['action']['href'], 'show=fingerprint') && $print($shown)['value'] === $longSha
+    && ($print($shown)['copy'] ?? false) === true, 'The fingerprint folded, then shown whole.');
+// Who may open the panel: the list's change in place, with the 2 minutes said before it (PX-90).
+$accessEdit = $panelPage(['addressListed' => true, 'edit' => 'access']);
+env_assert(str_contains($accessEdit, 'data-env-panel-access-form') && str_contains($accessEdit, 'data-env-settings-when="access"') && !str_contains($accessEdit, 'data-env-panel-access-outside'),
+    'Changing who may open the panel: '.$accessEdit);
+env_assert(!str_contains($panelPage(['addressListed' => true]), 'data-env-panel-access-form'), 'The list\'s form only on «Изменить».');
 // The server's setup on the Framework's wizard: every step is done inside it (owner 2026-11-06).
 $setupText = static fn (string $key): string => $key;
 $setupStates = ['login' => 'done', 'address' => 'done', 'alerts' => 'skipped', 'protection' => 'todo', 'backups' => 'todo', 'updates' => 'todo'];
@@ -546,7 +564,9 @@ env_assert(!str_contains($page, 'data-env-software-updates aria'), 'Without the 
 // One table of programs grouped by what they do, PHP as its row, the updates in one line (the panel's UX audit).
 env_assert(str_contains($page, 'data-env-software-table') && substr_count($page, 'data-env-software-group=') === 6 && !str_contains($page, 'data-env-software-php=')
     && str_contains($page, 'data-env-software-op="remove-certbot"') && !str_contains($page, 'data-env-software-op="remove-nginx"') && str_contains($page, 'data-env-software-op="install-memcached"')
-    && substr_count($page, 'data-env-software-required') === 4 && str_contains($page, 'data-env-software-filter="updates"')
+    && substr_count($page, 'data-env-software-required') - substr_count($page, 'data-env-software-required-why') === 4 && str_contains($page, 'data-env-software-required-why')
+    // Short on a phone and in plain case (PX-84): the version and the purpose leave the narrow screen, the headers are not shouted.
+    && str_contains($page, 'hidden md:table-cell') && !str_contains($page, 'larena-table-stack') && str_contains($page, 'data-env-software-filter="updates"')
     && str_contains($page, 'data-env-software-update-badge="system"') && preg_match('/<details\s+open\s+data-env-software-updates-details/', $page) !== 1
     && str_contains($page, 'data-env-software-op="update-nginx"') === ($software->component('nginx')?->update === true), 'The programs\' table: '.$page);
 $withPhpRow = $softwarePage(['withPhp' => true, 'phpRow' => \Larena\Env\Software\SoftwareScreen::php($extras->phpVersions($admin))]);
@@ -629,34 +649,56 @@ $securityController = new \Larena\Env\Http\Controllers\SecurityController($opera
 $words = $securityController->words($security);
 env_assert($words['security_updates']['title'] === 'Security updates' && $words['fail2ban']['line'] === 'Nobody blocks password guessing.'
     && $words['file_scan']['line'] === 'The sites\' files were not checked yet.' && $words['https:demo-php.test']['how'] !== '', 'Each check in the panel\'s words.');
+// «Безопасность» as a list of things to do (study part 8, PX-83, C37): the findings once each, their next step a link.
+$todoOf = static fn (\Larena\Env\Security\SecurityFindings $findings, array $fixes): array => \Larena\Env\Security\SecurityTodo::of($findings, $words, $fixes,
+    static fn (string $key, array $replace = []): string => (string) $translator->get('larena-env::admin.'.$key, $replace),
+    static fn (string $name, array $parameters = []): string => '/'.$name.($parameters === [] ? '' : '?'.http_build_query($parameters)));
+$allFixes = ['security_updates' => true, 'fail2ban' => true, 'https:demo-php.test' => false];
 $securityPage = static fn (array $data): string => $factory->make('larena-env::admin.security', $data + ['source' => 'recorded', 'supported' => true, 'status' => $security,
-    'words' => $words, 'findings' => \Larena\Env\Security\SecurityFindings::of($security), 'engines' => ['simai-env signatures', 'ClamAV antivirus'], 'fixes' => ['security_updates' => true, 'fail2ban' => true, 'https:demo-php.test' => false],
+    'words' => $words, 'findings' => \Larena\Env\Security\SecurityFindings::of($security), 'engines' => ['simai-env signatures', 'ClamAV antivirus'], 'fixes' => $allFixes,
+    'todo' => $todoOf(\Larena\Env\Security\SecurityFindings::of($security), $allFixes), 'finding' => null, 'edit' => null,
     'allows' => ['fix' => true, 'scan' => true, 'level' => true, 'files-scan' => true, 'quarantine' => true, 'restore' => true, 'geo' => true, 'geo-update' => true,
         'mcp-enable' => true, 'mcp-disable' => true, 'mcp-key-add' => true, 'mcp-key-remove' => true],
     'levels' => \Larena\Env\Security\SecurityStatus::LEVELS, 'files' => $found, 'quarantine' => $kept, 'filesSupported' => true, 'notice' => null,
     'geo' => null, 'geoSupported' => false, 'lookup' => null, 'lookupSupported' => false, 'countries' => [], 'myAddress' => '203.0.113.7',
     'mcp' => null, 'mcpSupported' => false, 'owners' => []])->render();
 $page = $securityPage([]);
-// The checks as the overview counts them (critics of 0.4.1): the two sites' backup check is one finding with both sites
-// under it, the four local names' HTTPS one quiet line, the counts the panel's and not the server's summary (1/12/4).
-env_assert(str_contains($page, 'data-env-security="risk"') && str_contains($page, 'data-env-security-score="45"') && str_contains($page, 'data-env-security-problems="8"')
-    && str_contains($page, 'data-env-security-fix="security_updates"') && str_contains($page, 'data-env-security-fix="fail2ban"') && !str_contains($page, 'data-env-security-check="https:demo-php.test"')
+// The checks as the overview counts them (critics of 0.4.1): the two sites' backup check is one finding, never a row per
+// site, the four local names' HTTPS one quiet line, the counts the panel's and not the server's summary (1/12/4).
+$todo = $todoOf(\Larena\Env\Security\SecurityFindings::of($security), $allFixes);
+$todoIds = array_column($todo['items'], 'id');
+env_assert(count($todoIds) === count(array_unique($todoIds)) && count($todo['passed']) > 0 && in_array('error', array_column($todo['items'], 'status'), true), 'Each finding once: '.json_encode($todoIds));
+env_assert(str_contains($page, 'data-env-security="risk"') && str_contains($page, 'data-env-security-score="45"') && str_contains($page, 'data-env-security-problems="'.count($todo['items']).'"')
+    && str_contains($page, 'data-env-attention="security"') && str_contains($page, 'check=security_updates') && str_contains($page, 'check=fail2ban') && !str_contains($page, 'check=https:demo-php.test')
     && str_contains($page, 'data-env-security-local="4"') && str_contains($page, 'Local addresses need no HTTPS: demo-owned.test, demo-php.test, demo-redirect.test, demo-static.test.')
-    && str_contains($page, 'id="env-security-check-backup_verify"') && str_contains($page, 'data-env-security-sites') && str_contains($page, 'data-env-security-open="backup_verify:demo-static.test"')
-    && str_contains($page, 'Urgent: 1 · advised: 7 · done: 4') && str_contains($page, 'data-env-security-level-card="enhanced"') && substr_count($page, 'data-env-security-op="level-') === 3
-    && str_contains($page, 'data-env-security-found="demo-php.test/public/up.php"') && str_contains($page, 'data-env-security-quarantine="1"') && substr_count($page, 'data-env-security-op="restore"') === 1
+    && !str_contains($page, 'id="env-security-sites"') && !str_contains($page, 'data-env-security-fix=')
+    && str_contains($page, 'Urgent: 1 · advised: 7 · done: 4') && str_contains($page, 'data-env-facts="security-protection"')
+    && !str_contains($page, 'data-env-security-level-card=') && !str_contains($page, 'data-env-security-found=')
     && str_contains($page, 'Nobody blocks password guessing.') && !str_contains($page, 'nobody blocks password guessing'), 'The security page: '.$page);
-// The checks of the panel's own address stand with who may open the panel, its button leads there.
-$panelSecurity = $securityPage(['findings' => \Larena\Env\Security\SecurityFindings::of($security, ['demo-owned.test'])]);
-env_assert(str_contains($panelSecurity, 'data-env-security-panel="1"') && str_contains($panelSecurity, 'data-env-security-open-panel="backup_verify:demo-owned.test"')
-    && str_contains($panelSecurity, 'data-env-security-open="backup_verify:demo-static.test"') && str_contains($panelSecurity, 'data-env-security-problems="9"'), 'The panel\'s own address apart: '.$panelSecurity);
-// A button that only opens the server's plan does not say the change is made (critics 2026-11-07): the plan page keeps «Применить».
-env_assert(str_contains($page, 'Fix…') && str_contains($page, 'Show what this would do') && !preg_match('/>\s*(Apply|Fix)\s*</', $page), 'The security page\'s buttons say they open a plan.');
+// A finding on several sites opens its sites under the list, each with its own step.
+$sites = $securityPage(['finding' => 'backup_verify']);
+env_assert(str_contains($sites, 'id="env-security-sites"') && str_contains($sites, 'data-env-security-open="backup_verify:demo-static.test"') && str_contains($sites, 'data-env-security-fold'),
+    'The sites of one finding: '.$sites);
+// The protection settings open in place on «Изменить».
+$levelPage = $securityPage(['edit' => 'level']);
+env_assert(str_contains($levelPage, 'data-env-security-level-card="enhanced"') && substr_count($levelPage, 'data-env-security-op="level-') === 3, 'The level in place: '.$levelPage);
+$filesPage = $securityPage(['edit' => 'files']);
+env_assert(str_contains($filesPage, 'data-env-security-found="demo-php.test/public/up.php"') && str_contains($filesPage, 'data-env-security-quarantine="1"')
+    && substr_count($filesPage, 'data-env-security-op="restore"') === 1, 'The files in place: '.$filesPage);
+// The checks of the panel's own address lead to who may open the panel among the settings (the duplicate is a link, PX-81).
+$panelFindings = \Larena\Env\Security\SecurityFindings::of($security, ['demo-owned.test']);
+$panelSecurity = $securityPage(['findings' => $panelFindings, 'todo' => $todoOf($panelFindings, $allFixes)]);
+env_assert(str_contains($panelSecurity, 'data-env-security-panel="1"') && str_contains($panelSecurity, '"href":"/larena.env.admin.panel.access"')
+    && str_contains($panelSecurity, 'data-env-security-problems="'.count($todoOf($panelFindings, $allFixes)['items']).'"'), 'The panel\'s own address apart: '.$panelSecurity);
+// A link that only opens the server's plan does not say the change is made (critics 2026-11-07): the plan page keeps «Применить».
+env_assert(str_contains($page, 'Fix…') && str_contains($levelPage, 'Show what this would do') && !preg_match('/>\s*(Apply|Fix)\s*</', $page), 'The security page\'s buttons say they open a plan.');
 $russian = require dirname(__DIR__, 2).'/resources/lang/ru/admin.php';
 env_assert($russian['security']['fix'] === 'Исправить…' && $russian['actions']['fix'] === 'Исправить…' && $russian['security']['level_apply'] === 'Показать, что будет сделано'
+    && $russian['security']['todo']['fix'] === 'Исправить…'
     && $russian['security']['geo']['apply'] === 'Показать, что будет сделано' && str_contains($russian['security']['checks']['https']['how'], '«Домены и HTTPS»'), 'The Russian buttons say the same.');
-$readOnlySecurity = $securityPage(['fixes' => [], 'allows' => ['fix' => false, 'scan' => false, 'level' => false, 'files-scan' => false, 'quarantine' => false, 'restore' => false, 'geo' => false, 'geo-update' => false]]);
-env_assert(!str_contains($readOnlySecurity, 'data-env-security-fix=') && !str_contains($readOnlySecurity, 'data-env-security-op=') && str_contains($readOnlySecurity, 'data-env-security-how'),
+$readOnlySecurity = $securityPage(['fixes' => [], 'todo' => $todoOf(\Larena\Env\Security\SecurityFindings::of($security), []), 'edit' => 'level',
+    'allows' => ['fix' => false, 'scan' => false, 'level' => false, 'files-scan' => false, 'quarantine' => false, 'restore' => false, 'geo' => false, 'geo-update' => false]]);
+env_assert(!str_contains($readOnlySecurity, 'check=security_updates') && !str_contains($readOnlySecurity, 'data-env-security-op=') && str_contains($readOnlySecurity, 'Nobody blocks password guessing.'),
     'Without the right to change the server: what to do, no buttons.');
 env_assert(str_contains($securityPage(['supported' => false, 'status' => null]), 'data-env-security="unsupported"') && str_contains($securityPage(['status' => null]), 'data-env-security="unreadable"'),
     'An older server or no answer says so.');
@@ -669,17 +711,17 @@ env_assert($geo instanceof \Larena\Env\Security\GeoStatus && $geo->mode === 'off
 env_assert(\Larena\Env\Security\GeoStatus::codes('ru, kz,RU,xyz') === ['RU', 'KZ'] && \Larena\Env\Security\GeoStatus::flag('RU') === "\u{1F1F7}\u{1F1FA}",
     'Country codes and flags.');
 $countryNames = array_combine(\Larena\Env\Security\GeoStatus::COUNTRIES, \Larena\Env\Security\GeoStatus::COUNTRIES);
-$geoPage = $securityPage(['geo' => $geo, 'geoSupported' => true, 'lookupSupported' => true, 'countries' => $countryNames,
+$geoPage = $securityPage(['edit' => 'geo', 'geo' => $geo, 'geoSupported' => true, 'lookupSupported' => true, 'countries' => $countryNames,
     'lookup' => ['ip' => '8.8.8.8', 'country' => 'US', 'valid' => true]]);
 env_assert(str_contains($geoPage, 'data-env-security-geo="off"') && substr_count($geoPage, 'name="countries[]"') === 249 && str_contains($geoPage, 'data-env-security-op="geo"')
     && str_contains($geoPage, 'value="203.0.113.7" inputmode') && str_contains($geoPage, 'data-env-security-geo-attribution>IP to country data by DB-IP')
     && str_contains($geoPage, 'data-env-security-geo-answer="US"') && !str_contains($geoPage, 'data-env-security-op="geo-update"'), 'The countries block: '.$geoPage);
 $on = \Larena\Env\Security\GeoStatus::fromData(['schema' => 'simai-geo/1', 'mode' => 'deny', 'countries' => ['CN', 'KP'], 'ports' => 'web', 'active' => true,
     'dropped_packets' => 1520, 'database' => ['present' => true, 'date' => '2026-11'], 'attribution' => '']);
-$onPage = $securityPage(['geo' => $on, 'geoSupported' => true, 'countries' => $countryNames]);
+$onPage = $securityPage(['edit' => 'geo', 'geo' => $on, 'geoSupported' => true, 'countries' => $countryNames]);
 env_assert($on->attribution === \Larena\Env\Security\GeoStatus::ATTRIBUTION && str_contains($onPage, 'data-env-security-geo="deny"') && str_contains($onPage, 'value="CN" checked')
     && str_contains($onPage, 'data-env-security-op="geo-update"') && str_contains($onPage, '1 520'), 'Blocking on: its countries ticked, the count, the update: '.$onPage);
-env_assert(!str_contains($securityPage(['geo' => $on, 'geoSupported' => true, 'countries' => $countryNames, 'allows' => ['fix' => false, 'scan' => false, 'level' => false,
+env_assert(!str_contains($securityPage(['edit' => 'geo', 'geo' => $on, 'geoSupported' => true, 'countries' => $countryNames, 'allows' => ['fix' => false, 'scan' => false, 'level' => false,
     'files-scan' => false, 'quarantine' => false, 'restore' => false, 'geo' => false, 'geo-update' => false]]), 'name="countries[]"'), 'Without the right, no form.');
 // The form's arguments: the ticked countries joined, off alone, a list asked for without a country refused.
 $geoArgs = new \ReflectionMethod(\Larena\Env\Http\Controllers\SecurityController::class, 'geoArgs');
@@ -693,7 +735,7 @@ env_assert($asked(['mode' => 'deny', 'countries' => ['cn', 'KP', 'ZZ'], 'ports' 
 // Access for AI assistants over MCP (simai-env 1.49.0): off offers to turn it on; on lists the keys with whom each works
 // for, removes one by its fingerprint, adds a key for an owner's sites or the whole server, and shows the lines to connect.
 $mcpOff = \Larena\Env\Security\McpStatus::fromData(['schema' => 'simai-mcp-status/1', 'enabled' => false, 'account' => 'simai-mcp', 'keys' => [], 'connect' => null, 'clients' => []]);
-$mcpOffPage = $securityPage(['mcp' => $mcpOff, 'mcpSupported' => true]);
+$mcpOffPage = $securityPage(['edit' => 'mcp', 'mcp' => $mcpOff, 'mcpSupported' => true]);
 env_assert(str_contains($mcpOffPage, 'data-env-security-mcp="off"') && str_contains($mcpOffPage, 'data-env-security-op="mcp-enable"') && !str_contains($mcpOffPage, 'name="pubkey"'),
     'MCP off: only turning it on. '.$mcpOffPage);
 $mcpOn = \Larena\Env\Security\McpStatus::fromData(['schema' => 'simai-mcp-status/1', 'enabled' => true, 'account' => 'simai-mcp',
@@ -702,7 +744,7 @@ $mcpOn = \Larena\Env\Security\McpStatus::fromData(['schema' => 'simai-mcp-status
     'connect' => 'ssh -T simai-mcp@server.example.com',
     'clients' => ['claude_code' => 'claude mcp add simai -- ssh -T simai-mcp@server.example.com', 'codex' => 'codex mcp add simai -- ssh -T simai-mcp@server.example.com',
         'json' => ['mcpServers' => ['simai' => ['command' => 'ssh', 'args' => ['-T', 'simai-mcp@server.example.com']]]]]]);
-$mcpPage = $securityPage(['mcp' => $mcpOn, 'mcpSupported' => true, 'owners' => ['acme', 'beta']]);
+$mcpPage = $securityPage(['edit' => 'mcp', 'mcp' => $mcpOn, 'mcpSupported' => true, 'owners' => ['acme', 'beta']]);
 env_assert($mcpOn !== null && count($mcpOn->keys) === 2 && $mcpOn->clients['json'] === '{"mcpServers":{"simai":{"command":"ssh","args":["-T","simai-mcp@server.example.com"]}}}'
     && str_contains($mcpPage, 'data-env-security-mcp="on"') && str_contains($mcpPage, 'data-env-security-mcp-keys="2"') && substr_count($mcpPage, 'data-env-security-op="mcp-key-remove"') === 2
     && str_contains($mcpPage, 'value="SHA256:zyxwvuts87654321"') && str_contains($mcpPage, '<option value="beta">beta</option>') && str_contains($mcpPage, 'data-env-security-mcp-client="codex"')

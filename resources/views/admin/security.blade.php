@@ -8,8 +8,12 @@
 @section('content')
     @include('larena-env::admin.partials.notes')
 
-    {{-- The server's security (simai-env 1.45.0–1.47.0), the system level's: the score first, then what to fix with
-         «Исправить» where the server can do it itself, the level in one choice, the sites' packages and files. --}}
+    {{-- The server's security (simai-env 1.45.0–1.49.0), the system level's, as a list of things to do (study part 8,
+         PX-83; Framework C37, sf-list-attention by severity): the score, then what is urgent, what is advised and what is
+         done, each finding once with its next step (SecurityTodo), times in the reader's own zone. The settings — the
+         level, the countries, AI assistants, the files, the packages — are one card «значение · Изменить» under it
+         (SecurityProtection), each opened in place (?edit=…). Who may open the panel lives among the settings: its
+         findings link there (PX-81). --}}
     @if (!$supported)
         <section class="larena-panel larena-panel-padded" data-env-security="unsupported">
             <p class="m-0">{{ __('larena-env::admin.security.unsupported') }}</p>
@@ -19,24 +23,25 @@
             <p class="m-0" role="alert">{{ __('larena-env::admin.security.unreadable') }}</p>
         </section>
     @else
-        <section class="larena-panel larena-panel-padded flex flex-wrap items-cross-center g-4" data-env-security="{{ $status->grade }}" aria-labelledby="env-security-score">
+        <section class="larena-panel p-2 flex flex-wrap items-cross-center g-3" style="margin: 0 0 1rem;" data-env-security="{{ $status->grade }}" aria-labelledby="env-security-score">
             <div role="img" aria-label="{{ __('larena-env::admin.security.score') }}: {{ __('larena-env::admin.security.score_of', ['score' => (string) ($status->score ?? 0)]) }}" data-env-security-score="{{ $status->score ?? '' }}"
-                 style="flex: none; inline-size: 7rem; block-size: 7rem; border-radius: 50%; display: grid; place-items: center;
+                 style="flex: none; inline-size: 4.5rem; block-size: 4.5rem; border-radius: 50%; display: grid; place-items: center;
                  background: conic-gradient(var(--sf-{{ ['good' => 'success', 'attention' => 'warning', 'risk' => 'error'][$status->grade] }}) {{ ($status->score ?? 0) * 3.6 }}deg, var(--sf-outline-variant) 0);">
-                <span style="inline-size: 5.5rem; block-size: 5.5rem; border-radius: 50%; display: grid; place-items: center; background: var(--larena-panel);">
-                    <span class="text-4" style="font-weight: 700; line-height: 1;">{{ $status->score ?? '—' }}</span>
+                <span style="inline-size: 3.5rem; block-size: 3.5rem; border-radius: 50%; display: grid; place-items: center; background: var(--larena-panel);">
+                    <span class="text-3" style="font-weight: 700; line-height: 1;">{{ $status->score ?? '—' }}</span>
                 </span>
             </div>
-            <div class="grow min-w-0" style="flex-basis: 14rem;">
+            <div class="grow min-w-0" style="flex-basis: 12rem;">
                 <h2 id="env-security-score" class="text-2 m-0">{{ __('larena-env::admin.security.grades.'.$status->grade) }}</h2>
                 <p class="m-0 color-on-surface-variant" data-env-security-summary>{{ __('larena-env::admin.security.summary', ['risk' => (string) $findings->count('now'), 'warn' => (string) $findings->count('todo'), 'ok' => (string) $findings->count('done')]) }}</p>
-                @if ($status->checkedAt !== null)
-                    <p class="m-0 color-on-surface-variant">{{ __('larena-env::admin.security.checked', ['when' => \Larena\Env\Server\Moment::human($status->checkedAt)]) }}</p>
+                @if (\Larena\Env\Server\Moment::iso($status->checkedAt) !== null)
+                    {{-- In the reader's own time (PX-83): the Framework's sf-time says it in the browser's zone. --}}
+                    <p class="m-0 color-on-surface-variant text-small" data-env-security-checked>{{ __('larena-env::admin.security.checked', ['when' => '']) }}<sf-time datetime="{{ \Larena\Env\Server\Moment::iso($status->checkedAt) }}" format="auto"></sf-time></p>
                 @endif
                 @if (!$status->onlineEnabled)
-                    <p class="m-0 color-on-surface-variant" data-env-security-offline>{{ __('larena-env::admin.security.online_off') }}</p>
+                    <p class="m-0 color-on-surface-variant text-small" data-env-security-offline>{{ __('larena-env::admin.security.online_off') }}</p>
                 @elseif ($status->onlineError !== null)
-                    <p class="m-0 color-on-surface-variant" data-env-security-online-error>{{ __('larena-env::admin.security.online_error') }}</p>
+                    <p class="m-0 color-on-surface-variant text-small" data-env-security-online-error>{{ __('larena-env::admin.security.online_error') }}</p>
                 @endif
             </div>
             @if ($allows['scan'])
@@ -48,11 +53,18 @@
             @endif
         </section>
 
-        {{-- «Обновите PHP» (owner decision msg-93e8e022): a site may run PHP 7.4 or 8.0, but it gets no security fixes. --}}
-        @if (($outdatedPhp ?? []) !== [])
-            <section class="larena-panel larena-panel-padded" data-env-security-php="{{ count($outdatedPhp) }}" aria-labelledby="env-security-php">
-                <h2 id="env-security-php" class="text-2">{{ __('larena-env::admin.php_outdated.advice_title') }}</h2>
-                <p>{{ __('larena-env::admin.php_outdated.advice') }}</p>
+        <div data-env-security-problems="{{ count($todo['items'] ?? []) }}" @if ($findings->problems(true) !== []) data-env-security-panel="{{ count($findings->problems(true)) }}" @endif>
+            @include('larena-env::admin.partials.attention', ['items' => $todo['items'] ?? [], 'passed' => $todo['passed'] ?? [], 'label' => __('larena-env::admin.security.todo.label'),
+                'emptyText' => __('larena-env::admin.security.todo.all_fine'), 'checkedAt' => \Larena\Env\Server\Moment::iso($status->checkedAt), 'mark' => 'security'])
+        </div>
+        @if ($findings->local !== [])
+            <p class="m-0 m-t-1 text-small color-on-surface-variant" data-env-security-local="{{ count($findings->local) }}" style="overflow-wrap: anywhere;">{{ __('larena-env::admin.security.local_https', ['sites' => implode(', ', $findings->local)]) }}</p>
+        @endif
+
+        {{-- A finding on several sites, opened from its row: each site with its own button (no repeats in the list itself). --}}
+        @if (($finding ?? null) === 'php-outdated' && ($outdatedPhp ?? []) !== [])
+            <section class="larena-panel p-2" style="margin: 1rem 0 0;" id="env-security-sites" data-env-security-php="{{ count($outdatedPhp) }}" aria-labelledby="env-security-sites-title">
+                <h2 id="env-security-sites-title" class="text-1 m-0">{{ __('larena-env::admin.php_outdated.advice_title') }}</h2>
                 <ul class="m-0 p-0" style="list-style: none;">
                     @foreach ($outdatedPhp as $outdated)
                         <li class="flex flex-wrap items-cross-center content-main-between g-1 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-security-php-site="{{ $outdated->domain }}">
@@ -61,53 +73,27 @@
                         </li>
                     @endforeach
                 </ul>
+                <p class="m-0 m-top-1"><a href="{{ route('larena.env.admin.security', [], false) }}" data-env-security-fold>{{ __('larena-env::admin.security.todo.close') }}</a></p>
             </section>
         @endif
+        @foreach ($findings->problems() as $open)
+            @if (($finding ?? null) === $open['key'])
+                <section class="larena-panel p-2" style="margin: 1rem 0 0;" id="env-security-sites" aria-labelledby="env-security-sites-title">
+                    <h2 id="env-security-sites-title" class="text-1 m-0">{{ __('larena-env::admin.security.todo.sites_title', ['title' => $words[$open['checks'][0]->id]['title']]) }}</h2>
+                    <ul class="m-0 p-0" style="list-style: none;">
+                        @include('larena-env::admin.partials.security-finding', ['finding' => $open])
+                    </ul>
+                    <p class="m-0 m-top-1"><a href="{{ route('larena.env.admin.security', [], false) }}" data-env-security-fold>{{ __('larena-env::admin.security.todo.close') }}</a></p>
+                </section>
+            @endif
+        @endforeach
 
-        {{-- The findings as the overview counts them (SecurityFindings): one line per check with its sites under it, the
-             local names' HTTPS in one quiet line, the panel's own address with who may open the panel (critics of 0.4.1). --}}
-        <section class="larena-panel larena-panel-padded" data-env-security-problems="{{ count($findings->problems()) }}" aria-labelledby="env-security-problems">
-            <h2 id="env-security-problems" class="text-2">{{ __('larena-env::admin.security.problems') }}</h2>
-            @if ($findings->problems() === [])
-                <p class="m-0">{{ __('larena-env::admin.security.no_problems') }}</p>
-            @elseif ($findings->problems(false) !== [])
-                <ul class="m-0 p-0" style="list-style: none;">
-                    @foreach ($findings->problems(false) as $finding)
-                        @include('larena-env::admin.partials.security-finding', ['finding' => $finding])
-                    @endforeach
-                </ul>
-            @endif
-            @if ($findings->problems(true) !== [])
-                <div class="m-t-2" data-env-security-panel="{{ count($findings->problems(true)) }}">
-                    <h3 class="text-1 m-0">{{ __('larena-env::admin.panel_access.title') }}</h3>
-                    <ul class="m-0 p-0" style="list-style: none;">
-                        @foreach ($findings->problems(true) as $finding)
-                            @include('larena-env::admin.partials.security-finding', ['finding' => $finding])
-                        @endforeach
-                    </ul>
-                </div>
-            @endif
-            @if ($findings->local !== [])
-                <p class="m-0 m-t-1 color-on-surface-variant" data-env-security-local="{{ count($findings->local) }}" style="overflow-wrap: anywhere;">{{ __('larena-env::admin.security.local_https', ['sites' => implode(', ', $findings->local)]) }}</p>
-            @endif
-            @if ($findings->rest() !== [])
-                <details class="m-t-2" data-env-security-fine>
-                    <summary style="cursor: pointer;">{{ __('larena-env::admin.security.fine', ['count' => (string) count($findings->rest())]) }}</summary>
-                    <ul class="m-0 p-0" style="list-style: none;">
-                        @foreach ($findings->rest() as $finding)
-                            <li class="flex flex-wrap items-cross-center g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-security-finding="{{ $finding['key'] }}" data-env-security-status="{{ $finding['checks'][0]->status }}">
-                                <sf-badge appearance="tonal" status="{{ $finding['state'] === 'done' ? 'success' : 'neutral' }}" text="{{ __('larena-env::admin.security.statuses.'.$finding['checks'][0]->status) }}"></sf-badge>
-                                <span class="grow min-w-0" style="overflow-wrap: anywhere;">
-                                    {{ $words[$finding['checks'][0]->id]['title'] }}@if ($finding['sites'] !== []) · {{ implode(', ', $finding['sites']) }}@endif
-                                    <span class="color-on-surface-variant">— {{ $words[$finding['checks'][0]->id]['line'] }}</span>
-                                </span>
-                            </li>
-                        @endforeach
-                    </ul>
-                </details>
-            @endif
+        <section class="larena-panel p-2" style="margin: 1rem 0;" id="env-security-protection" aria-label="{{ __('larena-env::admin.security.protection.title') }}">
+            @include('larena-env::admin.partials.facts', ['items' => \Larena\Env\Admin\SecurityProtection::items($status, $geoSupported, $geo, $mcpSupported, $mcp, $filesSupported, $files),
+                'label' => __('larena-env::admin.security.protection.title'), 'mark' => 'security-protection'])
         </section>
 
+        @if (($edit ?? null) === 'level')
         <section class="larena-panel larena-panel-padded" data-env-security-level="{{ $status->level ?? 'none' }}" aria-labelledby="env-security-level">
             <h2 id="env-security-level" class="text-2">{{ __('larena-env::admin.security.level') }}</h2>
             <p class="color-on-surface-variant">{{ __('larena-env::admin.security.level_note') }}</p>
@@ -136,7 +122,9 @@
             </div>
         </section>
 
-        @if ($geoSupported)
+            <p class="m-0 m-top-1 m-bottom-3"><a href="{{ route('larena.env.admin.security', [], false) }}#env-security-protection" data-env-security-fold>{{ __('larena-env::admin.security.protection.close') }}</a></p>
+        @endif
+        @if ($geoSupported && ($edit ?? null) === 'geo')
             {{-- Country blocking (simai-env 1.48.0): the mode, the countries, the ports and the addresses never dropped in one
                  form, planned and confirmed; allowing only a list or all ports is undone by the server unless kept in time. --}}
             <section class="larena-panel larena-panel-padded" data-env-security-geo="{{ $geo?->mode ?? 'unreadable' }}" aria-labelledby="env-security-geo">
@@ -227,9 +215,9 @@
                     <p class="m-0 m-t-2 color-on-surface-variant text-0" data-env-security-geo-attribution>{{ $geo->attribution }}</p>
                 @endif
             </section>
+                    <p class="m-0 m-top-1 m-bottom-3"><a href="{{ route('larena.env.admin.security', [], false) }}#env-security-protection" data-env-security-fold>{{ __('larena-env::admin.security.protection.close') }}</a></p>
         @endif
-
-        @if ($mcpSupported)
+        @if ($mcpSupported && ($edit ?? null) === 'mcp')
             {{-- Access for AI assistants over MCP (simai-env 1.49.0): on or off, the keys with whom each works for, a key to
                  add for the whole server or one owner's sites, and the lines to connect Claude Code, Codex or any client.
                  Every change is the server's own command, planned and confirmed. --}}
@@ -310,8 +298,9 @@
                     @endif
                 @endif
             </section>
+                    <p class="m-0 m-top-1 m-bottom-3"><a href="{{ route('larena.env.admin.security', [], false) }}#env-security-protection" data-env-security-fold>{{ __('larena-env::admin.security.protection.close') }}</a></p>
         @endif
-
+        @if (($edit ?? null) === 'vulnerabilities')
         <section class="larena-panel larena-panel-padded" data-env-security-vulnerabilities="{{ count($status->vulnerabilities) }}" aria-labelledby="env-security-vulnerabilities">
             <h2 id="env-security-vulnerabilities" class="text-2">{{ __('larena-env::admin.security.vulnerabilities') }}</h2>
             @if ($status->vulnerabilities === [])
@@ -332,7 +321,9 @@
             @endif
         </section>
 
-        @if ($filesSupported)
+            <p class="m-0 m-top-1 m-bottom-3"><a href="{{ route('larena.env.admin.security', [], false) }}#env-security-protection" data-env-security-fold>{{ __('larena-env::admin.security.protection.close') }}</a></p>
+        @endif
+        @if ($filesSupported && ($edit ?? null) === 'files')
             <section class="larena-panel larena-panel-padded" data-env-security-files="{{ $files?->foundCount() ?? '' }}" aria-labelledby="env-security-files">
                 <h2 id="env-security-files" class="text-2">{{ __('larena-env::admin.security.files') }}</h2>
                 <p class="color-on-surface-variant">{{ __('larena-env::admin.security.files_note') }}</p>
@@ -403,6 +394,7 @@
                     </ul>
                 @endif
             </section>
+                    <p class="m-0 m-top-1 m-bottom-3"><a href="{{ route('larena.env.admin.security', [], false) }}#env-security-protection" data-env-security-fold>{{ __('larena-env::admin.security.protection.close') }}</a></p>
         @endif
     @endif
 @endsection

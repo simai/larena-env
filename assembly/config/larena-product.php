@@ -34,6 +34,8 @@ return [
             // DNS through the provider's API (Panel plan, stage 7): the zones beside the server, the connection among the settings.
             'env.dns' => 'server',
             'env.dns.connection' => 'settings',
+            // «Настройки» opens on its map of values (study part 8, PX-81): security and programs stay under «Сервер».
+            'env.settings' => 'settings',
             // Where the server sends its own alerts (simai-env 1.31.0).
             'env.alerts.channel' => 'settings',
             // The services and the firewall beside the server, who reaches the panel among its settings (Panel plan 5.1–5.3).

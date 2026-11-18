@@ -308,13 +308,23 @@ env_assert(!str_contains($ok, 'data-env-update-hint'), 'No update, no hint.');
 // token field that is never filled, and a test; a server without it says so and offers nothing.
 $channel = static fn (array $data): string => $factory->make('larena-env::admin.alerts', $data + ['supported' => true, 'canTest' => true, 'channel' => null, 'notice' => null])->render();
 $telegram = $channel(['channel' => ['kind' => 'telegram', 'target_hint' => 'chat …4567', 'last_sent_at' => '2026-01-01T00:00:00Z', 'last_error' => 'timeout <b>']]);
+// One card «значение · Изменить» (study part 8, PX-82): the values in the Framework's description list, the form only on «Изменить».
 env_assert(str_contains($telegram, 'data-env-alerts-channel="telegram"') && str_contains($telegram, 'chat …4567') && str_contains($telegram, '01.01.2026 00:00 UTC')
-    && str_contains($telegram, 'timeout &lt;b&gt;') && str_contains($telegram, 'type="password" id="env-alerts-token" name="token"')
-    && !preg_match('/name="token"[^>]*value=/', $telegram) && str_contains($telegram, 'data-env-alerts-test'), 'The channel: '.$telegram);
+    && str_contains($telegram, 'timeout \\u003Cb\\u003E') && !str_contains($telegram, 'timeout <b>') && str_contains($telegram, 'data-env-facts="alerts"')
+    && str_contains($telegram, '?edit=channel#env-alerts-now') && !str_contains($telegram, 'data-env-alerts-form') && str_contains($telegram, 'data-env-alerts-test'), 'The channel: '.$telegram);
+$editing = $channel(['channel' => ['kind' => 'telegram', 'target_hint' => 'chat …4567'], 'edit' => 'channel']);
+env_assert(str_contains($editing, 'data-env-alerts-form') && str_contains($editing, 'type="password" id="env-alerts-token" name="token"')
+    && !preg_match('/name="token"[^>]*value=/', $editing) && str_contains($editing, 'data-env-edit-cancel'), 'Changing the channel: '.$editing);
 $off = $channel([]);
 env_assert(str_contains($off, 'data-env-alerts-channel="off"') && str_contains($off, $text('alerts.never')) && str_contains($off, $text('alerts.no_error')), 'Nowhere yet.');
 $older = $channel(['supported' => false, 'canTest' => false]);
 env_assert(str_contains($older, 'data-env-alerts-unsupported') && !str_contains($older, 'data-env-alerts-form'), 'An older server: nothing to change.');
+// «Настройки» as a map (study part 8, PX-81): each section with its value now and one action, the values escaped for the island.
+$map = $factory->make('larena-env::admin.settings', ['source' => 'recorded', 'notice' => null, 'rows' => [
+    ['id' => 'access', 'label' => 'Who may open', 'value' => 'From my addresses: 2 </script>', 'action' => ['label' => 'Change', 'href' => '/admin/server/panel-access']],
+    ['id' => 'security', 'label' => 'Security', 'value' => 'Urgent: 1', 'status' => 'error', 'action' => ['label' => 'Open', 'href' => '/admin/server/security']]]])->render();
+env_assert(str_contains($map, 'data-env-settings-map="2"') && str_contains($map, 'data-env-facts="settings"') && str_contains($map, '"href":"/admin/server/panel-access"')
+    && !str_contains($map, '2 </script>') && str_contains($map, 'data-env-settings-when'), 'The settings\' map: '.$map);
 $alertsSource = (string) file_get_contents(dirname(__DIR__, 2).'/resources/views/admin/alerts.blade.php');
 env_assert(!str_contains($alertsSource, '{!!') && preg_match('/<style\b|<script\b|@php\b/i', $alertsSource) !== 1, 'The alerts view prints nothing raw and holds no script.');
 env_assert(!str_contains($loaded, $text('metrics.swap')), 'No swap, no swap line.');

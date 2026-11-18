@@ -71,6 +71,26 @@ final class ServerAdminNavigationContributor implements AdminNavigationContribut
             activeRoutePattern: 'larena.env.admin.overview*',
             icon: 'monitor_heart',
         ), new AdminNavigationDescriptor(
+            // «Настройки»: the map of the panel's and the server's settings with their values, the menu's first row (study
+            // part 8, PX-81).
+            id: 'env.settings',
+            ownerPackage: $this->ownerPackage(),
+            label: 'All settings',
+            routeName: 'larena.env.admin.settings',
+            routeUri: '/admin/server/settings',
+            category: 'operations',
+            state: 'operator_slice',
+            accessScope: 'env.server.read',
+            auditEvent: 'env.settings.viewed',
+            statusCap: 'env_panel_skeleton',
+            order: 2,
+            group: 'operations',
+            knownLimitations: ['not_production_ready'],
+            surface: 'product',
+            labelKey: 'larena-env::admin.panel_settings.navigation',
+            activeRoutePattern: 'larena.env.admin.settings',
+            icon: 'tune',
+        ), new AdminNavigationDescriptor(
             // DNS through the provider's API (Panel plan, stage 7): the zones, and the connection among the panel's settings.
             id: 'env.dns',
             ownerPackage: $this->ownerPackage(),

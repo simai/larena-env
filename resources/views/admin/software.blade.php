@@ -120,27 +120,33 @@
             @if (\Larena\Env\Software\SoftwareScreen::groups($software, $withPhp ?? false, $filter ?? 'all', $query ?? '') === [])
                 <p class="p-x-2 p-bottom-2 m-0" data-env-software-none>{{ __('larena-env::admin.software.overview.none_found') }}</p>
             @else
-                <table class="larena-table larena-table-stack" data-env-software-table>
+                {{-- PX-84: on a phone the table keeps its rows short — the name with its version under it, the state, the menu; what a
+                     program is for and its version column show from a tablet up. Headings in plain case. --}}
+                @if (collect($software->components)->contains(fn ($component): bool => $component->requiredByEnv()))
+                    <p class="m-0 p-x-2 p-bottom-1 text-small color-on-surface-variant" data-env-software-required-why>{{ __('larena-env::admin.software.overview.required_by_env_why') }}</p>
+                @endif
+                <table class="larena-table" data-env-software-table>
                     <thead>
                         <tr>
-                            <th scope="col">{{ __('larena-env::admin.software.overview.columns.name') }}</th>
-                            <th scope="col" style="white-space: nowrap;">{{ __('larena-env::admin.software.overview.columns.state') }}</th>
-                            <th scope="col" style="white-space: nowrap;">{{ __('larena-env::admin.software.overview.columns.version') }}</th>
-                            <th scope="col"><span class="larena-visually-hidden">{{ __('larena-env::admin.software.overview.columns.actions') }}</span></th>
+                            <th scope="col" style="padding-inline: .625rem; text-transform: none; letter-spacing: normal;">{{ __('larena-env::admin.software.overview.columns.name') }}</th>
+                            <th scope="col" style="padding-inline: .625rem; white-space: nowrap; text-transform: none; letter-spacing: normal;">{{ __('larena-env::admin.software.overview.columns.state') }}</th>
+                            <th scope="col" class="hidden md:table-cell" style="padding-inline: .625rem; white-space: nowrap; text-transform: none; letter-spacing: normal;">{{ __('larena-env::admin.software.overview.columns.version') }}</th>
+                            <th scope="col" style="padding-inline: .625rem;"><span class="larena-visually-hidden">{{ __('larena-env::admin.software.overview.columns.actions') }}</span></th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (\Larena\Env\Software\SoftwareScreen::groups($software, $withPhp ?? false, $filter ?? 'all', $query ?? '') as $group)
                             <tr data-env-software-group="{{ $group['key'] }}">
-                                <th scope="colgroup" colspan="4" style="width: 100%;">{{ __('larena-env::admin.software.overview.groups.'.$group['key']) }}</th>
+                                <th scope="colgroup" colspan="4" style="padding-inline: .625rem; width: 100%; text-transform: none; letter-spacing: normal; color: var(--sf-on-surface); font-weight: 600;">{{ __('larena-env::admin.software.overview.groups.'.$group['key']) }}</th>
                             </tr>
                             @if ($group['php'])
                                 <tr data-env-software-php="{{ ($phpRow ?? null) === null ? 'unknown' : $phpRow['count'] }}">
-                                    <td data-label="{{ __('larena-env::admin.software.overview.columns.name') }}" style="min-width: 12rem;">
+                                    <td data-label="{{ __('larena-env::admin.software.overview.columns.name') }}" style="padding-inline: .625rem; min-width: 7rem;">
                                         <a href="{{ route('larena.env.admin.software.php', [], false) }}">PHP</a>
-                                        <div class="text-small color-on-surface-variant">{{ __('larena-env::admin.software.overview.purpose.php') }}</div>
+                                        <div class="hidden md:block text-small color-on-surface-variant">{{ __('larena-env::admin.software.overview.purpose.php') }}</div>
+                                        <div class="md:hidden text-small mono">{{ ($phpRow ?? null) === null || $phpRow['count'] === 0 ? '' : $phpRow['versions'] }}</div>
                                     </td>
-                                    <td data-label="{{ __('larena-env::admin.software.overview.columns.state') }}">
+                                    <td data-label="{{ __('larena-env::admin.software.overview.columns.state') }}" style="padding-inline: .625rem;">
                                         <div class="flex flex-wrap items-cross-center g-1">
                                             @if (($phpRow ?? null) === null)
                                                 <span class="color-on-surface-variant">—</span>
@@ -155,22 +161,25 @@
                                             @endif
                                         </div>
                                     </td>
-                                    <td data-label="{{ __('larena-env::admin.software.overview.columns.version') }}" class="mono text-small" style="min-width: 7rem;">{{ ($phpRow ?? null) === null || $phpRow['count'] === 0 ? '—' : $phpRow['versions'] }}</td>
-                                    <td data-label="{{ __('larena-env::admin.software.overview.columns.actions') }}">
+                                    <td data-label="{{ __('larena-env::admin.software.overview.columns.version') }}" class="hidden md:table-cell mono text-small" style="padding-inline: .625rem; min-width: 7rem;">{{ ($phpRow ?? null) === null || $phpRow['count'] === 0 ? '—' : $phpRow['versions'] }}</td>
+                                    <td data-label="{{ __('larena-env::admin.software.overview.columns.actions') }}" style="padding-inline: .625rem;">
                                         <a class="flex items-cross-center larena-control-floor" style="white-space: nowrap;" href="{{ route('larena.env.admin.software.php', [], false) }}" data-env-software-php-open>{{ __('larena-env::admin.software.overview.php_open') }}</a>
                                     </td>
                                 </tr>
                             @endif
                             @foreach ($group['components'] as $component)
                                 <tr data-env-software-component="{{ $component->name }}" data-env-software-state="{{ $component->installed ? 'installed' : 'absent' }}">
-                                    <td data-label="{{ __('larena-env::admin.software.overview.columns.name') }}" style="min-width: 12rem;">
+                                    <td data-label="{{ __('larena-env::admin.software.overview.columns.name') }}" style="padding-inline: .625rem; min-width: 7rem;">
                                         <span>{{ __('larena-env::admin.software.overview.components.'.$component->name) !== 'larena-env::admin.software.overview.components.'.$component->name ? __('larena-env::admin.software.overview.components.'.$component->name) : ($component->title ?? $component->name) }}</span>
-                                        <div class="text-small color-on-surface-variant">{{ __('larena-env::admin.software.overview.purpose.'.$component->name) !== 'larena-env::admin.software.overview.purpose.'.$component->name ? __('larena-env::admin.software.overview.purpose.'.$component->name) : $component->purpose }}</div>
+                                        <div class="hidden md:block text-small color-on-surface-variant">{{ __('larena-env::admin.software.overview.purpose.'.$component->name) !== 'larena-env::admin.software.overview.purpose.'.$component->name ? __('larena-env::admin.software.overview.purpose.'.$component->name) : $component->purpose }}</div>
                                         @if ($component->sites !== [])
-                                            <div class="text-small color-on-surface-variant" style="overflow-wrap: anywhere;" data-env-software-sites>{{ __('larena-env::admin.software.php.sites', ['sites' => implode(', ', $component->sites)]) }}</div>
+                                            <div class="hidden md:block text-small color-on-surface-variant" style="overflow-wrap: anywhere;" data-env-software-sites>{{ __('larena-env::admin.software.php.sites', ['sites' => implode(', ', $component->sites)]) }}</div>
+                                        @endif
+                                        @if ($component->installed)
+                                            <div class="md:hidden text-small mono">{{ \Larena\Env\Software\SoftwareScreen::shortVersion($component->version) }}</div>
                                         @endif
                                     </td>
-                                    <td data-label="{{ __('larena-env::admin.software.overview.columns.state') }}">
+                                    <td data-label="{{ __('larena-env::admin.software.overview.columns.state') }}" style="padding-inline: .625rem;">
                                         <div class="flex flex-wrap items-cross-center g-1">
                                             @if (!$component->installed)
                                                 <sf-badge appearance="tonal" text="{{ __('larena-env::admin.software.overview.not_installed') }}" data-env-software-absent></sf-badge>
@@ -188,7 +197,7 @@
                                             @endif
                                         </div>
                                     </td>
-                                    <td data-label="{{ __('larena-env::admin.software.overview.columns.version') }}" class="text-small" style="min-width: 7rem;">
+                                    <td data-label="{{ __('larena-env::admin.software.overview.columns.version') }}" class="hidden md:table-cell text-small" style="padding-inline: .625rem; min-width: 7rem;">
                                         @if ($component->installed)
                                             <span class="mono" style="white-space: nowrap;" title="{{ $component->version }}{{ $component->update && $component->candidate !== null ? ' → '.$component->candidate : '' }}">{{ \Larena\Env\Software\SoftwareScreen::shortVersion($component->version) }}@if ($component->update && $component->candidate !== null) → {{ \Larena\Env\Software\SoftwareScreen::shortVersion($component->candidate) }}@endif</span>
                                         @elseif ($component->candidate !== null)
@@ -197,7 +206,7 @@
                                             —
                                         @endif
                                     </td>
-                                    <td @if (\Larena\Env\Software\SoftwareScreen::hasMenu($component, $allows)) data-label="{{ __('larena-env::admin.software.overview.columns.actions') }}" @endif>
+                                    <td @if (\Larena\Env\Software\SoftwareScreen::hasMenu($component, $allows)) data-label="{{ __('larena-env::admin.software.overview.columns.actions') }}" @endif style="padding-inline: .625rem;">
                                         @if (\Larena\Env\Software\SoftwareScreen::hasMenu($component, $allows))
                                             <details data-env-software-actions="{{ $component->name }}" style="position: relative;">
                                                 <summary class="flex items-cross-center larena-control-floor" style="cursor: pointer; white-space: nowrap;"

@@ -12,6 +12,7 @@ use Larena\Env\Http\Controllers\SecurityController;
 use Larena\Env\Http\Controllers\ServerSetupController;
 use Larena\Env\Http\Controllers\NewSiteController;
 use Larena\Env\Http\Controllers\PeopleController;
+use Larena\Env\Http\Controllers\PanelSettingsController;
 use Larena\Env\Http\Controllers\ServerAdminController;
 use Larena\Env\Http\Controllers\ServerJobController;
 use Larena\Env\Http\Controllers\ServicesController;
@@ -77,6 +78,8 @@ $router->middleware(['access:env.server.read'])->group(static function ($router)
     $router->get('/firewall', [FirewallController::class, 'index'])->name('larena.env.admin.firewall');
     // The server's security (simai-env 1.45.0–1.47.0): its score, problems and fixes, the level, the files and the quarantine.
     $router->get('/security', [SecurityController::class, 'index'])->name('larena.env.admin.security');
+    // «Настройки»: the map of the panel's and the server's settings with their values (study part 8, PX-81).
+    $router->get('/settings', [PanelSettingsController::class, 'index'])->name('larena.env.admin.settings');
     // Storages for the sites' backups away from the server (simai-env 1.44.0) and the copies kept in them.
     $router->get('/backups', [BackupStorageController::class, 'index'])->name('larena.env.admin.storages');
     $router->get('/panel-access', [FirewallController::class, 'access'])->name('larena.env.admin.panel.access');
@@ -94,6 +97,8 @@ $router->middleware(['access:env.server.operate'])->group(static function ($rout
     $router->post('/software/php/run', [SoftwarePhpController::class, 'run'])->name('larena.env.admin.software.php.run');
     $router->post('/firewall/plan', [FirewallController::class, 'plan'])->name('larena.env.admin.firewall.plan');
     $router->post('/security/plan', [SecurityController::class, 'plan'])->name('larena.env.admin.security.plan');
+    // The plan of one fix, opened by a link from the list of things to do (PX-83); running it is still confirmed.
+    $router->get('/security/plan', [SecurityController::class, 'plan'])->name('larena.env.admin.security.plan.open');
     $router->post('/security/run', [SecurityController::class, 'run'])->name('larena.env.admin.security.run');
     $router->post('/backups/plan', [BackupStorageController::class, 'plan'])->name('larena.env.admin.storages.plan');
     // The server's first setup, one step at a time on the Framework's wizard, each put off if wanted (ENV 2026-11-06).
