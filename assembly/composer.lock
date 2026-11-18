@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "4c5c4593fec6bee583c3174513422fa6",
+    "content-hash": "a569f78f227c25a39f01cfc1d13450aa",
     "packages": [
         {
             "name": "brick/math",
@@ -1415,12 +1415,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:simai/larena-access.git",
-                "reference": "635f227ab0f8888b2eababef7562063c0b6e7e24"
+                "reference": "d612683795774996a2135e5db9c9d538138fc9cf"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-access/zipball/635f227ab0f8888b2eababef7562063c0b6e7e24",
-                "reference": "635f227ab0f8888b2eababef7562063c0b6e7e24",
+                "url": "https://api.github.com/repos/simai/larena-access/zipball/d612683795774996a2135e5db9c9d538138fc9cf",
+                "reference": "d612683795774996a2135e5db9c9d538138fc9cf",
                 "shasum": ""
             },
             "require": {
@@ -1469,6 +1469,7 @@
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/AdministratorGovernanceServiceTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/FirstAdministratorSetupServiceTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/AdministratorAuditNamesTest.php",
+                    "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/SignInAsPolicyTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/AdministratorApiOperationHandlerTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/AccessRolePolicyApiOperationHandlerTest.php",
                     "@php tests/Unit/AccessDecisionContractTest.php",
@@ -1565,11 +1566,7 @@
                 }
             ],
             "description": "Larena Access: Operation permissions, target providers, query scopes and explainable access decisions.",
-            "support": {
-                "source": "https://github.com/simai/larena-access/tree/main",
-                "issues": "https://github.com/simai/larena-access/issues"
-            },
-            "time": "2026-11-10T16:12:28+00:00"
+            "time": "2026-11-18T20:43:22+00:00"
         },
         {
             "name": "larena/admin",
@@ -1577,12 +1574,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:simai/larena-admin.git",
-                "reference": "8c7ff9dc2ccd7a448d734561e2201d2ef780c2d9"
+                "reference": "2c36c05e5f35fc73b4c7e51df25459091f9bd69a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-admin/zipball/8c7ff9dc2ccd7a448d734561e2201d2ef780c2d9",
-                "reference": "8c7ff9dc2ccd7a448d734561e2201d2ef780c2d9",
+                "url": "https://api.github.com/repos/simai/larena-admin/zipball/2c36c05e5f35fc73b4c7e51df25459091f9bd69a",
+                "reference": "2c36c05e5f35fc73b4c7e51df25459091f9bd69a",
                 "shasum": ""
             },
             "require": {
@@ -1693,6 +1690,7 @@
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/DeclarativeAuthLoginPageRendererTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/RepresentativeFixtureCommandTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/AdminFormPagesTest.php",
+                    "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/RoleRightsTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/AdminInstallerScreensTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/AdminPlannedActionProgressTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/AdminFailsClosedTest.php",
@@ -1705,6 +1703,7 @@
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/AdminRecordLayoutStoreTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/AdminViewSettingsStoreTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PropertyViewPortViewSettingsTest.php",
+                    "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PropertyViewPortCardSettingsTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PropertyViewPortKitTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PropertyViewPortTypedValuesTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/AdminFavoritesTest.php",
@@ -1807,11 +1806,7 @@
                 }
             ],
             "description": "Larena Admin: Object-based, permission-aware administration platform for package contributions, screens, actions and diagnostics.",
-            "support": {
-                "source": "https://github.com/simai/larena-admin/tree/main",
-                "issues": "https://github.com/simai/larena-admin/issues"
-            },
-            "time": "2026-11-18T10:59:30+00:00"
+            "time": "2026-11-18T20:56:45+00:00"
         },
         {
             "name": "larena/audit",
@@ -1819,12 +1814,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/simai/larena-audit.git",
-                "reference": "3465a523846437703ea5e28d5d03d574189d22d4"
+                "reference": "2fa8a5768f86a7d0955ad88e56f5b167dad56b51"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-audit/zipball/3465a523846437703ea5e28d5d03d574189d22d4",
-                "reference": "3465a523846437703ea5e28d5d03d574189d22d4",
+                "url": "https://api.github.com/repos/simai/larena-audit/zipball/2fa8a5768f86a7d0955ad88e56f5b167dad56b51",
+                "reference": "2fa8a5768f86a7d0955ad88e56f5b167dad56b51",
                 "shasum": ""
             },
             "require": {
@@ -1921,7 +1916,7 @@
                 "source": "https://github.com/simai/larena-audit/tree/main",
                 "issues": "https://github.com/simai/larena-audit/issues"
             },
-            "time": "2026-11-18T01:59:38+00:00"
+            "time": "2026-11-18T20:40:48+00:00"
         },
         {
             "name": "larena/auth",
@@ -1929,12 +1924,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:simai/larena-auth.git",
-                "reference": "225dfadfbd52fd911e3d2a2195d768eadf87270d"
+                "reference": "43226ac97ac61486e5aaa8c5cf7337992bc1217d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-auth/zipball/225dfadfbd52fd911e3d2a2195d768eadf87270d",
-                "reference": "225dfadfbd52fd911e3d2a2195d768eadf87270d",
+                "url": "https://api.github.com/repos/simai/larena-auth/zipball/43226ac97ac61486e5aaa8c5cf7337992bc1217d",
+                "reference": "43226ac97ac61486e5aaa8c5cf7337992bc1217d",
                 "shasum": ""
             },
             "require": {
@@ -2038,11 +2033,7 @@
                 }
             ],
             "description": "Larena Auth package: entry subject resolution, authentication methods, sessions, MFA and token channel boundaries.",
-            "support": {
-                "source": "https://github.com/simai/larena-auth/tree/main",
-                "issues": "https://github.com/simai/larena-auth/issues"
-            },
-            "time": "2026-11-16T09:28:12+00:00"
+            "time": "2026-11-18T20:54:56+00:00"
         },
         {
             "name": "larena/core",
@@ -2417,8 +2408,13 @@
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/SiteChecksTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/SiteRoutesTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/HistoryTest.php",
+                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/ServerActionsTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/DbBrowserTest.php",
-                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PanelRunsTest.php"
+                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PanelRunsTest.php",
+                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/SecretFilesTest.php",
+                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PanelPeopleTest.php",
+                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/AccountMovesTest.php",
+                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PanelMailTest.php"
                 ],
                 "test:unit": [
                     "@test"
@@ -2585,10 +2581,6 @@
                 }
             ],
             "description": "Larena Filesystem: File metadata, blob storage abstraction and safe file delivery layer used by content, storage, media, file-manager, link and search surfaces.",
-            "support": {
-                "source": "https://github.com/simai/larena-filesystem/tree/main",
-                "issues": "https://github.com/simai/larena-filesystem/issues"
-            },
             "time": "2026-11-16T16:08:44+00:00"
         },
         {
@@ -2597,12 +2589,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/simai/larena-notification.git",
-                "reference": "70e9ac626686ab9028de85b3bc3fd8a788872d28"
+                "reference": "e281e1d713122e060408aeaafa31eeee4e240902"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-notification/zipball/70e9ac626686ab9028de85b3bc3fd8a788872d28",
-                "reference": "70e9ac626686ab9028de85b3bc3fd8a788872d28",
+                "url": "https://api.github.com/repos/simai/larena-notification/zipball/e281e1d713122e060408aeaafa31eeee4e240902",
+                "reference": "e281e1d713122e060408aeaafa31eeee4e240902",
                 "shasum": ""
             },
             "require": {
@@ -2681,7 +2673,7 @@
                 "source": "https://github.com/simai/larena-notification/tree/main",
                 "issues": "https://github.com/simai/larena-notification/issues"
             },
-            "time": "2026-11-01T15:38:52+00:00"
+            "time": "2026-11-18T17:12:51+00:00"
         },
         {
             "name": "larena/property",
@@ -2796,10 +2788,6 @@
                 }
             ],
             "description": "Larena Property: Universal property layer for field type registry, field definitions, structured render models, validation, templates and typed value interaction across settings, admin, storage and future content models.",
-            "support": {
-                "source": "https://github.com/simai/larena-property/tree/main",
-                "issues": "https://github.com/simai/larena-property/issues"
-            },
             "time": "2026-11-17T23:29:07+00:00"
         },
         {
@@ -2808,12 +2796,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:simai/larena-setting.git",
-                "reference": "e33a0ce5d22c0690507576c2fa8eec6d48d53910"
+                "reference": "a6f023747472c8e39d89be1bcb61d0995606c611"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-setting/zipball/e33a0ce5d22c0690507576c2fa8eec6d48d53910",
-                "reference": "e33a0ce5d22c0690507576c2fa8eec6d48d53910",
+                "url": "https://api.github.com/repos/simai/larena-setting/zipball/a6f023747472c8e39d89be1bcb61d0995606c611",
+                "reference": "a6f023747472c8e39d89be1bcb61d0995606c611",
                 "shasum": ""
             },
             "require": {
@@ -2932,11 +2920,7 @@
                 }
             ],
             "description": "Larena Settings: Machine-readable settings definitions, runtime value resolution, pending changes and import/export policy.",
-            "support": {
-                "source": "https://github.com/simai/larena-setting/tree/main",
-                "issues": "https://github.com/simai/larena-setting/issues"
-            },
-            "time": "2026-11-18T06:01:16+00:00"
+            "time": "2026-11-18T12:38:19+00:00"
         },
         {
             "name": "larena/ui",
@@ -3090,7 +3074,7 @@
             ],
             "description": "Larena UI: Universal UI/frontend package for Larena smart components, backend-first rendering, hydration, design packs, UI asset graph, component registry, playground and frontend behavior contracts.",
             "support": {
-                "source": "https://github.com/simai/larena-ui/tree/larena-820bb267919e",
+                "source": "https://github.com/simai/larena-ui/tree/larena-a57887949f9a",
                 "issues": "https://github.com/simai/larena-ui/issues"
             },
             "time": "2026-11-13T11:34:36+00:00"
