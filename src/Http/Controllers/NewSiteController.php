@@ -1139,7 +1139,7 @@ final readonly class NewSiteController
             if ($blocked === 'upload') {
                 continue;
             }
-            $choices[] = ['id' => $route->id, 'label' => $this->known('routes.names.'.$route->id, $route->title),
+            $choices[] = ['id' => $route->id, 'label' => $this->known('routes.names_of.'.$kind.'_'.$route->id, $this->known('routes.names.'.$route->id, $route->title)),
                 'hint' => $this->known('routes.hints.'.$kind.'_'.$route->id, $route->title),
                 'available' => $blocked === null, 'reason' => $blocked === null ? null : $this->text('routes.unavailable.'.$blocked),
                 'steps' => array_map(fn (array $step): string => $this->stepLabel($step)

@@ -113,6 +113,21 @@ final readonly class RecordedAnswersGateway implements PanelGateway
 
             return $this->replay($request, $file);
         }
+        // A plain PHP site restored from its archive (site:restore-ready, recorded on the panel's stand, simai-env 1.63.3): the
+        // set holds the plan of the archive and the dump over a site with data, and the server's refusals as it says them
+        // (an archive of another kind, a file that is not there or is a link, a dump into a site without a database, data
+        // already there without «Заменить существующее»); any other choice is missing, never answered with another's.
+        if ($request->command === 'site:restore-ready' && !$request->confirm) {
+            $file = $this->siteRestoreFile($request->args);
+            if ($file === null) {
+                return $this->unavailable($request, PanelReason::RECORDING_MISSING);
+            }
+
+            return $this->replay($request, $file);
+        }
+        if ($request->command === 'job:status' && $this->state->startedCommand === 'site:restore-ready') {
+            return $this->replay($request, 'job-status.site-restore-ready.json');
+        }
         // A release from Git (site:deploy, the Laravel repository route of simai-env 1.56.2): the set holds the plan of one
         // repository and ref for one site; any other is missing, never answered with that one's.
         if ($request->command === 'site:deploy' && !$request->confirm) {
@@ -234,6 +249,35 @@ final readonly class RecordedAnswersGateway implements PanelGateway
         }
 
         return 'plan.bitrix-restore-ready.json';
+    }
+
+    /**
+     * The recorded answer to a restore's plan, by what the server checks first: the site's kind, the archive's and the
+     * dump's names, whether they are there, then the data already in the site.
+     *
+     * @param array<string, mixed> $args
+     */
+    private function siteRestoreFile(array $args): ?string
+    {
+        $domain = $args['domain'] ?? null;
+        $files = is_string($args['files'] ?? null) ? $args['files'] : '';
+        $dump = is_string($args['dump'] ?? null) ? $args['dump'] : '';
+        $overwrite = ($args['overwrite'] ?? 'no') === 'yes';
+        $refused = static fn (string $case): string => "refused.plan-failed.site-restore-ready.{$case}.json";
+
+        return match (true) {
+            $domain === 'demo-static.test' => $refused('profile'),
+            !in_array($domain, ['demo-php.test', 'demo-owned.test'], true) => null,
+            preg_match('/\.(?:zip|tar\.gz|tgz|tar)\z/', $files) !== 1 || str_ends_with($files, '.sql.zip') => $domain === 'demo-php.test' ? $refused('files-kind') : null,
+            $dump !== '' && preg_match('/\.sql(?:\.gz|\.zip)?\z/', $dump) !== 1 => $domain === 'demo-php.test' ? $refused('dump-kind') : null,
+            $files === 'gone.zip' => $domain === 'demo-php.test' ? $refused('file-missing') : null,
+            $files === 'link.zip' => $domain === 'demo-owned.test' ? $refused('file-link') : null,
+            $domain === 'demo-owned.test' => $files === 'site.zip' && $dump === 'db.sql' ? $refused('no-database') : null,
+            $files !== 'site.zip' => null,
+            !$overwrite => $refused($dump === '' ? 'files-present' : 'database-not-empty'),
+            $dump === 'db.sql.gz' => 'plan.site-restore-ready.json',
+            default => null,
+        };
     }
 
     private function fileFor(PanelRequest $request, ?string $domain): string

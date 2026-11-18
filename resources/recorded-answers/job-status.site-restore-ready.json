@@ -1,0 +1,77 @@
+{
+  "schema": "simai-panel-answer/1",
+  "request_id": "fixture-job-status.site-restore-ready",
+  "status": "ok",
+  "kind": "result",
+  "data": {
+    "job_id": "000000000000000000000000",
+    "state": "succeeded",
+    "exit_code": 0,
+    "command": "site:restore-ready",
+    "args": {
+      "domain": "demo-php.test",
+      "files": "site.zip",
+      "dump": "db.sql.gz",
+      "overwrite": "yes"
+    },
+    "created_at": "2026-11-18T23:37:30Z",
+    "started_at": "2026-11-18T23:37:30Z",
+    "finished_at": "2026-11-18T23:37:32Z",
+    "title": "Перенос сайта demo-php.test из архива",
+    "object": {
+      "kind": "site",
+      "id": "demo-php.test"
+    },
+    "state_words": "Готово",
+    "request_id": "fixture-job-start",
+    "actor": {
+      "user": "admin@example.test",
+      "kind": "person"
+    },
+    "steps": [
+      {
+        "id": 1,
+        "title": "Копия текущего сайта",
+        "state": "done",
+        "started_at": "2026-11-18T23:37:31Z",
+        "finished_at": "2026-11-18T23:37:31Z"
+      },
+      {
+        "id": 2,
+        "title": "Распаковка файлов",
+        "state": "done",
+        "started_at": "2026-11-18T23:37:31Z",
+        "finished_at": "2026-11-18T23:37:31Z"
+      },
+      {
+        "id": 3,
+        "title": "Загрузка дампа базы",
+        "state": "done",
+        "started_at": "2026-11-18T23:37:31Z",
+        "finished_at": "2026-11-18T23:37:31Z"
+      },
+      {
+        "id": 4,
+        "title": "Сайт the archive and the dump переходит к аккаунту the site's trash",
+        "state": "done",
+        "started_at": "2026-11-18T23:37:31Z",
+        "finished_at": "2026-11-18T23:37:32Z"
+      }
+    ],
+    "progress": {
+      "current": 4,
+      "total": 4,
+      "title": null
+    },
+    "outcome": {
+      "code": "succeeded",
+      "words": "Готово",
+      "reason": null
+    },
+    "cancel": {
+      "cancellable": false,
+      "leaves": null
+    },
+    "result": null
+  }
+}

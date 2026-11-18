@@ -1,0 +1,14 @@
+{
+  "schema": "simai-panel-answer/1",
+  "request_id": "fixture-refused.plan-failed.site-restore-ready.no-database",
+  "status": "failed",
+  "reason": "plan_failed",
+  "data": {
+    "checks": {
+      "blockers": [
+        "demo-owned.test has no database for the dump: simai-admin.sh site db-create --domain demo-owned.test --confirm yes"
+      ],
+      "notes": []
+    }
+  }
+}

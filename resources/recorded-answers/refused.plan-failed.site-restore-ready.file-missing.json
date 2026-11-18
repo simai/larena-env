@@ -1,0 +1,14 @@
+{
+  "schema": "simai-panel-answer/1",
+  "request_id": "fixture-refused.plan-failed.site-restore-ready.file-missing",
+  "status": "failed",
+  "reason": "plan_failed",
+  "data": {
+    "checks": {
+      "blockers": [
+        "--files: gone.zip not found in /home/simai/www/demo-php.test"
+      ],
+      "notes": []
+    }
+  }
+}

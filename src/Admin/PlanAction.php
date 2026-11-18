@@ -90,6 +90,10 @@ final class PlanAction
                     $facts[] = [$label, $value];
                 }
             }
+        } elseif ($command === 'site:restore-ready') {
+            // «Восстановить из архива»: what is unpacked, which database the dump goes to, what is replaced and the copy
+            // before, in the panel's words; the server's plan names only the files (simai-env 1.63.3).
+            $facts = RestoreWords::facts((string) $target, self::restoreArgs($plan, $hidden), self::restoreText(...));
         } elseif ($plan->transfer !== null || ($plan->account !== null && $plan->account['sites'] !== [])) {
             // Sites moving between server accounts (simai-env 1.57.0, 1.63.1): from whom to whom in the panel's words, not
             // the server's values.
@@ -135,7 +139,8 @@ final class PlanAction
             acceptText: $destroys ? $heading : ($heading !== $command ? $heading : (self::text('plan.confirm') ?? '')),
             danger: $destroys,
             // What deletes, replaces or stops something says so on the plate: the panel's sentence, else the server's (simai-env 1.60.0).
-            consequence: ($destroys || in_array($key, self::SAID_CONSEQUENCES, true) ? self::text('plan.consequence.'.$key) : null) ?? $plan->consequence ?? '',
+            consequence: $command === 'site:restore-ready' ? RestoreWords::consequence(self::restoreArgs($plan, $hidden), self::restoreText(...))
+                : (($destroys || in_array($key, self::SAID_CONSEQUENCES, true) ? self::text('plan.consequence.'.$key) : null) ?? $plan->consequence ?? ''),
             require: $destroys && $target !== null ? $target : '',
             facts: $facts,
             // What the panel knows, then what the server's check found: what would stop it, then what is worth knowing.
@@ -186,6 +191,32 @@ final class PlanAction
             key: 'env-'.preg_replace('/[^a-z0-9-]/', '-', strtolower($key)),
             more: trim($more) !== '' ? [\Larena\Admin\Runtime\AdminRenderedPart::control($more)] : [],
         ))->html();
+    }
+
+    /**
+     * A restore's choices as the plan carries them, else as the form sent them: an unticked «Заменить существующее» is
+     * not sent to the server, so the plan has no `overwrite` then.
+     *
+     * @param array<array-key, mixed> $hidden
+     * @return array<string, string>
+     */
+    private static function restoreArgs(PanelPlan $plan, array $hidden): array
+    {
+        $args = [];
+        foreach (['files', 'dump', 'overwrite'] as $name) {
+            $value = $plan->args[$name] ?? $hidden[$name] ?? null;
+            if (is_string($value)) {
+                $args[$name] = $value;
+            }
+        }
+
+        return $args;
+    }
+
+    /** @param array<string, string> $replace */
+    private static function restoreText(string $key, array $replace = []): string
+    {
+        return self::text('restore.'.$key, $replace) ?? $key;
     }
 
     /** «Удалить сайт demo.test? Отменить это нельзя.» asks its first sentence; the rest is the plate's own words. */

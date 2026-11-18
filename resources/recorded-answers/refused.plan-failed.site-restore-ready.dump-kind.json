@@ -1,0 +1,14 @@
+{
+  "schema": "simai-panel-answer/1",
+  "request_id": "fixture-refused.plan-failed.site-restore-ready.dump-kind",
+  "status": "failed",
+  "reason": "plan_failed",
+  "data": {
+    "checks": {
+      "blockers": [
+        "--dump must be a .sql, .sql.gz or .sql.zip file"
+      ],
+      "notes": []
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema": "simai-panel-answer/1",
+  "request_id": "fixture-refused.plan-failed.site-restore-ready.profile",
+  "status": "failed",
+  "reason": "plan_failed",
+  "data": {
+    "checks": {
+      "blockers": [
+        "site restore-ready is for PHP sites (generic profile); demo-static.test is static"
+      ],
+      "notes": []
+    }
+  }
+}

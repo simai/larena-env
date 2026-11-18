@@ -1,0 +1,14 @@
+{
+  "schema": "simai-panel-answer/1",
+  "request_id": "fixture-refused.plan-failed.site-restore-ready.database-not-empty",
+  "status": "failed",
+  "reason": "plan_failed",
+  "data": {
+    "checks": {
+      "blockers": [
+        "The database demo_php_test is not empty (1 tables); rerun with --overwrite yes (a backup is taken first)"
+      ],
+      "notes": []
+    }
+  }
+}

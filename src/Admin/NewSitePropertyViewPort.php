@@ -383,7 +383,7 @@ final class NewSitePropertyViewPort extends PropertyViewPort
                     hint: $this->hint('new_site.daily_backup_hint'), default: true);
             }
 
-            return ['structure_id' => $collection, 'label' => $this->kindLabel($kind, $profile).' · '.$this->text('routes.names.'.$route->id, $route->title),
+            return ['structure_id' => $collection, 'label' => $this->kindLabel($kind, $profile).' · '.$this->text('routes.names_of.'.$kind.'_'.$route->id, $this->text('routes.names.'.$route->id, $route->title)),
                 'fields' => array_map(static fn (PropertyField $field): array => $field->toArray(), $fields)];
         }
         if (in_array('redirect', $groups, true)) {

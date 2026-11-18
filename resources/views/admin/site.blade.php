@@ -108,9 +108,16 @@
                                     @if ($field === 'migrate')
                                         <input type="hidden" name="migrate" value="no">
                                         <label for="env-route-migrate"><input type="checkbox" id="env-route-migrate" name="migrate" value="yes" checked> {{ __('larena-env::admin.routes.inputs.migrate') }}</label>
+                                    @elseif ($field === 'overwrite' && $siteRoute['operation'] === \Larena\Env\Operations\SiteOperation::PhpRestore)
+                                        {{-- «Заменить существующее»: off by default; the plan says what it replaces and the copy before. --}}
+                                        <input type="hidden" name="overwrite" value="no">
+                                        <label class="flex items-cross-center g-1" for="env-route-overwrite"><input type="checkbox" id="env-route-overwrite" name="overwrite" value="yes"> <span>{{ __('larena-env::admin.fields.overwrite') }}</span></label>
                                     @elseif (in_array($field, ['files', 'dump'], true) && ($siteRoute['copies'] ?? null) !== null)
-                                        <label for="env-route-{{ $field }}">{{ __('larena-env::admin.routes.inputs.'.$field) }}</label>
-                                        <select id="env-route-{{ $field }}" name="{{ $field }}" required>
+                                        <label for="env-route-{{ $field }}">{{ $siteRoute['operation'] === \Larena\Env\Operations\SiteOperation::PhpRestore ? __('larena-env::admin.restore.'.$field) : __('larena-env::admin.routes.inputs.'.$field) }}</label>
+                                        <select id="env-route-{{ $field }}" name="{{ $field }}" @if ($siteRoute['operation'] !== \Larena\Env\Operations\SiteOperation::PhpRestore || $field === 'files') required @endif>
+                                            @if ($siteRoute['operation'] === \Larena\Env\Operations\SiteOperation::PhpRestore && $field === 'dump')
+                                                <option value="">{{ __('larena-env::admin.restore.no_dump') }}</option>
+                                            @endif
                                             @foreach ($siteRoute['copies'][$field === 'files' ? 'files' : 'dumps'] as $found)
                                                 <option value="{{ $found }}">{{ $found }}</option>
                                             @endforeach
@@ -125,6 +132,9 @@
                                     @endif
                                 </div>
                             @endforeach
+                            @if ($siteRoute['operation'] === \Larena\Env\Operations\SiteOperation::PhpRestore)
+                                <p class="m-0 text-small color-on-surface-variant" data-env-site-route-restore-note>{{ __('larena-env::admin.restore.note') }}</p>
+                            @endif
                             <div class="larena-form-actions">
                                 <button type="submit" class="larena-button larena-button-primary">{{ __('larena-env::admin.operations.'.$siteRoute['operation']->value) }}</button>
                             </div>

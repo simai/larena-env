@@ -1,0 +1,53 @@
+{
+  "schema": "simai-panel-answer/1",
+  "request_id": "fixture-plan.site-restore-ready",
+  "status": "ok",
+  "kind": "plan",
+  "data": {
+    "command": "site:restore-ready",
+    "args": {
+      "domain": "demo-php.test",
+      "files": "site.zip",
+      "dump": "db.sql.gz",
+      "overwrite": "yes"
+    },
+    "target": "demo-php.test",
+    "description": "Restore a PHP site (generic profile) from a files archive and an optional SQL dump",
+    "effects": "write",
+    "lock": "site",
+    "applied": false,
+    "checks": {
+      "blockers": [],
+      "notes": []
+    },
+    "display": [
+      {
+        "key": "domain",
+        "label": "Сайт",
+        "value": "demo-php.test",
+        "words": "demo-php.test"
+      },
+      {
+        "key": "files",
+        "label": "Файлы",
+        "value": "site.zip",
+        "words": "site.zip"
+      },
+      {
+        "key": "dump",
+        "label": "Дамп базы",
+        "value": "db.sql.gz",
+        "words": "db.sql.gz"
+      },
+      {
+        "key": "overwrite",
+        "label": "Заменить существующее",
+        "value": "yes",
+        "words": "да"
+      }
+    ],
+    "title": "Перенос сайта demo-php.test из архива",
+    "effects_words": "изменит настройки или файлы",
+    "consequence": "заменит файлы и базу сайта данными архива"
+  }
+}
