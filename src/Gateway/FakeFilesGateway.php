@@ -9,7 +9,7 @@ use Larena\Env\Contracts\PanelGateway;
 use Throwable;
 
 /**
- * A stand-in for the server's file commands (simai-env 1.39.0–1.40.0) on recorded answers, for tests and the install
+ * A stand-in for the server's file commands (simai-env 1.39.0–1.40.0; the trash of 1.57.0) on recorded answers, for tests and the install
  * check only: the recordings hold one folder and a few plans, never the bytes of a download or an upload. It answers
  * file:* the way the gateway does, on a local folder per site; everything else goes to the recorded answers it wraps. Paths are checked as the gateway
  * checks them: nothing outside a site's folder, no `..`, no link that leaves it.
@@ -18,12 +18,16 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
 {
     /** The commands this stand-in answers, added to the host description's own list. */
     public const array COMMANDS = ['file:list', 'file:stat', 'file:read', 'file:download', 'file:write', 'file:upload', 'file:mkdir', 'file:rename',
-        'file:remove', 'file:archive', 'file:extract'];
+        'file:remove', 'file:archive', 'file:extract', 'file:trash-list', 'file:trash-restore', 'file:trash-empty'];
+
+    /** How long the stand-in keeps a removed entry, as simai-env 1.57.0 does. */
+    public const int TRASH_DAYS = 30;
 
     private const array DESCRIPTIONS = [
         'file:write' => 'Replace or create a text file of a site', 'file:upload' => 'Put a file into a site', 'file:mkdir' => 'Make a directory',
         'file:rename' => 'Rename or move', 'file:remove' => 'Remove a file, a link or a directory with its contents',
         'file:archive' => 'Pack a file or directory into a new archive', 'file:extract' => 'Unpack an archive into a directory',
+        'file:trash-restore' => 'Put a trash entry back where it was', 'file:trash-empty' => 'Delete trash entries for good',
     ];
 
     public function __construct(private PanelGateway $inner, private string $root)
@@ -146,6 +150,9 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
     {
         $relative = $args['path'] ?? '';
         $path = $this->path($domain, $relative);
+        if ($command === 'file:trash-list') {
+            return $this->trashList($domain);
+        }
         if ($command === 'file:list') {
             if (!is_dir($path)) {
                 throw new FakeRefusal(file_exists($path) ? 'not_a_directory' : 'not_found');
@@ -200,6 +207,9 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
             'file:archive' => $this->existing($this->path($domain, $args['path'])) && $this->free($this->path($domain, $args['to'])),
             'file:extract' => $this->existing($this->path($domain, $args['path'])) && $this->path($domain, $args['to']) !== '',
             'file:write', 'file:upload' => $this->expected($this->path($domain, $args['path']), $args['expect-sha256'] ?? 'any'),
+            // As 1.57.0: a restore's plan fails while its place is taken or the entry is gone.
+            'file:trash-restore' => $this->restorable($domain, $args['id']),
+            'file:trash-empty' => !isset($args['id']) || $this->inTrash($domain, $args['id']),
             default => true,
         };
     }
@@ -267,9 +277,32 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
 
                 return ["Renamed {$args['path']} to {$args['to']}"];
             case 'file:remove':
-                self::removeTree($this->path($domain, $args['path']));
+                // Into the site's trash, as simai-env 1.57.0: kept there, put back by file:trash-restore.
+                $id = gmdate('Ymd\THis\Z').'-'.bin2hex(random_bytes(3));
+                $entry = $this->path($domain, '.').'/.simai-trash/'.$id;
+                mkdir($entry, 0o700, true);
+                $from = $this->path($domain, $args['path']);
+                $meta = ['id' => $id, 'path' => trim($args['path'], '/'), 'name' => basename($args['path'])] + self::stat($from)
+                    + ['deleted_at' => gmdate('Y-m-d\TH:i:s\Z'), 'expires_at' => gmdate('Y-m-d\TH:i:s\Z', time() + self::TRASH_DAYS * 86400)];
+                rename($from, $entry.'/item');
+                file_put_contents($entry.'/meta.json', json_encode($meta, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES));
 
-                return ["Removed {$args['path']}"];
+                return ["Moved {$args['path']} to the trash ({$id})"];
+            case 'file:trash-restore':
+                $meta = $this->trashMeta($domain, $args['id']);
+                $to = $this->path($domain, $args['to'] ?? (string) $meta['path']);
+                @mkdir(dirname($to), 0o775, true);
+                rename($this->path($domain, '.').'/.simai-trash/'.$args['id'].'/item', $to);
+                self::removeTree($this->path($domain, '.').'/.simai-trash/'.$args['id']);
+
+                return ["Restored {$meta['path']}"];
+            case 'file:trash-empty':
+                $ids = isset($args['id']) ? [$args['id']] : array_column($this->trashList($domain)['entries'], 'id');
+                foreach ($ids as $id) {
+                    self::removeTree($this->path($domain, '.').'/.simai-trash/'.$id);
+                }
+
+                return ['Deleted '.count($ids).' trash entries for good'];
             case 'file:archive':
                 return ["Packed {$args['path']} into {$args['to']}", 'packed: 1'];
             case 'file:extract':
@@ -312,6 +345,53 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
         }
 
         return $path;
+    }
+
+    /** @return array<string, mixed> the site's trash, simai-file-trash/1 */
+    private function trashList(string $domain): array
+    {
+        $dir = $this->path($domain, '.').'/.simai-trash';
+        $entries = [];
+        foreach (is_dir($dir) ? array_diff((array) scandir($dir), ['.', '..']) : [] as $id) {
+            $meta = json_decode((string) @file_get_contents($dir.'/'.$id.'/meta.json'), true);
+            if (is_array($meta)) {
+                $entries[] = ['id' => (string) $id, 'path' => $meta['path'] ?? null, 'name' => $meta['name'] ?? null, 'type' => $meta['type'] ?? 'file',
+                    'size' => (int) ($meta['size'] ?? 0), 'deleted_at' => $meta['deleted_at'] ?? null, 'expires_at' => $meta['expires_at'] ?? null];
+            }
+        }
+        rsort($entries);
+
+        return ['schema' => 'simai-file-trash/1', 'dir' => '.simai-trash', 'retention_days' => self::TRASH_DAYS, 'entries' => $entries,
+            'count' => count($entries), 'total_bytes' => array_sum(array_column($entries, 'size'))];
+    }
+
+    /** @return array<string, mixed> @throws FakeRefusal */
+    private function trashMeta(string $domain, string $id): array
+    {
+        $meta = json_decode((string) @file_get_contents($this->path($domain, '.').'/.simai-trash/'.$id.'/meta.json'), true);
+        if (!is_array($meta)) {
+            throw new FakeRefusal('plan_failed');
+        }
+
+        return $meta;
+    }
+
+    /** @throws FakeRefusal */
+    private function inTrash(string $domain, string $id): bool
+    {
+        $this->trashMeta($domain, $id);
+
+        return true;
+    }
+
+    /** @throws FakeRefusal */
+    private function restorable(string $domain, string $id): bool
+    {
+        if (file_exists($this->path($domain, (string) $this->trashMeta($domain, $id)['path']))) {
+            throw new FakeRefusal('plan_failed');
+        }
+
+        return true;
     }
 
     /** @throws FakeRefusal */

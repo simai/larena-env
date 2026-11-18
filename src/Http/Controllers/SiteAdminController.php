@@ -8,7 +8,9 @@ use Illuminate\Contracts\Translation\Translator;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Larena\Env\Files\FileEntry;
 use Larena\Env\Files\FilePath;
+use Larena\Env\Admin\SiteFilesPage;
 use Larena\Env\Files\SiteFiles;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\NoticeRedirect;
@@ -72,6 +74,7 @@ final readonly class SiteAdminController
         private ?\Larena\Env\Server\SiteRouteReader $routes = null,
         private ?\Larena\Env\Server\SiteExtrasReader $profiles = null,
         private ?\Larena\Env\Contracts\PanelGateway $gateway = null,
+        private ?\Larena\Admin\Runtime\AdminDataviewPagePresenter $dataviews = null,
     ) {
     }
 
@@ -233,7 +236,7 @@ final readonly class SiteAdminController
             'sftpAccounts' => $sftpAccounts,
             // The domain's records through the panel's DNS provider, and whether it points here (Panel plan, stage 7).
             // The site's files (simai-env 1.39.0–1.40.0): a folder or a file open in the editor.
-            'files' => $site !== null && $tab === 'files' ? $this->filesTab($request, $actor, $domain, $capabilities) : null,
+            'files' => $site !== null && $tab === 'files' ? $this->filesTab($request, $actor, $site, $capabilities) : null,
             // The site's own nginx directives (simai-env 1.41.0), the system level's.
             'nginx' => is_array($nginx) ? $nginx : null,
             'nginxProblem' => is_string($nginx) ? $this->filesReasonText($nginx) : null,
@@ -402,49 +405,145 @@ final readonly class SiteAdminController
     }
 
     /**
-     * What the «Файлы» tab shows: nothing but a sentence on a server without the file commands; otherwise the folder or
-     * a file open in the editor, and the changes this server allows (simai-env 1.39.0; upload and archives 1.40.0).
+     * What the «Файлы» tab shows: nothing but a sentence on a server without the file commands; otherwise a folder as the
+     * admin's list, or a file: its text in the editor, a picture in place, a file with passwords behind a question.
+     * Opened plainly it is the folder visitors see (PX-91), with the sentence that says so; the server's own entries of
+     * the site's root (releases, the current release, the trash) are folded. Removing goes to the site's trash where the
+     * server keeps one (simai-env 1.57.0), and the trash is listed below with «Вернуть».
      *
      * @return array<string, mixed>
      */
-    private function filesTab(Request $request, PanelActor $actor, string $domain, PanelCapabilities $capabilities): array
+    private function filesTab(Request $request, PanelActor $actor, \Larena\Env\Server\SiteDetails $site, PanelCapabilities $capabilities): array
     {
+        $domain = $site->domain;
         if (!$capabilities->allows('file:list') || $this->files === null) {
             return ['supported' => false];
         }
-        $path = FilePath::clean($request->query('path')) ?? '.';
-        $view = $request->query('view') === null ? null : FilePath::clean($request->query('view'));
         $allows = [];
         foreach (SiteFilesController::FILE_OPERATIONS as $op => $command) {
             $allows[$op] = $capabilities->allows($command);
         }
         $allows['download'] = $capabilities->allows('file:download');
         $allows['read'] = $capabilities->allows('file:read');
-        $opened = $view !== null && $view !== '.' && $allows['read'];
+        $trashKept = $capabilities->allows('file:trash-list');
+        $text = fn (string $key, array $replace = []): string => (string) $this->translator->get('larena-env::admin.'.$key, $replace);
 
-        $text = $opened ? $this->files->text($actor, $domain, $view) : null;
-        $folder = $opened ? null : $this->files->folder($actor, $domain, $path);
+        // The site's root is read first: it says where the visitors' folder is (public, or a link to the current release).
+        $root = $this->files->folder($actor, $domain, '.');
+        $visitors = is_array($root) ? self::visitorsFolder($root['entries'], $site->publicDir) : null;
+        $path = $request->query('path') === null ? null : FilePath::clean($request->query('path'));
+        $view = $request->query('view') === null ? null : FilePath::clean($request->query('view'));
+        $open = $request->query('open') === null ? null : FilePath::clean($request->query('open'));
+        $folder = null;
         $problem = null;
-        foreach ([$folder, $text] as $read) {
+        if ($open !== null && $open !== '.') {
+            // The row's name: a folder opens as a folder, anything else as a file.
+            $folder = $this->files->folder($actor, $domain, $open);
+            if (is_array($folder)) {
+                $path = $open;
+            } elseif ($folder === 'not_a_directory') {
+                [$view, $folder] = [$open, null];
+            }
+        }
+        $path ??= $view !== null ? FilePath::parent($view) : ($visitors ?? '.');
+        $opened = $view !== null && $view !== '.';
+        $image = $opened && FileEntry::imageType($view) !== null;
+        $secret = $opened && FileEntry::secret(basename($view));
+        // A file with passwords is shown only when asked for (PX-92), a picture in place (PX-96), any other file as text.
+        $revealed = $secret && $request->query('reveal') === '1';
+        $textRead = $opened && !$image && (!$secret || $revealed) && $allows['read'] ? $this->files->text($actor, $domain, $view) : null;
+        if (!$opened && !is_array($folder)) {
+            $folder = $path === '.' && is_array($root) ? $root : (is_string($folder) ? $folder : $this->files->folder($actor, $domain, $path));
+        }
+        foreach ([$folder, $textRead] as $read) {
             if (is_string($read)) {
                 $problem = $this->filesReasonText($read);
             }
         }
+        // The site's root: the server's entries are folded, the visitors' folder is named.
+        $service = [];
+        $entries = is_array($folder) ? $folder['entries'] : [];
+        if ($path === '.') {
+            foreach ($entries as $index => $entry) {
+                if (in_array($entry->name, SiteFilesPage::SERVICE, true) || ($entry->name === $site->publicDir && $entry->type === 'link')) {
+                    $service[] = $entry;
+                    unset($entries[$index]);
+                }
+            }
+            $entries = array_values($entries);
+        }
+        $token = $request->hasSession() ? (string) $request->session()->token() : '';
+        $base = route('larena.env.admin.site', ['domain' => $domain], false).'?tab=files';
+        $trash = $trashKept && !$opened ? $this->files->trash($actor, $domain) : null;
+        // The container leaves an optional class unbound as its default: the admin's presenter is asked for where the admin is.
+        $presenter = $this->dataviews ?? (class_exists(\Larena\Admin\Runtime\AdminDataviewPagePresenter::class)
+            ? \Illuminate\Container\Container::getInstance()->make(\Larena\Admin\Runtime\AdminDataviewPagePresenter::class) : null);
+        $present = static fn (\Larena\Admin\Runtime\AdminDataviewPage $page): ?array => $presenter?->present($page, \Larena\Admin\Assets\AdminProductAssetManifest::dataviewActivation());
+        // A change asked from a row's «⋯» (rename, pack, unpack) opens its form in the side panel with the page.
+        $entryOp = in_array($request->query('op'), ['rename', 'archive', 'extract'], true) && $allows[(string) $request->query('op')]
+            ? FilePath::clean($request->query('entry')) : null;
 
         return [
             'supported' => true,
             // The tab's own address, to which a folder's path or a file's is added.
-            'base' => route('larena.env.admin.site', ['domain' => $domain], false).'?tab=files',
+            'base' => $base,
             'problem' => $problem,
-            'path' => $opened ? FilePath::parent($view) : $path,
-            'crumbs' => FilePath::crumbs($opened ? FilePath::parent($view) : $path),
+            'path' => $path,
+            'crumbs' => FilePath::crumbs($path),
             'parent' => $path === '.' ? null : FilePath::parent($path),
             'view' => $opened ? $view : null,
-            'text' => is_array($text) ? $text : null,
-            'folder' => is_array($folder) ? $folder : null,
+            'text' => is_array($textRead) ? $textRead : null,
+            'image' => $image ? route('larena.env.admin.site.files.preview', ['domain' => $domain], false).'?path='.rawurlencode((string) $view) : null,
+            'secret' => $secret,
+            'revealed' => $revealed,
+            'folder' => is_array($folder) ? ['entries' => $entries, 'truncated' => $folder['truncated']] : null,
+            'visitors' => $visitors,
+            'atVisitors' => $visitors !== null && $path === $visitors,
+            'visitorsLink' => $visitors !== null && $site->publicDir !== $visitors ? $site->publicDir : null,
+            'service' => $service,
+            'trashKept' => $trashKept,
+            'trash' => is_array($trash) ? $trash : null,
+            'trashView' => is_array($trash) && $trash['entries'] !== [] ? $present(SiteFilesPage::trash($domain, $trash['entries'],
+                $capabilities->allows('file:trash-restore'), $capabilities->allows('file:trash-empty'), $text, $token)) : null,
+            'trashEmpty' => $capabilities->allows('file:trash-empty'),
+            'trashOpen' => $request->query('trash') === '1',
+            'list' => is_array($folder) && !$opened ? $present(SiteFilesPage::folder($domain, $path, $entries, $allows, $text, $token, $trashKept)) : null,
+            'entryOp' => $entryOp !== null && $entryOp !== '.' ? ['op' => (string) $request->query('op'), 'path' => $entryOp, 'name' => basename($entryOp)] : null,
             'allows' => $allows,
             'formats' => SiteFilesController::ARCHIVE_FORMATS,
         ];
+    }
+
+    /**
+     * The folder visitors see, from the site's root as the server lists it: `public` itself, or where its link leads
+     * (public → current → releases/…), followed only inside the site and only a few steps; null when there is none.
+     *
+     * @param list<FileEntry> $root
+     */
+    public static function visitorsFolder(array $root, string $publicDir = 'public'): ?string
+    {
+        $named = [];
+        foreach ($root as $entry) {
+            $named[$entry->name] = $entry;
+        }
+        $at = $publicDir;
+        for ($step = 0; $step < 4; $step++) {
+            $first = explode('/', $at)[0];
+            $entry = $named[$first] ?? null;
+            if ($entry === null) {
+                return null;
+            }
+            if ($entry->isDir()) {
+                return $at;
+            }
+            $target = $entry->type === 'link' && is_string($entry->target) && $entry->target !== '' && !str_starts_with($entry->target, '/') ? FilePath::clean($entry->target) : null;
+            if ($target === null || $target === '.') {
+                return null;
+            }
+            $at = $target;
+        }
+
+        return null;
     }
 
     /**

@@ -64,7 +64,7 @@ env_assert($names === ['larena.env.admin.alerts.ack.open', 'larena.env.admin.ale
     'larena.env.admin.people.owners.plan', 'larena.env.admin.people.owners.run', 'larena.env.admin.people.stop', 'larena.env.admin.security',
     'larena.env.admin.security.plan', 'larena.env.admin.security.run', 'larena.env.admin.services', 'larena.env.admin.services.plan',
     'larena.env.admin.services.run', 'larena.env.admin.site', 'larena.env.admin.site.cron.plan', 'larena.env.admin.site.cron.run',
-    'larena.env.admin.site.dns.plan', 'larena.env.admin.site.dns.run', 'larena.env.admin.site.files.download', 'larena.env.admin.site.files.plan',
+    'larena.env.admin.site.dns.plan', 'larena.env.admin.site.dns.run', 'larena.env.admin.site.files.download', 'larena.env.admin.site.files.plan', 'larena.env.admin.site.files.preview',
     'larena.env.admin.site.files.run', 'larena.env.admin.site.log.download', 'larena.env.admin.site.nginx.plan', 'larena.env.admin.site.nginx.run', 'larena.env.admin.site.plan',
     'larena.env.admin.site.run', 'larena.env.admin.sites.enable.plan', 'larena.env.admin.sites.enable.run', 'larena.env.admin.sites.new',
     'larena.env.admin.sites.new.step', 'larena.env.admin.sites.new.submit', 'larena.env.admin.sites.plan', 'larena.env.admin.sites.plan.draft',
@@ -141,6 +141,8 @@ env_assert($adminNames === [
     'src/Admin/PanelFirstSteps.php',
     'src/Admin/PlanAction.php',
     'src/Admin/ServerSitesPage.php',
+    // A site's folder and its trash in the admin's shared data view (files study PX-93, PX-94).
+    'src/Admin/SiteFilesPage.php',
     'src/Admin/SiteObjectMenu.php',
     'src/Http/Controllers/ServerAdminController.php',
     // The setup's breadcrumbs, only where the admin is installed.

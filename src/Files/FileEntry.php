@@ -55,6 +55,43 @@ final readonly class FileEntry
         return $this->type === 'dir';
     }
 
+    /**
+     * The pictures the panel shows in place (PX-96): raster images only, by their name; an SVG may hold a script and is
+     * downloaded instead. The preview reads the bytes and checks their signature before a browser sees them.
+     */
+    public const array IMAGES = ['png' => 'image/png', 'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'gif' => 'image/gif', 'webp' => 'image/webp'];
+
+    public function isImage(): bool
+    {
+        return $this->type === 'file' && self::imageType($this->name) !== null;
+    }
+
+    /** The media type of a picture shown in place, by its name; null for anything else. */
+    public static function imageType(string $name): ?string
+    {
+        return self::IMAGES[strtolower(pathinfo($name, PATHINFO_EXTENSION))] ?? null;
+    }
+
+    /**
+     * A file that holds passwords or keys (PX-92): .env and its copies, the database settings of WordPress and 1C-Bitrix,
+     * private keys and password files. The list marks it «секреты», and its download asks first.
+     */
+    public function isSecret(): bool
+    {
+        return $this->type === 'file' && self::secret($this->name);
+    }
+
+    public static function secret(string $name): bool
+    {
+        $lower = strtolower($name);
+        if (in_array($lower, ['.env.example', '.env.sample', '.env.dist'], true)) {
+            return false;
+        }
+
+        return $lower === '.env' || str_starts_with($lower, '.env.') || in_array($lower, ['wp-config.php', '.settings.php', '.settings_extra.php',
+            'dbconn.php', '.htpasswd', 'auth.json', 'id_rsa', 'id_ed25519', 'id_ecdsa'], true) || preg_match('/\.(?:pem|key|p12|pfx)\z/D', $lower) === 1;
+    }
+
     /** An archive file:extract unpacks, by its name. */
     public function isArchive(): bool
     {

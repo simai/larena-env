@@ -102,6 +102,39 @@ final readonly class SiteFiles
             'pending' => $pending];
     }
 
+    /** A file's or folder's size and type (file:stat), to know what a preview would read before it reads it. */
+    public function stat(PanelActor $actor, string $domain, string $path): FileEntry|string
+    {
+        $data = $this->data($actor, 'file:stat', ['domain' => $domain, 'path' => $path]);
+        if (is_string($data)) {
+            return $data;
+        }
+        try {
+            return FileEntry::fromData(['name' => basename($path)] + $data);
+        } catch (UnexpectedValueException) {
+            return PanelReason::ANSWER_SHAPE_INVALID;
+        }
+    }
+
+    /**
+     * The site's trash (file:trash-list, simai-file-trash/1, simai-env 1.57.0): what was removed, newest first, each with
+     * where it was and until when it is kept.
+     *
+     * @return array{entries: list<TrashEntry>, days: ?int}|string
+     */
+    public function trash(PanelActor $actor, string $domain): array|string
+    {
+        $data = $this->data($actor, 'file:trash-list', ['domain' => $domain]);
+        if (is_string($data)) {
+            return $data;
+        }
+        $entries = array_values(array_filter(array_map(static fn (mixed $one): ?TrashEntry => is_array($one) ? TrashEntry::fromData($one) : null,
+            is_array($data['entries'] ?? null) ? $data['entries'] : [])));
+        usort($entries, static fn (TrashEntry $a, TrashEntry $b): int => strcmp($b->id, $a->id));
+
+        return ['entries' => $entries, 'days' => is_int($data['retention_days'] ?? null) ? $data['retention_days'] : null];
+    }
+
     /** The file written to $into and checked, or its reason in the answer. */
     public function download(PanelActor $actor, string $domain, string $path, string $into): PanelDownload
     {

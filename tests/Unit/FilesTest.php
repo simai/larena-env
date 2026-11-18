@@ -164,7 +164,21 @@ $operations->startCommand($admin, 'file:rename', ['domain' => 'demo-php.test', '
 env_assert(is_array($files->folder($admin, 'demo-php.test', 'public-new')) && !is_array($files->folder($admin, 'demo-php.test', 'public')), 'Renamed.');
 env_assert($operations->planCommand($admin, 'file:remove', ['domain' => 'demo-php.test', 'path' => '.'])->reason === 'bad_path', 'The site\'s folder itself is never removed.');
 $operations->startCommand($admin, 'file:remove', ['domain' => 'demo-php.test', 'path' => 'public-new']);
-env_assert($files->folder($admin, 'demo-php.test', 'public-new') === 'not_found', 'Removed for good, with what it held.');
+env_assert($files->folder($admin, 'demo-php.test', 'public-new') === 'not_found', 'Removed from its place, with what it held.');
+// The site's trash (simai-env 1.57.0, PX-95): what was removed stays, is put back, or is removed for good, each planned.
+$trash = $files->trash($admin, 'demo-php.test');
+env_assert(is_array($trash) && $trash['days'] === 30 && count($trash['entries']) === 1 && $trash['entries'][0]->path === 'public-new' && $trash['entries'][0]->type === 'dir'
+    && preg_match(\Larena\Env\Files\TrashEntry::ID, $trash['entries'][0]->id) === 1 && $trash['entries'][0]->expiresAt !== null, 'Removed into the trash, kept 30 days.');
+$trashId = $trash['entries'][0]->id;
+env_assert($operations->planCommand($admin, 'file:trash-restore', ['domain' => 'demo-php.test', 'id' => $trashId])->plan?->command === 'file:trash-restore', 'Putting back is planned first.');
+env_assert($operations->planCommand($admin, 'file:trash-restore', ['domain' => 'demo-php.test', 'id' => '20260101T000000Z-abcdef'])->plan === null, 'Nothing of that id: no plan.');
+$operations->startCommand($admin, 'file:trash-restore', ['domain' => 'demo-php.test', 'id' => $trashId]);
+env_assert(is_array($files->folder($admin, 'demo-php.test', 'public-new')) && $files->trash($admin, 'demo-php.test')['entries'] === [], 'Put back where it was, the trash empty.');
+$operations->startCommand($admin, 'file:remove', ['domain' => 'demo-php.test', 'path' => 'public-new']);
+env_assert($operations->planCommand($admin, 'file:trash-empty', ['domain' => 'demo-php.test'])->plan?->command === 'file:trash-empty', 'Emptying the trash is planned first.');
+$operations->startCommand($admin, 'file:trash-empty', ['domain' => 'demo-php.test', 'id' => $files->trash($admin, 'demo-php.test')['entries'][0]->id]);
+env_assert($files->trash($admin, 'demo-php.test')['entries'] === [] && $files->folder($admin, 'demo-php.test', 'public-new') === 'not_found', 'Removed for good from the trash.');
+env_assert($files->stat($admin, 'demo-php.test', 'notes.txt') instanceof \Larena\Env\Files\FileEntry && $files->stat($admin, 'demo-php.test', 'nothing.txt') === 'not_found', 'One entry read on its own.');
 env_assert($operations->planCommand($admin, 'file:upload', ['domain' => 'demo-php.test', 'path' => 'notes.txt', 'expect-sha256' => 'new'], $attachment)->reason === 'exists', 'An upload never replaces a file unasked.');
 $uploaded = $operations->startCommand($admin, 'file:upload', ['domain' => 'demo-php.test', 'path' => 'page.html', 'expect-sha256' => 'new'], $attachment);
 env_assert($uploaded->jobId !== null && $files->text($admin, 'demo-php.test', 'page.html')['content'] === "<h1>new</h1>\n", 'An upload lands where it was asked.');
@@ -172,6 +186,34 @@ env_assert($operations->planCommand($admin, 'file:archive', ['domain' => 'demo-p
 $saved = $files->download($admin, 'demo-php.test', 'notes.txt', $directory.'/served');
 env_assert($saved->ok() && $saved->name === 'notes.txt' && file_get_contents($directory.'/served', false, null, $saved->offset) === "<h1>new</h1>\n", 'A download through the stand-in, checked.');
 env_assert($files->download($admin, 'demo-php.test', '.', $directory.'/served2')->answer->reason === 'not_a_file', 'A folder is not downloaded.');
+
+// What a name says (PX-92, PX-96): files with passwords and raster pictures; the visitors' folder (PX-91).
+foreach (['.env', '.env.production', 'wp-config.php', '.settings.php', 'dbconn.php', 'auth.json', 'id_rsa', 'server.key', 'site.pem'] as $secretName) {
+    env_assert(\Larena\Env\Files\FileEntry::secret($secretName), "{$secretName} holds passwords.");
+}
+foreach (['.env.example', '.env.sample', 'index.php', 'notes.txt', 'env.php'] as $plainName) {
+    env_assert(!\Larena\Env\Files\FileEntry::secret($plainName), "{$plainName} is an ordinary file.");
+}
+env_assert(\Larena\Env\Files\FileEntry::imageType('a/logo.PNG') === 'image/png' && \Larena\Env\Files\FileEntry::imageType('icon.svg') === null, 'Raster pictures only: never an SVG.');
+$isPicture = [\Larena\Env\Http\Controllers\SiteFilesController::class, 'isPicture'];
+env_assert($isPicture("\x89PNG\r\n\x1a\nrest", 'image/png') && $isPicture("\xFF\xD8\xFFrest", 'image/jpeg') && $isPicture('GIF89a..', 'image/gif')
+    && $isPicture('RIFF....WEBPVP8 ', 'image/webp') && !$isPicture('<svg onload=x>', 'image/png') && !$isPicture("\x89PNG\r\n\x1a\n", 'image/jpeg'), 'A picture by its bytes, not its name.');
+$entry = static fn (array $data): \Larena\Env\Files\FileEntry => \Larena\Env\Files\FileEntry::fromData($data);
+$visitors = [\Larena\Env\Http\Controllers\SiteAdminController::class, 'visitorsFolder'];
+env_assert($visitors([$entry(['name' => 'public', 'type' => 'dir'])]) === 'public', 'The visitors\' folder is public.');
+env_assert($visitors([$entry(['name' => 'public', 'type' => 'link', 'target' => 'current/public']), $entry(['name' => 'current', 'type' => 'link', 'target' => 'releases/20261118']),
+    $entry(['name' => 'releases', 'type' => 'dir'])]) === 'releases/20261118', 'A release site: where public leads, inside the site.');
+env_assert($visitors([$entry(['name' => 'public', 'type' => 'link', 'target' => '/etc'])]) === null && $visitors([]) === null, 'A link out of the site is not followed.');
+env_assert($visitors([$entry(['name' => 'web', 'type' => 'dir'])], 'web') === 'web', 'A site\'s own public folder.');
+// The folder as the admin's shared data view (PX-93, PX-94): a secret has no download in its row; a removal goes to the trash.
+$page = \Larena\Env\Admin\SiteFilesPage::folder('demo-php.test', '.', [$entry(['name' => 'public', 'type' => 'dir', 'mtime' => 1767225600]),
+    $entry(['name' => '.env', 'type' => 'file', 'size' => 10]), $entry(['name' => 'logo.png', 'type' => 'file', 'size' => 10]), $entry(['name' => 'up', 'type' => 'link', 'target' => '/etc'])],
+    array_fill_keys(['rename', 'remove', 'archive', 'extract', 'download', 'read'], true), static fn (string $key, array $replace = []): string => $key, 'tok', true,
+    new DateTimeImmutable('2026-01-01T02:00:00Z'));
+$rows = array_column($page->rows, null, 'id');
+env_assert(in_array('download', $rows['logo.png']['_actions'], true) && in_array('look', $rows['logo.png']['_actions'], true) && !in_array('download', $rows['.env']['_actions'], true)
+    && $rows['.env']['mark']['status'] === 'warning' && $rows['up']['_actions'] === ['rename', 'delete'] && $rows['public']['name'] === 'public/', 'Rows: a secret marked and not downloaded from the row; a link only renamed or removed.');
+env_assert($rows['public']['changed']['label'] === 'ago.hours' && $page->rowWrites['delete']['label'] === 'files.to_trash' && $page->rowWrites['delete']['fields']['op'] === 'remove', 'The time said as «ago», a removal to the trash.');
 
 // The owner: their own site only, and never the nginx directives.
 env_assert($files->folder($owner, 'demo-php.test', '.') === 'owner_scope', 'Another owner\'s site is refused.');

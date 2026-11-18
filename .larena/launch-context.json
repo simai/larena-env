@@ -120,7 +120,15 @@
     "tests/Unit/HistoryTest.php",
     "src/Operations/DbBrowserLink.php",
     "src/Server/DbBrowserState.php",
-    "tests/Unit/DbBrowserTest.php"
+    "tests/Unit/DbBrowserTest.php",
+    "src/Admin/SiteFilesPage.php",
+    "src/Files/TrashEntry.php",
+    "resources/views/admin/partials/files.blade.php",
+    "src/Files/FileEntry.php",
+    "src/Files/SiteFiles.php",
+    "src/Gateway/FakeFilesGateway.php",
+    "src/Http/Controllers/SiteFilesController.php",
+    "tests/Unit/FilesTest.php"
   ],
   "forbidden_files": [
     "../*"

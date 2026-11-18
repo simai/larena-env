@@ -441,9 +441,12 @@ def plan_and_run(path, fields):
     hidden["_token"] = form_token(planned)
     _, done = post(action, hidden)
     return planned, run_page(done)
-_, files = get("/admin/server/sites/demo-php.test?tab=files")
-assert 'data-env-files="on"' in files and 'data-env-file="public"' in files and 'data-env-file="notes.txt"' in files, "a site's folder"
-assert 'data-env-files-op="upload"' in files and 'data-env-files-op="mkdir"' in files and 'data-env-files-op="remove"' in files, "its changes"
+# The tab opens on the folder visitors see (PX-91); the site's root is a step up, its rows in the admin's data view.
+_, visitors = get("/admin/server/sites/demo-php.test?tab=files")
+assert 'data-env-files="on"' in visitors and "data-env-files-visitors" in visitors and "data-env-files-root" in visitors, "the visitors' folder first, said in words"
+_, files = get("/admin/server/sites/demo-php.test?tab=files&path=.")
+assert 'data-env-files="on"' in files and 'id="env-site-files"' in files and "notes.txt" in files and "data-env-files-to-visitors" in files, "a site's folder"
+assert "data-env-files-upload" in files and 'name="files[]"' in files and 'data-env-files-op="mkdir"' in files and "/files/plan" in files, "its changes"
 _, opened = get("/admin/server/sites/demo-php.test?tab=files&view=notes.txt")
 assert "data-env-files-editor" in opened and "Notes of demo-php.test" in opened, "a text file opens in the editor"
 sha = re.search(r'name="sha256" value="([a-f0-9]{64})"', opened)
@@ -458,9 +461,26 @@ assert "data-env-notice" in refused and "data-env-files-editor" in refused and "
 planned, done = plan_and_run("/admin/server/sites/demo-php.test/files/plan", {"_token": form_token(files), "op": "mkdir", "folder": ".", "name": "drafts"})
 assert 'data-env-plan="file:mkdir"' in planned and 'data-env-job-state="succeeded"' in done, "a folder made by plan"
 planned, done = plan_and_run("/admin/server/sites/demo-php.test/files/plan", {"_token": form_token(files), "op": "remove", "path": "drafts"})
-assert 'data-env-plan="file:remove"' in planned and "data-env-plan-replaces" in planned and 'data-env-job-state="succeeded"' in done, "removed by plan, said to be final"
-_, after = get("/admin/server/sites/demo-php.test?tab=files")
-assert 'data-env-file="drafts"' not in after and 'data-env-file="notes.txt"' in after, "gone from the folder"
+assert 'data-env-plan="file:remove"' in planned and "data-env-plan-replaces" in planned and 'data-env-job-state="succeeded"' in done, "removed by plan, said where it goes"
+_, after = get("/admin/server/sites/demo-php.test?tab=files&open=drafts")
+assert "data-env-files-problem" in after, "gone from the folder"
+# A file with passwords (PX-92) leaves the server only after a question: without it the panel sends the person to its page.
+with open(fake + "/sites/demo-php.test/.env", "w") as secret_file:
+    secret_file.write("APP_NAME=check\n")
+_, secret_page = get("/admin/server/sites/demo-php.test?tab=files&open=.env")
+assert "data-env-files-secret" in secret_page and "data-larena-confirm-submit" in secret_page and "APP_NAME=check" not in secret_page, "a secret is marked and not shown unasked"
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, *args, **kwargs):
+        return None
+try:
+    asked = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar), NoRedirect).open(base + "/admin/server/sites/demo-php.test/files/download?path=.env")
+    asked_status, asked_body = asked.status, asked.read()
+except urllib.error.HTTPError as redirected:
+    asked_status, asked_body = redirected.code, b""
+assert asked_status in (302, 303) and b"APP_NAME" not in asked_body, "a secret is not downloaded without a question"
+with web.open(base + "/admin/server/sites/demo-php.test/files/download?path=.env&confirm=secret") as answer:
+    assert answer.read() == b"APP_NAME=check\n", "a secret downloaded once the person said so"
+os.remove(fake + "/sites/demo-php.test/.env")
 with web.open(base + "/admin/server/sites/demo-php.test/files/download?path=notes.txt") as answer:
     assert answer.read() == b"Saved from the panel\n" and "attachment" in answer.headers.get("Content-Disposition", ""), "a download, checked and handed over"
 os.symlink("/etc", fake + "/sites/demo-php.test/escape")
@@ -533,8 +553,8 @@ except urllib.error.HTTPError as error:
 assert status == 403, ("an update is the system level's", status)
 status, own_sftp = get("/admin/server/sites/demo-owned.test?tab=access")
 assert status == 200 and 'data-env-sftp="demo-staff"' in own_sftp and 'data-env-operation="sftp-add-key"' in own_sftp, "the person manages their own site's SFTP"
-status, own_files = get("/admin/server/sites/demo-owned.test?tab=files")
-assert status == 200 and 'data-env-files="on"' in own_files and 'data-env-file="public"' in own_files, "the person's own site's files"
+status, own_files = get("/admin/server/sites/demo-owned.test?tab=files&path=.")
+assert status == 200 and 'data-env-files="on"' in own_files and 'id="env-site-files"' in own_files, "the person's own site's files"
 _, others = get("/admin/server/sites/demo-php.test?tab=files")
 assert 'data-env-files="on"' not in others, "another owner's files are not shown"
 _, own_nginx = get("/admin/server/sites/demo-owned.test?tab=nginx")
