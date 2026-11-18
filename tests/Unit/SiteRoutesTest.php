@@ -703,7 +703,7 @@ $restoring->answers['file:list demo-php.test'] = $folder(['public', 'site.zip', 
 $ready = $card($restoreCard($restoring, $lines), 'demo-php.test');
 env_assert(str_contains($ready, 'data-env-site-route-step="php-restore"') && str_contains($ready, 'name="operation" value="php-restore"') && str_contains($ready, 'current="2"')
     && str_contains($ready, 'From an archive') && str_contains($ready, 'Next: Restore the site from the archive') && !str_contains($ready, 'data-env-site-route-tab')
-    && str_contains($ready, '<option value="site.zip">site.zip</option>') && str_contains($ready, '<option value="">No database</option>') && str_contains($ready, '<option value="db.sql.gz">db.sql.gz</option>')
+    && preg_match('#<option value="site\.zip"\s*>site\.zip</option>#', $ready) === 1 && str_contains($ready, '<option value="">No database</option>') && preg_match('#<option value="db\.sql\.gz"\s+selected\s*>db\.sql\.gz</option>#', $ready) === 1
     && !str_contains($ready, 'notes.txt') && str_contains($ready, 'name="overwrite" value="yes"') && !str_contains($ready, 'name="overwrite" value="yes" checked'),
     'An archive in the folder: the restore is the next step, the archive and the dump chosen, the replacement off: '.$ready);
 // The plan in words, over a site with data: the copy first, what is replaced; the plate says it.
@@ -712,8 +712,8 @@ $planned = $restoreCard($restoring, $lines)->plan($asking('/admin/server/sites/d
 env_assert($planned instanceof \Illuminate\View\View && $planned->getData()['plan']->args === ['domain' => 'demo-php.test', 'files' => 'site.zip', 'dump' => 'db.sql.gz', 'overwrite' => 'yes'],
     'The restore is planned as the stand answered it.');
 $planPage = (string) $planned->render();
-foreach (['site.zip — unpacked into the site', 'the dump db.sql.gz is loaded into the site', 'replaced by the archive and the dump', 'the server first copies the site',
-    'the archive and the dump go to the site', 'The server copies the site first.'] as $said) {
+foreach (['site.zip — unpacked into the site', 'the dump db.sql.gz is loaded', 'replaced by the archive and the dump', 'first a copy of the files and the database',
+    'the archive and the dump to the site', 'The server copies the site first.'] as $said) {
     env_assert(str_contains($planPage, $said), "The plan says «{$said}»: ".$planPage);
 }
 // Each refusal in one sentence, in both languages; the server's line under «Подробнее»; the way to «Файлы» where a file is the problem.
@@ -770,7 +770,7 @@ env_assert($unknown === ['said' => ['Something new went wrong'], 'codes' => [], 
 // The plan without a replacement and without a dump says nothing is replaced and the database stays.
 $plain = \Larena\Env\Admin\RestoreWords::facts('demo-php.test', ['files' => 'site.zip'], $ruText);
 env_assert($plain[2] === ['База данных', 'не меняется: дамп не выбран'] && $plain[3][1] === $russian['restore']['fact']['replaces_no']
-    && $plain[4][1] === $russian['restore']['fact']['backup_no'] && $plain[5][1] === 'архив уйдёт в корзину сайта'
+    && $plain[4][1] === $russian['restore']['fact']['backup_no'] && $plain[5][1] === 'архив — в корзину сайта'
     && \Larena\Env\Admin\RestoreWords::consequence(['overwrite' => 'no'], $ruText) === $russian['restore']['consequence_empty'], 'Nothing replaced, said so: '.json_encode($plain, JSON_UNESCAPED_UNICODE));
 // The recorded gateway answers the restore as the stand did; the job's last step in the panel's words, not half English.
 $restoreOps = new PanelOperations($recorded);

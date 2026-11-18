@@ -119,7 +119,7 @@
                                                 <option value="">{{ __('larena-env::admin.restore.no_dump') }}</option>
                                             @endif
                                             @foreach ($siteRoute['copies'][$field === 'files' ? 'files' : 'dumps'] as $found)
-                                                <option value="{{ $found }}">{{ $found }}</option>
+                                                <option value="{{ $found }}" @if ($field === 'dump' && $loop->first) selected @endif>{{ $found }}</option>
                                             @endforeach
                                         </select>
                                     @else
@@ -583,7 +583,8 @@
                                                 <option value="">{{ __('larena-env::admin.restore.no_dump') }}</option>
                                             @endif
                                             @foreach ($restoreCopies[$field === 'files' ? 'files' : 'dumps'] as $found)
-                                                <option value="{{ $found }}">{{ $found }}</option>
+                                                {{-- A dump uploaded beside the archive is meant to be loaded: the first is chosen, «Без базы» stays. --}}
+                                                <option value="{{ $found }}" @if ($field === 'dump' && $loop->first) selected @endif>{{ $found }}</option>
                                             @endforeach
                                         </select>
                                     </div>
