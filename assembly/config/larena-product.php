@@ -36,6 +36,8 @@ return [
             'env.settings' => 'settings',
             // Where the server sends its own alerts (simai-env 1.31.0).
             'env.alerts.channel' => 'settings',
+            // The panel's own mail (owner decision C335).
+            'env.mail' => 'settings',
             // The services and the firewall beside the server, who reaches the panel among its settings (Panel plan 5.1–5.3).
             'env.services' => 'server',
             // The server's security (simai-env 1.45.0): score, problems with their fixes, level, files.

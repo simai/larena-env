@@ -75,7 +75,12 @@
                 <fieldset class="m-0 p-0 m-top-1" style="border: 0;" data-env-mail-levels>
                     <legend class="p-0">{{ __('larena-env::mail.fields.levels') }}</legend>
                     @foreach (\Larena\Env\Mail\MailSettings::LEVELS as $level)
-                        <label class="flex items-cross-center g-1 larena-control-floor"><input type="checkbox" name="levels[]" value="{{ $level }}" @checked(in_array($level, $settings?->levels ?? ['urgent'], true))> {{ __('larena-env::mail.levels.'.$level) }}</label>
+                        <div class="larena-field" data-env-mail-level="{{ $level }}">
+                            <label class="flex items-cross-center g-1" for="env-mail-level-{{ $level }}">
+                                <input type="checkbox" id="env-mail-level-{{ $level }}" name="levels[]" value="{{ $level }}" @checked(in_array($level, $settings?->levels ?? ['urgent'], true))>
+                                <span>{{ __('larena-env::mail.levels.'.$level) }}</span>
+                            </label>
+                        </div>
                     @endforeach
                     <p class="m-0 text-small color-on-surface-variant">{{ __('larena-env::mail.card.levels_hint') }}</p>
                 </fieldset>

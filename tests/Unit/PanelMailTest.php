@@ -362,6 +362,9 @@ $failed = $screen->test($asking('/admin/server/settings/mail/test', 'POST'));
 env_assert($notice($failed) === str_replace(':reason', $lines['mail']['reasons']['auth'], $lines['mail']['test']['failed']) && !str_contains($notice($failed), 'box@corp.ru')
     && $mail->state() === PanelMail::UNCHECKED, 'A refused test: in words, without the server\'s message, mail stays off.');
 $caught->refuse = null;
+$waited = $screen->test($asking('/admin/server/settings/mail/test', 'POST'));
+env_assert($notice($waited) === $lines['mail']['reasons']['test_wait'] && $caught->letters() === [], 'One test letter at a time: the next after 10 seconds.');
+$session->forget('larena_env_mail_tested_at');
 $sent = $screen->test($asking('/admin/server/settings/mail/test', 'POST'));
 env_assert($notice($sent) === str_replace(':to', 'admin@example.ru', $lines['mail']['test']['sent_on']) && $mail->isOn()
     && $caught->letters()[0]->getTo()[0]->getAddress() === 'admin@example.ru', 'The test letter to the person\'s own address switches mail on.');

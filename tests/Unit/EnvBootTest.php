@@ -35,8 +35,8 @@ env_assert($with['admin_loadable'] === true, 'The admin must be installed for de
 $navigation = $with['navigation'];
 sort($navigation);
 // The recording's server lists its services, its software and PHP, the firewall, the security and who reaches the panel.
-env_assert($navigation === ['env.alerts.channel', 'env.databases', 'env.dns', 'env.dns.connection', 'env.firewall', 'env.panel.access', 'env.people', 'env.security', 'env.server',
-    'env.server.overview', 'env.services', 'env.settings', 'env.software', 'env.software.php', 'env.storages', 'env.update'] && $with['navigation_valid'] === array_fill(0, 16, true),
+env_assert($navigation === ['env.alerts.channel', 'env.databases', 'env.dns', 'env.dns.connection', 'env.firewall', 'env.mail', 'env.panel.access', 'env.people', 'env.security', 'env.server',
+    'env.server.overview', 'env.services', 'env.settings', 'env.software', 'env.software.php', 'env.storages', 'env.update'] && $with['navigation_valid'] === array_fill(0, 17, true),
     'With the admin the sites, the databases, the overview, the settings\' map, the spaces, DNS, the alerts\' channel, the update, the services, the software, PHP, the firewall, the security, the backup storages and who reaches the panel are valid menu entries: '.implode(', ', $navigation));
 // The overview, the panel's dashboard, is the first of the panel's rows in the menu.
 $orders = [];

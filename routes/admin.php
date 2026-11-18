@@ -79,7 +79,7 @@ $router->get('/settings/mail', [PanelMailController::class, 'index'])->middlewar
 $router->middleware(['access:env.server.operate'])->group(static function ($router): void {
     $router->post('/settings/mail/plan', [PanelMailController::class, 'plan'])->name('larena.env.admin.settings.mail.plan');
     $router->post('/settings/mail/run', [PanelMailController::class, 'run'])->name('larena.env.admin.settings.mail.run');
-    $router->post('/settings/mail/test', [PanelMailController::class, 'test'])->middleware('throttle:6,1')->name('larena.env.admin.settings.mail.test');
+    $router->post('/settings/mail/test', [PanelMailController::class, 'test'])->name('larena.env.admin.settings.mail.test');
 });
 // A safe update of simai-env or of the panel (simai-env 1.32.0, Panel plan 4.7): the administrator's alone.
 $router->get('/update', [UpdateController::class, 'index'])->middleware('access:env.server.read')->name('larena.env.admin.update');

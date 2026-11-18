@@ -32,6 +32,9 @@ final readonly class PanelMailController
 {
     private const string PLANS = 'larena_env_mail_plans';
     private const int PLAN_SECONDS = 900;
+    /** One test letter at a time: the next one 10 seconds after the last (the wait of one letter at most). */
+    private const string TESTED = 'larena_env_mail_tested_at';
+    private const int TEST_GAP_SECONDS = 10;
 
     /** @param (Closure(Request): ?string)|null $email the person's own address, where the test letter goes */
     public function __construct(
@@ -155,6 +158,11 @@ final readonly class PanelMailController
         if ($password === null) {
             return $this->notice($request, $back.'?edit=mail#env-mail-now', 'password_lost');
         }
+        $last = $request->session()->get(self::TESTED);
+        if (is_int($last) && $last > time() - self::TEST_GAP_SECONDS) {
+            return $this->notice($request, $back, 'test_wait');
+        }
+        $request->session()->put(self::TESTED, time());
         $reason = $this->mailer->send($settings, $password, $to, $this->text('letters.test.subject'), $this->text('letters.test.body'));
         if ($reason !== null) {
             return NoticeRedirect::to($request, $back, $this->text('test.failed', ['reason' => $this->text('reasons.'.$reason)]));

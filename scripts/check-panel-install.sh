@@ -169,7 +169,7 @@ assert sorted(children["server"]) == ["env.dns", "env.firewall", "env.security",
 # «Люди» is one row, the panel's people (roles study part 7, PX-67): no second «Пользователи» screen beside it.
 assert children["users"] == [] and next(item for item in items if item["key"] == "users").get("href") == "/admin/server/people", items
 # «Настройки» opens with the map of its sections and their values (study part 8, PX-81).
-assert sorted(children["settings"]) == ["admin.settings_general", "env.alerts.channel", "env.dns.connection", "env.panel.access", "env.settings", "env.update"], children
+assert sorted(children["settings"]) == ["admin.settings_general", "env.alerts.channel", "env.dns.connection", "env.mail", "env.panel.access", "env.settings", "env.update"], children
 assert children["settings"][0] == "env.settings", children
 # Plain lists (the panel's UX audit): no group headings in any root.
 assert not [row for item in items for row in item.get("children", []) if row.get("kind") in ("heading", "divider")], "no group headings"

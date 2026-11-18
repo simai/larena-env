@@ -147,6 +147,25 @@ final class ServerAdminNavigationContributor implements AdminNavigationContribut
             activeRoutePattern: 'larena.env.admin.alerts.channel*',
             icon: 'notifications_active',
         ), new AdminNavigationDescriptor(
+            // The panel's own mail (owner decision C335), among the panel's settings: under the settings' address.
+            id: 'env.mail',
+            ownerPackage: $this->ownerPackage(),
+            label: 'Mail',
+            routeName: 'larena.env.admin.settings.mail',
+            routeUri: '/admin/server/settings/mail',
+            category: 'operations',
+            state: 'operator_slice',
+            accessScope: 'env.server.read',
+            auditEvent: 'env.mail.viewed',
+            statusCap: 'env_panel_skeleton',
+            order: 9,
+            group: 'operations',
+            knownLimitations: ['not_production_ready'],
+            surface: 'product',
+            labelKey: 'larena-env::mail.navigation',
+            activeRoutePattern: 'larena.env.admin.settings.mail*',
+            icon: 'mail',
+        ), new AdminNavigationDescriptor(
             // The server's services, restarted or reloaded by plan (Panel plan 5.1).
             id: 'env.services',
             ownerPackage: $this->ownerPackage(),

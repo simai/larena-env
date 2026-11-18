@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 // «Настройки» → «Почта» (owner decision C335): the panel's own outgoing mail through an external SMTP server or service.
 return [
+    'navigation' => 'Mail',
     'title' => 'Mail',
     'description' => 'How the panel sends its own letters: password recovery, and later invitations and urgent notifications.',
     'card' => [
@@ -107,6 +108,7 @@ return [
         'no_address' => 'Your account has no mail address — there is nowhere to send the test letter.',
         'not_set_up' => 'Fill in the mail settings first.',
         'not_available' => 'The mail settings are not available now: the panel\'s database does not answer.',
+        'test_wait' => 'A test letter was just sent: wait a few seconds.',
         'encryption_none' => 'Without encryption mail may go only to this computer (localhost).',
         'auth' => 'The mail server answered: wrong login or password.',
         'tls' => 'The mail server did not switch encryption on: check the port and the encryption.',
