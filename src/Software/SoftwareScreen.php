@@ -147,18 +147,6 @@ final readonly class SoftwareScreen
     }
 
     /**
-     * The updates of the panel and simai-env worth a card: one waiting, refused or not read; one already current is
-     * said by its badge alone.
-     *
-     * @param array<string, UpdatePlan|null> $plans
-     * @return array<string, UpdatePlan|null>
-     */
-    public static function plansToShow(array $plans): array
-    {
-        return array_filter($plans, static fn (?UpdatePlan $update): bool => $update === null || $update->blocked !== null || $update->updateAvailable);
-    }
-
-    /**
      * A package's version as people say it: «1.24.0» for «1.24.0-2ubuntu7.19», «7.0.15» for «5:7.0.15-1ubuntu0.24.04.5»
      * (the full one stays in the cell's title).
      */

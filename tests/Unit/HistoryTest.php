@@ -30,6 +30,7 @@ function route(string $name, array $parameters = [], bool $absolute = true): str
     return match ($name) {
         'larena.admin.history.index' => '/admin/history',
         'larena.env.admin.job' => '/admin/server/jobs/'.$parameters['job'],
+        'larena.env.admin.job.again.run' => '/admin/server/jobs/'.$parameters['job'].'/again/run',
         default => '/'.$name,
     };
 }
@@ -202,5 +203,104 @@ try {
 } catch (Throwable) {
 }
 env_assert($counting->asked > $before, 'Without the admin\'s «История» the run keeps its own page.');
+
+// «Повторить» (owner 2026-11-18): the same command with the same values, planned again (the plan in «Действие с планом»),
+// started only on its confirmation; refused without the right, for what succeeded, for what carried a secret.
+$again = new class () implements PanelGateway {
+    /** @var list<PanelRequest> */
+    public array $asked = [];
+    public string $state = 'failed';
+    public string $command = 'backup:data';
+
+    public function forget(): void
+    {
+        $this->asked = [];
+    }
+
+    public function ask(PanelRequest $request): PanelAnswer
+    {
+        $this->asked[] = $request;
+        $ok = static fn (string $kind, array $data, ?string $job = null): PanelAnswer => PanelAnswer::fromDocument($request->requestId,
+            ['schema' => 'simai-panel-answer/1', 'request_id' => $request->requestId, 'status' => 'ok', 'kind' => $kind, 'data' => $data] + ($job !== null ? ['job_id' => $job] : []));
+
+        return match ($request->command) {
+            'job:status' => $ok('result', ['job_id' => $request->args['job_id'], 'state' => $this->state, 'command' => $this->command, 'args' => ['domain' => 'demo-php.test'],
+                'created_at' => '2026-11-18T10:00:00Z', 'finished_at' => '2026-11-18T10:01:00Z', 'title' => 'Backup of demo-php.test']),
+            'job:log' => $ok('result', ['job_id' => $request->args['job_id'], 'lines' => [], 'next' => 0, 'done' => true]),
+            'backup:data' => $request->confirm ? $ok('job', [], 'bbbbbbbbbbbbbbbbbbbbbbbb')
+                : $ok('plan', ['command' => 'backup:data', 'args' => $request->args, 'target' => 'demo-php.test', 'description' => 'Back up the site', 'effects' => 'write', 'lock' => 'site', 'applied' => false]),
+            default => PanelAnswer::refused($request->requestId, 'not_allowed'),
+        };
+    }
+
+    public function source(): string
+    {
+        return 'stand-in';
+    }
+};
+$rights = new class implements \Illuminate\Contracts\Config\Repository {
+    /** @var array<string, mixed> */
+    private array $items = ['larena-access.operations' => [
+        'env.sites.operate' => ['target' => 'server:host', 'required_grants' => ['operate'], 'test_grants' => ['test:system' => ['host' => ['operate']], 'test:staff' => ['host' => []]]],
+        'env.server.operate' => ['target' => 'server:host', 'required_grants' => ['operate'], 'test_grants' => ['test:system' => ['host' => ['operate']], 'test:staff' => ['host' => []]]],
+    ]];
+
+    public function has($key): bool { return array_key_exists($key, $this->items); }
+    public function get($key, $default = null): mixed { return $this->items[$key] ?? $default; }
+    public function all(): array { return $this->items; }
+    public function set($key, $value = null): void { $this->items[$key] = $value; }
+    public function prepend($key, $value): void {}
+    public function push($key, $value): void {}
+};
+$planViews = new class implements \Illuminate\Contracts\View\Factory {
+    /** @var array<string, mixed> */
+    public array $data = [];
+    public string $name = '';
+
+    public function exists($view): bool { return true; }
+    public function file($path, $data = [], $mergeData = []): \Illuminate\Contracts\View\View { throw new LogicException('file'); }
+    public function make($view, $data = [], $mergeData = []): \Illuminate\Contracts\View\View
+    {
+        $this->name = $view;
+        $this->data = $data;
+
+        return new class implements \Illuminate\Contracts\View\View {
+            public function name(): string { return 'plan'; }
+            public function with($key, $value = null): static { return $this; }
+            public function getData(): array { return []; }
+            public function render(): string { return 'plan'; }
+        };
+    }
+    public function share($key, $value = null): mixed { return null; }
+    public function composer($views, $callback): array { return []; }
+    public function creator($views, $callback): array { return []; }
+    public function addNamespace($namespace, $hints): static { return $this; }
+    public function replaceNamespace($namespace, $hints): static { return $this; }
+};
+$againJobs = new ServerJobController(new PanelOperations($again), $planViews, $translator, null, new \Larena\Access\Runtime\AccessOperationAuthorizer($rights, 'testing'));
+$by = static function (string $who) use ($asking): Request {
+    $request = $asking('/admin/server/jobs/'.str_repeat('a', 24).'/again');
+    $request->attributes->set('larena_access_actor', $who);
+
+    return $request;
+};
+$planned = $againJobs->again($by('test:system'), str_repeat('a', 24));
+$plans = array_values(array_filter($again->asked, static fn (PanelRequest $asked): bool => $asked->command === 'backup:data'));
+env_assert(!$planned instanceof RedirectResponse && $planViews->name === 'larena-env::admin.plan' && count($plans) === 1 && !$plans[0]->confirm
+    && $plans[0]->args === ['domain' => 'demo-php.test'] && $planViews->data['runUrl'] === '/admin/server/jobs/'.str_repeat('a', 24).'/again/run',
+    'The same command and values, planned, its confirmation going to «again/run».');
+$again->forget();
+$run = $againJobs->againRun($by('test:system'), str_repeat('a', 24));
+$starts = array_values(array_filter($again->asked, static fn (PanelRequest $asked): bool => $asked->command === 'backup:data'));
+env_assert($run->getTargetUrl() === '/admin/server/jobs/bbbbbbbbbbbbbbbbbbbbbbbb' && count($starts) === 1 && $starts[0]->confirm, 'Confirmed: started, its new run opened.');
+$again->forget();
+$refusedAgain = $againJobs->again($by('test:staff'), str_repeat('a', 24));
+env_assert($refusedAgain instanceof RedirectResponse && array_filter($again->asked, static fn (PanelRequest $asked): bool => $asked->command === 'backup:data') === [],
+    'Without the right to operate: refused, nothing planned.');
+$again->state = 'succeeded';
+env_assert($againJobs->againRun($by('test:system'), str_repeat('a', 24))->getTargetUrl() === '/admin/server/jobs/'.str_repeat('a', 24), 'What succeeded is not repeated.');
+$again->state = 'failed';
+$again->command = 'file:write';
+env_assert($againJobs->againRun($by('test:system'), str_repeat('a', 24))->getTargetUrl() === '/admin/server/jobs/'.str_repeat('a', 24), 'What carried a file is not repeated.');
 
 echo "HistoryTest passed.\n";

@@ -68,6 +68,7 @@ final readonly class SoftwareController
             'query' => is_string($request->query('q')) ? mb_substr(trim($request->query('q')), 0, 64) : '',
             'phpRow' => $withPhp ? SoftwareScreen::php($this->extras->phpVersions($actor)) : null,
             'updateStates' => SoftwareScreen::updateStates($updates['plans']),
+            'versions' => UpdateController::versions($read->overview),
         ] + $updates);
     }
 

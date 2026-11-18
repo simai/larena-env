@@ -118,11 +118,23 @@ final readonly class SiteExtrasReader
      *
      * @param 'env'|'panel' $target
      */
-    public function updatePlan(PanelActor $actor, string $target): ?UpdatePlan
+    /**
+     * What an update of simai-env or of the panel would change, with when the panel asked (the kept answer's moment);
+     * $fresh asks the server past the kept answer («Проверить»).
+     */
+    public function updatePlan(PanelActor $actor, string $target, bool $fresh = false): ?UpdatePlan
     {
-        $data = $this->data($actor, 'self:update-plan', ['target' => $target]);
+        try {
+            $request = PanelRequest::read($actor, 'self:update-plan', ['target' => $target]);
+            $answer = $fresh && $this->gateway instanceof \Larena\Env\Gateway\CachingPanelGateway ? $this->gateway->fresh($request) : $this->gateway->ask($request);
+        } catch (PanelRefused|UnexpectedValueException) {
+            return null;
+        }
+        if (SiteDetailsReader::failureOf($answer) !== null) {
+            return null;
+        }
 
-        return $data === null ? null : UpdatePlan::fromData($data);
+        return UpdatePlan::fromData($answer->data)?->checkedAt($answer->receivedAt ?? time());
     }
 
     /** @return list<string>|null the last lines of a service's journal (Panel plan 5.1, administrator only) */

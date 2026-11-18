@@ -80,6 +80,8 @@ final readonly class ServerJobController
             'notice' => $request->session()->get('larena_env_notice'),
             // The server's own zone (simai-env 1.60.0): its times are said in it, how long ago in the tooltip.
             'timezone' => $result->status === null ? null : $this->overviews?->read($actor)->overview?->timezone,
+            // «Повторить» for a job that ended without success, where the person may run it (owner 2026-11-18).
+            'canAgain' => $result->status !== null && $result->status->state->isOver() && $this->mayAgain($request, $result->status),
         ]);
         // A page that shows a value given once (WordPress's administrator password, a database browser's address, a
         // database's password) is never kept by the browser or a proxy: the person sees it on this answer only.
@@ -109,6 +111,71 @@ final readonly class ServerJobController
         }
 
         return null;
+    }
+
+    /**
+     * «Повторить» (owner 2026-11-18): the same command with the values the server kept, planned again; the plan and its
+     * confirmation stand where the job was shown (the side panel of «История» too). Nothing runs before the confirmation.
+     */
+    public function again(Request $request, string $job): mixed
+    {
+        $actor = ResolvePanelActor::of($request);
+        $status = $this->operations->view($actor, $job, 0)->status;
+        $address = route('larena.env.admin.job', ['job' => $job], false);
+        if ($status === null || !\Larena\Env\Admin\JobOutcome::canAgain($status) || !$this->mayAgain($request, $status)) {
+            return NoticeRedirect::to($request, $address, (string) $this->translator->get('larena-env::admin.job.again_refused'));
+        }
+        $result = $this->operations->planCommand($actor, $status->command, $status->args);
+        if ($result->plan === null) {
+            return NoticeRedirect::to($request, $address, $this->reasonText($result->reason ?? 'answer_shape_invalid'));
+        }
+        $title = $status->title ?? \Larena\Env\Admin\EnvHistorySource::title($status, $this->translator);
+
+        return $this->views->make('larena-env::admin.plan', [
+            'heading' => (string) $this->translator->get('larena-env::admin.job.again_heading', ['title' => $title]),
+            'eyebrow' => (string) $this->translator->get('larena-env::admin.eyebrow'),
+            'target' => $status->args['domain'] ?? $status->args['target'] ?? $status->args['name'] ?? null,
+            'source' => $result->source,
+            'plan' => $result->plan,
+            'update' => $result->plan->update,
+            'runUrl' => route('larena.env.admin.job.again.run', ['job' => $job], false),
+            'cancelUrl' => $address,
+            'hidden' => [],
+        ]);
+    }
+
+    /** The confirmation of «Повторить»: the same command and values, read again from the server, not from the form. */
+    public function againRun(Request $request, string $job): RedirectResponse
+    {
+        $actor = ResolvePanelActor::of($request);
+        $status = $this->operations->view($actor, $job, 0)->status;
+        $address = route('larena.env.admin.job', ['job' => $job], false);
+        if ($status === null || !\Larena\Env\Admin\JobOutcome::canAgain($status) || !$this->mayAgain($request, $status)) {
+            return NoticeRedirect::to($request, $address, (string) $this->translator->get('larena-env::admin.job.again_refused'));
+        }
+        $started = $this->operations->startCommand($actor, $status->command, $status->args);
+        if ($started->jobId === null) {
+            return NoticeRedirect::to($request, $address, $this->reasonText($started->reason ?? 'answer_shape_invalid'));
+        }
+        if ($status->command === 'self:update' && $request->hasSession()) {
+            $request->session()->put(UpdateController::JOB.'.'.$started->jobId, $status->args['target'] ?? 'env');
+        }
+
+        return new RedirectResponse(route('larena.env.admin.job', ['job' => $started->jobId], false));
+    }
+
+    /**
+     * Whether the person may run this job's command again: a site's, with the right to operate sites (the server keeps
+     * an owner to their own); the server's own, with the system level's right.
+     */
+    private function mayAgain(Request $request, PanelJobStatus $status): bool
+    {
+        if ($this->authorizer === null) {
+            return false;
+        }
+        $right = is_string($status->args['domain'] ?? null) && $status->args['domain'] !== '' ? 'env.sites.operate' : 'env.server.operate';
+
+        return $this->authorizer->authorize($request, $right)->isAllowed();
     }
 
     public function cancel(Request $request, string $job): RedirectResponse

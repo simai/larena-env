@@ -23,6 +23,7 @@ $server = new class () implements PanelGateway {
     /** @var list<string> */
     public array $asked = [];
     public bool $refuse = false;
+    public ?string $jobState = null;
 
     public function ask(PanelRequest $request): PanelAnswer
     {
@@ -31,7 +32,8 @@ $server = new class () implements PanelGateway {
             return PanelAnswer::refused($request->requestId, 'not_allowed');
         }
 
-        return PanelAnswer::fromDocument($request->requestId, ['status' => 'ok', 'kind' => 'result', 'data' => ['n' => count($this->asked)]]);
+        return PanelAnswer::fromDocument($request->requestId, ['status' => 'ok', 'kind' => 'result', 'data' => ['n' => count($this->asked)]
+            + ($request->command === 'job:status' && $this->jobState !== null ? ['state' => $this->jobState] : [])]);
     }
 
     public function source(): string
@@ -79,6 +81,17 @@ $before = count($server->asked);
 $after->ask(PanelRequest::read($admin, 'job:status', ['job_id' => str_repeat('a', 24)]));
 $after->ask(PanelRequest::read($admin, 'self:describe'));
 env_assert(count($server->asked) === $before + 2, 'After a look at a job the server is asked again.');
+// A job seen still running has changed nothing yet: its page reads it every few seconds without making the rest stale.
+$server->jobState = 'running';
+$before = count($server->asked);
+$after->ask(PanelRequest::read($admin, 'job:status', ['job_id' => str_repeat('a', 24)]));
+$after->ask(PanelRequest::read($admin, 'self:describe'));
+env_assert(count($server->asked) === $before + 1, 'A running job keeps the answers.');
+$server->jobState = 'succeeded';
+$after->ask(PanelRequest::read($admin, 'job:status', ['job_id' => str_repeat('a', 24)]));
+$after->ask(PanelRequest::read($admin, 'self:describe'));
+env_assert(count($server->asked) === $before + 3, 'A job seen ended makes them stale.');
+$server->jobState = null;
 
 // A refusal is said again on the next screen, never kept.
 $server->refuse = true;

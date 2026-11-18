@@ -242,6 +242,25 @@ $counts = [$history->running($request), $history->running($request)];
 env_assert($counts === [1, 1] && count($server->asked()) === 0, 'The menu\'s count of running jobs is kept a little while, not asked on every page.');
 $cache->flush();
 env_assert($history->running($request) === 1 && count($server->asked()) === 1 && ($server->asked()[0]->args['state'] ?? null) === 'running', 'Asked once, for the running ones.');
+// The indicator of background actions (owner 2026-11-18): one cheap job:list with since and limit, its counts; the latest
+// actions; the failures not seen yet; kept a few seconds; the menu's running count taken from the same read.
+$cache->flush();
+$server->forget();
+$activity = $history->activity($request, null, 8);
+$asked = $server->asked();
+env_assert($activity !== null && count($asked) === 1 && $asked[0]->command === 'job:list' && ($asked[0]->args['limit'] ?? null) === '8'
+    && isset($asked[0]->args['since']) && !isset($asked[0]->args['state']), 'One job:list, with since and limit.');
+env_assert($activity->running === 1 && $activity->unseenFailed === 1 && count($activity->entries) === 8 && array_values($activity->entries)[0]->running(),
+    'What runs, the failure not seen, the latest actions.');
+$server->forget();
+env_assert($history->activity($request, null, 8)?->running === 1 && $history->running($request) === 1 && $server->asked() === [],
+    'Asked again within seconds: kept; the menu\'s count comes from the same read.');
+$seenNow = gmdate('Y-m-d\TH:i:s\Z', max(time(), (int) strtotime('2026-11-18T10:03:41Z')));
+env_assert($history->activity($request, $seenNow, 8)?->unseenFailed === 0, 'Seen after the failure ended: no red dot.');
+$seenLong = $history->activity($request, '2026-11-01T00:00:00Z', 8);
+$sinceAsked = array_values(array_filter($server->asked(), static fn (PanelRequest $asked): bool => $asked->command === 'job:list'));
+env_assert($seenLong?->unseenFailed === 1 && (end($sinceAsked)->args['since'] ?? null) === '2026-11-01T00:00:00Z', 'Not looked for days: asked since then, its failures counted.');
+
 // The list of jobs only looks: it does not forget the panel's kept answers.
 $kept = new CachingPanelGateway($server, $cache);
 $kept->ask(PanelRequest::read($admin, 'db:list'));

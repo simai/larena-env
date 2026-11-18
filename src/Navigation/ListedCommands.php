@@ -22,7 +22,7 @@ use Throwable;
 final class ListedCommands
 {
     /** The commands the menu asks about. */
-    public const array COMMANDS = ['service:list', 'software:list', 'php:list', 'firewall:status', 'security:status', 'backup:storage-list', 'panel:access'];
+    public const array COMMANDS = ['service:list', 'software:list', 'php:list', 'firewall:status', 'security:status', 'backup:storage-list', 'panel:access', 'self:update-plan'];
     private const string KEY = 'larena-env.listed-commands';
     /** Longer than the five minutes between two checks, which keep it fresh. */
     private const int SECONDS = 600;

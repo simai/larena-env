@@ -36,7 +36,7 @@ $navigation = $with['navigation'];
 sort($navigation);
 // The recording's server lists its services, its software and PHP, the firewall, the security and who reaches the panel.
 env_assert($navigation === ['env.alerts.channel', 'env.databases', 'env.dns', 'env.dns.connection', 'env.firewall', 'env.panel.access', 'env.people', 'env.security', 'env.server',
-    'env.server.overview', 'env.services', 'env.software', 'env.software.php', 'env.storages'] && $with['navigation_valid'] === array_fill(0, 14, true),
+    'env.server.overview', 'env.services', 'env.software', 'env.software.php', 'env.storages', 'env.update'] && $with['navigation_valid'] === array_fill(0, 15, true),
     'With the admin the sites, the databases, the overview, the spaces, DNS, the alerts\' channel, the update, the services, the software, PHP, the firewall, the security, the backup storages and who reaches the panel are valid menu entries: '.implode(', ', $navigation));
 // The overview, the panel's dashboard, is the first of the panel's rows in the menu.
 $orders = [];
@@ -58,7 +58,7 @@ env_assert($names === ['larena.env.admin.alerts.ack.open', 'larena.env.admin.ale
     'larena.env.admin.dns.connection', 'larena.env.admin.dns.connection.addresses', 'larena.env.admin.dns.connection.disconnect',
     'larena.env.admin.dns.connection.save', 'larena.env.admin.dns.run', 'larena.env.admin.dns.zone', 'larena.env.admin.dns.zone.plan',
     'larena.env.admin.dns.zone.undo', 'larena.env.admin.firewall', 'larena.env.admin.firewall.plan', 'larena.env.admin.firewall.run',
-    'larena.env.admin.home', 'larena.env.admin.index', 'larena.env.admin.job', 'larena.env.admin.job.cancel', 'larena.env.admin.overview',
+    'larena.env.admin.home', 'larena.env.admin.index', 'larena.env.admin.job', 'larena.env.admin.job.again', 'larena.env.admin.job.again.run', 'larena.env.admin.job.cancel', 'larena.env.admin.overview',
     'larena.env.admin.overview.setup', 'larena.env.admin.overview.setup.submit', 'larena.env.admin.panel.access', 'larena.env.admin.panel.address.plan',
     'larena.env.admin.panel.address.run', 'larena.env.admin.people', 'larena.env.admin.people.act', 'larena.env.admin.people.assign',
     'larena.env.admin.people.owners.plan', 'larena.env.admin.people.owners.run', 'larena.env.admin.people.stop', 'larena.env.admin.security',
@@ -71,7 +71,7 @@ env_assert($names === ['larena.env.admin.alerts.ack.open', 'larena.env.admin.ale
     'larena.env.admin.sites.port', 'larena.env.admin.sites.run', 'larena.env.admin.software', 'larena.env.admin.software.php',
     'larena.env.admin.software.php.plan', 'larena.env.admin.software.php.run', 'larena.env.admin.software.plan', 'larena.env.admin.software.run',
     'larena.env.admin.storages', 'larena.env.admin.storages.plan', 'larena.env.admin.storages.run', 'larena.env.admin.update',
-    'larena.env.admin.update.plan', 'larena.env.admin.update.run'],
+    'larena.env.admin.update.check', 'larena.env.admin.update.plan', 'larena.env.admin.update.run'],
     'The screens of the panel: '.implode(', ', $names));
 env_assert($with['routes']['larena.env.admin.index']['uri'] === 'admin/server', 'The sites keep their address.');
 env_assert($with['routes']['larena.env.admin.overview']['uri'] === 'admin/server/overview', 'The server\'s overview has its own address.');
@@ -109,7 +109,7 @@ foreach ($with['routes'] as $name => $route) {
     // The server's first setup is the administrator's: it leads through the server's own screens (ENV 2026-11-06).
     $setup = str_starts_with($name, 'larena.env.admin.overview.setup');
     // Changing a site is a right of its own: a new site, a site's action and stopping a job ask for it.
-    $changes = !$people && !$dns && !$nginx && !$channel && !$update && !$serverTools && !$setup && (str_ends_with($name, '.plan') || str_ends_with($name, '.run') || str_ends_with($name, '.cancel')
+    $changes = !$people && !$dns && !$nginx && !$channel && !$update && !$serverTools && !$setup && (str_ends_with($name, '.plan') || str_ends_with($name, '.run') || str_ends_with($name, '.cancel') || str_ends_with($name, '.again')
         || in_array($name, ['larena.env.admin.sites.new', 'larena.env.admin.sites.new.step', 'larena.env.admin.sites.new.submit', 'larena.env.admin.sites.port', 'larena.env.admin.sites.plan.draft', 'larena.env.admin.alerts.ack.open'], true));
     env_assert(in_array('access:env.sites.operate', $route['middleware'], true) === $changes, "{$name} asks for the wrong right.");
     // The server's overview and the people's spaces are the system level's; giving a space or acting for someone changes the server.

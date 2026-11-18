@@ -138,7 +138,10 @@ final class CachingPanelGateway implements PanelGateway, PanelFileGateway
         if (!self::keeps($request)) {
             $answer = $this->inner->ask($request);
             // The list of jobs only looks (the menu's mark of background actions asks it on every page): it keeps the answers.
-            if ($request->confirm || (PanelCommands::kind($request->command) === PanelCommands::JOB && $request->command !== 'job:list')
+            // A job seen still running has changed nothing yet: its page asks every few seconds (owner 2026-11-18), and the
+            // kept answers go once it is seen ended.
+            $stillRunning = $request->command === 'job:status' && $answer->status === PanelAnswerStatus::Ok && ($answer->data['state'] ?? null) === 'running';
+            if ($request->confirm || (PanelCommands::kind($request->command) === PanelCommands::JOB && $request->command !== 'job:list' && !$stillRunning)
                 || ($answer->status === PanelAnswerStatus::Refused && in_array($answer->reason, self::OUTDATED, true))) {
                 $this->forgetAll();
             }

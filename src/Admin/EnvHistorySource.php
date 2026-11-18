@@ -6,15 +6,18 @@ namespace Larena\Env\Admin;
 
 use Illuminate\Contracts\Translation\Translator;
 use Illuminate\Http\Request;
+use Larena\Admin\Contracts\AdminHistoryActivity;
 use Larena\Admin\Contracts\AdminHistoryRunning;
 use Larena\Admin\Contracts\AdminHistorySource;
 use Larena\Admin\Contracts\AdminIdentityLabelResolver;
+use Larena\Admin\History\AdminActivity;
 use Larena\Admin\History\AdminHistoryEntry;
 use Larena\Env\Gateway\PanelActor;
 use Larena\Env\Gateway\PanelRefused;
 use Larena\Env\Http\Controllers\ServerJobController;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\PanelActorResolver;
+use Larena\Env\Operations\JobPage;
 use Larena\Env\Operations\JobState;
 use Larena\Env\Operations\PanelJobStatus;
 use Larena\Env\Operations\PanelOperations;
@@ -28,8 +31,13 @@ use Larena\Env\Server\Moment;
  * command. A row opens the run's own page in the side panel. The count of running jobs (`counts.running`) marks
  * «История» in the menu, kept a little while per person so every page does not ask the server.
  */
-final readonly class EnvHistorySource implements AdminHistorySource, AdminHistoryRunning
+final readonly class EnvHistorySource implements AdminHistorySource, AdminHistoryRunning, AdminHistoryActivity
 {
+    /** How long the indicator's answer is kept per person, in seconds: every open tab asks every few seconds. */
+    public const int ACTIVITY_SECONDS = 4;
+    /** How far back the indicator's list reaches when the person looked more recently, in seconds (a day). */
+    public const int ACTIVITY_WINDOW = 86400;
+
     /** How long the menu's mark of running jobs is kept per person, in seconds. */
     public const int RUNNING_SECONDS = 20;
     /** The server's page of the list (job:list limit, at most 100). */
@@ -100,6 +108,68 @@ final readonly class EnvHistorySource implements AdminHistorySource, AdminHistor
         }
 
         return $running;
+    }
+
+    /**
+     * What goes on now for the indicator of background actions (simai-env 1.60.0 job:list `since`, `limit`, `counts`): one
+     * read of the server, kept a few seconds per person. The list is every job running and every one that ended since
+     * `since` (any outcome, so an end is said in the corner and the latest actions are listed); `since` is when the person
+     * last looked, or a day back when they looked within the day, so the list keeps the day's actions after a look.
+     * The failures not seen are the server's `counts.failed_since` when `since` is the person's own moment, else the
+     * failures in the list that ended after it. The running count is the one that marks «История» in the menu.
+     */
+    public function activity(Request $request, ?string $seenAt, int $limit): ?AdminActivity
+    {
+        $actor = $this->actor($request);
+        if ($actor === null) {
+            return null;
+        }
+        $now = time();
+        $seen = $seenAt !== null ? strtotime($seenAt) : false;
+        $window = $now - self::ACTIVITY_WINDOW;
+        $own = $seen === false || $seen < $window;
+        $since = gmdate('Y-m-d\TH:i:s\Z', $own && $seen !== false ? $seen : $window);
+        $limit = max(1, min(20, $limit));
+        $key = 'larena-env:activity:'.hash('sha256', $actor->user."\0".($actor->owner ?? '')."\0".$since."\0".$limit);
+        $kept = $this->cache?->get($key);
+        $page = $kept instanceof JobPage ? $kept : $this->operations->jobPage($actor, null, $limit, null, $since);
+        if ($page === null) {
+            return null;
+        }
+        if (!$kept instanceof JobPage) {
+            $this->cache?->put($key, $page, self::ACTIVITY_SECONDS);
+        }
+        $entries = [];
+        $failed = 0;
+        foreach ($page->jobs as $status) {
+            $entries[] = $this->entryOf($status, $actor);
+            if ($status->state === JobState::Failed) {
+                $end = strtotime($status->finishedAt ?? $status->startedAt ?? $status->createdAt ?? '');
+                if ($end !== false && ($seen === false || $end > $seen)) {
+                    $failed++;
+                }
+            }
+        }
+        $running = $page->running ?? count(array_filter($page->jobs, static fn (PanelJobStatus $status): bool => $status->state === JobState::Running));
+        $this->remember($actor, $running);
+        // The person's own moment: the server counted the failures since it over every job. Within the day the list is
+        // what is known; a failure beyond a full list that the server counts is not seen either.
+        $unseen = $own && $page->failedSince !== null ? $page->failedSince
+            : ($failed === 0 && $page->more && ($page->failedSince ?? 0) > 0 && $this->oldestEnd($page) > (int) $seen ? 1 : $failed);
+
+        return new AdminActivity($running, $unseen, $entries);
+    }
+
+    /** When the oldest job of a page ended (or started), Unix time; 0 when unknown. */
+    private function oldestEnd(JobPage $page): int
+    {
+        $oldest = PHP_INT_MAX;
+        foreach ($page->jobs as $status) {
+            $end = strtotime($status->finishedAt ?? $status->startedAt ?? $status->createdAt ?? '');
+            $oldest = $end === false ? $oldest : min($oldest, $end);
+        }
+
+        return $oldest === PHP_INT_MAX ? 0 : $oldest;
     }
 
     private function remember(PanelActor $actor, int $running): void

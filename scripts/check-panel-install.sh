@@ -167,7 +167,7 @@ children = {item["key"]: [row["key"] for row in item.get("children", []) if row.
 # The services came with simai-env 1.33.0, the firewall and who reaches the panel with 1.35.0.
 assert sorted(children["server"]) == ["env.dns", "env.firewall", "env.security", "env.server.overview", "env.services", "env.software", "env.software.php", "env.storages"], children
 assert sorted(children["users"]) == ["auth.users", "env.people"], children
-assert sorted(children["settings"]) == ["admin.settings_general", "env.alerts.channel", "env.dns.connection", "env.panel.access"], children
+assert sorted(children["settings"]) == ["admin.settings_general", "env.alerts.channel", "env.dns.connection", "env.panel.access", "env.update"], children
 # Plain lists (the panel's UX audit): no group headings in any root.
 assert not [row for item in items for row in item.get("children", []) if row.get("kind") in ("heading", "divider")], "no group headings"
 assert "site-switch" not in json.dumps(menu.get("capabilities", [])), "the panel has no site switcher"
@@ -258,6 +258,8 @@ status, update = get("/admin/server/update")
 assert status == 200 and re.search(r'data-env-update="env"\s+data-env-update-state="available"', update) and "9.9.0" in update, "simai-env's update"
 assert re.search(r'data-env-update="panel"\s+data-env-update-state="not_installed"', update) and "was not installed through simai-env" in update, "the panel says why not"
 assert 'data-env-update-plan="env"' in update and 'data-env-update-plan="panel"' not in update, "only simai-env is offered"
+# «Обновления» among the settings (owner 2026-11-18): both versions said always, «Проверить», the order of the two.
+assert 'data-env-update-versions="env"' in update and 'data-env-update-versions="panel"' in update and "data-env-update-check" in update and "data-env-update-order" in update, "the versions always"
 _, overview = get("/admin/server/overview")
 assert 'data-env-update-hint-target="env"' in overview, "the overview hints at the update"
 _, updating = post("/admin/server/update/plan", {"_token": form_token(update), "target": "env"})

@@ -40,7 +40,16 @@ final readonly class UpdatePlan
         public ?string $backupPath = null,
         /** @var list<array{kind: string, target: string}> */
         public array $restartItems = [],
+        // When the panel asked the server (Unix time): «проверено …» beside the versions.
+        public ?int $checkedAt = null,
     ) {
+    }
+
+    /** The same plan, asked at this moment. */
+    public function checkedAt(?int $at): self
+    {
+        return new self($this->target, $this->current, $this->available, $this->updateAvailable, $this->blocked, $this->notes, $this->notesUrl,
+            $this->backup, $this->restarts, $this->checks, $this->rollback, $this->backupKind, $this->backupPath, $this->restartItems, $at);
     }
 
     /** @param array<array-key, mixed> $data null when the answer is not an update plan the panel knows */
@@ -95,7 +104,7 @@ final readonly class UpdatePlan
         }
 
         return new self($this->target, $this->current, $this->available, false, $this->blocked, $this->notes, $this->notesUrl,
-            $this->backup, $this->restarts, $this->checks, $this->rollback, $this->backupKind, $this->backupPath, $this->restartItems);
+            $this->backup, $this->restarts, $this->checks, $this->rollback, $this->backupKind, $this->backupPath, $this->restartItems, $this->checkedAt);
     }
 
     /** Whether the published version is older than the one that runs (or, for a panel built here, than its build). */

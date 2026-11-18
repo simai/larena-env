@@ -143,11 +143,88 @@ final class JobOutcome
         return $status->progress['title'] !== null ? self::text('job.where', $replace + ['title' => $status->progress['title']]) : self::text('job.where_bare', $replace);
     }
 
-    /** The job's live part (larena/admin AdminLiveRegion): read again while it runs, said in a few words. */
+    /** How often a running job's page reads it again, in milliseconds (every 2–3 s, owner 2026-11-18). */
+    public const int INTERVAL_MS = 2500;
+    /** How often the page of an update asks while the server (or the panel itself) restarts. */
+    public const int RESTART_MS = 3000;
+
+    /**
+     * The job's live part (larena/admin AdminLiveRegion): read again (job:status) every few seconds while it runs, not
+     * only when the page is opened; said in a few words. It names its run, so the indicator of background actions does
+     * not say the same end a second time.
+     */
     public static function live(PanelJobStatus $status, string $url): HtmlString
     {
-        return new HtmlString(class_exists(\Larena\Admin\Runtime\AdminLiveRegion::class)
-            ? \Larena\Admin\Runtime\AdminLiveRegion::open('env-job', !$status->state->isOver(), $url, self::heading($status)) : '');
+        return self::holder(!$status->state->isOver(), $url, self::heading($status), self::INTERVAL_MS);
+    }
+
+    /** The part of an update's job while the server does not answer for it: asked again until the panel is back. */
+    public static function restarting(string $url, string $said): HtmlString
+    {
+        return self::holder(true, $url, $said, self::RESTART_MS);
+    }
+
+    private static function holder(bool $live, string $url, string $said, int $interval): HtmlString
+    {
+        if (!class_exists(\Larena\Admin\Runtime\AdminLiveRegion::class)) {
+            return new HtmlString('');
+        }
+        return new HtmlString(\Larena\Admin\Runtime\AdminLiveRegion::open('env-job', $live, $url, $said, $interval, true));
+    }
+
+    /** The state in the server's words (simai-env 1.60.0 `state_words`: Выполняется, Готово, Ошибка, Отменено, Занято), else the panel's. */
+    public static function stateWords(PanelJobStatus $status): string
+    {
+        return $status->stateWords ?? self::text('job.state_words.'.$status->state->value);
+    }
+
+    /** The state as sf-badge's activity: a spinner while it runs, an icon of its own once over. */
+    public static function activity(PanelJobStatus $status): string
+    {
+        return match ($status->state) {
+            JobState::Running => 'running',
+            JobState::Succeeded => 'done',
+            JobState::Busy => 'waiting',
+            JobState::Cancelled => 'stopped',
+            JobState::Failed => 'failed',
+        };
+    }
+
+    /**
+     * Why a failed job failed when the server gives no words of it (a server before 1.60.0, a job lost): the last lines
+     * of its output that speak of an error, else its last lines.
+     *
+     * @param list<string> $lines
+     * @return list<string>
+     */
+    public static function failureLines(array $lines, int $most = 6): array
+    {
+        $lines = array_values(array_filter(array_map(static fn (string $line): string => rtrim($line), $lines), static fn (string $line): bool => trim($line) !== ''));
+        $errors = array_values(array_filter($lines, static fn (string $line): bool => preg_match('/error|errno|fail|fatal|denied|refused|exception|ошибк|не удалось|невозможно/iu', $line) === 1));
+
+        return array_slice($errors !== [] ? $errors : $lines, -$most);
+    }
+
+    /** The commands «Повторить» never plans again: what carried a file or a secret the server keeps no copy of. */
+    private const array NOT_AGAIN = ['file:write', 'file:upload', 'self:alerts-channel', 'ssl:dns-credentials', 'site:deploy-archive'];
+
+    /**
+     * Whether «Повторить» plans this job again: one that ended without success, whose arguments the server kept whole
+     * (nothing «(stored)», nothing carried as a file).
+     */
+    public static function canAgain(PanelJobStatus $status): bool
+    {
+        if (!in_array($status->state, [JobState::Failed, JobState::Cancelled, JobState::Busy], true)
+            || in_array($status->command, self::NOT_AGAIN, true) || \Larena\Env\Gateway\PanelCommands::attachmentLimit($status->command) !== null) {
+            return false;
+        }
+        foreach ($status->args as $value) {
+            if ($value === '(stored)') {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public static function liveEnd(): HtmlString

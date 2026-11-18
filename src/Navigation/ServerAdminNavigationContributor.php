@@ -10,7 +10,7 @@ use Larena\Admin\Navigation\AdminNavigationDescriptor;
 final class ServerAdminNavigationContributor implements AdminNavigationContributor
 {
     /** Each row of a screen a newer simai-env brings, by the command it needs; ListedCommands reads each of them. */
-    public const array NEEDS = ['env.services' => 'service:list', 'env.software' => 'software:list', 'env.software.php' => 'php:list', 'env.firewall' => 'firewall:status', 'env.security' => 'security:status', 'env.storages' => 'backup:storage-list', 'env.panel.access' => 'panel:access'];
+    public const array NEEDS = ['env.services' => 'service:list', 'env.software' => 'software:list', 'env.software.php' => 'php:list', 'env.firewall' => 'firewall:status', 'env.security' => 'security:status', 'env.storages' => 'backup:storage-list', 'env.panel.access' => 'panel:access', 'env.update' => 'self:update-plan'];
 
     /**
      * The rows of screens that only a newer simai-env can use show only where the server lists their commands; without
@@ -259,6 +259,26 @@ final class ServerAdminNavigationContributor implements AdminNavigationContribut
             labelKey: 'larena-env::admin.panel_access.navigation',
             activeRoutePattern: 'larena.env.admin.panel.access*',
             icon: 'lock',
+        ), new AdminNavigationDescriptor(
+            // «Обновления» among the panel's settings (owner 2026-11-18): simai-env and the panel, their versions always,
+            // «Проверить» and «Обновить» through the server's plan (simai-env 1.32.0, 1.60.0).
+            id: 'env.update',
+            ownerPackage: $this->ownerPackage(),
+            label: 'Updates',
+            routeName: 'larena.env.admin.update',
+            routeUri: '/admin/server/update',
+            category: 'operations',
+            state: 'operator_slice',
+            accessScope: 'env.server.read',
+            auditEvent: 'env.update.viewed',
+            statusCap: 'env_panel_skeleton',
+            order: 13,
+            group: 'operations',
+            knownLimitations: ['not_production_ready'],
+            surface: 'product',
+            labelKey: 'larena-env::admin.update.navigation',
+            activeRoutePattern: 'larena.env.admin.update*',
+            icon: 'system_update',
         ), new AdminNavigationDescriptor(
             // «Базы данных» (simai-env 1.59.0 db:list): both levels, an owner's own sites' databases only.
             id: 'env.databases',

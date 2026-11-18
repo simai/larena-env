@@ -447,6 +447,12 @@ return [
         ],
     ],
     'job' => [
+        // The state in words when the server gives none (simai-env before 1.60.0), «Повторить», why it failed from its output.
+        'state_words' => ['running' => 'Running', 'succeeded' => 'Done', 'failed' => 'Failed', 'cancelled' => 'Cancelled', 'busy' => 'Busy'],
+        'again' => 'Run again',
+        'again_heading' => 'Run again: :title',
+        'again_refused' => 'This action cannot be run again from here: start it again where it was.',
+        'failure_lines' => 'The server named no reason. The last lines of its output:',
         // The end of an action in words and its next step («Действие с планом», PX-6): what became, then where to go.
         'done' => [
             'site-remove' => 'The site :domain is removed',
@@ -1323,10 +1329,10 @@ return [
     ],
     // A safe update of simai-env and of the panel (simai-env 1.32.0, Panel plan 4.7).
     'update' => [
-        'navigation' => 'Update',
-        'page_title' => 'Update — Larena Panel',
+        'navigation' => 'Updates',
+        'page_title' => 'Updates — Larena Panel',
         'states' => ['current' => 'Up to date', 'available' => 'Update available', 'blocked' => 'Cannot update', 'unknown' => 'Unreadable'],
-        'title' => 'Update',
+        'title' => 'Updates',
         'description' => 'Update the server\'s environment and the panel itself: what changes, which copy is taken first and what comes back if something goes wrong.',
         'unsupported' => 'This simai-env release cannot be updated from the panel. It needs 1.32.0 or later.',
         'unreadable' => 'The server did not say what the update changes. Try opening the page later.',
@@ -1364,9 +1370,25 @@ return [
         'hint' => ['env' => 'simai-env environment: release :available.', 'panel' => 'Panel: release :available.'],
         'hint_open' => 'Open the update',
         'restarting_title' => 'The panel is restarting',
-        'restarting' => 'During an update the server and the panel go quiet for a moment. Reload the page in a minute to see how the update ended.',
+        'restarting' => 'During an update the server and the panel go quiet for a moment. This part asks again until the panel answers and shows how the update ended.',
         'reload' => 'Reload the page',
         'not_cancellable' => 'An update cannot be stopped: wait for it to finish.',
+        // The versions always, «Проверить», the order of the two updates (owner 2026-11-18).
+        'versions' => 'Installed :installed · latest :latest · checked :checked',
+        'versions_label' => 'Versions',
+        'installed' => 'Installed',
+        'latest' => 'Latest',
+        'checked' => 'Checked',
+        'never' => 'not checked yet',
+        'unknown_version' => 'unknown',
+        'check' => 'Check',
+        'checked_notice' => 'The server checked for updates.',
+        'details' => 'What is new and what restarts',
+        'run' => 'Update',
+        'order' => 'simai-env is updated first, then the panel: the panel\'s version is pinned in simai-env.',
+        'env_not_panel' => 'Updating simai-env does not update the panel. If a new panel version comes with it, update the panel separately.',
+        'env_first' => 'Update simai-env first: it pins the panel\'s version.',
+        'panel_restarts' => 'The panel restarts during the update: this screen waits for it and shows the outcome. The update cannot be stopped.',
     ],
     'services' => [
         'navigation' => 'Services',

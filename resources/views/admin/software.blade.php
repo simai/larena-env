@@ -35,9 +35,10 @@
                     <span class="text-small color-on-surface-variant" style="margin-inline-start: auto;">{{ __('larena-env::admin.software.overview.updates_more') }}</span>
                 </summary>
                 <div class="p-x-2 p-bottom-2">
-                    @if (isset($plans) && (!$supported || \Larena\Env\Software\SoftwareScreen::plansToShow($plans) !== []))
+                    @if (isset($plans))
+                        {{-- simai-env and the panel, both always with their versions (owner 2026-11-18): the same part as «Обновления». --}}
                         <div class="m-bottom-2" data-env-software-updates aria-label="{{ __('larena-env::admin.software.overview.panel_title') }}">
-                            @include('larena-env::admin.partials.update-targets', ['plans' => $supported ? \Larena\Env\Software\SoftwareScreen::plansToShow($plans) : $plans])
+                            @include('larena-env::admin.partials.update-targets', ['plans' => $plans])
                         </div>
                     @endif
                     @if ($system !== null)

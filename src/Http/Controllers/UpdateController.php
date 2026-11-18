@@ -8,7 +8,6 @@ use Illuminate\Contracts\Translation\Translator;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Session\Store;
 use Larena\Access\Runtime\AccessOperationAuthorizer;
 use Larena\Env\Gateway\PanelActor;
 use Larena\Env\Gateway\PanelCapabilities;
@@ -34,13 +33,15 @@ final readonly class UpdateController
         private Factory $views,
         private Translator $translator,
         private ?AccessOperationAuthorizer $authorizer = null,
+        private ?\Larena\Env\Server\ServerOverviewReader $overviews = null,
     ) {
     }
 
     /**
-     * The update's own address opens its place in «Программы и обновления», with the notice the last step left; with
-     * `?target=env|panel`, as the alert bar and the overview link it («Обновить», owner 2026-11-07), it opens the
-     * server's plan of that update at once, to confirm. A plan changes nothing.
+     * «Обновления» among the panel's settings (owner 2026-11-18): simai-env and the panel, each with its versions always
+     * («Установлена X · последняя Y · проверено …»), what is new and what restarts, «Проверить» and «Обновить» through
+     * «Действие с планом». With `?target=env|panel`, as the alert bar and the overview link it («Обновить», owner
+     * 2026-11-07), the server's plan of that update opens at once, to confirm. A plan changes nothing.
      */
     public function index(Request $request): mixed
     {
@@ -48,12 +49,43 @@ final readonly class UpdateController
             && ($this->authorizer?->authorize($request, 'env.server.operate')->isAllowed() ?? false)) {
             return $this->plan($request);
         }
-        $session = $request->hasSession() ? $request->session() : null;
-        if ($session instanceof Store) {
-            $session->reflash();
+        $actor = ResolvePanelActor::of($request);
+        $overview = $this->overviews?->read($actor)->overview;
+
+        return $this->views->make('larena-env::admin.update', $this->state($request, $actor, $overview?->capabilities) + [
+            'versions' => self::versions($overview),
+            'notice' => $request->hasSession() ? $request->session()->get('larena_env_notice') : null,
+            'checkUrl' => route('larena.env.admin.update.check', [], false),
+        ]);
+    }
+
+    /** «Проверить»: the server is asked again what each update would bring (self:update-plan), past the kept answers. */
+    public function check(Request $request): RedirectResponse
+    {
+        $actor = ResolvePanelActor::of($request);
+        $read = false;
+        foreach (UpdatePlan::TARGETS as $target) {
+            $read = $this->extras->updatePlan($actor, $target, true) !== null || $read;
         }
 
-        return new RedirectResponse(route('larena.env.admin.software', [], false).'#update');
+        return NoticeRedirect::to($request, route('larena.env.admin.update', [], false),
+            (string) $this->translator->get('larena-env::admin.'.($read ? 'update.checked_notice' : 'update.unreadable')));
+    }
+
+    /**
+     * The versions that run, from the server's description (simai-env 1.60.0): simai-env's, and the panel's with the one
+     * simai-env pins; a panel built here says its build (panel-build.json).
+     *
+     * @return array<string, array{installed: ?string, pinned: ?string}>
+     */
+    public static function versions(?\Larena\Env\Server\ServerOverview $overview, ?string $build = null): array
+    {
+        $build ??= self::panelBuild();
+
+        return [
+            'env' => ['installed' => $overview?->envVersion, 'pinned' => null],
+            'panel' => ['installed' => $overview?->panel['version'] ?? $build, 'pinned' => $overview?->panel['pinned'] ?? null],
+        ];
     }
 
     /**
@@ -119,7 +151,7 @@ final readonly class UpdateController
             'plan' => $result->plan,
             'update' => $update,
             'runUrl' => route('larena.env.admin.update.run', [], false),
-            'cancelUrl' => route('larena.env.admin.software', [], false).'#update',
+            'cancelUrl' => route('larena.env.admin.update', [], false),
             'hidden' => ['target' => $target],
         ]);
     }
@@ -152,7 +184,7 @@ final readonly class UpdateController
         $key = 'larena-env::admin.reasons.'.$reason;
         $line = (string) $this->translator->get($key);
 
-        return NoticeRedirect::to($request, route('larena.env.admin.software', [], false),
+        return NoticeRedirect::to($request, route('larena.env.admin.update', [], false),
             $line !== $key ? $line : (string) $this->translator->get('larena-env::admin.reasons.unknown', ['reason' => $reason]));
     }
 

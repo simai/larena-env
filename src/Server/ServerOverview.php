@@ -34,6 +34,10 @@ final readonly class ServerOverview
         public array $ownerDiskBytes = [],
         // The server's time zone (simai-env 1.60.0 `timezone {name, offset}`): its times are said in it, an IANA name.
         public ?string $timezone = null,
+        // The panel the server runs (simai-env 1.60.0 `panel {domain, version, pinned, source, installed_at,
+        // update_available}`): its version (null for a panel built here), the one this simai-env pins, whether it waits.
+        /** @var array{version: ?string, pinned: ?string, source: ?string, installedAt: ?string, updateAvailable: bool}|null */
+        public ?array $panel = null,
     ) {
     }
 
@@ -57,7 +61,7 @@ final readonly class ServerOverview
 
         return new self($this->generatedAt, $this->envVersion, $this->osId, $this->osVersion, $this->services, $this->phpVersions,
             array_values(array_filter($this->sites, static fn (SiteSummary $site): bool => !in_array(strtolower($site->domain), $domains, true))),
-            $this->owners, $this->capabilities, $this->blockedOwners, $this->ownerDiskBytes, $this->timezone);
+            $this->owners, $this->capabilities, $this->blockedOwners, $this->ownerDiskBytes, $this->timezone, $this->panel);
     }
 
     /**
@@ -112,7 +116,24 @@ final readonly class ServerOverview
 
         return new self($generatedAt, $envVersion, $osId, $osVersion, $services,
             array_values(array_filter(is_array($host['php_versions'] ?? null) ? $host['php_versions'] : [], 'is_string')), $sites, $owners,
-            PanelCapabilities::fromHostDescription($host), $blocked, $disk, self::zone($host['timezone']['name'] ?? null));
+            PanelCapabilities::fromHostDescription($host), $blocked, $disk, self::zone($host['timezone']['name'] ?? null), self::panel($host['panel'] ?? null));
+    }
+
+    /** @return array{version: ?string, pinned: ?string, source: ?string, installedAt: ?string, updateAvailable: bool}|null */
+    public static function panel(mixed $panel): ?array
+    {
+        if (!is_array($panel)) {
+            return null;
+        }
+        $version = static fn (mixed $value): ?string => is_string($value) && preg_match('/\A[0-9A-Za-z.+-]{1,64}\z/D', $value) === 1 ? $value : null;
+
+        return [
+            'version' => $version($panel['version'] ?? null),
+            'pinned' => $version($panel['pinned'] ?? null),
+            'source' => is_string($panel['source'] ?? null) && preg_match('/\A[a-z_-]{1,32}\z/D', $panel['source']) === 1 ? $panel['source'] : null,
+            'installedAt' => is_string($panel['installed_at'] ?? null) && strtotime($panel['installed_at']) !== false ? $panel['installed_at'] : null,
+            'updateAvailable' => ($panel['update_available'] ?? false) === true,
+        ];
     }
 
     /** An IANA zone name the panel's PHP knows (`Europe/Moscow`, `UTC`), else null. */

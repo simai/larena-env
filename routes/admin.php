@@ -67,6 +67,7 @@ $router->middleware(['access:env.server.operate'])->group(static function ($rout
 // A safe update of simai-env or of the panel (simai-env 1.32.0, Panel plan 4.7): the administrator's alone.
 $router->get('/update', [UpdateController::class, 'index'])->middleware('access:env.server.read')->name('larena.env.admin.update');
 $router->middleware(['access:env.server.operate'])->group(static function ($router): void {
+    $router->post('/update/check', [UpdateController::class, 'check'])->name('larena.env.admin.update.check');
     $router->post('/update/plan', [UpdateController::class, 'plan'])->name('larena.env.admin.update.plan');
     $router->post('/update/run', [UpdateController::class, 'run'])->name('larena.env.admin.update.run');
 });
@@ -156,6 +157,9 @@ $router->middleware(['access:env.sites.operate'])->group(static function ($route
     $router->post('/sites/{domain}/files/plan', [SiteFilesController::class, 'plan'])->where('domain', $domain)->name('larena.env.admin.site.files.plan');
     $router->post('/sites/{domain}/files/run', [SiteFilesController::class, 'run'])->where('domain', $domain)->name('larena.env.admin.site.files.run');
     $router->post('/jobs/{job}/cancel', [ServerJobController::class, 'cancel'])->where('job', '[a-f0-9]{24}')->name('larena.env.admin.job.cancel');
+    // «Повторить» (owner 2026-11-18): the same plan again, then its confirmation; the server's own commands need the system level's right.
+    $router->post('/jobs/{job}/again', [ServerJobController::class, 'again'])->where('job', '[a-f0-9]{24}')->name('larena.env.admin.job.again');
+    $router->post('/jobs/{job}/again/run', [ServerJobController::class, 'againRun'])->where('job', '[a-f0-9]{24}')->name('larena.env.admin.job.again.run');
 });
 // A site's own nginx directives, the system level's only: they can break the sites' isolation (Panel plan 6.3).
 $router->middleware(['access:env.server.operate'])->group(static function ($router) use ($domain): void {

@@ -14,12 +14,16 @@
          journal and the notifications. --}}
     {{ \Larena\Admin\Runtime\AdminPlannedAction::open('env-job') }}
     @if ($status === null && ($updating ?? null) !== null && ! $refused)
-        {{-- An update replaces the gate and the panel while its job runs: the server may not answer for a moment. --}}
+        {{-- An update replaces the gate and the panel while its job runs: the server, or the panel itself, may not answer
+             for a while. The part asks again every few seconds (a failed answer later and later) until the job is read
+             again, then shows how it ended; the button reads it at once. --}}
+        {{ \Larena\Env\Admin\JobOutcome::restarting(route('larena.env.admin.job', ['job' => $jobId], false), __('larena-env::admin.update.restarting_title')) }}
         <section class="larena-panel larena-panel-padded" data-env-job-restarting="{{ $updating }}" role="status">
             <h2 class="text-2">{{ __('larena-env::admin.update.restarting_title') }}</h2>
             <p>{{ __('larena-env::admin.update.restarting') }}</p>
             <p><a href="{{ route('larena.env.admin.job', ['job' => $jobId], false) }}" class="larena-button">{{ __('larena-env::admin.update.reload') }}</a></p>
         </section>
+        {{ \Larena\Env\Admin\JobOutcome::liveEnd() }}
     @elseif ($status === null)
         <section class="larena-panel larena-empty" data-env-state="{{ ($missing ?? false) ? 'missing' : ($refused ? 'refused' : 'failed') }}" role="alert">
             <h2 class="text-2">{{ ($missing ?? false) ? __('larena-env::admin.job.missing_title') : ($refused ? __('larena-env::admin.refused_title') : __('larena-env::admin.failed_title')) }}</h2>
@@ -28,17 +32,36 @@
     @else
         {{ \Larena\Env\Admin\JobOutcome::live($status, route('larena.env.admin.job', ['job' => $status->jobId], false)) }}
         <section class="larena-panel larena-panel-padded" data-env-job="{{ $status->jobId }}" data-env-job-state="{{ $status->state->value }}" aria-labelledby="env-job">
+            {{-- The state, large and in words (owner 2026-11-18): the server's own (simai-env 1.60.0 state_words —
+                 Выполняется, Готово, Ошибка, Отменено, Занято) on the Framework's badge, spinning while it runs. --}}
+            <p class="m-0 m-bottom-1" data-env-job-state-words="{{ $status->state->value }}">
+                <sf-badge size="1" appearance="tonal" activity="{{ \Larena\Env\Admin\JobOutcome::activity($status) }}" text="{{ \Larena\Env\Admin\JobOutcome::stateWords($status) }}"></sf-badge>
+            </p>
             {{-- What became, in words (PX-6): «Сайт demo.test удалён», not «Готово» with who started it. --}}
-            <h2 id="env-job" class="text-2">{{ $status->state->isOver() ? \Larena\Env\Admin\JobOutcome::heading($status) : __('larena-env::admin.job.states.running') }}</h2>
+            <h2 id="env-job" class="text-2">{{ $status->state->isOver() ? \Larena\Env\Admin\JobOutcome::heading($status) : ($status->title ?? __('larena-env::admin.job.states.running')) }}</h2>
             {{-- The run on the Framework's sf-progress-run (PX-7, PX-11): no steps from the server yet, so a bar without a per
                  cent while it runs, what became once over; «Свернуть» leaves it to the corner. --}}
             {{ \Larena\Env\Admin\JobOutcome::progress($status) }}
             @if (! $status->state->isOver())
                 {{-- Where it stands in the server's words (simai-env 1.60.0): «2 из 5: Создаётся база». --}}
                 <p class="m-top-1" data-env-job-running>@if (\Larena\Env\Admin\JobOutcome::where($status) !== '')<span data-env-job-where>{{ \Larena\Env\Admin\JobOutcome::where($status) }}</span>. @endif{{ __('larena-env::admin.job.running') }}</p>
-            @elseif ($status->state->value === 'failed' && ($status->outcome['reason'] ?? null) !== null)
+            @elseif ($status->state->value === 'failed' && ($status->outcome['words'] ?? null) !== null && $status->outcome['words'] !== $status->outcome['code'])
                 {{-- Why it failed, as the server says it: its last error, not «see the log». --}}
                 <p class="m-top-1" role="alert" data-env-job-outcome="{{ $status->outcome['code'] }}">{{ $status->outcome['words'] }}</p>
+            @elseif ($status->state->value === 'failed' && \Larena\Env\Admin\JobOutcome::failureLines($log->lines ?? []) !== [])
+                {{-- No words of the server's (an older one, a lost job): the last lines of its output that speak of the error. --}}
+                <div class="m-top-1" role="alert" data-env-job-failure-lines>
+                    <p class="m-0 m-bottom-1">{{ __('larena-env::admin.job.failure_lines') }}</p>
+                    <pre class="m-0" tabindex="0" style="max-width: 100%; overflow-x: auto; white-space: pre-wrap; overflow-wrap: anywhere;">{{ implode("\n", \Larena\Env\Admin\JobOutcome::failureLines($log->lines ?? [])) }}</pre>
+                </div>
+            @endif
+            @if ($status->state->isOver() && \Larena\Env\Admin\JobOutcome::canAgain($status) && ($canAgain ?? false))
+                {{-- «Повторить» (owner 2026-11-18): the same command with the same values, planned again — the plan and its
+                     confirmation in place (the side panel of «История» too), nothing runs before it is confirmed. --}}
+                <form method="post" action="{{ route('larena.env.admin.job.again', ['job' => $status->jobId], false) }}" class="m-0 m-top-1" data-env-job-again data-larena-action-form>
+                    @csrf
+                    <button type="submit" class="larena-button larena-button-primary">{{ __('larena-env::admin.job.again') }}</button>
+                </form>
             @endif
             @if (($configFailed ?? null) !== null)
                 <p role="alert" data-env-job-config-failed="{{ $configFailed }}">{{ __('larena-env::admin.services.config_failed', ['name' => $configFailed]) }}</p>

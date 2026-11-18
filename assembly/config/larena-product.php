@@ -48,6 +48,8 @@ return [
             'env.software' => 'server',
             'env.software.php' => 'server',
             'env.panel.access' => 'settings',
+            // simai-env's and the panel's updates among the panel's settings (owner 2026-11-18).
+            'env.update' => 'settings',
             'admin.settings_general' => 'settings',
             'admin.site_backgrounds' => 'settings',
         ],

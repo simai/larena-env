@@ -603,4 +603,55 @@ $updateRunning = new PanelJobStatus('000000000000000000000000', JobState::Runnin
 $runningUpdate = $job(['status' => $updateRunning, 'log' => null, 'updating' => 'env']);
 env_assert(!str_contains($runningUpdate, 'data-env-job-cancel') && str_contains($runningUpdate, 'data-env-job-not-cancellable'), 'An update cannot be stopped.');
 
+// «Обновления» (owner 2026-11-18): the versions always, «Проверить», simai-env first; «Обновить» through «Действие с планом».
+$checkedEnv = $envUpdate->checkedAt(1795000000);
+$versionsScreen = $updateScreen(['plans' => ['env' => $checkedEnv, 'panel' => $panelUpdate->checkedAt(null)], 'checkUrl' => '/admin/server/update/check',
+    'versions' => ['env' => ['installed' => '1.62.0', 'pinned' => null], 'panel' => ['installed' => null, 'pinned' => '0.4.6']]]);
+env_assert(str_contains($versionsScreen, 'data-env-update-versions="env"') && str_contains($versionsScreen, 'data-env-update-versions="panel"')
+    && str_contains($versionsScreen, 'datetime="'.gmdate('Y-m-d\TH:i:s\Z', 1795000000).'"') && str_contains($versionsScreen, $text('update.never')),
+    'Each target says installed, latest and when it was checked, also when nothing waits.');
+env_assert(str_contains($versionsScreen, 'data-env-update-order') && str_contains($versionsScreen, 'data-env-update-check') && str_contains($versionsScreen, 'action="/admin/server/update/check"')
+    && str_contains($versionsScreen, 'data-env-update-env-not-panel'), 'The order, «Проверить», and that simai-env does not update the panel.');
+env_assert(!str_contains($updateScreen(['canUpdate' => false, 'checkUrl' => '/c']), 'data-env-update-check>'), 'Without the right, no «Проверить».');
+env_assert(preg_match('/<sf-modal id="env-update-env"[^>]*>\s*<div data-larena-action-host>\s*<form[^>]+data-env-update-plan="env"[^>]+data-larena-action-form data-larena-action-auto/', $versionsScreen) === 1,
+    '«Обновить» opens the plan in «Действие с планом».');
+$bothWait = \Larena\Env\Update\UpdatePlan::fromData(['schema' => 'simai-update-plan/1', 'target' => 'panel', 'update_available' => true, 'current' => '0.4.5', 'available' => '0.4.6']) ?? throw new RuntimeException('plan');
+$ordered = $updateScreen(['plans' => ['env' => $envUpdate, 'panel' => $bothWait]]);
+env_assert(str_contains($ordered, 'data-env-update-env-first') && preg_match('/<button[^>]+disabled data-env-update-open="panel"/', $ordered) === 1
+    && !str_contains($ordered, 'data-env-update-plan="panel"'), 'The panel waits for simai-env.');
+$envCurrent = \Larena\Env\Update\UpdatePlan::fromData(['schema' => 'simai-update-plan/1', 'target' => 'env', 'current' => '1.62.0', 'available' => '1.62.0']) ?? throw new RuntimeException('plan');
+$panelAlone = $updateScreen(['plans' => ['env' => $envCurrent, 'panel' => $bothWait]]);
+env_assert(str_contains($panelAlone, 'data-env-update-plan="panel"') && str_contains($panelAlone, 'data-env-update-panel-restarts'), 'simai-env current: the panel updates, saying it restarts.');
+
+$described = new \Larena\Env\Server\ServerOverview('now', '1.62.0', 'ubuntu', '24.04', [], [], [], panel: \Larena\Env\Server\ServerOverview::panel(['version' => null, 'pinned' => '0.4.6', 'source' => 'build', 'update_available' => false]));
+env_assert(\Larena\Env\Http\Controllers\UpdateController::versions($described, '0.4.6-dev') === ['env' => ['installed' => '1.62.0', 'pinned' => null], 'panel' => ['installed' => '0.4.6-dev', 'pinned' => '0.4.6']]
+    && \Larena\Env\Http\Controllers\UpdateController::versions(null, null)['env']['installed'] === null, 'The versions from self:describe; a panel built here says its build.');
+
+// The job page (owner 2026-11-18): its state large in words, why it failed, «Повторить».
+$failedBackup = PanelJobStatus::fromData(['job_id' => 'f00000000000000000000001', 'state' => 'failed', 'command' => 'backup:data', 'args' => ['domain' => 'demo-php.test'],
+    'created_at' => '2026-11-18T10:00:00Z', 'finished_at' => '2026-11-18T10:01:00Z']);
+$failedLog = new PanelJobLog('f00000000000000000000001', JobState::Failed, ['Packing the files', 'tar: write error: No space left on device', 'Cleaning up'], 3);
+$failedPage = $job(['status' => $failedBackup, 'log' => $failedLog, 'canAgain' => true]);
+env_assert(str_contains($failedPage, 'data-env-job-state-words="failed"') && str_contains($failedPage, 'size="1"') && str_contains($failedPage, 'activity="failed"')
+    && str_contains($failedPage, 'text="'.$text('job.state_words.failed').'"'), 'The state large, in words: '.$failedPage);
+env_assert(str_contains($failedPage, 'data-env-job-failure-lines') && str_contains($failedPage, 'No space left on device') && !str_contains(explode('</pre>', explode('data-env-job-failure-lines', $failedPage)[1])[0], 'Packing the files'),
+    'No words of the server: the lines that speak of the error.');
+env_assert(\Larena\Env\Admin\JobOutcome::failureLines(['one', 'two', '']) === ['one', 'two'], 'No error line: the last lines.');
+env_assert(preg_match('/action="\/admin\/server\/larena\.env\.admin\.job\.again\/f00000000000000000000001"[^>]+data-env-job-again data-larena-action-form/', $failedPage) === 1,
+    '«Повторить» plans the same again in «Действие с планом».');
+env_assert(!str_contains($job(['status' => $failedBackup, 'log' => $failedLog, 'canAgain' => false]), 'data-env-job-again'), 'Without the right, no «Повторить».');
+$worded = PanelJobStatus::fromData(['job_id' => 'f00000000000000000000002', 'state' => 'failed', 'command' => 'backup:data', 'args' => ['domain' => 'demo-php.test'],
+    'state_words' => 'Ошибка', 'outcome' => ['code' => 'disk_full', 'words' => 'The disk is full.']]);
+$wordedPage = $job(['status' => $worded, 'log' => $failedLog]);
+env_assert(str_contains($wordedPage, 'data-env-job-outcome="disk_full"') && !str_contains($wordedPage, 'data-env-job-failure-lines') && str_contains($wordedPage, 'text="Ошибка"'),
+    'The server\'s words first, its state words too.');
+env_assert(!\Larena\Env\Admin\JobOutcome::canAgain(PanelJobStatus::fromData(['job_id' => 'x', 'state' => 'failed', 'command' => 'file:write', 'args' => ['domain' => 'a.test']]))
+    && !\Larena\Env\Admin\JobOutcome::canAgain(PanelJobStatus::fromData(['job_id' => 'x', 'state' => 'failed', 'command' => 'site:db-rotate', 'args' => ['password' => '(stored)']]))
+    && !\Larena\Env\Admin\JobOutcome::canAgain(PanelJobStatus::fromData(['job_id' => 'x', 'state' => 'succeeded', 'command' => 'backup:data', 'args' => []]))
+    && \Larena\Env\Admin\JobOutcome::canAgain($failedBackup), 'Not again what carried a file or a secret, nor what succeeded.');
+$runningBackup = PanelJobStatus::fromData(['job_id' => 'f00000000000000000000003', 'state' => 'running', 'command' => 'backup:data', 'args' => ['domain' => 'demo-php.test']]);
+env_assert(str_contains($job(['status' => $runningBackup]), 'data-larena-live-interval="2500"') && str_contains($job(['status' => $runningBackup]), 'data-larena-live-source='),
+    'A running job is read again every 2.5 s and names its run.');
+env_assert(str_contains($restarting, 'data-larena-live-interval="3000"'), 'Through the restart the screen asks again until the panel answers.');
+
 echo "SiteScreenTest passed.\n";
