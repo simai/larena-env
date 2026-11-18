@@ -166,6 +166,7 @@ $source = (string) file_get_contents($root.'/src/Navigation/ServerAdminNavigatio
 env_assert(strpos($source, "id: 'env.people'") < strpos($source, "id: 'env.server',") && strpos($source, "id: 'env.server.overview'") < strpos($source, "id: 'env.server',"),
     'The narrower rows come before the sites row.');
 $provider = (string) file_get_contents($root.'/src/Providers/EnvServiceProvider.php');
-env_assert(str_contains($provider, "'larena-audit.history_sources', ['prefix' => 'env.', 'label' => 'larena-env::admin.audit_activity']"), 'The panel declares its events for the change history.');
+env_assert(str_contains($provider, "'larena-audit.history_sources', ['prefix' => 'env.', 'label' => 'larena-env::admin.audit_activity', 'words' => 'larena-env::admin.people.history']")
+    && str_contains($provider, "'larena-audit.reference_names', \\Larena\\Env\\People\\SecretFileAuditNames::class"), 'The panel declares its events for the change history, in words, a file by its name.');
 
 echo "EnvBootTest passed.\n";

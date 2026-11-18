@@ -21,6 +21,7 @@ use Larena\Env\Gateway\PanelRefused;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\NoticeRedirect;
 use Larena\Env\Operations\PanelOperations;
+use Larena\Env\People\SecretFileAccess;
 use Larena\Env\Server\ServerOverviewReader;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -33,7 +34,9 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  * the server named before a byte of it reaches the browser. A removal goes to the site's trash where the server keeps one
  * (simai-env 1.57.0), and is put back from there; on an older server it is final, and the plan says so. Several files are
  * uploaded at once, each planned and sent as its own job. A file with passwords is downloaded only when the person said
- * so, and a picture is shown in place only once its bytes are a picture (PX-92, PX-96).
+ * so, and a picture is shown in place only once its bytes are a picture (PX-92, PX-96). A file with passwords is opened,
+ * downloaded and changed only by a person with that right (q-4997ae4e93), refused here and not only hidden on the
+ * screen; each download and confirmed change of one is written to «История» without its text.
  */
 final readonly class SiteFilesController
 {
@@ -60,6 +63,7 @@ final readonly class SiteFilesController
         private Factory $views,
         private Translator $translator,
         private Application $app,
+        private ?SecretFileAccess $secrets = null,
     ) {
     }
 
@@ -79,6 +83,9 @@ final readonly class SiteFilesController
         $args = $this->arguments($request, $op, $domain);
         if ($args === null) {
             return $this->back($request, $domain, $tab, $tab === 'nginx' ? PanelReason::TOO_LARGE : 'path_invalid');
+        }
+        if ($this->secretRefused($actor, $args)) {
+            return $this->back($request, $domain, $tab, SecretFileAccess::REFUSED, $args['path'] ?? null);
         }
         $staged = null;
         if (PanelCommands::attachmentLimit($command) !== null) {
@@ -135,6 +142,11 @@ final readonly class SiteFilesController
         foreach ($files as $file) {
             $name = self::name($file->getClientOriginalName());
             $args = $name === null ? null : ['domain' => $domain, 'path' => FilePath::join($folder, $name), 'expect-sha256' => $expect];
+            if ($args !== null && $this->secretRefused($actor, $args)) {
+                $this->unstageAll($request, array_column($planned, 'id'));
+
+                return $this->back($request, $domain, 'files', SecretFileAccess::REFUSED, $args['path'], null, count($files) > 1 ? (string) $name : null);
+            }
             $staged = $args === null ? 'path_invalid' : $this->stage($request, $domain, 'file:upload', 'upload', $file, $args);
             if (is_string($staged)) {
                 $this->unstageAll($request, array_column($planned, 'id'));
@@ -186,6 +198,10 @@ final readonly class SiteFilesController
         if ($command === null || ($args['domain'] ?? null) !== $domain) {
             return $this->back($request, $domain, $tab, PanelReason::NOT_ALLOWED);
         }
+        // The confirmation is an address of its own: the right is asked again, never taken from the plan's page.
+        if ($this->secretRefused($actor, $args)) {
+            return $this->back($request, $domain, $tab, SecretFileAccess::REFUSED, $args['path'] ?? null);
+        }
         if ($op === 'upload') {
             return $this->runUpload($request, $actor, $domain, (string) $request->input('staged'));
         }
@@ -207,6 +223,7 @@ final readonly class SiteFilesController
         if ($started->jobId === null) {
             return $this->back($request, $domain, $tab, $started->reason ?? PanelReason::ANSWER_SHAPE_INVALID, $args['path'] ?? null, $op);
         }
+        $this->recordSaved($actor, $domain, $args);
 
         return new RedirectResponse(route('larena.env.admin.job', ['job' => $started->jobId], false));
     }
@@ -229,6 +246,11 @@ final readonly class SiteFilesController
 
                 return $this->back($request, $domain, 'files', 'staged_missing');
             }
+            if ($this->secretRefused($actor, $args)) {
+                $this->unstageAll($request, explode(',', $ids));
+
+                return $this->back($request, $domain, 'files', SecretFileAccess::REFUSED, (string) $args['path']);
+            }
             try {
                 $started = $this->operations->startCommand($actor, 'file:upload', $args, $attachment);
             } finally {
@@ -239,6 +261,7 @@ final readonly class SiteFilesController
                 return $this->back($request, $domain, 'files', $started->reason ?? PanelReason::ANSWER_SHAPE_INVALID, (string) $args['path'], 'upload');
             }
             $jobs[] = $started->jobId;
+            $this->recordSaved($actor, $domain, $args);
         }
         if ($jobs === []) {
             return $this->back($request, $domain, 'files', 'staged_missing');
@@ -260,6 +283,9 @@ final readonly class SiteFilesController
         $actor = ResolvePanelActor::of($request);
         $path = FilePath::clean($request->query('path'));
         $type = $path === null ? null : \Larena\Env\Files\FileEntry::imageType($path);
+        if ($path !== null && SecretFileAccess::secret($path) && !$this->secretAllowed($actor)) {
+            return new \Illuminate\Http\Response((string) $this->translator->get('larena-env::admin.files.reasons.'.SecretFileAccess::REFUSED), 403, ['Cache-Control' => 'no-store']);
+        }
         if (!($this->capabilities($actor)->allows('file:download') || $this->capabilities($actor)->allows('file:preview')) || $path === null || $path === '.' || $type === null) {
             return new \Illuminate\Http\Response('', 404, ['Cache-Control' => 'no-store']);
         }
@@ -334,8 +360,13 @@ final readonly class SiteFilesController
         if ($path === null || $path === '.') {
             return $this->back($request, $domain, 'files', 'path_invalid');
         }
+        // Without the right to files with passwords (q-4997ae4e93) nothing is asked of the server, whatever the address says.
+        $secret = SecretFileAccess::secret($path);
+        if ($secret && !$this->secretAllowed($actor)) {
+            return $this->back($request, $domain, 'files', SecretFileAccess::REFUSED, $path);
+        }
         // A file with passwords leaves the server only when the person said so on its own page (PX-92).
-        if (\Larena\Env\Files\FileEntry::secret(basename($path)) && $request->query('confirm') !== 'secret') {
+        if ($secret && $request->query('confirm') !== 'secret') {
             return NoticeRedirect::to($request, route('larena.env.admin.site', ['domain' => $domain], false).'?tab=files&view='.rawurlencode($path),
                 (string) $this->translator->get('larena-env::admin.files.secret_ask'));
         }
@@ -349,6 +380,9 @@ final readonly class SiteFilesController
             @unlink($into);
 
             return $this->back($request, $domain, 'files', $download->answer->reason ?? PanelReason::ANSWER_INVALID, FilePath::parent($path));
+        }
+        if ($secret) {
+            $this->secrets?->downloaded($actor, $domain, $path);
         }
         $offset = $download->offset;
         $name = preg_replace('/[^\x20-\x7e]|["\\\\]/', '_', $download->name) ?: 'file';
@@ -572,6 +606,48 @@ final readonly class SiteFilesController
         $sites = $this->overviews->read($actor)->overview?->sites;
 
         return $sites !== null && !in_array($domain, array_map(static fn (\Larena\Env\Server\SiteSummary $one): string => $one->domain, $sites), true);
+    }
+
+    /** Whether this person may open and change files with passwords; without the store, only the whole server may. */
+    private function secretAllowed(PanelActor $actor): bool
+    {
+        return $this->secrets?->allows($actor) ?? $actor->owner === null;
+    }
+
+    /**
+     * Whether the change touches a file with passwords (its path or where it goes: saved, made, uploaded, renamed, copied,
+     * packed or removed) and the person has no right to such files.
+     *
+     * @param array<string, string> $args
+     */
+    private function secretRefused(PanelActor $actor, array $args): bool
+    {
+        return self::secretOf($args) !== null && !$this->secretAllowed($actor);
+    }
+
+    /** @param array<string, string> $args */
+    private static function secretOf(array $args): ?string
+    {
+        foreach (['path', 'to'] as $field) {
+            if (is_string($args[$field] ?? null) && $args[$field] !== '' && SecretFileAccess::secret($args[$field])) {
+                return $args[$field];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * A confirmed change of a file with passwords in «История»: who, the site and the file, never its text.
+     *
+     * @param array<string, string> $args
+     */
+    private function recordSaved(PanelActor $actor, string $domain, array $args): void
+    {
+        $file = self::secretOf($args);
+        if ($file !== null) {
+            $this->secrets?->saved($actor, $domain, $file);
+        }
     }
 
     private function capabilities(PanelActor $actor): PanelCapabilities

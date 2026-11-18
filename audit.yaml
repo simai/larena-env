@@ -16,6 +16,17 @@ events:
     severity: notice
   - type: env.acting_as.stopped
     severity: notice
+  # Files with passwords (q-4997ae4e93): who may see them, and every open, download and save of one; never its text.
+  - type: env.person.secret_files_allowed
+    severity: notice
+  - type: env.person.secret_files_disallowed
+    severity: notice
+  - type: env.secret_file.opened
+    severity: notice
+  - type: env.secret_file.downloaded
+    severity: notice
+  - type: env.secret_file.saved
+    severity: notice
   # DNS through the provider's API (Panel plan, stage 7): the connection, and each record changed with how it was.
   - type: env.dns.connected
     severity: notice

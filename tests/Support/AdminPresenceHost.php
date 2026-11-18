@@ -67,9 +67,16 @@ final class AdminPresenceHost extends Container implements Application
         throw new LogicException(__METHOD__);
     }
 
+    /** Where a test keeps the panel's downloads; unset, the host has no storage. */
+    public ?string $storage = null;
+
     public function storagePath($path = '')
     {
-        throw new LogicException(__METHOD__);
+        if ($this->storage === null) {
+            throw new LogicException(__METHOD__);
+        }
+
+        return $this->storage.($path !== '' ? '/'.$path : '');
     }
 
     public function hasDebugModeEnabled()

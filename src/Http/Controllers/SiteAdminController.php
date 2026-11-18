@@ -77,6 +77,7 @@ final readonly class SiteAdminController
         private ?\Larena\Env\Server\SiteExtrasReader $profiles = null,
         private ?\Larena\Env\Contracts\PanelGateway $gateway = null,
         private ?\Larena\Admin\Runtime\AdminDataviewPagePresenter $dataviews = null,
+        private ?\Larena\Env\People\SecretFileAccess $secrets = null,
     ) {
     }
 
@@ -507,8 +508,12 @@ final readonly class SiteAdminController
         $opened = $view !== null && $view !== '.';
         $image = $opened && FileEntry::imageType($view) !== null;
         $secret = $opened && FileEntry::secret(basename($view));
+        // Files with passwords are a right of their own (q-4997ae4e93): the whole server has it, a person of the user level
+        // only when it is switched on for them. Without it the file is named, never read, whatever the address asks.
+        $secretAllowed = $this->secrets?->allows($actor) ?? $actor->owner === null;
+        $allows['secrets'] = $secretAllowed;
         // A file with passwords is shown only when asked for (PX-92), a picture in place (PX-96), any other file as text.
-        $revealed = $secret && $request->query('reveal') === '1';
+        $revealed = $secret && $secretAllowed && $request->query('reveal') === '1';
         // «Посмотреть» (simai-env 1.61.0 file:preview): a text's first 1 MiB even of a larger file, cut where it is cut;
         // an older server reads the whole text (file:read, up to 1 MiB).
         $previews = $capabilities->allows('file:preview');
@@ -517,6 +522,10 @@ final readonly class SiteAdminController
             $textRead = $previews ? $this->files->preview($actor, $domain, $view) : $this->files->text($actor, $domain, $view);
             if (is_array($textRead) && ($textRead['kind'] ?? 'text') !== 'text') {
                 $textRead = 'not_previewable';
+            }
+            // Every open of a file with passwords goes to «История»: who, which file of which site, never its text.
+            if ($secret && is_array($textRead)) {
+                $this->secrets?->opened($actor, $domain, (string) $view);
             }
         }
         if (!$opened && !is_array($folder)) {
@@ -565,6 +574,8 @@ final readonly class SiteAdminController
             'image' => $image ? route('larena.env.admin.site.files.preview', ['domain' => $domain], false).'?path='.rawurlencode((string) $view) : null,
             'secret' => $secret,
             'revealed' => $revealed,
+            // Without the right: the refusal in plain words instead of the question, and no way to open or download it.
+            'secretRefused' => $secret && !$secretAllowed ? $this->filesReasonText(\Larena\Env\People\SecretFileAccess::REFUSED) : null,
             'folder' => is_array($folder) ? ['entries' => $entries, 'truncated' => $folder['truncated']] : null,
             'visitors' => $visitors,
             'atVisitors' => $visitors !== null && $path === $visitors,

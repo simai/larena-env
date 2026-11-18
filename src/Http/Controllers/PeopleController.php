@@ -43,6 +43,7 @@ final readonly class PeopleController
         private PanelAudit $audit,
         private Factory $views,
         private Translator $translator,
+        private ?\Larena\Env\People\SecretFileAccess $secrets = null,
     ) {
     }
 
@@ -50,9 +51,11 @@ final readonly class PeopleController
     {
         $user = self::user($request);
         $assigned = $this->owners->all();
+        $secretReaders = $this->secrets?->all() ?? [];
         $rows = [];
         foreach ($this->access->subjectsWithRole(self::USER_LEVEL_ROLE) as $subject) {
-            $rows[] = ['subject' => $subject, 'label' => $this->label($subject, $user), 'owner' => $assigned[$subject] ?? null];
+            $rows[] = ['subject' => $subject, 'label' => $this->label($subject, $user), 'owner' => $assigned[$subject] ?? null,
+                'secretFiles' => isset($secretReaders[$subject])];
         }
         $result = $this->overviews->read(new PanelActor($user));
 
@@ -60,6 +63,8 @@ final readonly class PeopleController
 
         return $this->views->make('larena-env::admin.people', [
             'people' => $rows,
+            // The tick «Может смотреть файлы с паролями» on each person's row, where the panel keeps the right (q-4997ae4e93).
+            'secretFilesKept' => $this->secrets !== null,
             'owners' => $result->overview->owners ?? [],
             'blockedOwners' => $result->overview->blockedOwners ?? [],
             'ownerDisk' => $result->overview->ownerDiskBytes ?? [],
@@ -91,6 +96,8 @@ final readonly class PeopleController
                 $this->owners->assign($subject, $owner, $user);
                 $this->audit->record('env.person.owner_assigned', $user, $subject, ['owner' => $owner]);
             }
+            // Files with passwords: off unless ticked on the person's row; a change goes to «История».
+            $this->secrets?->set($subject, $request->input('secret_files') === 'yes', $user);
         } catch (PanelRefused $refused) {
             return $this->back($request, $refused->reasonCode);
         }

@@ -123,7 +123,13 @@ final class SiteFilesPage
     {
         $file = $entry->type === 'file';
         $secret = $entry->isSecret();
+        // Without the right to files with passwords (q-4997ae4e93) such a file is listed and marked, and its name opens the
+        // refusal: its row offers nothing the server would refuse.
+        $closed = $secret && !($allows['secrets'] ?? false);
         $actions = ['view'];
+        if ($closed) {
+            return self::cells($folder, $entry, ['view'], $text, $now, $text('files.reasons.secret_files_not_allowed'));
+        }
         if ($file && (($allows['read'] ?? false) || $entry->isImage())) {
             $actions[] = 'look';
         }
@@ -142,6 +148,18 @@ final class SiteFilesPage
             $actions[] = 'delete';
         }
 
+        return self::cells($folder, $entry, $entry->type === 'link' ? array_values(array_intersect($actions, ['rename', 'copy', 'delete'])) : $actions, $text, $now);
+    }
+
+    /**
+     * @param list<string> $actions
+     * @param callable(string, array<string, string>=): string $text
+     * @return array<string, mixed>
+     */
+    private static function cells(string $folder, FileEntry $entry, array $actions, callable $text, \DateTimeImmutable $now, ?string $secretTip = null): array
+    {
+        $secret = $entry->isSecret();
+
         return [
             'id' => FilePath::join($folder, $entry->name),
             'name' => $entry->name.($entry->isDir() ? '/' : ''),
@@ -153,9 +171,9 @@ final class SiteFilesPage
             },
             'changed' => self::when($entry->mtime, $now, $text),
             // A file with passwords stands out, and its row offers no download: it is downloaded from its own page, asked first.
-            'mark' => $secret ? ['label' => $text('files.secret'), 'text' => $text('files.secret'), 'status' => 'warning', 'tip' => $text('files.secret_tip')] : '',
+            'mark' => $secret ? ['label' => $text('files.secret'), 'text' => $text('files.secret'), 'status' => 'warning', 'tip' => $secretTip ?? $text('files.secret_tip')] : '',
             // A link is shown, never followed: nothing opens it.
-            '_actions' => $entry->type === 'link' ? array_values(array_intersect($actions, ['rename', 'copy', 'delete'])) : $actions,
+            '_actions' => $actions,
         ];
     }
 

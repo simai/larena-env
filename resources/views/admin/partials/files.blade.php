@@ -52,8 +52,9 @@
             @if ($files['secret'])
                 {{-- PX-92: a file with passwords is shown and downloaded only when the person says so. --}}
                 {{-- One warning: the mark and its sentence together. --}}
-                <p role="note" data-env-files-secret class="m-y-1 flex flex-wrap items-cross-center g-1"><sf-badge status="warning" appearance="tonal" text="{{ __('larena-env::admin.files.secret') }}"></sf-badge> <span>{{ __('larena-env::admin.files.secret_note') }}</span></p>
-                @if (!$files['revealed'] && $files['allows']['read'])
+                {{-- Without the right to such files (q-4997ae4e93): the refusal in plain words, nothing to open or download. --}}
+                <p role="note" data-env-files-secret class="m-y-1 flex flex-wrap items-cross-center g-1"><sf-badge status="warning" appearance="tonal" text="{{ __('larena-env::admin.files.secret') }}"></sf-badge> <span @if (($files['secretRefused'] ?? null) !== null) data-env-files-secret-refused @endif>{{ $files['secretRefused'] ?? __('larena-env::admin.files.secret_note') }}</span></p>
+                @if (($files['secretRefused'] ?? null) === null && !$files['revealed'] && $files['allows']['read'])
                     <p><a class="larena-button" href="{{ $files['base'] }}&amp;view={{ rawurlencode($files['view']) }}&amp;reveal=1" data-env-files-reveal>{{ __('larena-env::admin.files.secret_reveal') }}</a></p>
                 @endif
             @endif
@@ -88,7 +89,7 @@
             @elseif (!$files['secret'] || $files['revealed'])
                 <p data-env-files-not-shown>{{ __('larena-env::admin.files.not_shown') }}</p>
             @endif
-            @if ($files['allows']['download'])
+            @if ($files['allows']['download'] && ($files['secretRefused'] ?? null) === null)
                 @if ($files['secret'])
                     <form method="get" action="{{ route('larena.env.admin.site.files.download', ['domain' => $domain], false) }}" class="m-0" data-larena-confirm-submit="{{ __('larena-env::admin.files.secret_confirm') }}" data-env-files-secret-download>
                         <input type="hidden" name="path" value="{{ $files['view'] }}">

@@ -66,6 +66,11 @@ final class EnvServiceProvider extends ServiceProvider
         $this->app->bind(PanelOperations::class, static fn (Application $app): PanelOperations => new PanelOperations($app->make(PanelGateway::class)));
         // Which owner of the server a person at the user level works as (Panel plan 2.4).
         $this->app->bind(PersonOwners::class, static fn (Application $app): PersonOwners => new PersonOwners($app->make('db')->connection()));
+        // Who of the user level may open a site's files with passwords; every open and save goes to «История» (q-4997ae4e93).
+        $this->app->bind(\Larena\Env\People\SecretFileAccess::class, static fn (Application $app): \Larena\Env\People\SecretFileAccess => new \Larena\Env\People\SecretFileAccess(
+            $app->bound('db') ? $app->make('db')->connection() : null,
+            $app->make(PanelAudit::class),
+        ));
         // The load the panel measured, and the warnings it has already told people about (Panel plan 4.5, 4.6).
         $this->app->bind(MetricSamples::class, static fn (Application $app): MetricSamples => new MetricSamples($app->make('db')->connection()));
         $this->app->bind(WarningLedger::class, static fn (Application $app): WarningLedger => new WarningLedger($app->make('db')->connection()));
@@ -95,7 +100,11 @@ final class EnvServiceProvider extends ServiceProvider
         $this->loadViewsFrom(__DIR__.'/../../resources/views', 'larena-env');
         $this->loadMigrationsFrom(__DIR__.'/../../database/migrations');
         // The panel's own events (spaces, acting as someone) in the change history, where larena/audit shows it.
-        $config->push('larena-audit.history_sources', ['prefix' => 'env.', 'label' => 'larena-env::admin.audit_activity']);
+        $config->push('larena-audit.history_sources', ['prefix' => 'env.', 'label' => 'larena-env::admin.audit_activity', 'words' => 'larena-env::admin.people.history']);
+        // A site's file with passwords in «История» by its name and site.
+        if (interface_exists(\Larena\Audit\Contracts\AuditReferenceNames::class)) {
+            $config->push('larena-audit.reference_names', \Larena\Env\People\SecretFileAuditNames::class);
+        }
         // Its warnings in people's notifications read by what they are about, where larena/notification is installed.
         if (class_exists(NotificationSources::class)) {
             $this->callAfterResolving(NotificationSources::class, static function (NotificationSources $sources): void {

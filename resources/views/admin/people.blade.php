@@ -48,6 +48,10 @@
                                     <option value="{{ $person['owner'] }}" selected>{{ $person['owner'] }}</option>
                                 @endif
                             </select>
+                            {{-- Files with passwords (.env, wp-config.php…) are a right of their own, off unless ticked (q-4997ae4e93). --}}
+                            @if ($secretFilesKept ?? false)
+                                <label class="flex items-cross-center g-1 m-0 larena-control-floor" data-env-person-secret-files><input type="checkbox" name="secret_files" value="yes" style="width: auto; min-width: 1.25rem; min-height: 1.25rem;" @checked($person['secretFiles'] ?? false)> {{ __('larena-env::admin.people.secret_files') }}</label>
+                            @endif
                             <button type="submit" class="larena-button larena-control-floor">{{ __('larena-env::admin.people.save') }}</button>
                         </form>
                         <div data-env-person-actions>
