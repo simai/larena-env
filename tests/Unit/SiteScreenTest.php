@@ -643,8 +643,8 @@ env_assert(!str_contains($job(['status' => $failedBackup, 'log' => $failedLog, '
 $worded = PanelJobStatus::fromData(['job_id' => 'f00000000000000000000002', 'state' => 'failed', 'command' => 'backup:data', 'args' => ['domain' => 'demo-php.test'],
     'state_words' => 'Ошибка', 'outcome' => ['code' => 'disk_full', 'words' => 'The disk is full.']]);
 $wordedPage = $job(['status' => $worded, 'log' => $failedLog]);
-env_assert(str_contains($wordedPage, 'data-env-job-outcome="disk_full"') && !str_contains($wordedPage, 'data-env-job-failure-lines') && str_contains($wordedPage, 'text="Ошибка"'),
-    'The server\'s words first, its state words too.');
+env_assert(substr_count($wordedPage, 'The disk is full.') === 1 && !str_contains($wordedPage, 'data-env-job-failure-lines') && str_contains($wordedPage, 'text="Ошибка"'),
+    'The server\'s words first, said once, its state words too.');
 env_assert(!\Larena\Env\Admin\JobOutcome::canAgain(PanelJobStatus::fromData(['job_id' => 'x', 'state' => 'failed', 'command' => 'file:write', 'args' => ['domain' => 'a.test']]))
     && !\Larena\Env\Admin\JobOutcome::canAgain(PanelJobStatus::fromData(['job_id' => 'x', 'state' => 'failed', 'command' => 'site:db-rotate', 'args' => ['password' => '(stored)']]))
     && !\Larena\Env\Admin\JobOutcome::canAgain(PanelJobStatus::fromData(['job_id' => 'x', 'state' => 'succeeded', 'command' => 'backup:data', 'args' => []]))

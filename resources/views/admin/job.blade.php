@@ -46,8 +46,7 @@
                 {{-- Where it stands in the server's words (simai-env 1.60.0): «2 из 5: Создаётся база». --}}
                 <p class="m-top-1" data-env-job-running>@if (\Larena\Env\Admin\JobOutcome::where($status) !== '')<span data-env-job-where>{{ \Larena\Env\Admin\JobOutcome::where($status) }}</span>. @endif{{ __('larena-env::admin.job.running') }}</p>
             @elseif ($status->state->value === 'failed' && ($status->outcome['words'] ?? null) !== null && $status->outcome['words'] !== $status->outcome['code'])
-                {{-- Why it failed, as the server says it: its last error, not «see the log». --}}
-                <p class="m-top-1" role="alert" data-env-job-outcome="{{ $status->outcome['code'] }}">{{ $status->outcome['words'] }}</p>
+                {{-- Why it failed, as the server says it (its last error, not «see the log»): the run above says it already. --}}
             @elseif ($status->state->value === 'failed' && \Larena\Env\Admin\JobOutcome::failureLines($log->lines ?? []) !== [])
                 {{-- No words of the server's (an older one, a lost job): the last lines of its output that speak of the error. --}}
                 <div class="m-top-1" role="alert" data-env-job-failure-lines>
@@ -161,7 +160,7 @@
                     @if ($log === null)
                         <p>{{ $reasonText ?? __('larena-env::admin.job.no_log') }}</p>
                     @else
-                        <pre data-env-job-log-lines tabindex="0" style="max-width: 100%; overflow-x: auto;">{{ implode("\n", $log->lines) }}</pre>
+                        <pre data-env-job-log-lines tabindex="0" style="max-width: 100%; overflow-x: auto; white-space: pre-wrap; overflow-wrap: anywhere;">{{ implode("\n", $log->lines) }}</pre>
                     @endif
                 </div>
             </details>
