@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "ade2a5e75b703500df9c71874d828871",
+    "content-hash": "a8896995b42253e7715e3dcda59f548f",
     "packages": [
         {
             "name": "brick/math",
@@ -1574,12 +1574,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:simai/larena-admin.git",
-                "reference": "b930874c0007d7e287a9624e7602bc16d1ae29d3"
+                "reference": "95852efb3d015ee9330686260a7690beb3fb7507"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-admin/zipball/b930874c0007d7e287a9624e7602bc16d1ae29d3",
-                "reference": "b930874c0007d7e287a9624e7602bc16d1ae29d3",
+                "url": "https://api.github.com/repos/simai/larena-admin/zipball/95852efb3d015ee9330686260a7690beb3fb7507",
+                "reference": "95852efb3d015ee9330686260a7690beb3fb7507",
                 "shasum": ""
             },
             "require": {
@@ -1650,6 +1650,7 @@
             },
             "scripts": {
                 "test": [
+                    "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/AdminFailureLogTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/AdminAlertsTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/AdminHistoryTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/AdminActivityTest.php",
@@ -1808,7 +1809,7 @@
                 }
             ],
             "description": "Larena Admin: Object-based, permission-aware administration platform for package contributions, screens, actions and diagnostics.",
-            "time": "2026-11-19T05:18:13+00:00"
+            "time": "2026-11-19T14:28:55+00:00"
         },
         {
             "name": "larena/audit",
@@ -2595,12 +2596,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/simai/larena-notification.git",
-                "reference": "e281e1d713122e060408aeaafa31eeee4e240902"
+                "reference": "6383db6bf29a83f8e938d9c183a9bc13377549a7"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-notification/zipball/e281e1d713122e060408aeaafa31eeee4e240902",
-                "reference": "e281e1d713122e060408aeaafa31eeee4e240902",
+                "url": "https://api.github.com/repos/simai/larena-notification/zipball/6383db6bf29a83f8e938d9c183a9bc13377549a7",
+                "reference": "6383db6bf29a83f8e938d9c183a9bc13377549a7",
                 "shasum": ""
             },
             "require": {
@@ -2679,7 +2680,7 @@
                 "source": "https://github.com/simai/larena-notification/tree/main",
                 "issues": "https://github.com/simai/larena-notification/issues"
             },
-            "time": "2026-11-18T17:12:51+00:00"
+            "time": "2026-11-19T14:25:03+00:00"
         },
         {
             "name": "larena/property",
