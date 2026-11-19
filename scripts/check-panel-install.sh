@@ -416,8 +416,11 @@ for tab in ("overview", "domains", "dns", "php", "database", "backups", "files",
     assert status == 200 and 'data-env-section="' + shown + '"' in card, ("tab", tab)
     if tab in ("domains", "dns"):
         assert 'data-env-dns="not_connected"' in card, ("the site's DNS with its domains", tab)
-    # SFTP is by key only (simai-env 1.30.0): no password field on any tab.
-    assert 'type="password"' not in card and 'name="password"' not in card, ("no password", tab)
+    # SFTP is by key only (simai-env 1.30.0): no password field on any tab. The sign-in window's template (C347, the
+    # page's way back in when its session ends) is not part of the tab.
+    tab_only = re.sub(r'<template data-larena-session-window.*?</template>', '', card, flags=re.S)
+    assert 'data-larena-session-window' in card, ("the sign-in window is on the page", tab)
+    assert 'type="password"' not in tab_only and 'name="password"' not in tab_only, ("no password", tab)
     # The recorded server lists the file commands (1.39.0) but holds no folder of this site: said in words.
     if tab == "files":
         assert 'data-env-files="on"' in card and "data-env-files-problem" in card, "the files tab, a folder the recording lacks said in words"
