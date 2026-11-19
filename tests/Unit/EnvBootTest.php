@@ -11,12 +11,12 @@ use Larena\Env\Console\RegisterServerAreaCommand;
 require_once dirname(__DIR__).'/Support/env-test.php';
 
 /** @return array<string, mixed> */
-function env_boot(string $mode): array
+function env_boot(string $mode, string $scheduler = ''): array
 {
     $script = dirname(__DIR__).'/Support/env-boot.php';
     $output = [];
     $exitCode = 0;
-    exec(escapeshellarg(PHP_BINARY).' '.escapeshellarg($script).' '.escapeshellarg($mode).' 2>&1', $output, $exitCode);
+    exec(escapeshellarg(PHP_BINARY).' '.escapeshellarg($script).' '.escapeshellarg($mode).' '.escapeshellarg($scheduler).' 2>&1', $output, $exitCode);
     env_assert($exitCode === 0, "The provider did not boot ({$mode}): ".implode("\n", $output));
 
     return json_decode(implode("\n", $output), true, 512, JSON_THROW_ON_ERROR);
@@ -29,6 +29,13 @@ env_assert($without['navigation'] === [], 'Without the admin no menu entry.');
 env_assert($without['commands'] === [RegisterServerAreaCommand::class, PanelCheckCommand::class, \Larena\Env\Console\PanelWarmCommand::class], 'The console serves without the admin, the panel\'s check too.');
 env_assert($without['gateway_source'] === 'recorded' && $without['sites'] === 4, 'The gateway and the typed read work without the admin.');
 env_assert($without['operation_owner'] === 'larena/env', 'The right is declared when the registry is resolved.');
+
+// The panel's background jobs only by the flag (audit 2026-11-19, item 8): a foreign application gets none of them.
+env_assert($without['scheduled'] === [], 'Without larena-env.scheduler.enabled nothing is scheduled: '.implode(', ', $without['scheduled']));
+$jobs = ['larena:env-check', 'larena:env-warm'];
+env_assert(env_boot('without', 'env')['scheduled'] === $jobs, 'The flag on schedules the check and the warm-up.');
+$panel = env_boot('without', 'panel');
+env_assert($panel['scheduled'] === $jobs && $panel['notification_scheduler'] === true, 'The panel\'s edition turns on its jobs and the notifications\' cleanup.');
 
 $with = env_boot('with');
 env_assert($with['admin_loadable'] === true, 'The admin must be installed for development.');

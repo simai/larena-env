@@ -49,6 +49,10 @@ final class PanelEditionServiceProvider extends ServiceProvider
         /** @var Config $config */
         $config = $this->app->make(Config::class);
         $config->set('larena-core.first_run', ServerArea::firstRunDeclaration());
+        // The panel's background jobs (the server's check, the pages' warm-up, the notifications' daily cleanup) run on
+        // its scheduler; the packages keep them off in any other application.
+        $config->set('larena-env.scheduler.enabled', true);
+        $config->set('larena-notification.scheduler.enabled', true);
         $this->app->singleton(SetupLink::class, static fn (Application $app): SetupLink => new SetupLink(new EnvFile($app->basePath('.env'))));
         // An invitation by mail waits 72 hours for its answer (plan «Приглашение»): 30 minutes is too short for one.
         $config->set('larena-auth.user_invitation.activation_expiry_minutes', self::INVITATION_HOURS * 60);

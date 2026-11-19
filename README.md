@@ -35,6 +35,11 @@ the panel: it is planned, confirmed by a person, and run by the server as a job 
 `_PORT`, `_KEY` (a path), `_KNOWN_HOSTS` (a path; the host's key must be there), `_BINARY`, `_TIMEOUT`. An incomplete
 target, or recorded answers outside `local` and `testing`, leaves the screen saying `gateway_not_configured`.
 
+The panel's background jobs on the application's scheduler — `larena:env-check` every 5 minutes and `larena:env-warm` every
+minute — run only where `larena-env.scheduler.enabled` is on (`LARENA_ENV_SCHEDULER_ENABLED`, off by default). The panel's
+edition (`PanelEditionServiceProvider`) turns it on, and larena/notification's daily cleanup with it; any other application
+that installs this package schedules nothing.
+
 ## The panel's release
 
 `assembly/` is the application of the Larena Panel edition: exact package revisions in `composer.lock`, the list in

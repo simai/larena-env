@@ -244,8 +244,12 @@ final class EnvServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             $this->commands([RegisterServerAreaCommand::class, PanelCheckCommand::class, \Larena\Env\Console\PanelWarmCommand::class]);
         }
-        // The panel looks at the server every 5 minutes, open or not (the application's scheduler, `schedule:run`).
-        $this->callAfterResolving(Schedule::class, static function (Schedule $schedule): void {
+        // The panel looks at the server every 5 minutes, open or not (the application's scheduler, `schedule:run`). Only
+        // where larena-env.scheduler.enabled is on: the panel's edition turns it on, another application keeps it off.
+        $this->callAfterResolving(Schedule::class, static function (Schedule $schedule, \Illuminate\Contracts\Container\Container $app): void {
+            if (!(bool) $app->make(Config::class)->get('larena-env.scheduler.enabled', false)) {
+                return;
+            }
             $schedule->command('larena:env-check')->everyFiveMinutes()->withoutOverlapping();
             // What the pages asked lately is asked again every minute, so a page opens from kept answers (ENV 2026-11-07).
             $schedule->command('larena:env-warm')->everyMinute()->withoutOverlapping(5);

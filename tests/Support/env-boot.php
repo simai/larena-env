@@ -3,7 +3,8 @@
 declare(strict_types=1);
 
 // Boots the provider in a process of its own and prints what it composed. argv[1] is "without" (the admin's classes
-// cannot be loaded) or "with" (the admin is there, with its registry bound).
+// cannot be loaded) or "with" (the admin is there, with its registry bound). argv[2] turns the scheduler on:
+// "env" by LARENA_ENV_SCHEDULER_ENABLED, "panel" by the panel's edition; nothing leaves it as a foreign app has it.
 
 use Composer\Autoload\ClassLoader;
 use Illuminate\Console\Application as Artisan;
@@ -22,6 +23,8 @@ require dirname(__DIR__, 2).'/vendor/autoload.php';
 require_once __DIR__.'/AdminPresenceHost.php';
 
 putenv('LARENA_ENV_GATEWAY=recorded');
+$scheduler = $argv[2] ?? '';
+putenv($scheduler === 'env' ? 'LARENA_ENV_SCHEDULER_ENABLED=true' : 'LARENA_ENV_SCHEDULER_ENABLED');
 
 $mode = $argv[1] ?? '';
 if ($mode !== 'with') {
@@ -74,7 +77,22 @@ if ($mode === 'with') {
 }
 $provider = new EnvServiceProvider($app);
 $provider->register();
+if ($scheduler === 'panel') {
+    (new \Larena\Env\Providers\PanelEditionServiceProvider($app))->register();
+}
 $app->call([$provider, 'boot']);
+// The scheduler's locks are the application's cache; here nothing runs, so they are never asked.
+$app->instance(\Illuminate\Console\Scheduling\EventMutex::class, new class implements \Illuminate\Console\Scheduling\EventMutex {
+    public function create($event): bool { return true; }
+    public function exists($event): bool { return false; }
+    public function forget($event): void {}
+});
+$app->instance(\Illuminate\Console\Scheduling\SchedulingMutex::class, new class implements \Illuminate\Console\Scheduling\SchedulingMutex {
+    public function create($event, DateTimeInterface $time): bool { return true; }
+    public function exists($event, DateTimeInterface $time): bool { return false; }
+});
+$scheduled = array_map(static fn ($event): string => trim((string) preg_replace('/^.*artisan\'?\s+/', '', (string) $event->command)),
+    $app->make(\Illuminate\Console\Scheduling\Schedule::class)->events());
 
 $routes = [];
 foreach ($app->make('router')->getRoutes()->getRoutes() as $route) {
@@ -105,4 +123,6 @@ echo json_encode([
     'gateway_source' => $app->make(PanelGateway::class)->source(),
     'sites' => $overview->overview === null ? null : count($overview->overview->sites),
     'operation_owner' => $operation?->ownerPackage,
+    'scheduled' => $scheduled,
+    'notification_scheduler' => $config->get('larena-notification.scheduler.enabled'),
 ], JSON_THROW_ON_ERROR);

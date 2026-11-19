@@ -38,6 +38,12 @@ return [
             'timeout_seconds' => (float) (getenv('LARENA_ENV_SSH_TIMEOUT') ?: 30),
         ],
     ],
+    // The panel's own background jobs on the application's scheduler (`schedule:run`): the server's check every 5 minutes
+    // (larena:env-check) and the warm-up of the pages' answers every minute (larena:env-warm). Off for any other
+    // application that installs this package; the panel's edition turns it on (PanelEditionServiceProvider).
+    'scheduler' => [
+        'enabled' => filter_var(getenv('LARENA_ENV_SCHEDULER_ENABLED') ?: 'false', FILTER_VALIDATE_BOOL),
+    ],
     'admin' => [
         'enabled' => true,
         'prefix' => 'admin/server',
