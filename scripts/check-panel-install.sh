@@ -721,6 +721,7 @@ _, staff_plan = get("/admin/server/people/" + str(staff_id) + "/remove")
 assert "Server account demo" in staff_plan and "stays with its sites" in staff_plan, "the server account is not removed with the person"
 _, removal = get("/admin/server/people/" + str(invited_id) + "/remove")
 assert "data-env-person-plan" in removal and "panel sign-in and every open session" in removal and "journal entries, with the name «Invited»" in removal, "the plan says what goes and what stays"
+assert "invited@example.test becomes free — the person can be invited again" in removal, "the plan says the address becomes free"
 _, removed = post("/admin/server/people/" + str(invited_id) + "/remove", {"_token": form_token(removal), "remove": "yes"})
 assert "Invited is removed." in removed and "invited@example.test" not in removed, "the person is gone from «Люди»"
 _, history = get("/admin/history?shown=50")
@@ -730,6 +731,24 @@ _, login = get("/admin/login")
 post("/admin/login", {"_token": form_token(login), "email": "invited@example.test", "password": again})
 with web.open(base + "/admin/server") as answer:
     assert "/admin/login" in answer.geturl(), ("a removed person cannot sign in", answer.geturl())
+# The address is free: the same person invited again is a new record; the removed one keeps its name, not the address.
+jar.clear()
+_, login = get("/admin/login")
+post("/admin/login", {"_token": form_token(login), "email": email, "password": password})
+rows = dict(sqlite3.connect(sys.argv[5] + "/database/database.sqlite").execute("select id, email from larena_admin_identities"))
+assert rows[invited_id] == "removed-%d@removed.invalid" % invited_id and "invited@example.test" not in rows.values(), ("the removed address is freed", rows)
+_, people = get("/admin/server/people")
+returning = "Returning-" + secrets.token_hex(6) + "!"
+_, invite_plan = post("/admin/server/people/invite/plan", {"_token": form_token(people), "name": "Invited again", "email": "invited@example.test", "how": "password",
+    "password": returning, "level": "all"})
+assert "A person with this email already exists." not in invite_plan and "already in use" not in invite_plan, "the freed address passes the invitation"
+_, invited = post("/admin/server/people/invite/run", {"_token": form_token(invite_plan), "invite": hidden(invite_plan, "invite")})
+again_id = dict(sqlite3.connect(sys.argv[5] + "/database/database.sqlite").execute("select email, id from larena_admin_identities")).get("invited@example.test")
+assert again_id is not None and again_id != invited_id, ("invited again as a new record", again_id, invited_id)
+_, people = get("/admin/server/people")
+assert "Invited again" in people, "the person invited again is in «Люди»"
+_, history = get("/admin/history?shown=50")
+assert "Person removed" in history and "Invited" in history, "the journal still keeps the removed person's name"
 print("removing a person checked")
 PY
 python3 - "$APP/database/database.sqlite" <<'PY' >>"$LOG" 2>&1 || failed "audit"

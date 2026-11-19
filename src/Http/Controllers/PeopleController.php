@@ -316,6 +316,7 @@ final readonly class PeopleController
         }
         $level = $invite['level'] === PanelPeople::ALL ? PanelPeople::ALL : PanelPeople::OWN;
         $byMail = ($invite['how'] ?? 'password') === 'mail';
+        $this->freeRemovedAddress((string) $invite['email'], $user);
         if ($byMail) {
             $subject = $this->inviteByMail($request, $invite, $level, $user);
             if ($subject instanceof RedirectResponse) {
@@ -476,6 +477,7 @@ final readonly class PeopleController
         $facts = [
             [$text('people.removal.fact_gone'), $text($found['pending'] ? 'people.removal.fact_gone_invited' : 'people.removal.fact_gone_value')],
             [$text('people.removal.fact_kept'), $text('people.removal.fact_kept_value', ['name' => $found['name']])],
+            [$text('people.removal.fact_address'), $text('people.removal.fact_address_value', ['email' => $found['email']])],
         ];
         if ($found['owner'] !== null) {
             $sites = count($found['sites']);
@@ -524,6 +526,8 @@ final readonly class PeopleController
                 $this->database->connection()->transaction(fn (): bool => $this->challenges->revokeOutstandingForIdentityAtomically(
                     $found['id'], \Illuminate\Support\Carbon::now(), 'identity_removed'));
             }
+            // The address is free again: the person can be invited anew, as a new record; the old one keeps the name.
+            $this->credentials->releaseAddress($found['email'], $user);
         } catch (DomainException|InvalidArgumentException $failure) {
             return NoticeRedirect::to($request, self::cardOf($found['subject']), $this->refusalText($failure->getMessage()));
         }
@@ -722,6 +726,24 @@ final readonly class PeopleController
     }
 
     /** Whether someone signs in with this address already; one still waiting for their invitation does not count when $invitedAgain. */
+    /**
+     * An address still held by a person removed before it was freed on removal: freed now, so the invitation goes on.
+     * Only a removed person's (Auth refuses any other); someone working, blocked or invited keeps theirs.
+     */
+    private function freeRemovedAddress(string $email, string $user): void
+    {
+        if ($this->credentials === null || filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+            return;
+        }
+        try {
+            if ($this->credentials->inspect($email, $user)->diagnostics['revoked'] ?? false) {
+                $this->credentials->releaseAddress($email, $user);
+            }
+        } catch (DomainException|InvalidArgumentException) {
+            // The invitation then says why it was refused, as before.
+        }
+    }
+
     private function emailTaken(string $email, string $user, bool $invitedAgain = false): bool
     {
         foreach ($this->peopleOf($user, null) as $person) {
