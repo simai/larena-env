@@ -65,7 +65,8 @@ final readonly class PanelOperations
             $detail = $answer->data['detail'] ?? null;
 
             return new PlanResult($source, null, $answer->reason ?? PanelReason::ANSWER_INVALID, $answer->status === PanelAnswerStatus::Refused,
-                PlanChecks::fromData($answer->data['checks'] ?? null), is_string($detail) && trim($detail) !== '' ? mb_substr(trim($detail), 0, 500) : null);
+                PlanChecks::fromData($answer->data['checks'] ?? null), is_string($detail) && trim($detail) !== '' ? mb_substr(trim($detail), 0, 500) : null,
+                $command === 'site:restore-ready' ? \Larena\Env\Admin\RestoreWords::found($answer->data['restore'] ?? null) : null);
         }
         if ($answer->kind !== 'plan') {
             return new PlanResult($source, null, PanelReason::ANSWER_SHAPE_INVALID);

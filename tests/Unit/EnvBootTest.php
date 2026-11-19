@@ -62,7 +62,7 @@ env_assert($names === ['larena.env.admin.alerts.ack.open', 'larena.env.admin.ale
     'larena.env.admin.overview.setup', 'larena.env.admin.overview.setup.submit', 'larena.env.admin.panel.access', 'larena.env.admin.panel.address.plan',
     'larena.env.admin.panel.address.run', 'larena.env.admin.people', 'larena.env.admin.people.act', 'larena.env.admin.people.assign',
     'larena.env.admin.people.block', 'larena.env.admin.people.block.run', 'larena.env.admin.people.card', 'larena.env.admin.people.invite.plan', 'larena.env.admin.people.invite.run',
-    'larena.env.admin.people.owners.plan', 'larena.env.admin.people.owners.run', 'larena.env.admin.people.stop', 'larena.env.admin.security',
+    'larena.env.admin.people.owners.plan', 'larena.env.admin.people.owners.run', 'larena.env.admin.people.remove', 'larena.env.admin.people.remove.run', 'larena.env.admin.people.stop', 'larena.env.admin.security',
     'larena.env.admin.security.plan', 'larena.env.admin.security.plan.open', 'larena.env.admin.security.run', 'larena.env.admin.services', 'larena.env.admin.services.plan',
     'larena.env.admin.services.run', 'larena.env.admin.settings',
     'larena.env.admin.settings.mail', 'larena.env.admin.settings.mail.plan', 'larena.env.admin.settings.mail.run', 'larena.env.admin.settings.mail.test', 'larena.env.admin.site', 'larena.env.admin.site.cron.plan', 'larena.env.admin.site.cron.run',
@@ -169,6 +169,8 @@ env_assert($adminNames === [
     'src/Providers/PanelEditionServiceProvider.php',
     'src/Server/Moment.php',
     'src/Warnings/EnvAdminAlertSource.php',
+    // The same warnings as counts on the menu's rows (larena/admin AdminMenuAttentionSource, C384).
+    'src/Warnings/EnvMenuAttentionSource.php',
     // «Почта не уходит — проверьте настройки» in the admin's alert bar (C335 step 2).
     'src/Warnings/MailAlertSource.php',
 ], 'Only the admin\'s own pieces may name the admin: '.implode(', ', $adminNames));
@@ -184,5 +186,30 @@ env_assert(strpos($source, "id: 'env.people'") < strpos($source, "id: 'env.serve
 $provider = (string) file_get_contents($root.'/src/Providers/EnvServiceProvider.php');
 env_assert(str_contains($provider, "'larena-audit.history_sources', ['prefix' => 'env.', 'label' => 'larena-env::admin.audit_activity', 'words' => 'larena-env::admin.people.history']")
     && str_contains($provider, "'larena-audit.reference_names', \\Larena\\Env\\People\\SecretFileAuditNames::class"), 'The panel declares its events for the change history, in words, a file by its name.');
+
+// The panel's menu glyphs are of one drawn weight with the admin's (C384): each one's ink inside the 20 px box within
+// the admin's band (larena/admin resources/navigation/section-icons.json). The panel's own glyphs the admin does not list
+// were measured the admin's way (Material Symbols Outlined of the pinned pair, weight 400, FILL 0, 20 px drawn at 8x,
+// alpha summed) on 2026-11-19; language 40, dns 35, code 11, shield 19 and restart_alt 17 were out and are replaced.
+$sectionIcons = json_decode((string) file_get_contents($root.'/vendor/larena/admin/resources/navigation/section-icons.json'), true, 512, JSON_THROW_ON_ERROR);
+$measured = $sectionIcons['glyphs'] + ['hard_drive' => 27, 'web_asset' => 28, 'code_blocks' => 28, 'shield_person' => 27, 'settings_applications' => 30,
+    'memory' => 28, 'monitor_heart' => 28, 'key' => 22, 'notifications_active' => 24, 'mail' => 29, 'deployed_code' => 27, 'verified_user' => 22,
+    'cloud_upload' => 25, 'lock' => 24, 'system_update' => 23];
+$glyphs = [];
+foreach (['src/Navigation/ServerAdminNavigationContributor.php', 'assembly/config/larena-product.php'] as $file) {
+    preg_match_all("/(?:icon:|'icon' =>) '([a-z0-9_]+)'/", (string) file_get_contents($root.'/'.$file), $found);
+    array_push($glyphs, ...$found[1]);
+}
+$glyphs = array_values(array_unique($glyphs));
+env_assert(count($glyphs) >= 15, 'The glyph scan found too few: '.implode(', ', $glyphs));
+foreach ($glyphs as $glyph) {
+    $ink = $measured[$glyph] ?? null;
+    env_assert(is_int($ink) && $ink >= $sectionIcons['band']['min'] && $ink <= $sectionIcons['band']['max'],
+        'Menu glyph «'.$glyph.'» is '.($ink === null ? 'not measured' : $ink.' %').', outside the admin\'s band '.$sectionIcons['band']['min'].'...'.$sectionIcons['band']['max']);
+}
+// The bell's panel links to «Куда слать оповещения» (C384), a route of the panel's.
+$product = require $root.'/assembly/config/larena-product.php';
+env_assert(($product['menu']['notifications_settings'] ?? null) === 'larena.env.admin.alerts.channel' && isset($with['routes']['larena.env.admin.alerts.channel']),
+    'The notification settings of the bell are the alerts\' channel.');
 
 echo "EnvBootTest passed.\n";

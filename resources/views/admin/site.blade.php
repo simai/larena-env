@@ -50,7 +50,7 @@
                 @if ($site->suspended)
                     <p role="note" data-env-site-paused-note>{{ __('larena-env::admin.site.paused_note') }}</p>
                 @endif
-                <dl class="m-0" style="display: block;" data-env-facts>
+                <dl class="m-0" style="display: block;" data-env-facts data-larena-action-details>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-answers="{{ $site->answersChecked ? ($site->answers ?? 'none') : 'unchecked' }}"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.answers') }}</dt><dd class="m-0 min-w-0 text-end">{{ __('larena-env::admin.sites.state.'.\Larena\Env\Admin\SiteState::of($site->answersChecked, $site->answers, $site->suspended)) }}{{ $site->answers !== null ? ' · '.__('larena-env::admin.sites.answers_code', ['code' => (string) $site->answers]) : '' }}</dd></div>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.owner') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->owner ?? __('larena-env::admin.access.own_account') }}</dd></div>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.profile') }}</dt><dd class="m-0 min-w-0 text-end">{{ __('larena-env::admin.new_site.profiles.'.$site->profile) }}</dd></div>
@@ -201,7 +201,7 @@
                         <p><button type="button" class="larena-button larena-button-primary" data-sf-modal-open="env-op-{{ \Larena\Env\Operations\SiteOperation::CertificateIssue->value }}" data-env-certificate-get>{{ __('larena-env::admin.operations.certificate-issue') }}</button></p>
                     @endif
                 @else
-                    <dl class="m-0" style="display: block;" data-env-facts>
+                    <dl class="m-0" style="display: block;" data-env-facts data-larena-action-details>
                         <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.certificate.names') }}</dt><dd class="m-0 min-w-0 text-end">{{ implode(', ', $site->certificate->names) }}</dd></div>
                         <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.certificate.issuer') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->certificate->issuer ?? '—' }}</dd></div>
                         <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.certificate.not_after') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->certificate->notAfter ?? '—' }}</dd></div>
@@ -225,7 +225,7 @@
         @elseif ($tab === 'php')
             <section class="larena-panel larena-panel-padded" data-env-runtime aria-labelledby="env-site-runtime">
                 <h2 id="env-site-runtime" class="text-2">{{ __('larena-env::admin.runtime.title') }}</h2>
-                <dl class="m-0" style="display: block;" data-env-facts>
+                <dl class="m-0" style="display: block;" data-env-facts data-larena-action-details>
                     {{-- The version and its change on one line at the tab's top (FASTPANEL comparison 2026-11-18): no scrolling
                          past the extensions to reach the tab's main action. --}}
                     <div class="flex items-cross-center content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.php') }}</dt><dd class="flex flex-wrap items-cross-center content-main-end g-1 m-0 min-w-0 text-end" data-env-site-php="{{ $site->php }}"><span>{{ $site->php === 'none' ? __('larena-env::admin.site.php_none') : 'PHP '.$site->php }}</span>@if ($site->php !== 'none' && \Larena\Env\Software\PhpSupport::outdated($site->php)) <sf-badge status="warning" appearance="tonal" text="{{ __('larena-env::admin.php_outdated.mark') }}" data-env-php-outdated></sf-badge>@endif
@@ -246,7 +246,7 @@
                     @if ($phpSettings === [])
                         <p>{{ __('larena-env::admin.runtime.settings_none') }}</p>
                     @else
-                        <dl class="m-0" style="display: block;" data-env-facts>
+                        <dl class="m-0" style="display: block;" data-env-facts data-larena-action-details>
                             @foreach ($phpSettings as $setting)
                                 <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-php-setting="{{ $setting->key }}"><dt class="color-on-surface-variant">{{ $setting->key }}</dt><dd class="m-0 min-w-0 text-end">{{ $setting->value }}@if ($setting->source !== null) · {{ $setting->source }}@endif</dd></div>
                             @endforeach
@@ -287,7 +287,7 @@
                         <p class="flex flex-wrap g-1"><button type="button" class="larena-button larena-button-primary" data-sf-modal-open="env-op-{{ \Larena\Env\Operations\SiteOperation::DatabaseCreate->value }}" data-env-database-create>{{ __('larena-env::admin.database.actions.create') }}</button></p>
                     @endif
                 @else
-                    <dl class="m-0" style="display: block;" data-env-facts>
+                    <dl class="m-0" style="display: block;" data-env-facts data-larena-action-details>
                         @if (($databases[0] ?? null) !== null)
                             <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.database.name') }}</dt><dd class="m-0 min-w-0 text-end mono" style="overflow-wrap: anywhere;" data-env-database-name>{{ $databases[0]->name }}</dd></div>
                         @endif
@@ -409,7 +409,7 @@
         @elseif ($tab === 'releases')
             <section class="larena-panel larena-panel-padded" data-env-releases aria-labelledby="env-site-releases">
                 <h2 id="env-site-releases" class="text-2">{{ __('larena-env::admin.releases.title') }}</h2>
-                <dl class="m-0" style="display: block;" data-env-facts>
+                <dl class="m-0" style="display: block;" data-env-facts data-larena-action-details>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.release') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->release ?? '—' }}</dd></div>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.site.previous_release') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->previousRelease ?? '—' }}</dd></div>
                 </dl>
@@ -481,7 +481,7 @@
                 <h2 id="env-site-access" class="text-2">{{ __('larena-env::admin.access.title') }}</h2>
                 {{-- One line «Работает от аккаунта» (roles study PX-68): the server's account the site runs as, and whether it is
                      the site's own; «Рабочее место» and «Чей сайт» said the same twice. --}}
-                <dl class="m-0" style="display: block;" data-env-facts>
+                <dl class="m-0" style="display: block;" data-env-facts data-larena-action-details>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-runs-as><dt class="color-on-surface-variant">{{ __('larena-env::admin.access.runs_as') }}</dt><dd class="m-0 min-w-0 text-end"><span class="mono">{{ $site->owner ?? $site->runsAs ?? '—' }}</span>@if ($site->owner === null) <span class="color-on-surface-variant">· {{ __('larena-env::admin.access.own_account') }}</span>@endif</dd></div>
                 </dl>
                 <p>{{ __('larena-env::admin.access.explain') }}</p>

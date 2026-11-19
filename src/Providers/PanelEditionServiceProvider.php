@@ -172,6 +172,13 @@ final class PanelEditionServiceProvider extends ServiceProvider
                 $alerts->register('larena/env-mail', new MailAlertSource($app->make(PanelMail::class), $app->make(MailLetters::class), $app->make(Translator::class), $authorizer()));
             });
         }
+        // «Почта не уходит» as a count on the menu's «Почта» row too (C384).
+        if (interface_exists(\Larena\Admin\Contracts\AdminMenuAttentionSource::class)) {
+            $this->callAfterResolving(\Larena\Admin\Navigation\AdminMenuAttention::class, static function (\Larena\Admin\Navigation\AdminMenuAttention $attention) use ($app, $authorizer): void {
+                $attention->register('larena/env-mail', new \Larena\Env\Warnings\EnvMenuAttentionSource(
+                    new MailAlertSource($app->make(PanelMail::class), $app->make(MailLetters::class), $app->make(Translator::class), $authorizer())));
+            });
+        }
         if (interface_exists(\Larena\Admin\Contracts\AdminHistorySource::class)) {
             $this->callAfterResolving(\Larena\Admin\History\AdminHistory::class, static function (\Larena\Admin\History\AdminHistory $history) use ($app, $authorizer): void {
                 $history->register('mail', new MailHistorySource($app->make(MailLetters::class), $app->make(Translator::class), $authorizer()));

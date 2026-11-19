@@ -1,0 +1,31 @@
+{
+  "schema": "simai-panel-answer/1",
+  "request_id": "fixture-refused.plan-failed.site-restore-ready.site-missing",
+  "status": "refused",
+  "reason": "site_missing",
+  "data": {
+    "restore": {
+      "schema": "simai-site-restore-plan/1",
+      "root": null,
+      "doc_root": null,
+      "public_dir": null,
+      "files": null,
+      "dump": null,
+      "database": {
+        "exists": false,
+        "engine": null,
+        "name": null,
+        "tables": null
+      },
+      "files_present": false,
+      "overwrite": false,
+      "backup": false
+    },
+    "checks": {
+      "blockers": [
+        "Domain is not configured as a site. Create it first: simai-admin.sh site add --domain nosuch.test ..."
+      ],
+      "notes": []
+    }
+  }
+}

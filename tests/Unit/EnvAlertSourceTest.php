@@ -191,4 +191,23 @@ $answering = new EnvAdminAlertSource($resolver, new ServerOverviewReader($gatewa
 env_assert(array_filter($answering->alerts($as(new PanelActor('admin@example.com'))), static fn (AdminAlert $alert): bool => $alert->id === 'env:server-unanswered') === [],
     'An answering server: no red line.');
 
+// The same warnings as counts on the menu's rows (C384): a site's problem on «Сайты», the silent server on «Обзор» in
+// red, a new version on «Обновления»; every alert counted once, the row's tone the most serious of its alerts.
+$counts = (new \Larena\Env\Warnings\EnvMenuAttentionSource($stale))->attention($as(new PanelActor('admin@example.com')));
+$siteAlerts = count(array_filter($staleSaid, static fn (AdminAlert $alert): bool => str_starts_with($alert->action->href ?? '', '/admin/server/sites/')));
+env_assert($siteAlerts > 0 && ($counts['sites']['count'] ?? 0) === $siteAlerts && ($counts['env.server.overview']['tone'] ?? null) === 'error'
+    && array_sum(array_column($counts, 'count')) === count($staleSaid) && !isset($counts['env.server']),
+    'The menu counts what the bar holds, by the row it leads to: '.json_encode($counts));
+$rowOf = static fn (string $id, string $href): string => \Larena\Env\Warnings\EnvMenuAttentionSource::rowOf(new AdminAlert(id: $id, level: AdminAlertLevel::Info, text: 'x',
+    action: new \Larena\Admin\Alerts\AdminAlertAction('Go', $href)));
+env_assert($rowOf('env:update:env:1-64-0', '/admin/server/update?target=env') === 'env.update' && $rowOf('env:security', '/admin/server/security') === 'env.security'
+    && $rowOf('env:x', '/admin/server/settings/mail') === 'env.mail' && $rowOf('env:x', '/admin/server/overview') === 'env.server.overview', 'Each alert by where it leads.');
+$quiet = new class () implements \Larena\Admin\Contracts\AdminAlertSource {
+    public function alerts(Request $request): array
+    {
+        return [];
+    }
+};
+env_assert((new \Larena\Env\Warnings\EnvMenuAttentionSource($quiet))->attention(Request::create('/admin')) === [], 'Nothing waits: no counts.');
+
 echo "EnvAlertSourceTest passed.\n";

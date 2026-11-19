@@ -164,10 +164,11 @@ final class EnvServiceProvider extends ServiceProvider
                 $app = $this->app;
                 // The panel watches the server's disks and certificates itself: the CMS's own site checks stay off here.
                 $config->set('larena-admin.alerts.site_checks', false);
-                $this->callAfterResolving(\Larena\Admin\Alerts\AdminAlerts::class, static function (\Larena\Admin\Alerts\AdminAlerts $alerts) use ($app, $config): void {
+                $source = static function () use ($app, $config): \Larena\Env\Warnings\EnvAdminAlertSource {
                     $cache = $app->bound('cache') ? $app->make('cache')->store() : null;
                     $host = parse_url((string) $config->get('app.url'), PHP_URL_HOST);
-                    $alerts->register('larena/env', new \Larena\Env\Warnings\EnvAdminAlertSource(
+
+                    return new \Larena\Env\Warnings\EnvAdminAlertSource(
                         $app->make(PanelActorResolver::class),
                         $app->make(ServerOverviewReader::class),
                         $app->make(\Larena\Env\Server\SiteExtrasReader::class),
@@ -176,8 +177,17 @@ final class EnvServiceProvider extends ServiceProvider
                         $cache === null ? null : static fn (string $key, int $ttl, \Closure $read): array => $cache->remember($key.':'.(string) $cache->get(\Larena\Env\Warnings\EnvAdminAlertSource::GENERATION, 0), $ttl, $read),
                         is_string($host) ? [$host] : [],
                         $cache === null ? null : static fn (): ?int => \Larena\Env\Gateway\CachingPanelGateway::silentSince($cache),
-                    ));
+                    );
+                };
+                $this->callAfterResolving(\Larena\Admin\Alerts\AdminAlerts::class, static function (\Larena\Admin\Alerts\AdminAlerts $alerts) use ($source): void {
+                    $alerts->register('larena/env', $source());
                 });
+                // The same warnings as counts on the menu's rows (C384), where the admin's menu draws them.
+                if (interface_exists(\Larena\Admin\Contracts\AdminMenuAttentionSource::class)) {
+                    $this->callAfterResolving(\Larena\Admin\Navigation\AdminMenuAttention::class, static function (\Larena\Admin\Navigation\AdminMenuAttention $attention) use ($source): void {
+                        $attention->register('larena/env', new \Larena\Env\Warnings\EnvMenuAttentionSource($source()));
+                    });
+                }
             }
             // The server's runs in the admin's «История» (owner decision dec-d9f352569fd1), where the admin has one.
             if (interface_exists(\Larena\Admin\Contracts\AdminHistorySource::class)) {

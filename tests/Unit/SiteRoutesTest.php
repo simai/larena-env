@@ -178,6 +178,9 @@ final class ServingGateway implements PanelGateway
     /** @var array<string, array<array-key, mixed>> answers by command and domain */
     public array $answers = [];
 
+    /** @var list<string> what was asked, by command and domain */
+    public array $asked = [];
+
     /** @param list<string>|null $lists */
     public function __construct(private PanelGateway $inner, private ?array $lists, private bool $routes = true, private ?\Closure $profiles = null, private string $version = '1.56.2')
     {
@@ -186,6 +189,7 @@ final class ServingGateway implements PanelGateway
     public function ask(PanelRequest $request): PanelAnswer
     {
         $domain = is_string($request->args['domain'] ?? null) ? $request->args['domain'] : '';
+        $this->asked[] = $request->command.' '.$domain;
         if (isset($this->answers[$request->command.' '.$domain])) {
             return PanelAnswer::fromDocument($request->requestId, $this->answers[$request->command.' '.$domain]);
         }
@@ -300,6 +304,8 @@ env_assert(str_contains($wordpress, 'data-env-new-field="title"') && str_contain
 // An optional database is a switch.
 $generic = $address($current, ['profile' => 'generic']);
 env_assert(str_contains($generic, '<sf-switch name="create-db"') && !str_contains($generic, 'data-env-new-field="db-note"'), 'A database the kind may have is a switch: '.$generic);
+// On by the server's default for the kind (self:profiles: create-db «yes» for a PHP site).
+env_assert(preg_match('/<sf-switch name="create-db"[^>]*\bchecked\b/', $generic) === 1, 'The database switch is on, as the server\'s default: '.$generic);
 // A kind none of whose ways can be made now is a greyed tile with the reason; the first available one is chosen.
 $noRedirect = new ServingGateway($recorded, $listed, true, static function (array $document): array {
     foreach ($document['data']['profiles'] as $index => $profile) {
@@ -661,10 +667,11 @@ foreach (['new-site.blade.php', 'site.blade.php', 'plan.blade.php', 'job.blade.p
     env_assert(!str_contains($source, '{!!') && preg_match('/<style\b|<script\b|@php\b/i', $source) !== 1, "{$view} prints nothing raw and holds no script.");
 }
 
-// «Из архива» (site:restore-ready, simai-env 1.57.1; the stand's 1.63.3 answers recorded): a plain PHP site made from an
-// archive of its files and a dump. The wizard offers the kind's restore route under that name; the card leads to the
-// restore once an archive is in the site's folder; the plan says what is unpacked, where the dump goes, what is replaced and
-// the copy before; each refusal of the server is one sentence of the panel's, the server's line under «Подробнее».
+// «Из архива» (site:restore-ready, simai-env 1.57.1; the stand's 1.63.4 answers recorded): a plain PHP site made from an
+// archive of its files and a dump. The wizard offers the kind's restore route under that name; the card follows the
+// server's route (`restore`: step `upload` with a dump only, step `restore` with an archive); the plan says what the
+// server found — the folder, the database and its tables, what is replaced, the copy before; each refusal is the server's
+// code said as one sentence of the panel's, the server's line under «Подробнее».
 $standRestore = ['id' => 'restore', 'title' => 'Restore from a files archive and an SQL dump', 'available' => true, 'inputs' => [
     ['name' => 'domain', 'required' => true, 'kind' => 'text'], ['name' => 'php', 'required' => false, 'kind' => 'choice', 'values' => ['8.3'], 'default' => '8.3'],
     ['name' => 'create-db', 'required' => false, 'kind' => 'choice', 'values' => ['yes', 'no'], 'default' => 'yes'],
@@ -683,7 +690,7 @@ $withRestore = static function (array $document) use ($standRestore): array {
     return $document;
 };
 $restoreListed = [...$listed, 'site:restore-ready', 'file:list'];
-$restoring = new ServingGateway($recorded, $restoreListed, true, $withRestore, '1.63.3');
+$restoring = new ServingGateway($recorded, $restoreListed, true, $withRestore, '1.63.4');
 $archiveWay = $address($restoring, ['profile' => 'generic'], '?route=restore');
 env_assert(str_contains($archiveWay, 'data-env-new-way="restore"') && str_contains($archiveWay, 'From an archive') && !str_contains($archiveWay, 'Restore from a copy')
     && str_contains($archiveWay, 'name="route" value="restore"') && !str_contains($archiveWay, 'Unpack the files and import the dump'),
@@ -696,31 +703,56 @@ $restoreCard = static fn (PanelGateway $gateway, array $words): SiteAdminControl
 $folder = static fn (array $names): array => ['schema' => 'simai-panel-answer/1', 'request_id' => 'r', 'status' => 'ok', 'kind' => 'result', 'command_status' => 'success',
     'data' => ['schema' => 'simai-files/1', 'path' => '', 'truncated' => false, 'entries' => array_map(static fn (string $name): array => ['name' => $name,
         'type' => $name === 'public' ? 'dir' : 'file', 'size' => 337, 'mtime' => 1793926628, 'mode' => '640'], $names)]];
-$restoring->answers['file:list demo-php.test'] = $folder(['public']);
+$listsAsked = static fn (ServingGateway $gateway): int => count(array_filter($gateway->asked, static fn (string $asked): bool => $asked === 'file:list demo-php.test'));
+// A dump only (route restore, step upload): the restore's name, the dump said, the way to the site's files.
+$restoring->answers['site:status demo-php.test'] = $document('site-status.demo-php.test.restore-upload.json');
+$restoring->answers['file:list demo-php.test'] = $folder(['public', 'db.sql.gz']);
+$restoring->asked = [];
 $waiting = $card($restoreCard($restoring, $lines), 'demo-php.test');
-env_assert(str_contains($waiting, 'data-env-site-route-tab="files"') && !str_contains($waiting, 'value="php-restore"'), 'No archive yet: to the site\'s files: '.$waiting);
+env_assert(str_contains($waiting, 'data-env-site-route-tab="files"') && !str_contains($waiting, 'value="php-restore"') && str_contains($waiting, 'From an archive')
+    && str_contains($waiting, htmlspecialchars($lines['routes']['at']['restore_dump'], ENT_QUOTES)), 'A dump only: the files archive is needed too, in the site\'s files: '.$waiting);
+env_assert($listsAsked($restoring) <= 1, 'The site\'s files are asked once: '.json_encode($restoring->asked));
+// An archive (route restore, step restore): the restore is the next step, the archive and the dump the server named chosen.
+$restoring->answers['site:status demo-php.test'] = $document('site-status.demo-php.test.restore.json');
 $restoring->answers['file:list demo-php.test'] = $folder(['public', 'site.zip', 'db.sql.gz', 'notes.txt']);
+$restoring->asked = [];
 $ready = $card($restoreCard($restoring, $lines), 'demo-php.test');
 env_assert(str_contains($ready, 'data-env-site-route-step="php-restore"') && str_contains($ready, 'name="operation" value="php-restore"') && str_contains($ready, 'current="2"')
     && str_contains($ready, 'From an archive') && str_contains($ready, 'Next: Restore the site from the archive') && !str_contains($ready, 'data-env-site-route-tab')
     && preg_match('#<option value="site\.zip"\s*>site\.zip</option>#', $ready) === 1 && str_contains($ready, '<option value="">No database</option>') && preg_match('#<option value="db\.sql\.gz"\s+selected\s*>db\.sql\.gz</option>#', $ready) === 1
     && !str_contains($ready, 'notes.txt') && str_contains($ready, 'name="overwrite" value="yes"') && !str_contains($ready, 'name="overwrite" value="yes" checked'),
     'An archive in the folder: the restore is the next step, the archive and the dump chosen, the replacement off: '.$ready);
-// The plan in words, over a site with data: the copy first, what is replaced; the plate says it.
+env_assert($listsAsked($restoring) === 1, 'The card and its form share one list of the site\'s files: '.json_encode($restoring->asked));
+// The site's files unreadable: the archive and the dump the server named.
+$restoring->answers['file:list demo-php.test'] = ['schema' => 'simai-panel-answer/1', 'request_id' => 'r', 'status' => 'failed', 'reason' => 'command_failed'];
+$named = $card($restoreCard($restoring, $lines), 'demo-php.test');
+env_assert(str_contains($named, 'name="operation" value="php-restore"') && preg_match('#<option value="site\.zip"#', $named) === 1 && preg_match('#<option value="db\.sql\.gz"#', $named) === 1,
+    'The files unread: the archive and the dump from the server\'s route: '.$named);
+// An older server (route none, next file:upload): an archive among the site's files is the same step.
+unset($restoring->answers['site:status demo-php.test']);
+$restoring->answers['file:list demo-php.test'] = $folder(['public']);
+$older = $card($restoreCard($restoring, $lines), 'demo-php.test');
+env_assert(str_contains($older, 'data-env-site-route-tab="files"') && !str_contains($older, 'value="php-restore"'), 'An older server, no archive yet: to the site\'s files: '.$older);
+$restoring->answers['file:list demo-php.test'] = $folder(['public', 'site.zip']);
+env_assert(str_contains($card($restoreCard($restoring, $lines), 'demo-php.test'), 'name="operation" value="php-restore"'), 'An older server, an archive found: the restore.');
+// The plan in words, over a site with data, from what the server found: the folder, the database and its tables, the copy first.
 $planned = $restoreCard($restoring, $lines)->plan($asking('/admin/server/sites/demo-php.test/plan', 'POST', ['operation' => 'php-restore', 'files' => 'site.zip',
     'dump' => 'db.sql.gz', 'overwrite' => 'yes']), 'demo-php.test');
-env_assert($planned instanceof \Illuminate\View\View && $planned->getData()['plan']->args === ['domain' => 'demo-php.test', 'files' => 'site.zip', 'dump' => 'db.sql.gz', 'overwrite' => 'yes'],
-    'The restore is planned as the stand answered it.');
+env_assert($planned instanceof \Illuminate\View\View && $planned->getData()['plan']->args === ['domain' => 'demo-php.test', 'files' => 'site.zip', 'dump' => 'db.sql.gz', 'overwrite' => 'yes']
+    && ($planned->getData()['plan']->restore['database']['tables'] ?? null) === 1, 'The restore is planned as the stand answered it.');
 $planPage = (string) $planned->render();
-foreach (['site.zip — unpacked into the site', 'the dump db.sql.gz is loaded', 'replaced by the archive and the dump', 'first a copy of the files and the database',
-    'the archive and the dump to the site', 'The server copies the site first.'] as $said) {
+foreach (['site.zip — unpacked into the site', 'the dump db.sql.gz is loaded into the database demo_php_test, which has 1 tables now', '/home/simai/www/demo-php.test, the site opens from the folder public',
+    'replaced by the archive and the dump', 'first a copy of the files and the database', 'the archive and the dump to the site', 'The server copies the site first.'] as $said) {
     env_assert(str_contains($planPage, $said), "The plan says «{$said}»: ".$planPage);
 }
-// Each refusal in one sentence, in both languages; the server's line under «Подробнее»; the way to «Файлы» where a file is the problem.
+// Each refusal by its code, in one sentence, in both languages; the server's line under «Подробнее»; the way to «Файлы»
+// where a file is the problem; the name said is the file the server stopped at.
 foreach ([[['files' => 'site.zip', 'dump' => 'db.sql.gz', 'overwrite' => 'no'], 'database_not_empty', ['count' => '1'], false],
     [['files' => 'site.zip', 'overwrite' => 'no'], 'files_present', [], false],
-    [['files' => 'notes.txt'], 'files_kind', [], true], [['files' => 'site.zip', 'dump' => 'notes.txt'], 'dump_kind', [], true],
-    [['files' => 'gone.zip'], 'missing', ['name' => 'gone.zip'], true]] as [$input, $code, $replace, $toFiles]) {
+    [['files' => 'notes.txt'], 'archive_kind', [], true], [['files' => 'site.zip', 'dump' => 'notes.txt'], 'dump_kind', [], true],
+    [['files' => 'gone.zip'], 'file_missing', ['name' => 'gone.zip'], true], [['files' => 'site.zip', 'dump' => 'gone.sql'], 'file_missing', ['name' => 'gone.sql'], true],
+    [['files' => 'link.zip'], 'symlink', ['name' => 'link.zip'], true], [['files' => 'adir.zip'], 'not_file', ['name' => 'adir.zip'], true],
+    [['files' => 'db.sql.gz'], 'files_is_dump', ['name' => 'db.sql.gz'], true], [['files' => 'missing.tar.gz'], 'file_missing', ['name' => 'missing.tar.gz'], true]] as [$input, $code, $replace, $toFiles]) {
     foreach ([[$lines, 'en'], [$russian, 'ru']] as [$words, $language]) {
         $refusedRestore = $restoreCard($restoring, $words)->plan($asking('/admin/server/sites/demo-php.test/plan', 'POST', ['operation' => 'php-restore'] + $input), 'demo-php.test');
         env_assert($refusedRestore instanceof \Illuminate\View\View, "{$code} in {$language}: a window, not a notice.");
@@ -730,12 +762,13 @@ foreach ([[['files' => 'site.zip', 'dump' => 'db.sql.gz', 'overwrite' => 'no'], 
         }
         $window = (string) $refusedRestore->render();
         env_assert($refusedRestore->getData()['refused'] === [$sentence] && str_contains($refusedRestore->getData()['refusedServer'], 'overwrite') === in_array($code, ['database_not_empty', 'files_present'], true)
-            && $refusedRestore->getData()['refusedServer'] !== '' && str_contains($window, 'data-env-plan-restore-files') === $toFiles,
+            && $refusedRestore->getData()['refusedServer'] !== '' && str_contains($window, 'data-env-plan-restore-files') === $toFiles && preg_match('/:[a-z]/', $sentence) !== 1,
             "{$code} in {$language}: ".json_encode($refusedRestore->getData()['refused'], JSON_UNESCAPED_UNICODE));
     }
 }
 
-// Every line the server's restore can refuse with (admin/commands/site_restore.sh) has its sentence; an unknown line stays.
+// Every code the server's restore can refuse with (simai-env 1.63.4, admin/commands/site_restore.sh) has its sentence in
+// both languages, the names and counts said in place; a code that is not this command's is not said as one.
 $ruText = static function (string $key, array $replace) use ($russian): string {
     $line = data_get($russian['restore'], $key);
     env_assert(is_string($line), "No Russian words for restore.{$key}.");
@@ -745,45 +778,63 @@ $ruText = static function (string $key, array $replace) use ($russian): string {
 
     return $line;
 };
-foreach (['Domain is not configured as a site. Create it first: simai-admin.sh site add --domain x.test ...' => 'site_missing',
-    'x.test is a Bitrix site: use bitrix restore-ready' => 'bitrix', 'x.test is a WordPress site: use wp restore-ready' => 'wordpress',
-    'site restore-ready is for PHP sites (generic profile); demo-static.test is static' => 'not_php',
-    'x.test is deployed in releases; restore it with site deploy --archive' => 'releases', 'Site directory /home/simai/www/x.test is missing' => 'root_missing',
-    "--dump must not contain '.' or '..' parts" => 'path', '--files: gone.zip not found in /home/simai/www/x.test' => 'missing',
-    '--files: link.zip goes through a symlink; refused' => 'link', '--dump: dumps is not a regular file' => 'not_file',
-    "--files is the site's files; db.sql.zip is a dump (--dump)" => 'files_is_dump', '--files must be a .tar.gz, .tgz, .tar or .zip archive' => 'files_kind',
-    '--dump must be a .sql, .sql.gz or .sql.zip file' => 'dump_kind',
-    'x.test has no database for the dump: simai-admin.sh site db-create --domain x.test --confirm yes' => 'no_database',
-    'The dump can be imported into MySQL only; x.test uses pgsql' => 'not_mysql', 'Cannot read the database x_test as root' => 'database_unreadable',
-    'The database demo_php_test is not empty (12 tables); rerun with --overwrite yes (a backup is taken first)' => 'database_not_empty',
-    '/home/simai/www/x.test/public already has files; rerun with --overwrite yes (a backup is taken first)' => 'files_present'] as $line => $code) {
-    $said = \Larena\Env\Admin\RestoreWords::refusals([$line], $ruText);
-    env_assert($said['codes'] === [$code] && $said['all'] && preg_match('/[А-Яа-я]/u', $said['said'][0]) === 1 && !str_contains($said['said'][0], ':'.'name')
-        && !str_contains($said['said'][0], '--') && is_string($lines['restore']['refusals'][$code] ?? null), "«{$line}» is {$code}: ".$said['said'][0]);
+$enText = static function (string $key, array $replace) use ($lines): string {
+    $line = data_get($lines['restore'], $key);
+    env_assert(is_string($line), "No English words for restore.{$key}.");
+    foreach ($replace as $name => $value) {
+        $line = str_replace(':'.$name, $value, $line);
+    }
+
+    return $line;
+};
+$foundOf = static fn (string $file): ?array => \Larena\Env\Admin\RestoreWords::found($document($file)['data']['restore'] ?? null);
+$pgsql = $foundOf('refused.plan-failed.site-restore-ready.database-not-empty.json');
+$pgsql['database']['engine'] = 'pgsql';
+foreach (\Larena\Env\Admin\RestoreWords::REFUSALS as $code) {
+    foreach ([$ruText, $enText] as $say) {
+        $said = \Larena\Env\Admin\RestoreWords::refusal($code, ['files' => 'site.zip', 'dump' => 'db.sql.gz'], $code === 'engine_unsupported' ? $pgsql : null, $say);
+        env_assert(is_string($said) && $said !== '' && preg_match('/:[a-z]/', $said) !== 1 && !str_contains($said, '--'), "{$code} is said: ".var_export($said, true));
+    }
 }
-env_assert(\Larena\Env\Admin\RestoreWords::refusals(['--dump: dumps is not a regular file'], $ruText)['said'] === ['dumps — не файл. Выберите файл архива в папке сайта.']
-    && \Larena\Env\Admin\RestoreWords::refusals(['The database demo_php_test is not empty (12 tables); rerun with --overwrite yes (a backup is taken first)'], $ruText)['said'][0]
-        === 'В базе данных сайта уже есть данные (таблиц: 12). Чтобы заменить их, отметьте «Заменить файлы и базу, если они уже есть» — сервер сначала сделает копию.',
-    'The names and the count said in place.');
-$unknown = \Larena\Env\Admin\RestoreWords::refusals(['Something new went wrong'], $ruText);
-env_assert($unknown === ['said' => ['Something new went wrong'], 'codes' => [], 'all' => false], 'A line the panel does not know stays as the server wrote it.');
-// The plan without a replacement and without a dump says nothing is replaced and the database stays.
-$plain = \Larena\Env\Admin\RestoreWords::facts('demo-php.test', ['files' => 'site.zip'], $ruText);
+env_assert(\Larena\Env\Admin\RestoreWords::refusal('engine_unsupported', ['files' => 'site.zip', 'dump' => 'db.sql.gz'], $pgsql, $ruText) === str_replace(':engine', 'pgsql', $russian['restore']['refusals']['engine_unsupported'])
+    && \Larena\Env\Admin\RestoreWords::refusal('database_not_empty', ['files' => 'site.zip', 'dump' => 'db.sql.gz'], $foundOf('refused.plan-failed.site-restore-ready.database-not-empty.json'), $ruText)
+        === 'В базе данных сайта уже есть данные (таблиц: 1). Чтобы заменить их, отметьте «Заменить файлы и базу, если они уже есть» — сервер сначала сделает копию.'
+    && \Larena\Env\Admin\RestoreWords::refusal('plan_failed', [], null, $ruText) === null && \Larena\Env\Admin\RestoreWords::found(['schema' => 'other']) === null,
+    'The engine and the count said in place; another reason or shape is not this command\'s.');
+foreach (['site-missing' => 'site_missing', 'profile' => 'profile_unsupported', 'profile-wp' => 'profile_wordpress', 'no-database' => 'no_database', 'not-file' => 'not_file',
+    'symlink' => 'symlink', 'files-is-dump' => 'files_is_dump', 'archive-kind' => 'archive_kind', 'dump-kind' => 'dump_kind', 'file-missing' => 'file_missing', 'dump-missing' => 'file_missing',
+    'files-present' => 'files_present', 'database-not-empty' => 'database_not_empty'] as $case => $code) {
+    $refusal = $document("refused.plan-failed.site-restore-ready.{$case}.json");
+    env_assert($refusal['status'] === 'refused' && $refusal['reason'] === $code && is_string($russian['restore']['refusals'][$code] ?? null), "The recorded {$case} is {$code}.");
+}
+// The plan without a replacement and without a dump, over an empty site: nothing replaced, no copy, the database stays.
+$plain = \Larena\Env\Admin\RestoreWords::facts('demo-php.test', ['files' => 'site.zip'], null, $ruText);
 env_assert($plain[2] === ['База данных', 'не меняется: дамп не выбран'] && $plain[3][1] === $russian['restore']['fact']['replaces_no']
     && $plain[4][1] === $russian['restore']['fact']['backup_no'] && $plain[5][1] === 'архив — в корзину сайта'
-    && \Larena\Env\Admin\RestoreWords::consequence(['overwrite' => 'no'], $ruText) === $russian['restore']['consequence_empty'], 'Nothing replaced, said so: '.json_encode($plain, JSON_UNESCAPED_UNICODE));
-// The recorded gateway answers the restore as the stand did; the job's last step in the panel's words, not half English.
+    && \Larena\Env\Admin\RestoreWords::consequence(['overwrite' => 'no'], null, $ruText) === $russian['restore']['consequence_empty'], 'Nothing replaced, said so: '.json_encode($plain, JSON_UNESCAPED_UNICODE));
+$emptyFound = $foundOf('plan.site-restore-ready.json');
+$emptyFound['files_present'] = false;
+$emptyFound['database']['tables'] = 0;
+$emptyFound['overwrite'] = false;
+$emptyFound['backup'] = false;
+$empty = \Larena\Env\Admin\RestoreWords::facts('demo-php.test', ['files' => 'site.zip', 'dump' => 'db.sql.gz'], $emptyFound, $ruText);
+env_assert(in_array(['Что есть', $russian['restore']['fact']['replaces_nothing']], $empty, true) && in_array(['Копия', $russian['restore']['fact']['backup_no']], $empty, true)
+    && \Larena\Env\Admin\RestoreWords::consequence(['overwrite' => 'yes'], $emptyFound, $ruText) === $russian['restore']['consequence_empty'],
+    'An empty site: nothing to replace and no copy, as the server found it: '.json_encode($empty, JSON_UNESCAPED_UNICODE));
+// The recorded gateway answers the restore as the stand did; the job's steps as the server says them.
 $restoreOps = new PanelOperations($recorded);
-$recordedRefusal = $restoreOps->plan($admin, SiteOperation::PhpRestore, 'demo-owned.test', ['files' => 'site.zip', 'dump' => 'db.sql']);
-env_assert($recordedRefusal->plan === null && \Larena\Env\Admin\RestoreWords::refusals($recordedRefusal->checks->blockers ?? [], $ruText)['codes'] === ['no_database'],
-    'A dump into a site without a database is refused as recorded.');
+$recordedRefusal = $restoreOps->plan($admin, SiteOperation::PhpRestore, 'demo-owned.test', ['files' => 'site.zip', 'dump' => 'db.sql.gz']);
+env_assert($recordedRefusal->plan === null && $recordedRefusal->reason === 'no_database' && ($recordedRefusal->restore['database']['exists'] ?? null) === false,
+    'A dump into a site without a database is refused as recorded: '.var_export($recordedRefusal->reason, true));
+env_assert($restoreOps->plan($admin, SiteOperation::PhpRestore, 'demo-php.test', ['files' => '../site.zip'])->reason === 'invalid_argument',
+    'A path out of the site is the gateway\'s refusal.');
 env_assert($restoreOps->plan($admin, SiteOperation::PhpRestore, 'demo-php.test', ['files' => 'other.zip', 'overwrite' => 'yes'])->reason === PanelReason::RECORDING_MISSING,
     'Another choice is missing, never answered with another\'s.');
 $restoreJob = $restoreOps->start($admin, SiteOperation::PhpRestore, 'demo-php.test', ['files' => 'site.zip', 'dump' => 'db.sql.gz', 'overwrite' => 'yes']);
 $restoreStatus = PanelJobStatus::fromData($recorded->ask(new PanelRequest('j', $admin, 'job:status', ['job_id' => (string) $restoreJob->jobId]))->data);
 $stepTitles = array_column(\Larena\Env\Admin\JobOutcome::steps($restoreStatus), 'title');
-env_assert($restoreStatus->command === 'site:restore-ready' && count($stepTitles) === 4 && $stepTitles[0] === 'Копия текущего сайта' && $stepTitles[3] === $lines['restore']['step_trash']
-    && !str_contains(implode(' ', $stepTitles), 'переходит к аккаунту'), 'The copy first, then unpacking, the dump, the trash: '.json_encode($stepTitles, JSON_UNESCAPED_UNICODE));
+env_assert($restoreStatus->command === 'site:restore-ready' && $stepTitles === ['Копия текущего сайта', 'Распаковка файлов', 'Загрузка дампа базы', 'Архив и дамп — в корзину сайта']
+    && !isset($lines['restore']['step_trash']) && !isset($russian['restore']['step_trash']), 'The copy first, then unpacking, the dump, the trash, in the server\'s words: '.json_encode($stepTitles, JSON_UNESCAPED_UNICODE));
 
 // The card's reads asked ahead in one call (speed review 2026-11-16): what the site is everywhere, its check, route and the
 // server's kinds on the overview only; nothing the server does not list.

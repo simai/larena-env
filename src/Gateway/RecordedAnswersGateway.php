@@ -113,10 +113,11 @@ final readonly class RecordedAnswersGateway implements PanelGateway
 
             return $this->replay($request, $file);
         }
-        // A plain PHP site restored from its archive (site:restore-ready, recorded on the panel's stand, simai-env 1.63.3): the
-        // set holds the plan of the archive and the dump over a site with data, and the server's refusals as it says them
-        // (an archive of another kind, a file that is not there or is a link, a dump into a site without a database, data
-        // already there without «Заменить существующее»); any other choice is missing, never answered with another's.
+        // A plain PHP site restored from its archive (site:restore-ready, recorded on the panel's stand, simai-env 1.63.4): the
+        // set holds the plan of the archive and the dump over a site with data, and each refusal by its code with what the
+        // server found (a site of another kind or none, an archive or a dump of another kind, a file that is not there, a
+        // link or a folder, a dump into a site without a database, data already there without «Заменить существующее»,
+        // a path out of the site); any other choice is missing, never answered with another's.
         if ($request->command === 'site:restore-ready' && !$request->confirm) {
             $file = $this->siteRestoreFile($request->args);
             if ($file === null) {
@@ -265,16 +266,26 @@ final readonly class RecordedAnswersGateway implements PanelGateway
         $overwrite = ($args['overwrite'] ?? 'no') === 'yes';
         $refused = static fn (string $case): string => "refused.plan-failed.site-restore-ready.{$case}.json";
 
+        $php = $domain === 'demo-php.test';
+
         return match (true) {
+            // The gateway refuses a path out of the site before the command runs, with no data.
+            str_contains($files.'/'.$dump, '..') || str_starts_with($files, '/') || str_starts_with($dump, '/') => 'refused.invalid-argument.site-restore-path.json',
             $domain === 'demo-static.test' => $refused('profile'),
-            !in_array($domain, ['demo-php.test', 'demo-owned.test'], true) => null,
-            preg_match('/\.(?:zip|tar\.gz|tgz|tar)\z/', $files) !== 1 || str_ends_with($files, '.sql.zip') => $domain === 'demo-php.test' ? $refused('files-kind') : null,
-            $dump !== '' && preg_match('/\.sql(?:\.gz|\.zip)?\z/', $dump) !== 1 => $domain === 'demo-php.test' ? $refused('dump-kind') : null,
-            $files === 'gone.zip' => $domain === 'demo-php.test' ? $refused('file-missing') : null,
-            $files === 'link.zip' => $domain === 'demo-owned.test' ? $refused('file-link') : null,
-            $domain === 'demo-owned.test' => $files === 'site.zip' && $dump === 'db.sql' ? $refused('no-database') : null,
+            $domain === 'demo-wp.test' => $refused('profile-wp'),
+            $domain === 'nosuch.test' => $refused('site-missing'),
+            $domain === 'demo-owned.test' => $files === 'site.zip' && $dump === 'db.sql.gz' ? $refused('no-database') : null,
+            !$php => null,
+            $files === 'db.sql.gz' => $refused('files-is-dump'),
+            $files === 'notes.txt' => $refused('archive-kind'),
+            $files === 'gone.zip' => $refused('file-missing'),
+            $files === 'missing.tar.gz' => 'refused.plan-failed.site-restore-ready.json',
+            $files === 'link.zip' => $refused('symlink'),
+            $files === 'adir.zip' => $refused('not-file'),
             $files !== 'site.zip' => null,
-            !$overwrite => $refused($dump === '' ? 'files-present' : 'database-not-empty'),
+            $dump === 'notes.txt' => $refused('dump-kind'),
+            $dump === 'gone.sql' => $refused('dump-missing'),
+            !$overwrite => $dump === '' ? $refused('files-present') : ($dump === 'db.sql.gz' ? $refused('database-not-empty') : null),
             $dump === 'db.sql.gz' => 'plan.site-restore-ready.json',
             default => null,
         };

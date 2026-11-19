@@ -5,7 +5,7 @@
     <div class="larena-panel larena-panel-padded m-0" role="alert" data-env-job-secret>
         <p class="m-0 text-medium">{{ __('larena-env::admin.routes.password.title') }}</p>
         <p class="m-0">{{ __('larena-env::admin.routes.password.save_now') }}</p>
-        <dl class="m-0 m-y-1" style="display: block;" data-env-facts>
+        <dl class="m-0 m-y-1" style="display: block;" data-env-facts data-larena-action-details>
             <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.routes.password.user') }}</dt><dd class="m-0 min-w-0 text-end mono">{{ $secret->user }}</dd></div>
             <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.routes.password.password') }}</dt><dd class="m-0 min-w-0 text-end mono" style="overflow-wrap: anywhere;" data-env-job-password>{{ $secret->password }}</dd></div>
         </dl>

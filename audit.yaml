@@ -19,6 +19,9 @@ events:
     severity: notice
   - type: env.person.unblocked
     severity: notice
+  # «Удалить человека»: who removed whom; the name is kept for the journal, never the address or a password.
+  - type: env.person.removed
+    severity: notice
   - type: env.acting_as.started
     severity: notice
   - type: env.acting_as.stopped

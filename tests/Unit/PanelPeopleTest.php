@@ -63,11 +63,13 @@ assert(!in_array('groups', array_column($page->columns, 'key'), true), 'no «Г�
 // The signed-in person is «вы»; no acting as themselves and no blocking themselves.
 assert($rows['1']['email'] === people_line($russian, 'people.you') && !str_contains(json_encode($rows['1'], JSON_THROW_ON_ERROR), 'admin@example.test'));
 assert($rows['1']['_actions'] === ['view']);
-// Another person of their own sites: «Посмотреть как он» and blocking; the last sign-in by its own time.
-assert($rows['2']['_actions'] === ['view', 'edit', 'block']);
+// Another person of their own sites: «Посмотреть как он», blocking and removing; the last sign-in by its own time.
+assert($rows['2']['_actions'] === ['view', 'edit', 'block', 'remove']);
+// Every action of a row stands in «⋯»: no button in the row, so nothing breaks onto two lines at 1440 (UX audit).
+assert($page->quickActions === [] && isset($page->rowWrites['edit'], $page->rowActions['remove']) && $page->rowActions['remove']['href'] === '/admin/server/people/__ID__/remove');
 assert($rows['2']['last']['tip'] !== '' && $rows['2']['last']['label'] !== people_line($russian, 'people.never'));
 // A blocked person: no acting as them; unblocking instead; the dot says so.
-assert($rows['3']['_actions'] === ['view', 'unblock'] && $rows['3']['state']['value'] === 'stopped');
+assert($rows['3']['_actions'] === ['view', 'unblock', 'remove'] && $rows['3']['state']['value'] === 'stopped');
 // Never signed in.
 assert($rows['4']['last']['label'] === people_line($russian, 'people.never'));
 // «Пригласить человека» is the one filled button; a reader has none, and no row actions.
@@ -82,13 +84,17 @@ $invitedRows = array_column($invited->rows, null, 'id');
 assert($invitedRows['5']['state']['value'] === 'invited' && $invitedRows['5']['state']['label'] === people_line($russian, 'people.state.invited'));
 assert(str_contains(json_encode($invitedRows['5'], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE), 'Ждёт ответа до'), 'the invitation waits until a time');
 assert(str_contains(json_encode($invitedRows['6'], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE), people_line($russian, 'people.invite.pending_expired')), 'an invitation that ran out says so');
+// An invitation still waiting can be taken back («Удалить человека»).
+assert($invitedRows['5']['_actions'] === ['view', 'remove']);
 assert($reader->headerActions === [] && $reader->quickActions === [] && $reader->rowWrites === []);
 
 // The lines both languages carry for the list, the invitation and the card.
 foreach ([$lines, $russian] as $language) {
     foreach (['people.navigation', 'people.act_as', 'people.invite.open', 'people.invite.heading', 'people.invite.show_plan', 'people.invite.account_new',
         'people.invite.levels.own.label', 'people.invite.levels.all.label', 'people.card.summary', 'people.card.account', 'people.block.open',
-        'people.block.unopen', 'people.secret_files', 'people.can.all', 'people.can_said.own', 'people.can_said.all', 'access.row.sftp-remove'] as $key) {
+        'people.block.unopen', 'people.removal.open', 'people.removal.question', 'people.removal.fact_gone_value', 'people.removal.fact_gone_invited',
+        'people.removal.fact_kept_value', 'people.removal.fact_account_sites', 'people.removal.fact_account_apart', 'people.removal.consequence', 'people.removal.done',
+        'reasons.person_remove_self', 'reasons.person_remove_last', 'people.history.env_person_removed', 'people.secret_files', 'people.can.all', 'people.can_said.own', 'people.can_said.all', 'access.row.sftp-remove'] as $key) {
         people_line($language, $key);
     }
 }

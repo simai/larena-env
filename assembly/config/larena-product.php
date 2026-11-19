@@ -17,7 +17,7 @@ return [
         'roots' => [
             // Both levels: the sites a person reaches, the first screen. «История» (the server's runs and the action
             // journal, larena/admin) is the menu's last root of its own, by «Уведомления» (owner decision dec-d9f352569fd1).
-            'sites' => ['label' => 'larena-env::admin.menu.sites', 'icon' => 'dns', 'level' => 'site', 'kind' => 'row', 'row' => 'env.server'],
+            'sites' => ['label' => 'larena-env::admin.menu.sites', 'icon' => 'hard_drive', 'level' => 'site', 'kind' => 'row', 'row' => 'env.server'],
             // Both levels: the sites' databases (simai-env 1.59.0 db:list), each opening its site's «База данных».
             'databases' => ['label' => 'larena-env::admin.menu.databases', 'icon' => 'database', 'level' => 'site', 'kind' => 'row', 'row' => 'env.databases'],
             // The system level: people, the server, the panel's own settings. «Люди» is one screen (roles study part 7,
@@ -65,5 +65,7 @@ return [
         // still opens, for a password reset.
         'hidden_rows' => ['auth.diagnostics', 'auth.users'],
         'folded_rows' => ['admin.site_backgrounds' => 'admin.settings_general'],
+        // The bell's panel links to where the server's alerts are sent («Куда слать оповещения», C384).
+        'notifications_settings' => 'larena.env.admin.alerts.channel',
     ],
 ];

@@ -1,9 +1,26 @@
 {
   "schema": "simai-panel-answer/1",
   "request_id": "fixture-refused.plan-failed.site-restore-ready.files-present",
-  "status": "failed",
-  "reason": "plan_failed",
+  "status": "refused",
+  "reason": "files_present",
   "data": {
+    "restore": {
+      "schema": "simai-site-restore-plan/1",
+      "root": "/home/simai/www/demo-php.test",
+      "doc_root": "/home/simai/www/demo-php.test/public",
+      "public_dir": "public",
+      "files": "site.zip",
+      "dump": null,
+      "database": {
+        "exists": true,
+        "engine": "mysql",
+        "name": "demo_php_test",
+        "tables": 1
+      },
+      "files_present": true,
+      "overwrite": false,
+      "backup": false
+    },
     "checks": {
       "blockers": [
         "/home/simai/www/demo-php.test/public already has files; rerun with --overwrite yes (a backup is taken first)"

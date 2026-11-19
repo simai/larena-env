@@ -1,0 +1,31 @@
+{
+  "schema": "simai-panel-answer/1",
+  "request_id": "fixture-refused.plan-failed.site-restore-ready.not-file",
+  "status": "refused",
+  "reason": "not_file",
+  "data": {
+    "restore": {
+      "schema": "simai-site-restore-plan/1",
+      "root": "/home/simai/www/demo-php.test",
+      "doc_root": "/home/simai/www/demo-php.test/public",
+      "public_dir": "public",
+      "files": null,
+      "dump": null,
+      "database": {
+        "exists": true,
+        "engine": "mysql",
+        "name": "demo_php_test",
+        "tables": 0
+      },
+      "files_present": false,
+      "overwrite": false,
+      "backup": false
+    },
+    "checks": {
+      "blockers": [
+        "--files: adir.zip is not a regular file"
+      ],
+      "notes": []
+    }
+  }
+}

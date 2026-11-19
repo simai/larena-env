@@ -54,6 +54,10 @@ final readonly class PanelPlan
         // comes first, whether the site keeps serving and whether it has a database, which stays as it is.
         /** @var array{domain: string, from: ?string, to: string, backup: bool, serving: bool, database: bool}|null */
         public ?array $transfer = null,
+        // site:restore-ready (simai-env 1.63.4): what the check found — the site's folders, the archive and the dump, the
+        // database and its tables, files already there, whether a backup is taken (\Larena\Env\Admin\RestoreWords::found).
+        /** @var array<string, mixed>|null */
+        public ?array $restore = null,
     ) {
     }
 
@@ -126,6 +130,7 @@ final readonly class PanelPlan
             clears: $command === 'site:cache-clear' ? self::clears($data['clear'] ?? null) : [],
             account: $command === 'owner:create' ? self::account($data['owner'] ?? null) : null,
             transfer: $command === 'site:transfer' ? self::transfer($data['transfer'] ?? null) : null,
+            restore: $command === 'site:restore-ready' ? \Larena\Env\Admin\RestoreWords::found($data['restore'] ?? null) : null,
         );
     }
 

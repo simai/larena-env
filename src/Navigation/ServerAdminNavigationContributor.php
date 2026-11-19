@@ -108,7 +108,7 @@ final class ServerAdminNavigationContributor implements AdminNavigationContribut
             surface: 'product',
             labelKey: 'larena-env::admin.dns.navigation',
             activeRoutePattern: 'larena.env.admin.dns*',
-            icon: 'language',
+            icon: 'web_asset',
         ), new AdminNavigationDescriptor(
             id: 'env.dns.connection',
             ownerPackage: $this->ownerPackage(),
@@ -183,7 +183,7 @@ final class ServerAdminNavigationContributor implements AdminNavigationContribut
             surface: 'product',
             labelKey: 'larena-env::admin.services.navigation',
             activeRoutePattern: 'larena.env.admin.services*',
-            icon: 'restart_alt',
+            icon: 'settings_applications',
         ), new AdminNavigationDescriptor(
             // The server's software and the system's updates (simai-env 1.38.0).
             id: 'env.software',
@@ -221,7 +221,7 @@ final class ServerAdminNavigationContributor implements AdminNavigationContribut
             surface: 'product',
             labelKey: 'larena-env::admin.software.php.navigation',
             activeRoutePattern: 'larena.env.admin.software.php*',
-            icon: 'code',
+            icon: 'code_blocks',
         ), new AdminNavigationDescriptor(
             // The firewall, each change undone by the server unless kept in time (Panel plan 5.2).
             id: 'env.firewall',
@@ -240,7 +240,7 @@ final class ServerAdminNavigationContributor implements AdminNavigationContribut
             surface: 'product',
             labelKey: 'larena-env::admin.firewall.navigation',
             activeRoutePattern: 'larena.env.admin.firewall*',
-            icon: 'shield',
+            icon: 'shield_person',
         ), new AdminNavigationDescriptor(
             // The server's security: score, problems with their fixes, the level, the files (simai-env 1.45.0–1.47.0).
             id: 'env.security',
@@ -354,7 +354,7 @@ final class ServerAdminNavigationContributor implements AdminNavigationContribut
             surface: 'product',
             labelKey: 'larena-env::admin.navigation',
             activeRoutePattern: 'larena.env.admin.*',
-            icon: 'dns',
+            icon: 'hard_drive',
         )];
         // Each row of a screen a newer simai-env brings, by the command it needs (Panel plan stage 5).
         $needs = self::NEEDS;

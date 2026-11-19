@@ -91,9 +91,9 @@ final class PlanAction
                 }
             }
         } elseif ($command === 'site:restore-ready') {
-            // «Восстановить из архива»: what is unpacked, which database the dump goes to, what is replaced and the copy
-            // before, in the panel's words; the server's plan names only the files (simai-env 1.63.3).
-            $facts = RestoreWords::facts((string) $target, self::restoreArgs($plan, $hidden), self::restoreText(...));
+            // «Восстановить из архива»: what is unpacked where, which database the dump goes to and what it holds now, what
+            // is replaced and the copy before, from what the server's check found (simai-env 1.63.4), in the panel's words.
+            $facts = RestoreWords::facts((string) $target, self::restoreArgs($plan, $hidden), $plan->restore, self::restoreText(...));
         } elseif ($plan->transfer !== null || ($plan->account !== null && $plan->account['sites'] !== [])) {
             // Sites moving between server accounts (simai-env 1.57.0, 1.63.1): from whom to whom in the panel's words, not
             // the server's values.
@@ -139,7 +139,7 @@ final class PlanAction
             acceptText: $destroys ? $heading : ($heading !== $command ? $heading : (self::text('plan.confirm') ?? '')),
             danger: $destroys,
             // What deletes, replaces or stops something says so on the plate: the panel's sentence, else the server's (simai-env 1.60.0).
-            consequence: $command === 'site:restore-ready' ? RestoreWords::consequence(self::restoreArgs($plan, $hidden), self::restoreText(...))
+            consequence: $command === 'site:restore-ready' ? RestoreWords::consequence(self::restoreArgs($plan, $hidden), $plan->restore, self::restoreText(...))
                 : (($destroys || in_array($key, self::SAID_CONSEQUENCES, true) ? self::text('plan.consequence.'.$key) : null) ?? $plan->consequence ?? ''),
             require: $destroys && $target !== null ? $target : '',
             facts: $facts,

@@ -1,7 +1,7 @@
 {{-- The server's plan for the step's change, in the panel's words; the server's own terms under «Подробнее». Nothing
      changes until «Выполнить». --}}
 <p class="m-0" data-env-setup-plan="{{ $plan->command }}">{{ __('larena-env::admin.setup.review') }}</p>
-<dl class="m-0" style="display: block;" data-env-facts>
+<dl class="m-0" style="display: block;" data-env-facts data-larena-action-details>
     @foreach (\Larena\Env\Admin\PlanValues::of($plan->args, $plan->target) as $row)
         <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-plan-argument="{{ $row['name'] }}"><dt class="color-on-surface-variant">{{ $row['label'] }}</dt><dd class="m-0 min-w-0 text-end" style="overflow-wrap: anywhere;">{{ $row['value'] }}</dd></div>
     @endforeach

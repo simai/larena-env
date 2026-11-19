@@ -12,7 +12,7 @@ use Larena\Env\Server\Moment;
  * «Люди» as the admin's shared list of resources (roles study part 7, PX-67…PX-70; lists C31): a dot says whether the
  * person works or is blocked, the name over the email (the signed-in person reads «вы», never their address), what they
  * may do in words — «Весь сервер», «Свои сайты: 3» — and the last sign-in by its own time. No «Группы»: the panel has its
- * two levels only. In the row «Посмотреть как он» for a person of their own sites, and «⋯» with the card and blocking.
+ * two levels only. «⋯» holds the card, «Посмотреть как он» for a person of their own sites, blocking and removing.
  * «Пригласить человека» is the list's one filled button; it opens the invitation form in the side panel.
  */
 final class ServerPeoplePage
@@ -58,9 +58,12 @@ final class ServerPeoplePage
             rowWrites: $canOperate ? ['edit' => ['url' => '/admin/server/people/act', 'fields' => ['subject' => 'user:admin_identity:__ID__'],
                 'label' => $text('people.act_as')]] : [],
             layout: 'list',
-            quickActions: $canOperate ? ['edit'] : [],
+            // No buttons in the row (the panel's UX audit, 1440: «Посмотреть как он» broke onto two lines): every action
+            // of a person stands in «⋯».
+            quickActions: [],
             rowActions: $canOperate ? ['block' => ['label' => $text('people.block.open'), 'icon' => 'block', 'href' => '/admin/server/people/__ID__/block'],
-                'unblock' => ['label' => $text('people.block.unopen'), 'icon' => 'lock_open', 'href' => '/admin/server/people/__ID__/block']] : [],
+                'unblock' => ['label' => $text('people.block.unopen'), 'icon' => 'lock_open', 'href' => '/admin/server/people/__ID__/block'],
+                'remove' => ['label' => $text('people.removal.open'), 'icon' => 'delete', 'href' => '/admin/server/people/__ID__/remove']] : [],
             emptyText: $text('people.empty'),
             emptyDescription: $text('people.empty_description'),
         );
@@ -102,6 +105,7 @@ final class ServerPeoplePage
         }
         if ($canOperate && !$self) {
             $actions[] = $person['blocked'] ? 'unblock' : 'block';
+            $actions[] = 'remove';
         }
 
         // Invited by mail and not answered yet (C335): «Приглашён», and until when the link works where the panel sent it.
@@ -117,7 +121,8 @@ final class ServerPeoplePage
                 'email' => $person['email'],
                 'can' => ['label' => $text('people.state.invited'), 'text' => $left ?? $text('people.state.invited'), 'status' => 'warning'],
                 'last' => ['label' => $left ?? $text('people.never'), 'text' => $left ?? $text('people.never')],
-                '_actions' => ['view'],
+                // An invitation still waiting can be taken back: «Удалить человека».
+                '_actions' => $canOperate && !$self ? ['view', 'remove'] : ['view'],
             ];
         }
 

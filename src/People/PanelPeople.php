@@ -56,6 +56,11 @@ final readonly class PanelPeople
         $sites = self::sitesByOwner($overview);
         $rows = [];
         foreach ($people as $user) {
+            // A removed person (Auth's terminal state, «Удалить человека») is no longer one of the panel's people; the
+            // journal keeps their name.
+            if ((string) $user['status'] === 'revoked') {
+                continue;
+            }
             $subject = (string) $user['subject_ref'];
             $level = self::LEVELS[(string) ($user['role_code'] ?? '')] ?? self::READ;
             $owner = $level === self::ALL ? null : ($assigned[$subject] ?? null);
@@ -65,7 +70,7 @@ final readonly class PanelPeople
                 'name' => (string) $user['display_name'],
                 'email' => (string) $user['email'],
                 'level' => $level,
-                'blocked' => in_array((string) $user['status'], ['disabled', 'revoked'], true) || ($owner !== null && in_array($owner, $overview->blockedOwners ?? [], true)),
+                'blocked' => (string) $user['status'] === 'disabled' || ($owner !== null && in_array($owner, $overview->blockedOwners ?? [], true)),
                 'owner' => $owner,
                 'sites' => $owner === null ? [] : ($sites[$owner] ?? []),
                 'last' => $last[(int) $user['id']] ?? null,

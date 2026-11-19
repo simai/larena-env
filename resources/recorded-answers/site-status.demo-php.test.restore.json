@@ -1,0 +1,25 @@
+{
+  "schema": "simai-panel-answer/1",
+  "request_id": "fixture-site-status.demo-php.test.restore",
+  "status": "ok",
+  "kind": "result",
+  "data": {
+    "schema": "simai-site-status/1",
+    "domain": "demo-php.test",
+    "profile": "generic",
+    "suspended": false,
+    "route": "restore",
+    "step": "restore",
+    "next": "site:restore-ready",
+    "restore_url": null,
+    "installer_url": null,
+    "pending": [],
+    "detail": {
+      "index": "index.php",
+      "archive": "site.zip",
+      "dump": "db.sql.gz"
+    }
+  },
+  "command_status": "success",
+  "operation_id": "20261119042105863786252"
+}

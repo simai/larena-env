@@ -75,6 +75,9 @@ final readonly class PeopleController
         private ?MailLetters $letters = null,
         private ?RegistrationActivationBoundaryService $invitations = null,
         private ?InvitationLetter $letter = null,
+        private ?\Larena\Auth\Runtime\AdminCredentialLifecycleService $credentials = null,
+        private ?\Larena\Auth\Contracts\ActivationChallengeStore $challenges = null,
+        private ?\Illuminate\Database\DatabaseManager $database = null,
     ) {
     }
 
@@ -453,6 +456,113 @@ final readonly class PeopleController
         }
 
         return NoticeRedirect::to($request, self::cardOf($found['subject']), $done);
+    }
+
+    /**
+     * «Удалить человека»: the plan in words before anything changes — their sign-in, open sessions and an invitation
+     * still waiting go; the journal keeps their name; their server account (the «Свои сайты» level) stays with its
+     * sites, removed apart where the server can and it has none. Never oneself, never the last of the whole server.
+     */
+    public function removePlan(Request $request, string $person): mixed
+    {
+        $user = self::user($request);
+        $overview = $this->overviews->read(new PanelActor($user))->overview;
+        $found = $this->person($person, $user, $overview);
+        $refused = $this->removalRefused($found, $user, $overview);
+        if ($refused !== null) {
+            return $this->back($request, $refused, $found === null ? null : self::cardOf($found['subject']));
+        }
+        $text = $this->text();
+        $facts = [
+            [$text('people.removal.fact_gone'), $text($found['pending'] ? 'people.removal.fact_gone_invited' : 'people.removal.fact_gone_value')],
+            [$text('people.removal.fact_kept'), $text('people.removal.fact_kept_value', ['name' => $found['name']])],
+        ];
+        if ($found['owner'] !== null) {
+            $sites = count($found['sites']);
+            $apart = $sites === 0 && $overview?->capabilities?->allows('owner:remove') === true;
+            $facts[] = [$text('people.block.fact_account', ['account' => $found['owner']]),
+                $text($sites > 0 ? 'people.removal.fact_account_sites' : ($apart ? 'people.removal.fact_account_apart' : 'people.removal.fact_account_kept'), ['count' => (string) $sites])];
+        }
+
+        return $this->views->make('larena-env::admin.people-plan', [
+            'heading' => $text('people.removal.open'),
+            'action' => new AdminPlannedAction(
+                question: $text('people.removal.question', ['name' => $found['name']]),
+                runUrl: route('larena.env.admin.people.remove.run', ['person' => (string) $found['id']], false),
+                token: (string) $request->session()->token(),
+                runFields: ['remove' => 'yes'],
+                acceptText: $text('people.removal.accept'),
+                danger: true,
+                consequence: $text('people.removal.consequence'),
+                facts: $facts,
+                cancelUrl: self::cardOf($found['subject']),
+                key: 'env-person-remove',
+            ),
+        ]);
+    }
+
+    public function removeRun(Request $request, string $person): RedirectResponse
+    {
+        $user = self::user($request);
+        $overview = $this->overviews->read(new PanelActor($user))->overview;
+        $found = $this->person($person, $user, $overview);
+        $refused = $this->removalRefused($found, $user, $overview) ?? ($request->input('remove') !== 'yes' ? 'person_remove_unconfirmed' : null);
+        if ($refused !== null || $found === null) {
+            return $this->back($request, $refused ?? 'person_unknown');
+        }
+        if ($this->credentials === null) {
+            return $this->back($request, 'person_remove_unavailable', self::cardOf($found['subject']));
+        }
+        try {
+            // Auth's terminal state: no sign-in, every session ended; the last administrator is refused inside it.
+            $result = $this->credentials->revoke($found['email'], $user);
+            if (!$result->succeeded()) {
+                return NoticeRedirect::to($request, self::cardOf($found['subject']), $this->refusalText($result->status));
+            }
+            // An invitation still waiting: its link stops working with the sign-in.
+            if ($found['pending'] && $this->challenges !== null && $this->database !== null) {
+                $this->database->connection()->transaction(fn (): bool => $this->challenges->revokeOutstandingForIdentityAtomically(
+                    $found['id'], \Illuminate\Support\Carbon::now(), 'identity_removed'));
+            }
+        } catch (DomainException|InvalidArgumentException $failure) {
+            return NoticeRedirect::to($request, self::cardOf($found['subject']), $this->refusalText($failure->getMessage()));
+        }
+        // The panel's own records of them; the server account stays (the «Свои сайты» level's sites keep working).
+        $this->owners->release($found['subject']);
+        if ($found['secret'] && $found['level'] !== PanelPeople::ALL) {
+            $this->secrets?->set($found['subject'], false, $user);
+        }
+        $this->audit->record('env.person.removed', $user, $found['subject'],
+            ['name' => $found['name']] + ($found['owner'] !== null ? ['owner' => $found['owner']] : []));
+
+        return NoticeRedirect::to($request, route('larena.env.admin.people', [], false),
+            (string) $this->translator->get('larena-env::admin.people.removal.done', ['name' => $found['name']]));
+    }
+
+    /**
+     * Why a person may not be removed, or null: unknown, oneself, or the last person of the whole server who works.
+     *
+     * @param array{id: int, subject: string, level: string, blocked: bool, pending: bool}|null $found
+     */
+    private function removalRefused(?array $found, string $user, ?ServerOverview $overview): ?string
+    {
+        if ($found === null) {
+            return 'person_unknown';
+        }
+        if ($found['subject'] === $user) {
+            return 'person_remove_self';
+        }
+        if ($found['level'] === PanelPeople::ALL && !$found['blocked'] && !$found['pending']) {
+            foreach ($this->peopleOf($user, $overview) as $other) {
+                if ($other['id'] !== $found['id'] && $other['level'] === PanelPeople::ALL && !$other['blocked'] && !$other['pending']) {
+                    return null;
+                }
+            }
+
+            return 'person_remove_last';
+        }
+
+        return null;
     }
 
     /** The panel as one of its people sees it: their space, asked as them and marked as acted for. */

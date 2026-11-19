@@ -75,7 +75,7 @@
                 <div class="larena-panel larena-panel-padded m-y-2" role="alert" data-env-job-secret data-larena-action-keep="{{ __('larena-env::admin.job.secret_keep') }}">
                     <h3 class="m-top-0 text-medium">{{ __('larena-env::admin.routes.password.title') }}</h3>
                     <p>{{ __('larena-env::admin.routes.password.save_now') }}</p>
-                    <dl class="m-0" style="display: block;" data-env-facts>
+                    <dl class="m-0" style="display: block;" data-env-facts data-larena-action-details>
                         <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.routes.password.user') }}</dt><dd class="m-0 min-w-0 text-end mono">{{ $status->secret->user }}</dd></div>
                         <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.routes.password.password') }}</dt><dd class="m-0 min-w-0 text-end mono" style="overflow-wrap: anywhere;" data-env-job-password>{{ $status->secret->password }}</dd></div>
                     </dl>
@@ -113,7 +113,7 @@
                 <div class="larena-panel larena-panel-padded m-y-2" role="alert" data-env-job-credentials data-larena-action-keep="{{ __('larena-env::admin.database.credentials.keep') }}">
                     <h3 class="m-top-0 text-medium">{{ __('larena-env::admin.database.credentials.title') }}</h3>
                     <p><strong>{{ __('larena-env::admin.database.credentials.secret') }}</strong> {{ __('larena-env::admin.database.credentials.once') }}</p>
-                    <dl class="m-0" style="display: block;" data-env-facts>
+                    <dl class="m-0" style="display: block;" data-env-facts data-larena-action-details>
                         @foreach (['engine', 'host', 'port', 'database', 'user'] as $field)
                             @if ($status->credentials->{$field} !== null)
                                 <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.database.credentials.'.$field) }}</dt><dd class="m-0 min-w-0 text-end mono" style="overflow-wrap: anywhere;" data-env-job-credential="{{ $field }}">{{ $field === 'engine' && __('larena-env::admin.new_site.engines.'.$status->credentials->engine) !== 'larena-env::admin.new_site.engines.'.$status->credentials->engine ? __('larena-env::admin.new_site.engines.'.$status->credentials->engine) : $status->credentials->{$field} }}</dd></div>
@@ -155,7 +155,7 @@
                 {{-- The next step (PX-6, PX-15): the list after a removal, the site over https, HTTPS after WordPress. --}}
                 <p><a href="{{ \Larena\Env\Admin\JobOutcome::next($status)[0] }}" class="larena-button {{ $status->state->value === 'succeeded' ? 'larena-button-primary' : '' }}" data-env-job-next>{{ \Larena\Env\Admin\JobOutcome::next($status)[1] }}</a></p>
             @endif
-            <dl class="m-0" style="display: block;" data-env-facts>
+            <dl class="m-0" style="display: block;" data-env-facts data-larena-action-details>
                 {{-- The reader's own time (PX-6), the full moment on hover; who started it is the journal's. --}}
                 {{-- In the server's own zone (simai-env 1.60.0 self:describe timezone), how long ago in the tooltip. --}}
                 @foreach (['started' => $status->startedAt ?? $status->createdAt, 'finished' => $status->finishedAt] as $which => $moment)
@@ -171,7 +171,7 @@
                  failure, folded otherwise. --}}
             <details class="m-y-2" data-env-job-server @if ($status->state->value === 'failed') open @endif>
                 <summary class="color-primary" style="cursor: pointer;">{{ __('larena-env::admin.more') }}</summary>
-                <dl class="m-0" style="display: block;" data-env-facts>
+                <dl class="m-0" style="display: block;" data-env-facts data-larena-action-details>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.plan.command') }}</dt><dd class="m-0 min-w-0 text-end mono">{{ $status->command }}</dd></div>
                     <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.job.exit_code') }}</dt><dd class="m-0 min-w-0 text-end">{{ $status->exitCode ?? '—' }}</dd></div>
                 </dl>

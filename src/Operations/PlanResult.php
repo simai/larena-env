@@ -18,6 +18,9 @@ final readonly class PlanResult
         public bool $refused = false,
         public ?PlanChecks $checks = null,
         public ?string $detail = null,
+        // What a restore's check found before it refused (simai-env 1.63.4 `data.restore`): the tables, the engine.
+        /** @var array<string, mixed>|null */
+        public ?array $restore = null,
     ) {
     }
 

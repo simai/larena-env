@@ -72,9 +72,9 @@
       "status": "ok"
     },
     "job-status.site-restore-ready.json": {
-      "sha256": "85c872cf9e9d187e8c35b0cb7566a7a9676272abce8a6f736672c719c53f3278",
+      "sha256": "ed95301055d98ecb798637171d42637469c6110463e2196ee1f40573271f3c57",
       "status": "ok",
-      "recorded_from": "simai-env v1.63.3, the panel stand's gateway (site renamed to the set's own)"
+      "recorded_from": "simai-env v1.63.4, the panel stand's gateway (site renamed to the set's own)"
     },
     "job-wp-install-status-again.json": {
       "sha256": "d5a89dbf610cde6059979a67f63116f294eb57745a3039130262f066b350ea49",
@@ -344,9 +344,9 @@
       "status": "ok"
     },
     "plan.site-restore-ready.json": {
-      "sha256": "fbaf0549fe0255fe8403ef27f92ae67d140c5024d007d52d8599b4cdc4ee5ca0",
+      "sha256": "2b6be41e38e56dc0b0ef56057d4aaf7df442e793ab84881165a2d0a3995cb40c",
       "status": "ok",
-      "recorded_from": "simai-env v1.63.3, the panel stand's gateway (site renamed to the set's own)"
+      "recorded_from": "simai-env v1.63.4, the panel stand's gateway (site renamed to the set's own)"
     },
     "plan.site-set-php.json": {
       "sha256": "aba65c453fa369808e07962f3ee4e36c7da14285b2404e6cf5bd12c131f9e9dc",
@@ -415,6 +415,11 @@
     "refused.invalid-argument.service-name.json": {
       "sha256": "efd5b5c01a5f8e1091212a9fbf298027caed8ba17871beab40863f939246464d",
       "status": "refused"
+    },
+    "refused.invalid-argument.site-restore-path.json": {
+      "sha256": "efd5b5c01a5f8e1091212a9fbf298027caed8ba17871beab40863f939246464d",
+      "status": "refused",
+      "recorded_from": "simai-env v1.63.4 testing/fixtures/panel"
     },
     "refused.invalid-argument.wp-restore-path.json": {
       "sha256": "efd5b5c01a5f8e1091212a9fbf298027caed8ba17871beab40863f939246464d",
@@ -541,45 +546,75 @@
       "sha256": "32349f5549a1065851173f70516008b6c1db48a50462d0df320db0ade8d709b9",
       "status": "refused"
     },
+    "refused.plan-failed.site-restore-ready.archive-kind.json": {
+      "sha256": "41d81ef1ec498de174ae9211dfc92c474b3139b8287b2d6e5207e5aa34386b68",
+      "status": "refused",
+      "recorded_from": "simai-env v1.63.4, the panel stand's gateway (site renamed to the set's own)"
+    },
     "refused.plan-failed.site-restore-ready.database-not-empty.json": {
-      "sha256": "e782609526beb0cba5d20fef15d894718b2c7a43b6d8f00c80140ce2bf3692a3",
-      "status": "failed",
-      "recorded_from": "simai-env v1.63.3, the panel stand's gateway (site renamed to the set's own)"
+      "sha256": "f736a641ebaee7c87b78cd00cb5b8f7d2e1b910d06f841052e7c2bae0041b009",
+      "status": "refused",
+      "recorded_from": "simai-env v1.63.4, the panel stand's gateway (site renamed to the set's own)"
     },
     "refused.plan-failed.site-restore-ready.dump-kind.json": {
-      "sha256": "8e0340ce1145559b4d68478a3bd48ed8f7e508e70d54672da508f7fedb5981cd",
-      "status": "failed",
-      "recorded_from": "simai-env v1.63.3, the panel stand's gateway (site renamed to the set's own)"
+      "sha256": "6511123307c6283cab84b30ff199e05cdb5cdd96635579d1d3d5d355a4780e00",
+      "status": "refused",
+      "recorded_from": "simai-env v1.63.4, the panel stand's gateway (site renamed to the set's own)"
     },
-    "refused.plan-failed.site-restore-ready.file-link.json": {
-      "sha256": "7b9d7dca695acdf9cf92d9145bcaf612af941bccbad5e12b007d2a151ce8ae4d",
-      "status": "failed",
-      "recorded_from": "simai-env v1.63.3, the panel stand's gateway (site renamed to the set's own)"
+    "refused.plan-failed.site-restore-ready.dump-missing.json": {
+      "sha256": "075d60c2f5ab69a5c618c02334d04faa77bbab4f7a8b7a89fe18f1ebf24573ec",
+      "status": "refused",
+      "recorded_from": "simai-env v1.63.4, the panel stand's gateway (site renamed to the set's own)"
     },
     "refused.plan-failed.site-restore-ready.file-missing.json": {
-      "sha256": "9b01d5396d0de8a414086fe961dcd0de76deb98e0564ad52eab0f1a503a65457",
-      "status": "failed",
-      "recorded_from": "simai-env v1.63.3, the panel stand's gateway (site renamed to the set's own)"
+      "sha256": "77ec96cf249d825f2428354c11ba15641eaf29eda09c880a3dbef8515de3b8df",
+      "status": "refused",
+      "recorded_from": "simai-env v1.63.4, the panel stand's gateway (site renamed to the set's own)"
     },
-    "refused.plan-failed.site-restore-ready.files-kind.json": {
-      "sha256": "dbc90e9a57d850b1a7c703cd811882fc3eace66f6c18979c51d8a33bfdc87516",
-      "status": "failed",
-      "recorded_from": "simai-env v1.63.3, the panel stand's gateway (site renamed to the set's own)"
+    "refused.plan-failed.site-restore-ready.files-is-dump.json": {
+      "sha256": "2e644bdf1522bc282ca27aa055cce35f9cacd9b67a29bb62ca177da25608639a",
+      "status": "refused",
+      "recorded_from": "simai-env v1.63.4, the panel stand's gateway (site renamed to the set's own)"
     },
     "refused.plan-failed.site-restore-ready.files-present.json": {
-      "sha256": "d3a501e3a158606aa7121106a75894719457ff4c36dc24048336a8c3eae622f6",
-      "status": "failed",
-      "recorded_from": "simai-env v1.63.3, the panel stand's gateway (site renamed to the set's own)"
+      "sha256": "430dec5f08b2c9e3cb47498ca2dff6870cf5c82b79beabaa3651708cb9b517f4",
+      "status": "refused",
+      "recorded_from": "simai-env v1.63.4, the panel stand's gateway (site renamed to the set's own)"
+    },
+    "refused.plan-failed.site-restore-ready.json": {
+      "sha256": "89b3cb391c045f17e3da34e91f69c7b155af52d8a1673437fbd8b07cb9dd6cf0",
+      "status": "refused",
+      "recorded_from": "simai-env v1.63.4 testing/fixtures/panel"
     },
     "refused.plan-failed.site-restore-ready.no-database.json": {
-      "sha256": "7d9fa9b0039343592e6f5e7a797560713f5b80e86de286abdf5736e7f347ee8f",
-      "status": "failed",
-      "recorded_from": "simai-env v1.63.3, the panel stand's gateway (site renamed to the set's own)"
+      "sha256": "28a23e19276d0589a598085fcc294f6d9e6e114d68cbbd839ec771b6f14ade11",
+      "status": "refused",
+      "recorded_from": "simai-env v1.63.4, the panel stand's gateway (site renamed to the set's own)"
+    },
+    "refused.plan-failed.site-restore-ready.not-file.json": {
+      "sha256": "433853dba4506f062e176a6bebcd91253b86b828456de853aefec388c71f58a9",
+      "status": "refused",
+      "recorded_from": "simai-env v1.63.4, the panel stand's gateway (site renamed to the set's own)"
+    },
+    "refused.plan-failed.site-restore-ready.profile-wp.json": {
+      "sha256": "d7e0a5734145546a01ba6b1cc59344bd4a1b28b34b0a3d72d414c40be17d7eac",
+      "status": "refused",
+      "recorded_from": "simai-env v1.63.4, the panel stand's gateway (site renamed to the set's own)"
     },
     "refused.plan-failed.site-restore-ready.profile.json": {
-      "sha256": "c5113c1acfa40d1dc15107fc7253a9b30b33d4c37dc3543aa7a02053347d3068",
-      "status": "failed",
-      "recorded_from": "simai-env v1.63.3, the panel stand's gateway (site renamed to the set's own)"
+      "sha256": "9b323a14b25e4ea64e482bca10e97650be7f058372bfc4a6eeea0f09dcfa9f47",
+      "status": "refused",
+      "recorded_from": "simai-env v1.63.4, the panel stand's gateway (site renamed to the set's own)"
+    },
+    "refused.plan-failed.site-restore-ready.site-missing.json": {
+      "sha256": "f32dc91ead393ebac96cc68e16f0290c7d0cb29317f8a5f210323eba92b5e441",
+      "status": "refused",
+      "recorded_from": "simai-env v1.63.4, the panel stand's gateway (site renamed to the set's own)"
+    },
+    "refused.plan-failed.site-restore-ready.symlink.json": {
+      "sha256": "61bf3ec9281919be5e212fd7ff2dab510e74a15ca1f783802f133d26333de7f5",
+      "status": "refused",
+      "recorded_from": "simai-env v1.63.4, the panel stand's gateway (site renamed to the set's own)"
     },
     "refused.profile-disabled.json": {
       "sha256": "24d5662fa64085de4653ed9f61d1a45f74a778c96bc2937b3606237162276e13",
@@ -792,6 +827,16 @@
       "sha256": "be25c684490fddbd8e32bb8432b8be256b15e2702b604cadb7870853f8157ab3",
       "status": "ok",
       "recorded_from": "simai-env v1.56.1, testing/fixtures/panel/site-status.demo-php.test.json"
+    },
+    "site-status.demo-php.test.restore-upload.json": {
+      "sha256": "a45d30079bae843a5a9608076c69a6283de7e9bf75dd3e6b1217be5b8da8971e",
+      "status": "ok",
+      "recorded_from": "simai-env v1.63.4, the panel stand's gateway (site renamed to the set's own)"
+    },
+    "site-status.demo-php.test.restore.json": {
+      "sha256": "0c7d63ba8b2e78530dbe36b82758af754351d08b16a11672e3697214575380c3",
+      "status": "ok",
+      "recorded_from": "simai-env v1.63.4, the panel stand's gateway (site renamed to the set's own)"
     },
     "site-status.demo-redirect.test.json": {
       "sha256": "162b5336291bac3f7f12b15bd01607c1b9b48bbade6ef68e1427abbf9991ea39",

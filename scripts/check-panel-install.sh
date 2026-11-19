@@ -707,11 +707,35 @@ _, mail = get("/admin/server/settings/mail")
 _, off_plan = post("/admin/server/settings/mail/plan", {"_token": form_token(mail), "action": "off"})
 post("/admin/server/settings/mail/run", {"_token": form_token(off_plan), "plan": re.search(r'name="plan" value="([0-9a-f]{24})"', off_plan).group(1)})
 print("mail step 2 checked:", len(caught), "letters caught")
+
+# «Удалить человека»: the plan says what goes (the sign-in, the sessions) and what stays (the journal, the server
+# account with its sites); after it the person is gone from «Люди» and cannot sign in, and the journal keeps the name.
+import sqlite3
+ids = dict(sqlite3.connect(sys.argv[5] + "/database/database.sqlite").execute("select email, id from larena_admin_identities"))
+invited_id, staff_id, self_id = ids["invited@example.test"], ids["staff@example.test"], ids[email]
+cards = {number: get("/admin/server/people/" + str(number))[1] for number in (invited_id, staff_id, self_id)}
+assert "data-env-person-remove" in cards[invited_id] and "data-env-person-remove" not in cards[self_id], "removing is offered for others, never oneself"
+_, own_removal = get("/admin/server/people/" + str(self_id) + "/remove")
+assert "You cannot remove yourself." in own_removal and "data-env-person-plan" not in own_removal, "oneself is refused in words"
+_, staff_plan = get("/admin/server/people/" + str(staff_id) + "/remove")
+assert "Server account demo" in staff_plan and "stays with its sites" in staff_plan, "the server account is not removed with the person"
+_, removal = get("/admin/server/people/" + str(invited_id) + "/remove")
+assert "data-env-person-plan" in removal and "panel sign-in and every open session" in removal and "journal entries, with the name «Invited»" in removal, "the plan says what goes and what stays"
+_, removed = post("/admin/server/people/" + str(invited_id) + "/remove", {"_token": form_token(removal), "remove": "yes"})
+assert "Invited is removed." in removed and "invited@example.test" not in removed, "the person is gone from «Люди»"
+_, history = get("/admin/history?shown=50")
+assert "Person removed" in history and "Invited" in history, "the journal keeps the name"
+jar.clear()
+_, login = get("/admin/login")
+post("/admin/login", {"_token": form_token(login), "email": "invited@example.test", "password": again})
+with web.open(base + "/admin/server") as answer:
+    assert "/admin/login" in answer.geturl(), ("a removed person cannot sign in", answer.geturl())
+print("removing a person checked")
 PY
 python3 - "$APP/database/database.sqlite" <<'PY' >>"$LOG" 2>&1 || failed "audit"
 import sqlite3, sys
 types = {row[0] for row in sqlite3.connect(sys.argv[1]).execute("select event_type from larena_audit_events where event_type like 'env.%'")}
-assert {"env.person.owner_assigned", "env.acting_as.started", "env.acting_as.stopped"} <= types, types
+assert {"env.person.owner_assigned", "env.acting_as.started", "env.acting_as.stopped", "env.person.removed"} <= types, types
 print("audit:", sorted(types))
 PY
 kill "$SERVER_PID" 2>/dev/null || true

@@ -3,7 +3,7 @@
 @if ($plans === null)
     <p class="m-0" data-env-setup-unsupported>{{ __('larena-env::admin.setup.unsupported') }}</p>
 @else
-    <dl class="m-0" style="display: block;" data-env-facts>
+    <dl class="m-0" style="display: block;" data-env-facts data-larena-action-details>
         @foreach ($plans as $target => $one)
             <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-setup-update="{{ $target }}">
                 <dt class="color-on-surface-variant">{{ __('larena-env::admin.update.targets.'.$target) }}</dt>

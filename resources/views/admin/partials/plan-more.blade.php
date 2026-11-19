@@ -25,7 +25,7 @@
      for a copy the free disk against three times the archive. --}}
 @if (($resources ?? null) !== null)
     <h3 class="m-top-2 m-bottom-1 text-medium" data-env-plan-resources>{{ __('larena-env::admin.routes.resources.title') }}</h3>
-    <dl class="m-0" style="display: block;" data-env-facts>
+    <dl class="m-0" style="display: block;" data-env-facts data-larena-action-details>
         @if ($resources->ramMb !== null && $resources->ramMinMb > 0)
             <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-plan-ram><dt class="color-on-surface-variant">{{ __('larena-env::admin.routes.resources.ram') }}</dt><dd class="m-0 min-w-0 text-end">{{ __('larena-env::admin.routes.resources.ram_value', ['have' => \Larena\Env\Server\Bytes::human($resources->ramMb * 1048576), 'min' => \Larena\Env\Server\Bytes::human($resources->ramMinMb * 1048576), 'recommended' => \Larena\Env\Server\Bytes::human(max($resources->ramRecommendedMb, $resources->ramMinMb) * 1048576)]) }}</dd></div>
         @endif

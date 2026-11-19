@@ -1,9 +1,26 @@
 {
   "schema": "simai-panel-answer/1",
   "request_id": "fixture-refused.plan-failed.site-restore-ready.dump-kind",
-  "status": "failed",
-  "reason": "plan_failed",
+  "status": "refused",
+  "reason": "dump_kind",
   "data": {
+    "restore": {
+      "schema": "simai-site-restore-plan/1",
+      "root": "/home/simai/www/demo-php.test",
+      "doc_root": "/home/simai/www/demo-php.test/public",
+      "public_dir": "public",
+      "files": "site.zip",
+      "dump": "notes.txt",
+      "database": {
+        "exists": true,
+        "engine": "mysql",
+        "name": "demo_php_test",
+        "tables": 0
+      },
+      "files_present": false,
+      "overwrite": false,
+      "backup": false
+    },
     "checks": {
       "blockers": [
         "--dump must be a .sql, .sql.gz or .sql.zip file"

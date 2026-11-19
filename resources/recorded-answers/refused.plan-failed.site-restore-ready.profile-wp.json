@@ -1,0 +1,31 @@
+{
+  "schema": "simai-panel-answer/1",
+  "request_id": "fixture-refused.plan-failed.site-restore-ready.profile-wp",
+  "status": "refused",
+  "reason": "profile_wordpress",
+  "data": {
+    "restore": {
+      "schema": "simai-site-restore-plan/1",
+      "root": null,
+      "doc_root": null,
+      "public_dir": null,
+      "files": null,
+      "dump": null,
+      "database": {
+        "exists": false,
+        "engine": null,
+        "name": null,
+        "tables": null
+      },
+      "files_present": false,
+      "overwrite": false,
+      "backup": false
+    },
+    "checks": {
+      "blockers": [
+        "demo-wp.test is a WordPress site: use wp restore-ready"
+      ],
+      "notes": []
+    }
+  }
+}

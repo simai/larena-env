@@ -49,6 +49,9 @@ $router->middleware(['access:env.server.operate'])->group(static function ($rout
     $router->post('/people/invite/run', [PeopleController::class, 'inviteRun'])->name('larena.env.admin.people.invite.run');
     $router->get('/people/{person}/block', [PeopleController::class, 'blockPlan'])->where('person', '[1-9][0-9]{0,17}')->name('larena.env.admin.people.block');
     $router->post('/people/{person}/block', [PeopleController::class, 'blockRun'])->where('person', '[1-9][0-9]{0,17}')->name('larena.env.admin.people.block.run');
+    // «Удалить человека»: planned in words, then confirmed.
+    $router->get('/people/{person}/remove', [PeopleController::class, 'removePlan'])->where('person', '[1-9][0-9]{0,17}')->name('larena.env.admin.people.remove');
+    $router->post('/people/{person}/remove', [PeopleController::class, 'removeRun'])->where('person', '[1-9][0-9]{0,17}')->name('larena.env.admin.people.remove.run');
 });
 // DNS through the provider's API (Panel plan, stage 7): the zones and the connection are the system level's.
 $router->middleware(['access:env.dns.read'])->group(static function ($router): void {

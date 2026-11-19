@@ -155,26 +155,12 @@ final class JobOutcome
         $over = $status->state !== JobState::Running;
         foreach ($status->steps as $step) {
             $open = $over && $step['finished'] === null;
-            $steps[] = ['id' => 'step-'.$step['id'], 'title' => self::stepTitle($status, $step['title']) ?? self::text('job.step_waiting', ['number' => $step['id']]), 'state' => $step['state']]
+            $steps[] = ['id' => 'step-'.$step['id'], 'title' => $step['title'] ?? self::text('job.step_waiting', ['number' => $step['id']]), 'state' => $step['state']]
                 + ($step['started'] !== null && !$open ? ['started' => (string) \Larena\Env\Server\Moment::iso($step['started'])] : [])
                 + ($step['finished'] !== null ? ['finished' => (string) \Larena\Env\Server\Moment::iso($step['finished'])] : []);
         }
 
         return $steps;
-    }
-
-    /**
-     * A step's words, as the server gives them, except a restore's last step: simai-env 1.63.3 says «Moving the archive
-     * and the dump to the site's trash» through its words of a site's handing over («Сайт … переходит к аккаунту …»),
-     * half English; the panel says that step itself until the server's words are right.
-     */
-    private static function stepTitle(PanelJobStatus $status, ?string $title): ?string
-    {
-        if ($status->command === 'site:restore-ready' && $title !== null && str_contains($title, "the site's trash")) {
-            return self::text('restore.step_trash');
-        }
-
-        return $title;
     }
 
     /** Where a running job stands in words: «2 из 5: Создаётся база»; empty without steps or once over. */
@@ -185,7 +171,7 @@ final class JobOutcome
         }
         $replace = ['current' => (string) $status->progress['current'], 'total' => (string) $status->progress['total']];
 
-        return $status->progress['title'] !== null ? self::text('job.where', $replace + ['title' => (string) self::stepTitle($status, $status->progress['title'])]) : self::text('job.where_bare', $replace);
+        return $status->progress['title'] !== null ? self::text('job.where', $replace + ['title' => (string) $status->progress['title']]) : self::text('job.where_bare', $replace);
     }
 
     /** How often a running job's page reads it again, in milliseconds (every 2–3 s, owner 2026-11-18). */

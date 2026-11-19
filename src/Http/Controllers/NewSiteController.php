@@ -410,7 +410,9 @@ final readonly class NewSiteController
         if ($db === 'required') {
             $fields[] = ['name' => 'db-note', 'kind' => 'note', 'label' => '', 'value' => $this->text('new_site.wizard.db_required')];
         } elseif ($db === 'optional') {
-            $fields[] = ['name' => 'create-db', 'kind' => 'switch', 'label' => $this->text('new_site.wizard.db_optional'), 'value' => ($values['create-db'] ?? 'no') === 'yes' ? 'yes' : '',
+            // On by the server's default for the kind (self:profiles `create-db`, «yes» for a PHP site), off where it says no.
+            $dbDefault = $server[$kind]->args['create-db']['default'] ?? 'yes';
+            $fields[] = ['name' => 'create-db', 'kind' => 'switch', 'label' => $this->text('new_site.wizard.db_optional'), 'value' => ($values['create-db'] ?? $dbDefault) === 'yes' ? 'yes' : '',
                 'hint' => $this->text('new_site.wizard.db_optional_hint')];
         }
         if ($this->schedules($overview) && self::backsUp($kind, $server)) {

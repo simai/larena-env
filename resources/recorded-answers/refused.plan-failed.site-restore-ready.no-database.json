@@ -1,9 +1,26 @@
 {
   "schema": "simai-panel-answer/1",
   "request_id": "fixture-refused.plan-failed.site-restore-ready.no-database",
-  "status": "failed",
-  "reason": "plan_failed",
+  "status": "refused",
+  "reason": "no_database",
   "data": {
+    "restore": {
+      "schema": "simai-site-restore-plan/1",
+      "root": "/home/simai/www/demo-owned.test",
+      "doc_root": "/home/simai/www/demo-owned.test/public",
+      "public_dir": "public",
+      "files": "site.zip",
+      "dump": "db.sql.gz",
+      "database": {
+        "exists": false,
+        "engine": null,
+        "name": null,
+        "tables": null
+      },
+      "files_present": false,
+      "overwrite": false,
+      "backup": false
+    },
     "checks": {
       "blockers": [
         "demo-owned.test has no database for the dump: simai-admin.sh site db-create --domain demo-owned.test --confirm yes"

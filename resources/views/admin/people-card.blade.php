@@ -55,8 +55,13 @@
                 @if ($canAddKey && $person['owner'] !== null)
                     <sf-button appearance="outline" scheme="on-surface" text="{{ __('larena-env::admin.people.add_key') }}" data-sf-modal-open="env-person-key" data-env-person-key></sf-button>
                 @endif
-                <sf-button appearance="outline" scheme="on-surface" href="{{ route('larena.env.admin.people.block', ['person' => (string) $person['id']], false) }}"
-                    text="{{ $text('block.'.($person['blocked'] ? 'unopen' : 'open')) }}" data-env-person-block></sf-button>
+                @if (!$person['pending'])
+                    <sf-button appearance="outline" scheme="on-surface" href="{{ route('larena.env.admin.people.block', ['person' => (string) $person['id']], false) }}"
+                        text="{{ $text('block.'.($person['blocked'] ? 'unopen' : 'open')) }}" data-env-person-block></sf-button>
+                @endif
+                {{-- «Удалить человека»: its plan says what goes and what stays. --}}
+                <sf-button appearance="outline" scheme="on-surface" icon-start="delete" href="{{ route('larena.env.admin.people.remove', ['person' => (string) $person['id']], false) }}"
+                    text="{{ $text('removal.open') }}" data-env-person-remove></sf-button>
             </div>
         @endif
     </section>

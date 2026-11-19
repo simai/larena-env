@@ -402,7 +402,8 @@ final class NewSitePropertyViewPort extends PropertyViewPort
                 readonly: $readonly, hint: $this->hint('new_site.php_default_hint'), default: is_string($default) && in_array($default, $versions, true) ? $default : null);
         }
         if (in_array('database', $groups, true)) {
-            $wanted = $profile?->db === 'required' || in_array($kind, ['laravel', 'wordpress', 'bitrix'], true);
+            // On by the server's default for the kind (self:profiles `create-db`: «yes» for a PHP site too).
+            $wanted = $profile?->db === 'required' || ($profile?->args['create-db']['default'] ?? null) === 'yes' || in_array($kind, ['laravel', 'wordpress', 'bitrix'], true);
             $fields[] = new PropertyField('create_db', 'boolean', 1, $this->text('new_site.database', 'Create a database'), readonly: $readonly,
                 hint: $this->hint('new_site.database_hint'), default: $wanted);
             $engines = $profile?->values('db-engine') ?? ['mysql', 'pgsql'];

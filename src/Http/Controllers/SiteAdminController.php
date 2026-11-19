@@ -245,6 +245,15 @@ final readonly class SiteAdminController
         // A failed or missing backup said where backups are; the rest of what needs attention is in the admin's alert bar.
         $siteWarnings = $overview === null || $tab !== 'backups' ? null : ($this->warningSource ?? new PanelWarningSource($this->extras))->ofSite($actor, $overview, $domain, PanelWarnings::now());
         $siteNames = $ask('site:names', 'domains') ? $this->names?->read($actor, $domain) : null;
+        // The site's archives and dumps (file:list) are asked once per page: the restore step and the overview's form share them.
+        $copies = false;
+        $copiesOnce = function () use (&$copies, $actor, $domain, $capabilities): ?array {
+            if ($copies === false) {
+                $copies = $this->restoreCopies($actor, $domain, $capabilities);
+            }
+
+            return $copies;
+        };
 
         $this->breadcrumbs($request, $domain, $tab);
 
@@ -257,7 +266,7 @@ final readonly class SiteAdminController
             'phpVersions' => $tab === 'php' && $site !== null ? \Larena\Env\Software\PhpSupport::forSite($this->profileOf($actor, $site->profile, $capabilities),
                 $overview->phpVersions ?? [], $site->php) : [],
             // «Восстановить из архива» (simai-env 1.57.1): the archives and dumps found in the site's root.
-            'restoreCopies' => $tab === 'overview' && in_array(SiteOperation::PhpRestore, $operations, true) ? $this->restoreCopies($actor, $domain, $capabilities) : null,
+            'restoreCopies' => $tab === 'overview' && in_array(SiteOperation::PhpRestore, $operations, true) ? $copiesOnce() : null,
             'phpSettings' => $ask('site:php-ini-list', 'php') ? $this->extras->phpSettings($actor, $domain) : null,
             'phpExtensions' => $ask('php:extensions', 'php') && $site->php !== 'none' ? $this->extras->phpExtensions($actor, $site->php) : null,
             'databases' => $ask('db:list', 'database') ? $this->extras->databases($actor, $domain) : null,
@@ -302,7 +311,7 @@ final readonly class SiteAdminController
             // Where the site stands on its creation route (simai-env 1.56.0), with its next step through the plan; a server
             // without site:status shows the overview as before, without a refusal.
             'siteRoute' => $site !== null && $tab === 'overview' && $capabilities->allows('site:status')
-                ? $this->routeBlock($request, $actor, $site, $capabilities) : null,
+                ? $this->routeBlock($request, $actor, $site, $capabilities, $copiesOnce) : null,
             // The fix of a profile's rule that does not pass (simai-env 1.55.1), offered on the rule's own row of «Проверка»
             // only where the server lists site:check-fix; an older server shows the block as before.
             'checkFixes' => $capabilities->allows(SiteOperation::CheckFix->command()),
@@ -455,7 +464,8 @@ final readonly class SiteAdminController
      *
      * @return array<string, mixed>|null
      */
-    private function routeBlock(Request $request, PanelActor $actor, \Larena\Env\Server\SiteDetails $site, PanelCapabilities $capabilities): ?array
+    /** @param \Closure(): ?array{files: list<string>, dumps: list<string>} $copiesOnce the site's archives and dumps, read once per page */
+    private function routeBlock(Request $request, PanelActor $actor, \Larena\Env\Server\SiteDetails $site, PanelCapabilities $capabilities, \Closure $copiesOnce): ?array
     {
         $status = $this->routes?->status($actor, $site->domain);
         if ($status === null || !$status->worthShowing()) {
@@ -468,15 +478,27 @@ final readonly class SiteAdminController
             }
         }
         $route = $profile?->route($status->route);
-        // A plain PHP site waiting for its files with an archive already in its folder: the next step is «Восстановить из
-        // архива», on the kind's restore route (the server's status does not tell this route from a new site's yet).
+        // A plain PHP site on its restore route (simai-env 1.63.4: route `restore` once an archive or a dump is in its folder,
+        // step `restore` with an archive, `upload` with a dump only): «Восстановить из архива» with the archive, else the
+        // site's files to upload it. An older server says route `none` and `file:upload`: an archive found among the site's
+        // files (asked once per page, with the overview's form) is the same step.
         $copies = null;
         $restoring = false;
-        if (($status->profile ?? $site->profile) === 'generic' && in_array($status->next, ['file:upload', 'site:restore-ready'], true)
-            && $capabilities->allows(SiteOperation::PhpRestore->command())) {
-            $copies = $this->restoreCopies($actor, $site->domain, $capabilities);
-            $restoring = ($copies['files'] ?? []) !== [] || $status->next === 'site:restore-ready';
-            if ($restoring && $profile?->route('restore') !== null) {
+        $uploading = false;
+        if (($status->profile ?? $site->profile) === 'generic' && $capabilities->allows(SiteOperation::PhpRestore->command())) {
+            if ($status->route === 'restore') {
+                $restoring = $status->step === 'restore' || $status->next === 'site:restore-ready';
+                $uploading = !$restoring && $status->step !== 'done';
+                $copies = $restoring ? $copiesOnce() : null;
+            } elseif (in_array($status->next, ['file:upload', 'site:restore-ready'], true)) {
+                $copies = $copiesOnce();
+                $restoring = ($copies['files'] ?? []) !== [] || $status->next === 'site:restore-ready';
+            }
+            if ($restoring && ($copies['files'] ?? []) === [] && isset($status->detail['archive'])) {
+                // The archive the server found, where the site's files could not be listed.
+                $copies = ['files' => [basename($status->detail['archive'])], 'dumps' => isset($status->detail['dump']) ? [basename($status->detail['dump'])] : []];
+            }
+            if (($restoring || $uploading) && $profile?->route('restore') !== null) {
                 $route = $profile->route('restore');
             }
         }
@@ -511,16 +533,16 @@ final readonly class SiteAdminController
 
         return [
             'status' => $status,
-            'route' => $restoring ? $known('routes.names_of.generic_restore', $route->title ?? 'restore') : $known('routes.names.'.$status->route, $route->title ?? $status->route),
+            'route' => $restoring || $uploading ? $known('routes.names_of.generic_restore', $route->title ?? 'restore') : $known('routes.names.'.$status->route, $route->title ?? $status->route),
             'steps' => $steps,
             'current' => $status->step === 'done' ? count($steps) : $current,
-            'stepText' => $restoring ? $known('routes.at.restore', $status->step) : $known('routes.at.'.$status->step, $status->step),
+            'stepText' => $restoring ? $known('routes.at.restore', $status->step) : ($uploading ? $known('routes.at.restore_dump', $status->step) : $known('routes.at.'.$status->step, $status->step)),
             'nextText' => $restoring ? $known('routes.steps.site_restore_ready', 'site:restore-ready') : ($status->next === null ? null : $known('routes.steps.'.\Larena\Env\Admin\RouteWords::stepKey($status->next, $status->restoreUrl !== null ? 'restore_url' : 'installer_url'), $status->next)),
             'openUrl' => $status->openUrl(),
             // A step the panel does not lead here (a release archive): said, and done outside the panel.
             'outside' => !$restoring && $status->next !== null && !in_array($status->next, ['open_url', 'file:upload', 'cron:add'], true) && $operation === null,
             // A step done in another section of the card: the files of the site, its scheduled jobs.
-            'tab' => $restoring ? null : match ($status->next) {'file:upload' => 'files', 'cron:add' => 'cron', default => null},
+            'tab' => $restoring ? null : ($uploading ? 'files' : match ($status->next) {'file:upload' => 'files', 'cron:add' => 'cron', default => null}),
             'operation' => $operation,
             'fields' => $operation === null ? [] : array_values(array_filter($operation->fields(), static fn (string $field): bool => $capabilities->takes($operation->command(), $field))),
             // What the person gave when the site was made (a WordPress title, a repository), offered again at its step.
@@ -848,7 +870,7 @@ final readonly class SiteAdminController
         }
         $result = $this->operations->plan($actor, $operation, $domain, $input);
         if ($result->plan === null) {
-            $refused = $this->refusedPlan($operation, $domain, $result);
+            $refused = $this->refusedPlan($operation, $domain, $result, $input);
 
             return $refused ?? $this->back($request, $domain, $result->reason ?? 'answer_shape_invalid', $operation->tab(), $operation);
         }
@@ -879,7 +901,8 @@ final readonly class SiteAdminController
      * server's own blockers, or its detail — above a button that stays off; what is worth knowing below; and where HTTPS
      * is what is missing, «Выпустить сертификат». Null when the server said nothing a person can act on.
      */
-    private function refusedPlan(SiteOperation $operation, string $domain, \Larena\Env\Operations\PlanResult $result): mixed
+    /** @param array<string, string> $input what the person chose, for a restore's refusal that names its file */
+    private function refusedPlan(SiteOperation $operation, string $domain, \Larena\Env\Operations\PlanResult $result, array $input = []): mixed
     {
         $reason = $result->reason ?? 'answer_shape_invalid';
         $reasons = [];
@@ -893,14 +916,12 @@ final readonly class SiteAdminController
             $reasons[] = $transferRefusal;
         }
         $blockers = $result->checks->blockers ?? [];
-        $restoreCodes = [];
-        // A restore from the site's archive (site:restore-ready): the server's English lines, each said as the panel's
-        // sentence; the lines themselves stand under «Подробнее».
-        if ($operation === SiteOperation::PhpRestore && $blockers !== []) {
-            $restore = \Larena\Env\Admin\RestoreWords::refusals($blockers,
-                fn (string $key, array $replace): string => (string) $this->translator->get('larena-env::admin.restore.'.$key, $replace));
-            $reasons = $restore['said'];
-            $restoreCodes = $restore['codes'];
+        // A restore from the site's archive (site:restore-ready): the server's named refusal (simai-env 1.63.4) said as the
+        // panel's sentence, with what its check found (the tables, the engine); its English lines stand under «Подробнее».
+        $restoreRefusal = $operation === SiteOperation::PhpRestore ? \Larena\Env\Admin\RestoreWords::refusal($reason, $input, $result->restore,
+            fn (string $key, array $replace): string => (string) $this->translator->get('larena-env::admin.restore.'.$key, $replace)) : null;
+        if ($restoreRefusal !== null) {
+            $reasons[] = $restoreRefusal;
         }
         // The panel's own sentence says it once; the server's words of the same refusal (with its console command) stand
         // under «Подробнее», not as a second warning (FASTPANEL comparison 2026-11-18).
@@ -937,7 +958,7 @@ final readonly class SiteAdminController
         $site = route('larena.env.admin.site', ['domain' => $domain], false);
         $more = '';
         // An archive or a dump that is not there, or not of its kind: the way to the site's files, where it is uploaded.
-        if (array_intersect($restoreCodes, ['missing', 'link', 'not_file', 'files_kind', 'dump_kind', 'files_is_dump']) !== []) {
+        if ($restoreRefusal !== null && in_array($reason, \Larena\Env\Admin\RestoreWords::TO_FILES, true)) {
             $more = '<a href="'.e($site.'?tab=files&path=.').'" class="larena-button" data-env-plan-restore-files>'
                 .e((string) $this->translator->get('larena-env::admin.restore.to_files')).'</a>';
         }

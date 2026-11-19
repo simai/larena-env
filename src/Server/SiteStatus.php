@@ -9,13 +9,17 @@ use UnexpectedValueException;
 /**
  * Where a site stands on its creation route (site:status, simai-site-status/1, simai-env 1.56.0), the same for every kind:
  * the route (new, restore, repo, installed or none), the step (an id of the route's steps, or done), the gateway command
- * of the next step (or open_url, or none), the addresses an open_url step opens and what the next step changes.
+ * of the next step (or open_url, or none), the addresses an open_url step opens and what the next step changes; `detail`
+ * names what the server found (a PHP site's archive and dump on its restore route, simai-env 1.63.4).
  */
 final readonly class SiteStatus
 {
     private const string SCHEMA = 'simai-site-status/1';
 
-    /** @param list<string> $pending */
+    /**
+     * @param list<string> $pending
+     * @param array<string, string> $detail what the server found, by name, the empty ones left out
+     */
     public function __construct(
         public string $domain,
         public ?string $profile,
@@ -25,6 +29,7 @@ final readonly class SiteStatus
         public ?string $restoreUrl,
         public ?string $installerUrl,
         public array $pending,
+        public array $detail = [],
     ) {
     }
 
@@ -48,8 +53,15 @@ final readonly class SiteStatus
             }
         }
 
+        $detail = [];
+        foreach (is_array($data['detail'] ?? null) ? $data['detail'] : [] as $name => $value) {
+            if (is_string($name) && is_string($value) && $value !== '' && mb_strlen($value) <= 500) {
+                $detail[$name] = $value;
+            }
+        }
+
         return new self($data['domain'], is_string($data['profile'] ?? null) ? $data['profile'] : null, $data['route'], $data['step'],
-            is_string($data['next'] ?? null) && $data['next'] !== '' ? $data['next'] : null, $url('restore_url'), $url('installer_url'), $pending);
+            is_string($data['next'] ?? null) && $data['next'] !== '' ? $data['next'] : null, $url('restore_url'), $url('installer_url'), $pending, $detail);
     }
 
     /** Whether the site is still on its way: a step to take, or a creation route just finished. */
