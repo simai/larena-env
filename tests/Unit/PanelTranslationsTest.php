@@ -50,7 +50,7 @@ foreach ($files as $pattern) {
 // The panel's pages, letters and settings words: every key of ru in ru's order, the same placeholders, nothing Russian,
 // no sentence left in English, and the words the code reads as data in each language's form.
 $pages = ['resources/lang/%s/admin.php', 'resources/lang/%s/mail.php', 'assembly/lang/vendor/larena-admin/%s/settings.php'];
-$translated = ['de', 'fr', 'es', 'it', 'pt-BR', 'zh-Hans', 'ja', 'ko'];
+$translated = $languages;
 foreach ($pages as $pattern) {
     $ru = $flat(require $root.'/'.sprintf($pattern, 'ru'));
     $en = $flat(require $root.'/'.sprintf($pattern, 'en'));
