@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "88668212b0091c084a102511a5c7537a",
+    "content-hash": "ade2a5e75b703500df9c71874d828871",
     "packages": [
         {
             "name": "brick/math",
@@ -1574,12 +1574,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:simai/larena-admin.git",
-                "reference": "063a6c8543974e3c3f7ba9e934d6802a01611612"
+                "reference": "b930874c0007d7e287a9624e7602bc16d1ae29d3"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-admin/zipball/063a6c8543974e3c3f7ba9e934d6802a01611612",
-                "reference": "063a6c8543974e3c3f7ba9e934d6802a01611612",
+                "url": "https://api.github.com/repos/simai/larena-admin/zipball/b930874c0007d7e287a9624e7602bc16d1ae29d3",
+                "reference": "b930874c0007d7e287a9624e7602bc16d1ae29d3",
                 "shasum": ""
             },
             "require": {
@@ -1808,7 +1808,7 @@
                 }
             ],
             "description": "Larena Admin: Object-based, permission-aware administration platform for package contributions, screens, actions and diagnostics.",
-            "time": "2026-11-19T02:50:11+00:00"
+            "time": "2026-11-19T05:18:13+00:00"
         },
         {
             "name": "larena/audit",
@@ -1926,12 +1926,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:simai/larena-auth.git",
-                "reference": "059cb70bfcc080752f12f9d641abb67f0cb216da"
+                "reference": "9dc2b2787677052d4c87a976ede3b502caf6e47e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-auth/zipball/059cb70bfcc080752f12f9d641abb67f0cb216da",
-                "reference": "059cb70bfcc080752f12f9d641abb67f0cb216da",
+                "url": "https://api.github.com/repos/simai/larena-auth/zipball/9dc2b2787677052d4c87a976ede3b502caf6e47e",
+                "reference": "9dc2b2787677052d4c87a976ede3b502caf6e47e",
                 "shasum": ""
             },
             "require": {
@@ -2039,7 +2039,7 @@
                 }
             ],
             "description": "Larena Auth package: entry subject resolution, authentication methods, sessions, MFA and token channel boundaries.",
-            "time": "2026-11-19T02:17:57+00:00"
+            "time": "2026-11-19T06:52:57+00:00"
         },
         {
             "name": "larena/core",
@@ -2934,12 +2934,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/simai/larena-ui.git",
-                "reference": "eced1374ad57ddfa4a9934a0c8a8e253b62380d5"
+                "reference": "50a7f478bd2a22be6bc0e787318717c6f3cdc95d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-ui/zipball/eced1374ad57ddfa4a9934a0c8a8e253b62380d5",
-                "reference": "eced1374ad57ddfa4a9934a0c8a8e253b62380d5",
+                "url": "https://api.github.com/repos/simai/larena-ui/zipball/50a7f478bd2a22be6bc0e787318717c6f3cdc95d",
+                "reference": "50a7f478bd2a22be6bc0e787318717c6f3cdc95d",
                 "shasum": ""
             },
             "require": {
@@ -3080,10 +3080,10 @@
             ],
             "description": "Larena UI: Universal UI/frontend package for Larena smart components, backend-first rendering, hydration, design packs, UI asset graph, component registry, playground and frontend behavior contracts.",
             "support": {
-                "source": "https://github.com/simai/larena-ui/tree/larena-a57887949f9a",
+                "source": "https://github.com/simai/larena-ui/tree/main",
                 "issues": "https://github.com/simai/larena-ui/issues"
             },
-            "time": "2026-11-13T11:34:36+00:00"
+            "time": "2026-11-19T05:16:58+00:00"
         },
         {
             "name": "league/commonmark",
