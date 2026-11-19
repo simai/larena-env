@@ -19,5 +19,13 @@ return [
             'description' => 'A link for a new password cannot be sent. Ask another administrator of the panel. If there is none, set the password on the server: sign in to the server over SSH (ssh -t) and run «sudo /root/simai-env/simai-admin.sh panel reset-password --confirm yes» — it asks for the address and the new password.',
         ],
     ],
+    // The Framework sign-in look's «Забыли пароль?» while mail is off (C335): whom to ask, and for the only
+    // administrator the server's command with a copy button.
+    'sign_in' => [
+        'forgot_page' => [
+            'only_admin' => 'If you are the only administrator, sign in to the server over SSH (ssh -t) and run this — it asks for the address and the new password:',
+            'command' => 'sudo /root/simai-env/simai-admin.sh panel reset-password --confirm yes',
+        ],
+    ],
     'users' => ['navigation' => 'Panel users'],
 ];

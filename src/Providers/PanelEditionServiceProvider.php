@@ -52,6 +52,16 @@ final class PanelEditionServiceProvider extends ServiceProvider
         $this->app->singleton(SetupLink::class, static fn (Application $app): SetupLink => new SetupLink(new EnvFile($app->basePath('.env'))));
         // An invitation by mail waits 72 hours for its answer (plan «Приглашение»): 30 minutes is too short for one.
         $config->set('larena-auth.user_invitation.activation_expiry_minutes', self::INVITATION_HOURS * 60);
+        // The panel's sign-in screens in the SIMAI Framework look (owner decisions C355-C363, C378-C383); the CMS keeps the
+        // admin's. A new password is twelve characters that are not a common one (C358), and an ended session opens the
+        // sign-in window over the page instead of losing what was typed (C347, C351).
+        $config->set('larena-auth.sign_in', [
+            'look' => 'framework',
+            'product' => 'Larena Panel',
+            'languages' => ['ru', 'en', 'zh-Hans', 'es', 'pt-BR', 'de', 'fr', 'it', 'ja', 'ko', 'ar'],
+            'session_window' => true,
+        ]);
+        $config->set('larena-auth.passwords.rule', 'not_common');
         // Who invites and what the person will do, for the one invitation letter of a request.
         $this->app->scoped(InvitationLetter::class, static fn (): InvitationLetter => new InvitationLetter());
         $this->app->bind(PasswordChangedLetter::class, static fn (Application $app): PasswordChangedLetter => new PasswordChangedLetter(

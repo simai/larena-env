@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "a569f78f227c25a39f01cfc1d13450aa",
+    "content-hash": "753f01c1424497792596f16231422a00",
     "packages": [
         {
             "name": "brick/math",
@@ -1924,12 +1924,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:simai/larena-auth.git",
-                "reference": "43226ac97ac61486e5aaa8c5cf7337992bc1217d"
+                "reference": "a36767a69d2887c219f2b83d964d0e6803d589c2"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-auth/zipball/43226ac97ac61486e5aaa8c5cf7337992bc1217d",
-                "reference": "43226ac97ac61486e5aaa8c5cf7337992bc1217d",
+                "url": "https://api.github.com/repos/simai/larena-auth/zipball/a36767a69d2887c219f2b83d964d0e6803d589c2",
+                "reference": "a36767a69d2887c219f2b83d964d0e6803d589c2",
                 "shasum": ""
             },
             "require": {

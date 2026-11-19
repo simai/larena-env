@@ -24,7 +24,7 @@
         "larena/access": "dev-main#d612683795774996a2135e5db9c9d538138fc9cf",
         "larena/admin": "dev-main#2c36c05e5f35fc73b4c7e51df25459091f9bd69a",
         "larena/audit": "dev-main#2fa8a5768f86a7d0955ad88e56f5b167dad56b51",
-        "larena/auth": "dev-main#43226ac97ac61486e5aaa8c5cf7337992bc1217d",
+        "larena/auth": "dev-main#a36767a69d2887c219f2b83d964d0e6803d589c2",
         "larena/core": "dev-main#359416eb1aea28386ae9db20a68c5edc9bd86491",
         "larena/dataview": "dev-main#9e18f3f120f3c9db74bedaf5655a8e90d74e62e2",
         "larena/env": "dev-main",
