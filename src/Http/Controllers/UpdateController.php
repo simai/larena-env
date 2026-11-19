@@ -13,6 +13,7 @@ use Larena\Env\Gateway\PanelActor;
 use Larena\Env\Gateway\PanelCapabilities;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\NoticeRedirect;
+use Larena\Env\Http\Support\PlanReceipts;
 use Larena\Env\Operations\PanelOperations;
 use Larena\Env\Server\SiteExtrasReader;
 use Larena\Env\Update\UpdatePlan;
@@ -34,6 +35,7 @@ final readonly class UpdateController
         private Translator $translator,
         private ?AccessOperationAuthorizer $authorizer = null,
         private ?\Larena\Env\Server\ServerOverviewReader $overviews = null,
+        private PlanReceipts $receipts = new PlanReceipts(),
     ) {
     }
 
@@ -152,7 +154,7 @@ final readonly class UpdateController
             'update' => $update,
             'runUrl' => route('larena.env.admin.update.run', [], false),
             'cancelUrl' => route('larena.env.admin.update', [], false),
-            'hidden' => ['target' => $target],
+            'hidden' => ['target' => $target, PlanReceipts::FIELD => $this->receipts->issue($request, 'self:update', ['target' => $target])],
         ]);
     }
 
@@ -161,6 +163,10 @@ final readonly class UpdateController
         $target = self::target($request);
         if ($target === null) {
             return $this->notice($request, 'invalid_argument');
+        }
+        // Only the update the person saw planned: its receipt, this target, once.
+        if (!$this->receipts->confirms($request, 'self:update', ['target' => $target])) {
+            return $this->notice($request, PlanReceipts::REFUSED);
         }
         $started = $this->operations->startCommand(ResolvePanelActor::of($request), 'self:update', ['target' => $target]);
         if ($started->jobId === null) {

@@ -361,21 +361,67 @@ env_assert(!str_contains($clean, 'data-env-rule') && !str_contains($clean, '<det
 // «Исправить…» opens the server's plan, which names the rule in words; the confirmation starts the job.
 $planRequest = $asking("/admin/server/sites/{$bitrix}/plan", 'POST', ['operation' => 'check-fix', 'id' => 'bitrix.db-session-modes']);
 $planView = $current->plan($planRequest, $bitrix);
-env_assert($planView instanceof \Illuminate\View\View && ($planView->getData()['hidden'] ?? null) === ['operation' => 'check-fix', 'id' => 'bitrix.db-session-modes']
+env_assert($planView instanceof \Illuminate\View\View && array_diff_key($planView->getData()['hidden'] ?? [], ['receipt' => true]) === ['operation' => 'check-fix', 'id' => 'bitrix.db-session-modes']
+    && strlen((string) ($planView->getData()['hidden']['receipt'] ?? '')) === 32
     && $planView->getData()['plan']->command === 'site:check-fix', 'The button opens the server\'s plan, the confirmation carrying the same rule.');
 $planPage = (string) $planView->render();
 env_assert(str_contains($planPage, 'data-env-plan="site:check-fix"') && str_contains($planPage, 'data-env-plan-check="bitrix.db-session-modes">MySQL modes for Bitrix</h3>')
     && str_contains($planPage, 'data-env-plan-check-detail>Now: after_connect_d7.php: partial</p>') && str_contains($planPage, 'data-env-plan-check-plan>Append sql_mode=')
     && !str_contains($planPage, 'data-env-plan-argument="id"') && str_contains($planPage, 'name="id" value="bitrix.db-session-modes"') && str_contains($planPage, 'data-env-confirm="site:check-fix"')
     && str_contains($planPage, '<h1>Fix a check finding</h1>'), 'The plan says which rule, what the server found and what it would do: '.$planPage);
-$ran = $current->run($asking("/admin/server/sites/{$bitrix}/run", 'POST', ['operation' => 'check-fix', 'id' => 'bitrix.db-session-modes']), $bitrix);
+// The confirmation is the plan's page sent back in the same session, its receipt with it.
+$runRequest = $asking("/admin/server/sites/{$bitrix}/run", 'POST', $planView->getData()['hidden']);
+$runRequest->setLaravelSession($planRequest->session());
+$ran = $current->run($runRequest, $bitrix);
 env_assert(str_contains($ran->getTargetUrl(), 'larena.env.admin.job/000000000000000000000000'), 'Confirmed, the job\'s screen follows.');
+
+// The plan's receipt (PlanReceipts) on the site's actions: none, another rule, an old one or one used already starts nothing.
+$fixes = new class ($serving(['site:check-state', 'site:check-fix'])) implements PanelGateway {
+    public int $started = 0;
+    public function __construct(private PanelGateway $inner) {}
+    public function ask(\Larena\Env\Gateway\PanelRequest $request): \Larena\Env\Gateway\PanelAnswer
+    {
+        $this->started += $request->confirm ? 1 : 0;
+
+        return $this->inner->ask($request);
+    }
+    public function source(): string { return 'recorded'; }
+};
+$siteClock = 1_800_000_000;
+$timedCard = new SiteAdminController(new SiteDetailsReader($fixes), new ServerOverviewReader($fixes), new SiteExtrasReader($fixes), new PanelOperations($fixes), $factory,
+    $translating($lines), receipts: env_plan_receipts($siteClock));
+$siteSession = new Store('panel', new ArraySessionHandler(10));
+$siteAsk = static function (string $step, array $input) use ($asking, $bitrix, $siteSession): Request {
+    $request = $asking("/admin/server/sites/{$bitrix}/{$step}", 'POST', $input);
+    $request->setLaravelSession($siteSession);
+
+    return $request;
+};
+$fixPlan = static fn (): array => $timedCard->plan($siteAsk('plan', ['operation' => 'check-fix', 'id' => 'bitrix.db-session-modes']), $bitrix)->getData()['hidden'];
+$fixRun = static fn (array $sent): RedirectResponse => $timedCard->run($siteAsk('run', $sent), $bitrix);
+$sent = $fixPlan();
+$fixRun(array_diff_key($sent, ['receipt' => true]));
+env_assert($fixes->started === 0 && $siteSession->get('larena_env_notice') === $text('reasons.plan_receipt'), 'Without the receipt: refused in words, nothing started.');
+$fixRun(['id' => 'bitrix.timezone'] + $sent);
+env_assert($fixes->started === 0, 'Another rule than the one planned is refused.');
+$sent = $fixPlan();
+$siteClock += 901;
+$fixRun($sent);
+env_assert($fixes->started === 0, 'A receipt older than 15 minutes is refused.');
+$sent = $fixPlan();
+env_assert(str_contains($fixRun($sent)->getTargetUrl(), 'larena.env.admin.job/') && $fixes->started === 1, 'The plan\'s receipt starts it.');
+$fixRun($sent);
+env_assert($fixes->started === 1, 'A receipt starts it once.');
 
 // A refusal is said in words on the overview, never as its code: in Russian as the owner reads it.
 $inRussian = $controller($serving(['site:check-fix']), $russian);
 foreach (['bitrix.timezone' => 'Уже исправлено.', 'bitrix.no-such' => 'Такой проверки у сайта нет.'] as $id => $words) {
     foreach (['plan', 'run'] as $step) {
         $request = $asking("/admin/server/sites/{$bitrix}/{$step}", 'POST', ['operation' => 'check-fix', 'id' => $id]);
+        // At the confirmation the server refuses after all: a plan was shown and confirmed (its receipt given here).
+        if ($step === 'run') {
+            $request->merge(['receipt' => (new \Larena\Env\Http\Support\PlanReceipts())->issue($request, 'site:check-fix', ['domain' => $bitrix, 'args' => ['id' => $id]])]);
+        }
         $answer = $inRussian->{$step}($request, $bitrix);
         env_assert($answer instanceof RedirectResponse && $answer->getTargetUrl() === "/admin/server/larena.env.admin.site/{$bitrix}?tab=overview"
             && $request->session()->get('larena_env_notice') === $words, "{$id} on {$step}: «{$words}», got ".(string) $request->session()->get('larena_env_notice'));

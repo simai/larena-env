@@ -245,22 +245,91 @@ $engines->register('blade', static fn () => new Illuminate\View\Engines\FileEngi
 $views = new Illuminate\View\Factory($engines, new Illuminate\View\FileViewFinder($files, []), new Illuminate\Events\Dispatcher());
 $views->addExtension('blade.php', 'blade');
 $views->addNamespace('larena-env', dirname(__DIR__, 2).'/resources/views');
+$clock = 1_800_000_000;
+$certificatesGateway = new class (new Larena\Env\Gateway\RecordedAnswersGateway(env_recorded_path())) implements Larena\Env\Contracts\PanelGateway {
+    public int $started = 0;
+    public function __construct(private Larena\Env\Contracts\PanelGateway $recorded) {}
+    public function ask(Larena\Env\Gateway\PanelRequest $request): Larena\Env\Gateway\PanelAnswer
+    {
+        $this->started += $request->confirm ? 1 : 0;
+
+        return $this->recorded->ask($request);
+    }
+    public function source(): string { return 'recorded'; }
+};
 $certificates = new Larena\Env\Http\Controllers\DnsCertificatesController(
-    new Larena\Env\Operations\PanelOperations(new Larena\Env\Gateway\RecordedAnswersGateway(env_recorded_path())), $connection, $views, $translator);
-$asked = static function (string $op, string $as = 'admin@stand.test'): Illuminate\Http\Request {
-    $request = Illuminate\Http\Request::create('/admin/server/dns/certificates/plan', 'POST', ['op' => $op]);
+    new Larena\Env\Operations\PanelOperations($certificatesGateway), $connection, $views, $translator, env_plan_receipts($clock));
+$certificatesSession = new Illuminate\Session\Store('panel', new Illuminate\Session\ArraySessionHandler(10));
+$asked = static function (string $op, string $as = 'admin@stand.test', ?string $receipt = null) use ($certificatesSession): Illuminate\Http\Request {
+    $request = Illuminate\Http\Request::create('/admin/server/dns/certificates/plan', 'POST', ['op' => $op] + ($receipt !== null ? ['receipt' => $receipt] : []));
     $request->attributes->set(Larena\Env\Http\Middleware\ResolvePanelActor::ATTRIBUTE, new Larena\Env\Gateway\PanelActor($as));
+    $request->setLaravelSession($certificatesSession);
 
     return $request;
 };
 $stored = $certificates->plan($asked('store'));
-env_assert($stored instanceof Illuminate\View\View && $stored->getData()['plan']->command === 'ssl:dns-credentials' && $stored->getData()['hidden'] === ['op' => 'store']
-    && !str_contains(json_encode($stored->getData()['hidden'], JSON_THROW_ON_ERROR), $token), 'Giving the token is planned; the page carries the step, not the token.');
+$storedReceipt = (string) ($stored->getData()['hidden']['receipt'] ?? '');
+env_assert($stored instanceof Illuminate\View\View && $stored->getData()['plan']->command === 'ssl:dns-credentials'
+    && array_diff_key($stored->getData()['hidden'], ['receipt' => true]) === ['op' => 'store'] && strlen($storedReceipt) === 32
+    && !str_contains(json_encode($stored->getData()['hidden'], JSON_THROW_ON_ERROR), $token), 'Giving the token is planned; the page carries the step and its receipt, not the token.');
 env_assert($certificates->plan($asked('remove')) instanceof Illuminate\View\View, 'Taking it back is planned too.');
-$run = $certificates->run($asked('store'));
-env_assert($run->getTargetUrl() !== '' && str_contains($run->getTargetUrl(), 'larena.env.admin.job'), 'Confirmed, a job: '.$run->getTargetUrl());
+// The confirmation carries the plan's receipt: without it, for the other step, again, or after 15 minutes, nothing is sent.
+$noReceipt = $certificates->run($asked('store'));
+env_assert($certificatesGateway->started === 0 && is_string($noReceipt->getSession()?->get('larena_env_notice')) && str_ends_with($noReceipt->getTargetUrl(), '#env-dns-certificates'),
+    'Without the receipt: refused in words, back to the connection, nothing sent.');
+$certificates->run($asked('remove', 'admin@stand.test', $storedReceipt));
+env_assert($certificatesGateway->started === 0, 'The receipt of giving the token does not take it back.');
+$stored = $certificates->plan($asked('store'));
+$clock += 901;
+$certificates->run($asked('store', 'admin@stand.test', (string) $stored->getData()['hidden']['receipt']));
+env_assert($certificatesGateway->started === 0, 'A receipt older than 15 minutes is refused.');
+$stored = $certificates->plan($asked('store'));
+$storedReceipt = (string) $stored->getData()['hidden']['receipt'];
+$certificates->run($asked('store', 'other@stand.test', $storedReceipt));
+env_assert($certificatesGateway->started === 0, 'Another person\'s confirmation is refused.');
+$stored = $certificates->plan($asked('store'));
+$storedReceipt = (string) $stored->getData()['hidden']['receipt'];
+$run = $certificates->run($asked('store', 'admin@stand.test', $storedReceipt));
+env_assert($certificatesGateway->started === 1 && $run->getTargetUrl() !== '' && str_contains($run->getTargetUrl(), 'larena.env.admin.job'), 'Confirmed, a job: '.$run->getTargetUrl());
+$certificates->run($asked('store', 'admin@stand.test', $storedReceipt));
+env_assert($certificatesGateway->started === 1, 'A receipt confirms once.');
 $wrong = $certificates->plan($asked('other'));
 env_assert($wrong instanceof Illuminate\Http\RedirectResponse && str_ends_with($wrong->getTargetUrl(), '#env-dns-certificates'), 'Anything else goes back to the connection.');
+
+// A DNS change by hand waits in its plan's receipt (PlanReceipts): confirmed once, by the person it was planned for,
+// within 15 minutes; the form sends only the receipt's id.
+$dnsClock = time();
+$dnsScreen = new Larena\Env\Http\Controllers\DnsController($dns, new Larena\Env\Server\SiteDetailsReader(new Larena\Env\Gateway\RecordedAnswersGateway(env_recorded_path())),
+    $views, $translator, receipts: env_plan_receipts($dnsClock));
+$dnsSession = new Illuminate\Session\Store('panel', new Illuminate\Session\ArraySessionHandler(10));
+$dnsAsked = static function (array $input, string $as = 'admin@stand.test') use ($dnsSession): Illuminate\Http\Request {
+    $request = Illuminate\Http\Request::create('/admin/server/dns', 'POST', $input);
+    $request->attributes->set(Larena\Env\Http\Middleware\ResolvePanelActor::ATTRIBUTE, new Larena\Env\Gateway\PanelActor($as));
+    $request->setLaravelSession($dnsSession);
+
+    return $request;
+};
+$txtCount = static fn (string $content): int => count(array_filter($dns->records($dns->zone($zoneId)), static fn ($record): bool => $record->content === $content));
+$dnsPlanned = static function (string $content) use ($dnsScreen, $dnsAsked, $zoneId): string {
+    $view = $dnsScreen->plan($dnsAsked(['action' => DnsChange::CREATE, 'type' => 'TXT', 'name' => '@', 'content' => $content]), $zoneId);
+    env_assert($view instanceof Illuminate\View\View && strlen((string) $view->getData()['planId']) === 32, 'The change is planned with its receipt.');
+
+    return (string) $view->getData()['planId'];
+};
+$late = $dnsPlanned('receipt-late');
+$dnsClock += 901;
+$dnsScreen->run($dnsAsked(['plan' => $late]));
+env_assert($txtCount('receipt-late') === 0, 'A plan older than 15 minutes is not made.');
+$other = $dnsPlanned('receipt-other');
+$dnsScreen->run($dnsAsked(['plan' => $other], 'staff@stand.test'));
+env_assert($txtCount('receipt-other') === 0, 'Another person\'s confirmation is refused.');
+$given = $dnsPlanned('receipt-made');
+$dnsScreen->run($dnsAsked(['plan' => $given]));
+env_assert($txtCount('receipt-made') === 1, 'The confirmed plan is made.');
+$dnsScreen->run($dnsAsked(['plan' => $given]));
+env_assert($txtCount('receipt-made') === 1, 'A plan is made once.');
+$dnsScreen->run($dnsAsked([]));
+env_assert($dnsSession->get('larena_env_notice') === 'larena-env::admin.dns.reasons.unknown', 'Without a receipt: refused, nothing made.');
 
 // Disconnecting forgets the token.
 $dns->disconnect('user:admin_identity:1');
@@ -314,6 +383,11 @@ $newer = new class ($recorded) implements Larena\Env\Contracts\PanelGateway {
             'status' => 'ok', 'kind' => 'result', 'data' => $data]);
     }
     public function source(): string { return 'recorded'; }
+    /** How many times a command was started (confirmed) since the list was last emptied. */
+    public function started(string $command): int
+    {
+        return count(array_filter($this->asked, static fn (Larena\Env\Gateway\PanelRequest $request): bool => $request->command === $command && $request->confirm));
+    }
 };
 $levelsController = new Larena\Env\Http\Controllers\AlertsController(new Larena\Env\Operations\PanelOperations($newer),
     new Larena\Env\Server\ServerOverviewReader($newer), new Larena\Env\Server\SiteExtrasReader($newer), $views, $translator, $encrypter);
@@ -328,7 +402,7 @@ $planned = static fn (): ?Larena\Env\Gateway\PanelRequest => array_values(array_
     static fn (Larena\Env\Gateway\PanelRequest $request): bool => $request->command === 'self:alerts-channel'))[0] ?? null;
 $onlyLevels = $levelsController->channelPlan($channelAsked(['kind' => 'telegram', 'target' => '', 'levels' => 'all']));
 env_assert($onlyLevels instanceof Illuminate\View\View && $planned()?->args === ['kind' => 'telegram', 'levels' => 'all']
-    && $onlyLevels->getData()['hidden'] === ['kind' => 'telegram', 'levels' => 'all'], 'Only «Что слать»: the current kind, no address, the levels: '.json_encode($planned()?->args));
+    && array_diff_key($onlyLevels->getData()['hidden'], ['receipt' => true]) === ['kind' => 'telegram', 'levels' => 'all'], 'Only «Что слать»: the current kind, no address, the levels: '.json_encode($planned()?->args));
 $newer->asked = [];
 $otherKind = $levelsController->channelPlan($channelAsked(['kind' => 'webhook', 'target' => '', 'levels' => 'all']));
 env_assert($otherKind instanceof Illuminate\Http\RedirectResponse && $planned() === null, 'Another kind needs its address.');
@@ -339,5 +413,52 @@ $newer->asked = [];
 $levelsController->channelPlan($channelAsked(['kind' => 'telegram', 'target' => '-1001234567', 'levels' => 'all']));
 $olderAsked = $planned();
 env_assert($olderAsked !== null && !array_key_exists('levels', $olderAsked->args), 'An older server is never sent levels.');
+
+// The alerts' changes go by their plan's receipt too: the channel, the test message and a single acknowledgement.
+$newer->version = '1.63.0';
+$alertsClock = 1_800_000_000;
+$receiptAlerts = new Larena\Env\Http\Controllers\AlertsController(new Larena\Env\Operations\PanelOperations($newer),
+    new Larena\Env\Server\ServerOverviewReader($newer), new Larena\Env\Server\SiteExtrasReader($newer), $views, $translator, $encrypter, null, env_plan_receipts($alertsClock));
+$alertsSession = new Illuminate\Session\Store('panel', new Illuminate\Session\ArraySessionHandler(10));
+$alertsAsked = static function (array $input) use ($alertsSession): Illuminate\Http\Request {
+    $request = Illuminate\Http\Request::create('/admin/server/alerts', 'POST', $input);
+    $request->attributes->set(Larena\Env\Http\Middleware\ResolvePanelActor::ATTRIBUTE, new Larena\Env\Gateway\PanelActor('admin@stand.test'));
+    $request->setLaravelSession($alertsSession);
+
+    return $request;
+};
+$alertsStarted = static fn (string $command): int => $newer->started($command);
+foreach ([
+    'channel' => [static fn (array $in) => $receiptAlerts->channelPlan($alertsAsked($in)), static fn (array $in) => $receiptAlerts->channelRun($alertsAsked($in)),
+        ['kind' => 'webhook', 'target' => 'https://hooks.example.org/panel', 'levels' => 'all'], 'self:alerts-channel', ['target' => 'https://evil.example.org/x']],
+    'test' => [static fn (array $in) => $receiptAlerts->testPlan($alertsAsked($in)), static fn (array $in) => $receiptAlerts->testRun($alertsAsked($in)),
+        [], 'self:alerts-test', null],
+    'ack' => [static fn (array $in) => $receiptAlerts->ackPlan($alertsAsked($in)), static fn (array $in) => $receiptAlerts->ackRun($alertsAsked($in)),
+        ['id' => '3591eb397633', 'back' => '/admin/server'], 'self:alerts-ack', ['id' => '3591eb397634']],
+] as $name => [$plan, $run, $input, $command, $changed]) {
+    $newer->asked = [];
+    $hidden = static function () use ($plan, $input): array {
+        $view = $plan($input);
+        env_assert($view instanceof Illuminate\View\View && strlen((string) ($view->getData()['hidden']['receipt'] ?? '')) === 32, 'Planned with a receipt.');
+
+        return $view->getData()['hidden'];
+    };
+    $first = $hidden();
+    $run(array_diff_key($first, ['receipt' => true]));
+    env_assert($alertsStarted($command) === 0, "{$name}: without the receipt nothing is sent.");
+    if ($changed !== null) {
+        $run($changed + $first);
+        env_assert($alertsStarted($command) === 0, "{$name}: a value changed after the plan is refused.");
+    }
+    $late = $hidden();
+    $alertsClock += 901;
+    $run($late);
+    env_assert($alertsStarted($command) === 0, "{$name}: an old receipt is refused.");
+    $given = $hidden();
+    $done = $run($given);
+    env_assert($alertsStarted($command) === 1 && str_contains($done->getTargetUrl(), 'larena.env.admin.job'), "{$name}: the receipt of the plan runs it: ".$done->getTargetUrl());
+    $run($given);
+    env_assert($alertsStarted($command) === 1, "{$name}: a receipt runs once.");
+}
 
 echo "DnsTest passed\n";

@@ -266,7 +266,7 @@ assert status == 200 and 'data-env-mail="none"' in mail and "data-env-mail-form"
 _, mail_plan = post("/admin/server/settings/mail/plan", {"_token": form_token(mail), "service": "smtp", "host": "127.0.0.1", "port": "9",
     "encryption": "none", "login": "box@corp.test", "password": "local-catcher-Pa55!", "from_address": "noreply@panel.test", "levels[]": "urgent"})
 assert "data-env-mail-plan" in mail_plan and "local-catcher-Pa55!" not in mail_plan and "spam" in mail_plan, "the mail change planned, the password not shown"
-plan_id = re.search(r'name="plan" value="([0-9a-f]{24})"', mail_plan).group(1)
+plan_id = re.search(r'name="plan" value="([0-9a-f]{32})"', mail_plan).group(1)
 _, mail = post("/admin/server/settings/mail/run", {"_token": form_token(mail_plan), "plan": plan_id})
 assert 'data-env-mail="unchecked"' in mail and "data-env-mail-test" in mail and "data-env-mail-spam" in mail, "kept, waiting for the test letter"
 _, mail = post("/admin/server/settings/mail/test", {"_token": form_token(mail)})
@@ -403,7 +403,8 @@ static = new_kind("static")
 planned = new_review(static, {"domain": "new.test", "daily-backup": "yes"})
 _, plain = post("/admin/server/sites/new/plan", {"_token": form_token(static), "domain": "new.test", "profile": "static", "daily-backup": "yes"})
 assert 'name="backup" value="yes"' in plain and "data-env-plan-then" not in plain, "a new site is planned with its daily backup"
-_, made = post("/admin/server/sites/new/review/answer", {"_token": form_token(planned), "wizard-action": "run"})
+# «Создать сайт» sends back the plan's receipt: only the plan shown runs (PlanReceipts).
+_, made = post("/admin/server/sites/new/review/answer", {"_token": form_token(planned), "wizard-action": "run", "receipt": hidden(planned, "receipt")})
 assert 'data-env-new-site="run"' in made and "data-env-new-run=" in made, "the wizard runs the site's plan"
 assert "daily backup is being turned on" not in made, "the daily backup came with the site, nothing is turned on after"
 # DNS lives in «Домены и HTTPS» and nginx in «PHP и веб-сервер» (the panel's UX audit): old links open there;
@@ -666,7 +667,7 @@ post("/admin/login", {"_token": form_token(login), "email": email, "password": p
 _, mail = get("/admin/server/settings/mail")
 _, mail_plan = post("/admin/server/settings/mail/plan", {"_token": form_token(mail), "service": "smtp", "host": "127.0.0.1", "port": str(catcher.getsockname()[1]),
     "encryption": "none", "login": email, "password": "catcher-Pa55!", "from_address": email, "from_name": "", "levels[]": "urgent"})
-_, mail = post("/admin/server/settings/mail/run", {"_token": form_token(mail_plan), "plan": re.search(r'name="plan" value="([0-9a-f]{24})"', mail_plan).group(1)})
+_, mail = post("/admin/server/settings/mail/run", {"_token": form_token(mail_plan), "plan": re.search(r'name="plan" value="([0-9a-f]{32})"', mail_plan).group(1)})
 _, mail = post("/admin/server/settings/mail/test", {"_token": form_token(mail)})
 assert 'data-env-mail="on"' in mail and len(caught) == 1, "the test letter left through the catcher: mail is on"
 _, mail = get("/admin/server/settings/mail")
@@ -705,7 +706,7 @@ assert "i***@example.test" in history and "c***@example.test" in history and "in
 catcher.close()
 _, mail = get("/admin/server/settings/mail")
 _, off_plan = post("/admin/server/settings/mail/plan", {"_token": form_token(mail), "action": "off"})
-post("/admin/server/settings/mail/run", {"_token": form_token(off_plan), "plan": re.search(r'name="plan" value="([0-9a-f]{24})"', off_plan).group(1)})
+post("/admin/server/settings/mail/run", {"_token": form_token(off_plan), "plan": re.search(r'name="plan" value="([0-9a-f]{32})"', off_plan).group(1)})
 print("mail step 2 checked:", len(caught), "letters caught")
 
 # «Удалить человека»: the plan says what goes (the sign-in, the sessions) and what stays (the journal, the server
@@ -722,7 +723,7 @@ assert "Server account demo" in staff_plan and "stays with its sites" in staff_p
 _, removal = get("/admin/server/people/" + str(invited_id) + "/remove")
 assert "data-env-person-plan" in removal and "panel sign-in and every open session" in removal and "journal entries, with the name «Invited»" in removal, "the plan says what goes and what stays"
 assert "invited@example.test becomes free — the person can be invited again" in removal, "the plan says the address becomes free"
-_, removed = post("/admin/server/people/" + str(invited_id) + "/remove", {"_token": form_token(removal), "remove": "yes"})
+_, removed = post("/admin/server/people/" + str(invited_id) + "/remove", {"_token": form_token(removal), "remove": "yes", "receipt": hidden(removal, "receipt")})
 assert "Invited is removed." in removed and "invited@example.test" not in removed, "the person is gone from «Люди»"
 _, history = get("/admin/history?shown=50")
 assert "Person removed" in history and "Invited" in history, "the journal keeps the name"

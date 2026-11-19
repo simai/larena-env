@@ -14,6 +14,7 @@ use Larena\Env\Dns\DnsFailed;
 use Larena\Env\Dns\DnsService;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\NoticeRedirect;
+use Larena\Env\Http\Support\PlanReceipts;
 use Larena\Env\Gateway\PanelCapabilities;
 use Larena\Env\Server\ServerOverviewReader;
 use Larena\Env\Server\SiteDetailsReader;
@@ -26,9 +27,6 @@ use Larena\Env\Server\SiteExtrasReader;
  */
 final readonly class DnsController
 {
-    private const string PLANS = 'larena_env_dns_plans';
-    private const int KEEP_PLANS = 5;
-
     public function __construct(
         private DnsService $dns,
         private SiteDetailsReader $sites,
@@ -37,6 +35,7 @@ final readonly class DnsController
         private ?ServerOverviewReader $overviews = null,
         private ?SiteExtrasReader $extras = null,
         private ?AccessOperationAuthorizer $authorizer = null,
+        private PlanReceipts $receipts = new PlanReceipts(),
     ) {
     }
 
@@ -235,10 +234,9 @@ final readonly class DnsController
     /** @param list<DnsChange> $changes */
     private function showPlan(Request $request, array $changes, string $target, string $runUrl, string $cancelUrl, ?string $site, ?string $undoOf): mixed
     {
-        $id = bin2hex(random_bytes(12));
-        $plans = (array) $request->session()->get(self::PLANS, []);
-        $plans[$id] = ['changes' => array_map(static fn (DnsChange $change): array => $change->toArray(), $changes), 'site' => $site, 'undo_of' => $undoOf];
-        $request->session()->put(self::PLANS, array_slice($plans, -self::KEEP_PLANS, null, true));
+        // The change waits in the plan's receipt (PlanReceipts): the confirmation sends back only its id.
+        $id = $this->receipts->issue($request, 'dns:change', [],
+            ['changes' => array_map(static fn (DnsChange $change): array => $change->toArray(), $changes), 'site' => $site, 'undo_of' => $undoOf]);
 
         return $this->views->make('larena-env::admin.dns.plan', [
             'target' => $target,
@@ -253,11 +251,7 @@ final readonly class DnsController
     /** @return array{changes: list<DnsChange>, site: ?string, undo_of: ?string}|null the plan confirmed, once */
     private function takePlan(Request $request): ?array
     {
-        $id = (string) $request->input('plan');
-        $plans = (array) $request->session()->get(self::PLANS, []);
-        $plan = $plans[$id] ?? null;
-        unset($plans[$id]);
-        $request->session()->put(self::PLANS, $plans);
+        $plan = $this->receipts->take($request, 'dns:change', 'plan');
         if (!is_array($plan) || !is_array($plan['changes'] ?? null) || $plan['changes'] === []) {
             return null;
         }

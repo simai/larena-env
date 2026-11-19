@@ -15,6 +15,7 @@ use Larena\Env\Gateway\PanelActor;
 use Larena\Env\Gateway\PanelCapabilities;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\NoticeRedirect;
+use Larena\Env\Http\Support\PlanReceipts;
 use Larena\Env\Operations\PanelOperations;
 use Larena\Env\Server\ServerOverviewReader;
 use Larena\Env\Server\SiteExtrasReader;
@@ -45,6 +46,7 @@ final readonly class FirewallController
         private Factory $views,
         private Translator $translator,
         private ?AccessOperationAuthorizer $authorizer = null,
+        private PlanReceipts $receipts = new PlanReceipts(),
     ) {
     }
 
@@ -120,6 +122,7 @@ final readonly class FirewallController
                 $hidden['args['.$name.']'.(is_int($index) ? '['.$index.']' : '')] = $item;
             }
         }
+        $hidden[PlanReceipts::FIELD] = $this->receipts->issue($request, self::OPERATIONS[$op], ['op' => $op, 'args' => $args]);
 
         return $this->views->make('larena-env::admin.plan', [
             'heading' => (string) $this->translator->get('larena-env::admin.firewall.operations.'.$op),
@@ -144,6 +147,10 @@ final readonly class FirewallController
         $args = $this->arguments($request, $actor, $op, $typed);
         if (is_string($args)) {
             return $this->back($request, $back, $args);
+        }
+        // Only the change the person saw planned: its receipt, these values, once.
+        if (!$this->receipts->confirms($request, self::OPERATIONS[$op], ['op' => $op, 'args' => $args])) {
+            return $this->back($request, $back, PlanReceipts::REFUSED);
         }
         $started = $this->operations->startCommand($actor, self::OPERATIONS[$op], $args);
         if ($started->jobId === null) {

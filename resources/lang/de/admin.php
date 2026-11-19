@@ -556,6 +556,7 @@ return [
         'panel_site' => 'Das ist die eigene Website des Panels: Sie lässt sich nicht pausieren.',
         'profile_unsupported' => 'Eine Website dieser Art hat keinen eigenen Cache: Es gibt nichts zu leeren.',
         'setup_plan_expired' => 'Der Plan ist veraltet (er wird 15 Minuten aufbewahrt). Füllen Sie den Schritt erneut aus.',
+        'plan_receipt' => 'Diese Bestätigung passt nicht zum angezeigten Plan oder ist veraltet. Nichts wurde geändert: Öffnen Sie den Plan erneut und bestätigen Sie ihn.',
         'setup_login_needed' => 'Die Anmeldung mit Code ist noch nicht eingeschaltet. Öffnen Sie die Anmeldeeinstellungen, schalten Sie sie ein und kommen Sie zurück.',
         'setup_alerts_needed' => 'Wählen Sie, wohin gesendet wird, und geben Sie die Adresse oder den Chat an.',
         'geo_countries_needed' => 'Wählen Sie mindestens ein Land.',

@@ -556,6 +556,7 @@ return [
         'panel_site' => 'C’est le site du panneau lui-même : il ne peut pas être mis en pause.',
         'profile_unsupported' => 'Un site de ce type n’a pas de cache propre : il n’y a rien à vider.',
         'setup_plan_expired' => 'Le plan n’est plus à jour (il est conservé 15 minutes). Remplissez l’étape à nouveau.',
+        'plan_receipt' => 'Cette confirmation ne correspond pas au plan affiché ou n’est plus à jour. Rien n’a été modifié : ouvrez à nouveau le plan et confirmez-le.',
         'setup_login_needed' => 'La connexion avec un code n’est pas encore activée. Ouvrez les paramètres de connexion, activez-la et revenez.',
         'setup_alerts_needed' => 'Choisissez où envoyer et indiquez l’adresse ou le chat.',
         'geo_countries_needed' => 'Choisissez au moins un pays.',

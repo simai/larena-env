@@ -20,6 +20,7 @@ use Larena\Env\Gateway\PanelReason;
 use Larena\Env\Gateway\PanelRefused;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\NoticeRedirect;
+use Larena\Env\Http\Support\PlanReceipts;
 use Larena\Env\Operations\PanelOperations;
 use Larena\Env\People\SecretFileAccess;
 use Larena\Env\Server\ServerOverviewReader;
@@ -66,6 +67,7 @@ final readonly class SiteFilesController
         private Translator $translator,
         private Application $app,
         private ?SecretFileAccess $secrets = null,
+        private PlanReceipts $receipts = new PlanReceipts(),
     ) {
     }
 
@@ -116,6 +118,7 @@ final readonly class SiteFilesController
         if ($staged !== null) {
             $hidden['staged'] = $staged['id'];
         }
+        $hidden[PlanReceipts::FIELD] = $this->receipts->issue($request, $command, ['op' => $op, 'args' => $args, 'staged' => $staged['id'] ?? null]);
 
         return $this->views->make('larena-env::admin.plan', [
             'heading' => (string) $this->translator->get('larena-env::admin.files.operations.'.$op),
@@ -172,6 +175,8 @@ final readonly class SiteFilesController
         }
         $hidden = ['op' => 'upload', 'args[domain]' => $domain, 'args[path]' => FilePath::join($folder, $planned[0]['name']), 'args[expect-sha256]' => $expect,
             'staged' => implode(',', array_column($planned, 'id'))];
+        $hidden[PlanReceipts::FIELD] = $this->receipts->issue($request, 'file:upload', ['op' => 'upload', 'staged' => $hidden['staged'],
+            'args' => ['domain' => $domain, 'path' => $hidden['args[path]'], 'expect-sha256' => $expect]]);
         $names = array_column($planned, 'name');
 
         return $this->views->make('larena-env::admin.plan', [
@@ -204,6 +209,13 @@ final readonly class SiteFilesController
         }
         if ($command === null || ($args['domain'] ?? null) !== $domain) {
             return $this->back($request, $domain, $tab, PanelReason::NOT_ALLOWED);
+        }
+        // Only the change the person saw planned, with these values and this file: its receipt, once.
+        if (!$this->receipts->confirms($request, $command, ['op' => $op, 'args' => $args, 'staged' => (string) $request->input('staged')])) {
+            // A file waiting for this confirmation is let go: the plan is made again with it.
+            $this->unstageAll($request, array_filter(explode(',', (string) $request->input('staged'))));
+
+            return $this->back($request, $domain, $tab, PlanReceipts::REFUSED);
         }
         // The confirmation is an address of its own: the right is asked again, never taken from the plan's page.
         if ($this->secretRefused($actor, $args)) {

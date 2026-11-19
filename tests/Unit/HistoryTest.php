@@ -277,22 +277,47 @@ $planViews = new class implements \Illuminate\Contracts\View\Factory {
     public function addNamespace($namespace, $hints): static { return $this; }
     public function replaceNamespace($namespace, $hints): static { return $this; }
 };
-$againJobs = new ServerJobController(new PanelOperations($again), $planViews, $translator, null, new \Larena\Access\Runtime\AccessOperationAuthorizer($rights, 'testing'));
-$by = static function (string $who) use ($asking): Request {
-    $request = $asking('/admin/server/jobs/'.str_repeat('a', 24).'/again');
+$clock = 1_800_000_000;
+$againJobs = new ServerJobController(new PanelOperations($again), $planViews, $translator, null, new \Larena\Access\Runtime\AccessOperationAuthorizer($rights, 'testing'),
+    receipts: env_plan_receipts($clock));
+// One person's session through the plan and its confirmation: the receipt the plan gives comes back with it.
+$againSession = new Store('panel', new ArraySessionHandler(10));
+$by = static function (string $who, array $input = []) use ($againSession): Request {
+    $request = Request::create('/admin/server/jobs/'.str_repeat('a', 24).'/again', 'POST', $input);
+    $request->attributes->set(ResolvePanelActor::ATTRIBUTE, new PanelActor('admin@stand.test'));
+    $request->setLaravelSession($againSession);
     $request->attributes->set('larena_access_actor', $who);
 
     return $request;
 };
+$receipt = static fn (): string => (string) ($planViews->data['hidden'][\Larena\Env\Http\Support\PlanReceipts::FIELD] ?? '');
 $planned = $againJobs->again($by('test:system'), str_repeat('a', 24));
 $plans = array_values(array_filter($again->asked, static fn (PanelRequest $asked): bool => $asked->command === 'backup:data'));
 env_assert(!$planned instanceof RedirectResponse && $planViews->name === 'larena-env::admin.plan' && count($plans) === 1 && !$plans[0]->confirm
     && $plans[0]->args === ['domain' => 'demo-php.test'] && $planViews->data['runUrl'] === '/admin/server/jobs/'.str_repeat('a', 24).'/again/run',
     'The same command and values, planned, its confirmation going to «again/run».');
 $again->forget();
-$run = $againJobs->againRun($by('test:system'), str_repeat('a', 24));
-$starts = array_values(array_filter($again->asked, static fn (PanelRequest $asked): bool => $asked->command === 'backup:data'));
+$started = static fn (): array => array_values(array_filter($again->asked, static fn (PanelRequest $asked): bool => $asked->command === 'backup:data' && $asked->confirm));
+// The plan's receipt: without it, with another job's, used once already or past its 15 minutes, nothing starts.
+$withoutReceipt = $againJobs->againRun($by('test:system'), str_repeat('a', 24));
+env_assert($started() === [] && $againSession->get('larena_env_notice') === $lines['reasons']['plan_receipt'], 'Without the plan\'s receipt: refused in words, nothing started.');
+$againJobs->again($by('test:system'), str_repeat('a', 24));
+$againJobs->againRun($by('test:system', ['receipt' => $receipt()]), str_repeat('c', 24));
+env_assert($started() === [], 'The receipt of one job does not confirm another.');
+$againJobs->again($by('test:system'), str_repeat('a', 24));
+$late = $receipt();
+$clock += 901;
+$againJobs->againRun($by('test:system', ['receipt' => $late]), str_repeat('a', 24));
+env_assert($started() === [], 'A receipt older than 15 minutes is refused.');
+$againJobs->again($by('test:system'), str_repeat('a', 24));
+$given = $receipt();
+$again->forget();
+$run = $againJobs->againRun($by('test:system', ['receipt' => $given]), str_repeat('a', 24));
+$starts = $started();
 env_assert($run->getTargetUrl() === '/admin/server/jobs/bbbbbbbbbbbbbbbbbbbbbbbb' && count($starts) === 1 && $starts[0]->confirm, 'Confirmed: started, its new run opened.');
+$again->forget();
+$againJobs->againRun($by('test:system', ['receipt' => $given]), str_repeat('a', 24));
+env_assert($started() === [], 'A receipt confirms once.');
 $again->forget();
 $refusedAgain = $againJobs->again($by('test:staff'), str_repeat('a', 24));
 env_assert($refusedAgain instanceof RedirectResponse && array_filter($again->asked, static fn (PanelRequest $asked): bool => $asked->command === 'backup:data') === [],

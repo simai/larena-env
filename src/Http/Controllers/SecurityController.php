@@ -15,6 +15,7 @@ use Larena\Env\Gateway\PanelCommands;
 use Larena\Env\Gateway\PanelRefused;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\NoticeRedirect;
+use Larena\Env\Http\Support\PlanReceipts;
 use Larena\Env\Operations\PanelOperations;
 use Larena\Env\Security\GeoStatus;
 use Larena\Env\Security\SecurityFindings;
@@ -53,6 +54,7 @@ final readonly class SecurityController
         private ?AccessOperationAuthorizer $authorizer = null,
         // The panel's configured address, to tell the checks of its own site from the sites'.
         private ?\Illuminate\Contracts\Config\Repository $config = null,
+        private PlanReceipts $receipts = new PlanReceipts(),
     ) {
     }
 
@@ -172,7 +174,7 @@ final readonly class SecurityController
             'plan' => $result->plan,
             'runUrl' => route('larena.env.admin.security.run', [], false),
             'cancelUrl' => route('larena.env.admin.security', [], false),
-            'hidden' => $hidden,
+            'hidden' => $hidden + [PlanReceipts::FIELD => $this->receipts->issue($request, $command, $args)],
         ]);
     }
 
@@ -184,6 +186,9 @@ final readonly class SecurityController
             return $this->back($request, $asked);
         }
         [$command, $args] = $asked;
+        if (!$this->receipts->confirms($request, $command, $args)) {
+            return $this->back($request, PlanReceipts::REFUSED);
+        }
         $started = $this->operations->startCommand($actor, $command, $args);
 
         return $started->jobId === null

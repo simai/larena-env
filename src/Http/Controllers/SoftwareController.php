@@ -12,6 +12,7 @@ use Larena\Access\Runtime\AccessOperationAuthorizer;
 use Larena\Env\Gateway\PanelActor;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\NoticeRedirect;
+use Larena\Env\Http\Support\PlanReceipts;
 use Larena\Env\Operations\PanelOperations;
 use Larena\Env\Server\ServerOverviewReader;
 use Larena\Env\Server\SiteExtrasReader;
@@ -41,6 +42,7 @@ final readonly class SoftwareController
         private Translator $translator,
         private UpdateController $updates,
         private ?AccessOperationAuthorizer $authorizer = null,
+        private PlanReceipts $receipts = new PlanReceipts(),
     ) {
     }
 
@@ -94,7 +96,7 @@ final readonly class SoftwareController
             'system' => $result->plan->system,
             'runUrl' => route('larena.env.admin.software.run', [], false),
             'cancelUrl' => route('larena.env.admin.software', [], false),
-            'hidden' => ['op' => $op] + $args,
+            'hidden' => ['op' => $op] + $args + [PlanReceipts::FIELD => $this->receipts->issue($request, self::OPERATIONS[$op], ['op' => $op, 'args' => $args])],
             'then' => $this->then($actor, $op, $args),
         ]);
     }
@@ -106,6 +108,9 @@ final readonly class SoftwareController
         [$op, $args] = $this->asked($request, $actor);
         if ($op === null) {
             return $this->back($request, 'not_allowed');
+        }
+        if (!$this->receipts->confirms($request, self::OPERATIONS[$op], ['op' => $op, 'args' => $args])) {
+            return $this->back($request, PlanReceipts::REFUSED);
         }
         $started = $this->operations->startCommand($actor, self::OPERATIONS[$op], $args);
         if ($started->jobId === null) {
@@ -133,7 +138,8 @@ final readonly class SoftwareController
             return [$op, []];
         }
         if ($op === 'update') {
-            return [$op, ['security-only' => $request->input('security_only') === 'yes' ? 'yes' : 'no']];
+            // The form sends `security_only`; the plan's confirmation sends the argument back under its own name.
+            return [$op, ['security-only' => $request->input('security-only', $request->input('security_only')) === 'yes' ? 'yes' : 'no']];
         }
         $name = $request->input('name');
         $component = is_string($name) ? $this->extras->serverSoftware($actor)?->component($name) : null;

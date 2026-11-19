@@ -556,6 +556,7 @@ return [
         'panel_site' => 'Este é o site do próprio painel: ele não pode ser pausado.',
         'profile_unsupported' => 'Um site deste tipo não tem cache próprio: não há nada para limpar.',
         'setup_plan_expired' => 'O plano está desatualizado (ele é mantido por 15 minutos). Preencha a etapa de novo.',
+        'plan_receipt' => 'Esta confirmação não corresponde ao plano mostrado ou está desatualizada. Nada foi alterado: abra o plano de novo e confirme-o.',
         'setup_login_needed' => 'O acesso com código ainda não está ativado. Abra as configurações de acesso, ative-o e volte.',
         'setup_alerts_needed' => 'Escolha para onde enviar e informe o endereço ou o chat.',
         'geo_countries_needed' => 'Escolha pelo menos um país.',

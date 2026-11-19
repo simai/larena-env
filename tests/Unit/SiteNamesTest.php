@@ -376,9 +376,13 @@ env_assert(str_contains($withoutNames, 'data-env-certificate=') && !str_contains
 $ownerPage = (string) $withNames->show($asking('/admin/server/sites/demo-owned.test?tab=domains', as: $owner), 'demo-owned.test')->render();
 env_assert(str_contains($ownerPage, 'data-env-name-suggest="www.demo-owned.test"'), 'An owner sees their own site\'s names.');
 $planned = $withNames->plan($asking('/admin/server/sites/demo-names.test/plan', 'POST', ['operation' => 'name-add', 'name' => 'old.demo-names.test', 'mode' => 'redirect', 'check-dns' => 'yes']), 'demo-names.test');
-env_assert($planned instanceof \Illuminate\View\View && ($planned->getData()['hidden'] ?? null) === ['operation' => 'name-add', 'name' => 'old.demo-names.test', 'mode' => 'redirect', 'check-dns' => 'yes']
+env_assert($planned instanceof \Illuminate\View\View
+    && array_diff_key($planned->getData()['hidden'] ?? [], ['receipt' => true]) === ['operation' => 'name-add', 'name' => 'old.demo-names.test', 'mode' => 'redirect', 'check-dns' => 'yes']
     && $planned->getData()['plan']->command === 'site:name-add', 'The form opens the server\'s plan, the confirmation carrying the same fields.');
-$ran = $withNames->run($asking('/admin/server/sites/demo-names.test/run', 'POST', ['operation' => 'name-remove', 'name' => 'www.demo-names.test']), 'demo-names.test');
+$removeRequest = $asking('/admin/server/sites/demo-names.test/run', 'POST', ['operation' => 'name-remove', 'name' => 'www.demo-names.test']);
+$removeRequest->merge(['receipt' => (new \Larena\Env\Http\Support\PlanReceipts())->issue($removeRequest, 'site:name-remove',
+    ['domain' => 'demo-names.test', 'args' => ['name' => 'www.demo-names.test']])]);
+$ran = $withNames->run($removeRequest, 'demo-names.test');
 env_assert(str_contains($ran->getTargetUrl(), 'larena.env.admin.job/000000000000000000000000'), 'Confirmed, the job\'s screen follows.');
 $refusedRequest = $asking('/admin/server/sites/demo-php.test/plan', 'POST', ['operation' => 'name-add', 'name' => 'not a name']);
 $refusedAnswer = $withNames->plan($refusedRequest, 'demo-php.test');

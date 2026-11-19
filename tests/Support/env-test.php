@@ -35,3 +35,13 @@ function env_temp_directory(): string
 
     return $directory;
 }
+
+/**
+ * The plan receipts on a clock the test moves (seconds): `$now += 901` makes every receipt given before it old.
+ */
+function env_plan_receipts(int &$now): Larena\Env\Http\Support\PlanReceipts
+{
+    return new Larena\Env\Http\Support\PlanReceipts(900, static function () use (&$now): int {
+        return $now;
+    });
+}

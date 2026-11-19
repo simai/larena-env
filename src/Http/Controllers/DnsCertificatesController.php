@@ -12,6 +12,7 @@ use Larena\Env\Certificates\DnsCertificates;
 use Larena\Env\Dns\DnsConnection;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\NoticeRedirect;
+use Larena\Env\Http\Support\PlanReceipts;
 use Larena\Env\Operations\PanelOperations;
 
 /**
@@ -31,6 +32,7 @@ final readonly class DnsCertificatesController
         private DnsConnection $connection,
         private Factory $views,
         private Translator $translator,
+        private PlanReceipts $receipts = new PlanReceipts(),
     ) {
     }
 
@@ -54,7 +56,7 @@ final readonly class DnsCertificatesController
             'plan' => $result->plan,
             'runUrl' => route('larena.env.admin.dns.certificates.run', [], false),
             'cancelUrl' => self::back(),
-            'hidden' => ['op' => $op],
+            'hidden' => ['op' => $op, PlanReceipts::FIELD => $this->receipts->issue($request, self::COMMAND, ['op' => $op, 'args' => $args])],
         ]);
     }
 
@@ -64,6 +66,9 @@ final readonly class DnsCertificatesController
         $args = $op === null ? null : $this->args($op);
         if (!is_array($args)) {
             return $this->notice($request, $args ?? 'invalid_argument');
+        }
+        if (!$this->receipts->confirms($request, self::COMMAND, ['op' => $op, 'args' => $args])) {
+            return $this->notice($request, PlanReceipts::REFUSED);
         }
         $started = $this->operations->startCommand(ResolvePanelActor::of($request), self::COMMAND, $args);
 

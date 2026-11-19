@@ -14,6 +14,7 @@ use Larena\Access\Runtime\AccessOperationAuthorizer;
 use Larena\Admin\Runtime\AdminPlannedAction;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\NoticeRedirect;
+use Larena\Env\Http\Support\PlanReceipts;
 use Larena\Env\Mail\MailFailed;
 use Larena\Env\Mail\MailLetters;
 use Larena\Env\Mail\MailSettings;
@@ -31,8 +32,6 @@ use Throwable;
  */
 final readonly class PanelMailController
 {
-    private const string PLANS = 'larena_env_mail_plans';
-    private const int PLAN_SECONDS = 900;
     /** One test letter at a time: the next one 10 seconds after the last (the wait of one letter at most). */
     private const string TESTED = 'larena_env_mail_tested_at';
     private const int TEST_GAP_SECONDS = 10;
@@ -47,6 +46,7 @@ final readonly class PanelMailController
         private ?AccessOperationAuthorizer $authorizer = null,
         private ?Closure $email = null,
         private ?MailLetters $letters = null,
+        private PlanReceipts $receipts = new PlanReceipts(),
     ) {
     }
 
@@ -227,11 +227,8 @@ final readonly class PanelMailController
      */
     private function showPlan(Request $request, array $kept, string $heading, array $facts, array $warnings, string $consequence): mixed
     {
-        $id = bin2hex(random_bytes(12));
-        $plans = array_filter((array) $request->session()->get(self::PLANS, []),
-            static fn (mixed $plan): bool => is_array($plan) && is_int($plan['at'] ?? null) && $plan['at'] > time() - self::PLAN_SECONDS);
-        $plans[$id] = $kept + ['at' => time()];
-        $request->session()->put(self::PLANS, array_slice($plans, -3, null, true));
+        // The change waits in the plan's receipt (PlanReceipts), the password encrypted: the confirmation sends back only its id.
+        $id = $this->receipts->issue($request, 'mail:settings', [], $kept);
         $run = route('larena.env.admin.settings.mail.run', [], false);
 
         return $this->views->make('larena-env::admin.mail-plan', [
@@ -254,13 +251,8 @@ final readonly class PanelMailController
     /** @return array<string, mixed>|null the plan confirmed, once, while it is fresh */
     private function takePlan(Request $request): ?array
     {
-        $id = (string) $request->input('plan');
-        $plans = (array) $request->session()->get(self::PLANS, []);
-        $plan = $plans[$id] ?? null;
-        unset($plans[$id]);
-        $request->session()->put(self::PLANS, $plans);
-        if (!is_array($plan) || !is_int($plan['at'] ?? null) || $plan['at'] <= time() - self::PLAN_SECONDS
-            || !in_array($plan['action'] ?? null, ['save', 'off'], true) || ($plan['action'] === 'save' && !is_array($plan['settings'] ?? null))) {
+        $plan = $this->receipts->take($request, 'mail:settings', 'plan');
+        if (!is_array($plan) || !in_array($plan['action'] ?? null, ['save', 'off'], true) || ($plan['action'] === 'save' && !is_array($plan['settings'] ?? null))) {
             return null;
         }
 

@@ -13,6 +13,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\NoticeRedirect;
+use Larena\Env\Http\Support\PlanReceipts;
 use Larena\Env\Operations\JobState;
 use Larena\Env\Operations\PanelOperations;
 use Larena\Env\Server\ServerOverviewReader;
@@ -42,6 +43,7 @@ final readonly class AlertsController
         private Translator $translator,
         private StringEncrypter $encrypter,
         private ?CacheRepository $cache = null,
+        private PlanReceipts $receipts = new PlanReceipts(),
     ) {
     }
 
@@ -69,7 +71,7 @@ final readonly class AlertsController
             'plan' => $result->plan,
             'runUrl' => route('larena.env.admin.alerts.ack.run', [], false),
             'cancelUrl' => $back,
-            'hidden' => ['id' => $id, 'back' => $back],
+            'hidden' => ['id' => $id, 'back' => $back, PlanReceipts::FIELD => $this->receipts->issue($request, 'self:alerts-ack', ['id' => $id])],
         ]);
     }
 
@@ -79,6 +81,9 @@ final readonly class AlertsController
         $back = self::back($request);
         if ($id === null) {
             return $this->notice($request, $back, 'invalid_argument');
+        }
+        if (!$this->receipts->confirms($request, 'self:alerts-ack', ['id' => $id])) {
+            return $this->notice($request, $back, PlanReceipts::REFUSED);
         }
         $started = $this->operations->startCommand(ResolvePanelActor::of($request), 'self:alerts-ack', ['id' => $id]);
         EnvAdminAlertSource::forgetKept($this->cache);
@@ -160,19 +165,26 @@ final readonly class AlertsController
             'plan' => $result->plan,
             'runUrl' => route('larena.env.admin.alerts.channel.run', [], false),
             'cancelUrl' => route('larena.env.admin.alerts.channel', [], false),
-            'hidden' => $hidden,
+            // The receipt holds what the confirmation sends back: the kind, the address, the token's reference, the levels.
+            'hidden' => $hidden + [PlanReceipts::FIELD => $this->receipts->issue($request, 'self:alerts-channel', $hidden)],
         ]);
     }
 
     public function channelRun(Request $request): RedirectResponse
     {
+        $ref = $request->input('token_ref');
+        $sent = ['kind' => $request->input('kind'), 'target' => trim((string) $request->input('target')), 'token_ref' => $ref, 'levels' => $this->levels($request)];
+        if (!$this->receipts->confirms($request, 'self:alerts-channel', $sent)) {
+            $this->dropToken($request, is_string($ref) ? $ref : null);
+
+            return $this->notice($request, route('larena.env.admin.alerts.channel', [], false), PlanReceipts::REFUSED);
+        }
         $kind = (string) $request->input('kind');
         $args = ['kind' => in_array($kind, ['webhook', 'telegram', 'off'], true) ? $kind : 'off'];
         $target = trim((string) $request->input('target'));
         if ($args['kind'] !== 'off' && $target !== '') {
             $args['target'] = $target;
         }
-        $ref = $request->input('token_ref');
         if ($args['kind'] === 'telegram' && is_string($ref) && $ref !== '') {
             $token = $this->takeToken($request, $ref);
             if ($token === null) {
@@ -206,12 +218,15 @@ final readonly class AlertsController
             'plan' => $result->plan,
             'runUrl' => route('larena.env.admin.alerts.test.run', [], false),
             'cancelUrl' => route('larena.env.admin.alerts.channel', [], false),
-            'hidden' => [],
+            'hidden' => [PlanReceipts::FIELD => $this->receipts->issue($request, 'self:alerts-test')],
         ]);
     }
 
     public function testRun(Request $request): RedirectResponse
     {
+        if (!$this->receipts->confirms($request, 'self:alerts-test')) {
+            return $this->notice($request, route('larena.env.admin.alerts.channel', [], false), PlanReceipts::REFUSED);
+        }
         $started = $this->operations->startCommand(ResolvePanelActor::of($request), 'self:alerts-test', []);
 
         return $started->jobId === null

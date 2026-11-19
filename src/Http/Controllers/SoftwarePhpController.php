@@ -12,6 +12,7 @@ use Larena\Access\Runtime\AccessOperationAuthorizer;
 use Larena\Env\Gateway\PanelActor;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\NoticeRedirect;
+use Larena\Env\Http\Support\PlanReceipts;
 use Larena\Env\Operations\PanelOperations;
 use Larena\Env\Server\ServerOverviewReader;
 use Larena\Env\Server\SiteExtrasReader;
@@ -36,6 +37,7 @@ final readonly class SoftwarePhpController
         private Factory $views,
         private Translator $translator,
         private ?AccessOperationAuthorizer $authorizer = null,
+        private PlanReceipts $receipts = new PlanReceipts(),
     ) {
     }
 
@@ -83,7 +85,7 @@ final readonly class SoftwarePhpController
             'plan' => $result->plan,
             'runUrl' => route('larena.env.admin.software.php.run', [], false),
             'cancelUrl' => route('larena.env.admin.software.php', $op === 'extension' ? ['extensions' => $args['php']] : [], false),
-            'hidden' => ['op' => $op] + $args,
+            'hidden' => ['op' => $op] + $args + [PlanReceipts::FIELD => $this->receipts->issue($request, self::OPERATIONS[$op], ['op' => $op, 'args' => $args])],
             'then' => [(string) $this->translator->get('larena-env::admin.software.php.then.'.$op)],
         ]);
     }
@@ -95,6 +97,9 @@ final readonly class SoftwarePhpController
         [$op, $args] = $this->asked($request, $actor);
         if ($op === null) {
             return $this->back($request, 'not_allowed');
+        }
+        if (!$this->receipts->confirms($request, self::OPERATIONS[$op], ['op' => $op, 'args' => $args])) {
+            return $this->back($request, PlanReceipts::REFUSED);
         }
         $started = $this->operations->startCommand($actor, self::OPERATIONS[$op], $args);
         if ($started->jobId === null) {
@@ -128,7 +133,9 @@ final readonly class SoftwarePhpController
             'extension' => $have !== null && $this->extension($request, $args),
         };
         if ($op === 'install') {
-            $args['include-common'] = $request->boolean('include_common', true) ? 'yes' : 'no';
+            // The form sends `include_common`; the plan's confirmation sends the argument back under its own name.
+            $args['include-common'] = $request->has('include-common') ? ($request->input('include-common') === 'yes' ? 'yes' : 'no')
+                : ($request->boolean('include_common', true) ? 'yes' : 'no');
         }
 
         return $fits ? [$op, $args] : [null, []];

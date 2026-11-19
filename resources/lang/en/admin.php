@@ -556,6 +556,7 @@ return [
         'panel_site' => 'This is the panel\'s own site: it cannot be paused.',
         'profile_unsupported' => 'A site of this kind has no cache of its own: there is nothing to clear.',
         'setup_plan_expired' => 'The plan is out of date (it is kept for 15 minutes). Fill the step in again.',
+        'plan_receipt' => 'This confirmation does not match the plan shown, or it is out of date. Nothing was changed: open the plan again and confirm it.',
         'setup_login_needed' => 'Sign-in with a code is not on yet. Open the sign-in settings, turn it on and come back.',
         'setup_alerts_needed' => 'Choose where to send and give the address or the chat.',
         'geo_countries_needed' => 'Choose at least one country.',

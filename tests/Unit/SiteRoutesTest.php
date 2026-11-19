@@ -343,7 +343,22 @@ env_assert($answered->headers->get('Location') === route('larena.env.admin.sites
 $review = (string) $newSite($current)->step($asking('/admin/server/sites/new/review', 'GET', [], $flowSession), 'review')->render();
 env_assert(str_contains($review, 'data-env-new-plan="site:add"') && substr_count($review, 'data-env-new-fact') >= 4 && str_contains($review, 'action-text=')
     && str_contains($review, 'data-wizard-step="address"'), 'What will be done: the facts in words, each with its change: '.$review);
-$started = $newSite($current)->submit($asking('/admin/server/sites/new/review/answer', 'POST', ['wizard-action' => 'run'], $flowSession), 'review');
+// «Создать сайт» sends back the receipt of the plan shown; without it, or with the values changed since, nothing starts.
+env_assert(preg_match('/name="receipt" value="([a-f0-9]{32})"/', $review, $reviewReceipt) === 1, 'What will be done carries its plan\'s receipt.');
+$unconfirmed = $newSite($current)->submit($asking('/admin/server/sites/new/review/answer', 'POST', ['wizard-action' => 'run'], $flowSession), 'review');
+env_assert($unconfirmed->headers->get('Location') === route('larena.env.admin.sites.new.step', ['step' => 'review'], false)
+    && ($flowSession->get('larena_env.new_site_wizard')['run'] ?? null) === null && $flowSession->get('larena_env_notice') === $lines['reasons']['plan_receipt'],
+    'Without the receipt: back to what will be done, said in words, nothing started.');
+$review = (string) $newSite($current)->step($asking('/admin/server/sites/new/review', 'GET', [], $flowSession), 'review')->render();
+preg_match('/name="receipt" value="([a-f0-9]{32})"/', $review, $reviewReceipt);
+$shownValues = $flowSession->get('larena_env.new_site_wizard');
+$flowSession->put('larena_env.new_site_wizard', ['values' => ['title' => 'Changed in another tab'] + $shownValues['values'], 'run' => null]);
+$newSite($current)->submit($asking('/admin/server/sites/new/review/answer', 'POST', ['wizard-action' => 'run', 'receipt' => $reviewReceipt[1]], $flowSession), 'review');
+env_assert(($flowSession->get('larena_env.new_site_wizard')['run'] ?? null) === null, 'Values changed since the plan was shown: refused, nothing started.');
+$flowSession->put('larena_env.new_site_wizard', $shownValues);
+$review = (string) $newSite($current)->step($asking('/admin/server/sites/new/review', 'GET', [], $flowSession), 'review')->render();
+preg_match('/name="receipt" value="([a-f0-9]{32})"/', $review, $reviewReceipt);
+$started = $newSite($current)->submit($asking('/admin/server/sites/new/review/answer', 'POST', ['wizard-action' => 'run', 'receipt' => $reviewReceipt[1]], $flowSession), 'review');
 $run = $flowSession->get('larena_env.new_site_wizard')['run'] ?? null;
 env_assert($started->headers->get('Location') === route('larena.env.admin.sites.new.step', ['step' => 'run'], false) && is_array($run) && is_string($run['steps'][0]['job'] ?? null)
     && $run['steps'][0]['command'] === 'site:add' && in_array('wp:install', array_column($run['steps'], 'command'), true), 'One run: the site first, WordPress after it.');
@@ -381,7 +396,23 @@ $badTitle = $asking('/admin/server/sites/new/plan', 'POST', ['title' => '-rf'] +
 $back = $newSite($current)->plan($badTitle);
 env_assert($back instanceof RedirectResponse && $notice($badTitle) === 'Check the field «Site title».' && str_contains($back->getTargetUrl(), 'route=new'), 'A wrong title: '.$notice($badTitle));
 // Confirmed: the site is made and the later values wait on its card; never a password.
+// Only the plan's receipt makes the site (PlanReceipts): none, a value changed after the plan, an old one or a used one is
+// refused before the server is asked.
+$madeJob = static fn (RedirectResponse $answer): bool => str_contains($answer->getTargetUrl(), 'larena.env.admin.job/');
+$refusedRun = $asking('/admin/server/sites/new/run', 'POST', array_diff_key($hidden, ['receipt' => true]), $session);
+env_assert(!$madeJob($newSite($current)->run($refusedRun)) && $notice($refusedRun) === $lines['reasons']['plan_receipt'], 'Without the receipt: refused in words, no site made.');
+$otherHidden = $newSite($current)->plan($asking('/admin/server/sites/new/plan', 'POST', $wpForm, $session))->getData()['hidden'];
+env_assert(!$madeJob($newSite($current)->run($asking('/admin/server/sites/new/run', 'POST', ['title' => 'Another title'] + $otherHidden, $session))),
+    'A value changed after the plan is refused.');
+$newSiteClock = time();
+$timedNewSite = new NewSiteController(new ServerOverviewReader($current), new PanelOperations($current), $factory, $translating($lines), new SiteExtrasReader($current),
+    env_plan_receipts($newSiteClock));
+$lateHidden = $timedNewSite->plan($asking('/admin/server/sites/new/plan', 'POST', $wpForm, $session))->getData()['hidden'];
+$newSiteClock += 901;
+env_assert(!$madeJob($timedNewSite->run($asking('/admin/server/sites/new/run', 'POST', $lateHidden, $session))), 'A receipt older than 15 minutes is refused.');
 $ran = $newSite($current)->run($asking('/admin/server/sites/new/run', 'POST', $hidden, $session));
+$again = $asking('/admin/server/sites/new/run', 'POST', $hidden, $session);
+env_assert(!$madeJob($newSite($current)->run($again)) && $notice($again) === $lines['reasons']['plan_receipt'], 'A receipt makes the site once.');
 env_assert(str_contains($ran->getTargetUrl(), 'larena.env.admin.job/') && $session->get(NewSiteController::ROUTE_VALUES.'.demo-wp.test')
     === ['route' => 'new', 'title' => 'Demo WordPress', 'admin-user' => 'admin', 'admin-email' => 'admin@stand.test', 'locale' => 'ru_RU'], 'The later values are kept for their step.');
 
@@ -509,11 +540,13 @@ $deploying = $card($siteCard($at('demo-laravel.test', 'deploy')), 'demo-laravel.
 env_assert(str_contains($deploying, 'data-env-site-step="deploy"') && str_contains($deploying, 'name="operation" value="deploy"')
     && str_contains($deploying, 'type="url" id="env-route-git" name="git"') && str_contains($deploying, 'value="https://github.com/example/app"') && str_contains($deploying, 'value="main"')
     && str_contains($deploying, '>Deploy the application</button>') && !str_contains($deploying, 'data-env-site-route-outside'), 'The deploy from Git through its plan, its values offered again: '.$deploying);
-$deployPlan = $siteCard($current)->plan($asking('/admin/server/sites/demo-static.test/plan', 'POST', ['operation' => 'deploy', 'git' => 'https://github.com/example/site', 'ref' => 'v1.0.0']), 'demo-static.test');
+$deploySession = new Store('panel', new ArraySessionHandler(10));
+$deployPlan = $siteCard($current)->plan($asking('/admin/server/sites/demo-static.test/plan', 'POST', ['operation' => 'deploy', 'git' => 'https://github.com/example/site', 'ref' => 'v1.0.0'], $deploySession), 'demo-static.test');
 env_assert($deployPlan instanceof \Illuminate\View\View && $deployPlan->getData()['plan']->command === 'site:deploy'
     && $deployPlan->getData()['plan']->args === ['domain' => 'demo-static.test', 'git' => 'https://github.com/example/site', 'ref' => 'v1.0.0']
-    && $deployPlan->getData()['hidden'] === ['operation' => 'deploy', 'git' => 'https://github.com/example/site', 'ref' => 'v1.0.0'], 'The recorded deploy is planned.');
-$deployRun = $siteCard($current)->run($asking('/admin/server/sites/demo-static.test/run', 'POST', $deployPlan->getData()['hidden']), 'demo-static.test');
+    && array_diff_key($deployPlan->getData()['hidden'], ['receipt' => true]) === ['operation' => 'deploy', 'git' => 'https://github.com/example/site', 'ref' => 'v1.0.0'],
+    'The recorded deploy is planned.');
+$deployRun = $siteCard($current)->run($asking('/admin/server/sites/demo-static.test/run', 'POST', $deployPlan->getData()['hidden'], $deploySession), 'demo-static.test');
 env_assert(str_contains($deployRun->getTargetUrl(), 'larena.env.admin.job/'), 'Confirmed, the deploy is a job: '.$deployRun->getTargetUrl());
 $otherRepo = $asking('/admin/server/sites/demo-laravel.test/plan', 'POST', ['operation' => 'deploy', 'git' => 'https://github.com/example/app', 'ref' => 'main']);
 env_assert($siteCard($current)->plan($otherRepo, 'demo-laravel.test') instanceof RedirectResponse && $notice($otherRepo) !== '', 'A deploy the set holds no plan of is not answered with another\'s.');

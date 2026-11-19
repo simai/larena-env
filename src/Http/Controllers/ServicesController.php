@@ -12,6 +12,7 @@ use Larena\Access\Runtime\AccessOperationAuthorizer;
 use Larena\Env\Gateway\PanelActor;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\NoticeRedirect;
+use Larena\Env\Http\Support\PlanReceipts;
 use Larena\Env\Operations\PanelOperations;
 use Larena\Env\Server\HostService;
 use Larena\Env\Server\ServerOverview;
@@ -45,6 +46,7 @@ final readonly class ServicesController
         private Factory $views,
         private Translator $translator,
         private ?AccessOperationAuthorizer $authorizer = null,
+        private PlanReceipts $receipts = new PlanReceipts(),
     ) {
     }
 
@@ -160,7 +162,7 @@ final readonly class ServicesController
             'plan' => $result->plan,
             'runUrl' => route('larena.env.admin.services.run', [], false),
             'cancelUrl' => route('larena.env.admin.services', [], false),
-            'hidden' => ['op' => $op, 'name' => $name],
+            'hidden' => ['op' => $op, 'name' => $name, PlanReceipts::FIELD => $this->receipts->issue($request, self::OPERATIONS[$op], ['name' => $name])],
             // What a stop takes away: the sites and what each loses, and the server's own checks where cron goes.
             'serviceStop' => $op === 'stop' ? ['name' => $name, 'sites' => $result->plan->affected, 'server' => $result->plan->pausesServer] : null,
             'then' => [(string) $this->translator->get('larena-env::admin.services.'.match ($op) {'stop' => 'stop_then', 'start' => 'start_then', default => 'checked_first'})],
@@ -174,6 +176,9 @@ final readonly class ServicesController
         [$op, $name] = $this->asked($request, $actor);
         if ($op === null || $name === null) {
             return $this->back($request, 'not_allowed');
+        }
+        if (!$this->receipts->confirms($request, self::OPERATIONS[$op], ['name' => $name])) {
+            return $this->back($request, PlanReceipts::REFUSED);
         }
         $started = $this->operations->startCommand($actor, self::OPERATIONS[$op], ['name' => $name]);
         if ($started->jobId === null) {

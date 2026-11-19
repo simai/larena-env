@@ -14,6 +14,7 @@ use Larena\Env\Admin\SiteFilesPage;
 use Larena\Env\Files\SiteFiles;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\NoticeRedirect;
+use Larena\Env\Http\Support\PlanReceipts;
 use Larena\Env\Operations\PanelOperations;
 use Larena\Env\Gateway\PanelActor;
 use Larena\Env\Gateway\PanelCapabilities;
@@ -78,6 +79,7 @@ final readonly class SiteAdminController
         private ?\Larena\Env\Contracts\PanelGateway $gateway = null,
         private ?\Larena\Admin\Runtime\AdminDataviewPagePresenter $dataviews = null,
         private ?\Larena\Env\People\SecretFileAccess $secrets = null,
+        private PlanReceipts $receipts = new PlanReceipts(),
     ) {
     }
 
@@ -886,7 +888,8 @@ final readonly class SiteAdminController
             'plan' => $result->plan,
             'runUrl' => route('larena.env.admin.site.run', ['domain' => $domain], false),
             'cancelUrl' => route('larena.env.admin.site', ['domain' => $domain], false).'?tab='.$operation->tab(),
-            'hidden' => ['operation' => $operation->value] + $input,
+            'hidden' => ['operation' => $operation->value] + $input
+                + [PlanReceipts::FIELD => $this->receipts->issue($request, 'site:'.$operation->value, ['domain' => $domain, 'args' => $input])],
             'replaces' => $this->replaces($actor, $operation, $domain, $input['backup'] ?? null),
             'check' => $result->plan->check,
             'resources' => $result->plan->resources,
@@ -1038,7 +1041,12 @@ final readonly class SiteAdminController
         if ($operation === null) {
             return $this->back($request, $domain, 'not_allowed');
         }
-        $started = $this->operations->start($actor, $operation, $domain, $this->input($request, $actor, $operation));
+        $input = $this->input($request, $actor, $operation);
+        // Only the action the person saw planned, for this site, with these values (a changed tick was planned again).
+        if (!$this->receipts->confirms($request, 'site:'.$operation->value, ['domain' => $domain, 'args' => $input])) {
+            return $this->back($request, $domain, PlanReceipts::REFUSED, $operation->tab(), $operation);
+        }
+        $started = $this->operations->start($actor, $operation, $domain, $input);
         if ($started->jobId === null) {
             return $this->back($request, $domain, $started->reason ?? 'answer_shape_invalid', $operation->tab(), $operation);
         }

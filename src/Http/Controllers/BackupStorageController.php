@@ -16,6 +16,7 @@ use Larena\Env\Gateway\PanelCommands;
 use Larena\Env\Gateway\PanelRefused;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\NoticeRedirect;
+use Larena\Env\Http\Support\PlanReceipts;
 use Larena\Env\Operations\PanelOperations;
 use Larena\Env\Server\ServerOverviewReader;
 use Larena\Env\Server\SiteExtrasReader;
@@ -43,6 +44,7 @@ final readonly class BackupStorageController
         private Translator $translator,
         private StringEncrypter $encrypter,
         private ?AccessOperationAuthorizer $authorizer = null,
+        private PlanReceipts $receipts = new PlanReceipts(),
     ) {
     }
 
@@ -103,6 +105,8 @@ final readonly class BackupStorageController
         if (isset($args['access-key'], $args['secret-key'])) {
             $hidden['keys_ref'] = $this->keepKeys($request, $args['access-key'], $args['secret-key']);
         }
+        // The receipt holds what the confirmation sends back, the keys by their reference: checked before the keys are taken.
+        $hidden[PlanReceipts::FIELD] = $this->receipts->issue($request, $command, $hidden);
 
         return $this->views->make('larena-env::admin.plan', [
             'heading' => $this->text('storages.operations.'.(string) $request->input('op')),
@@ -119,6 +123,12 @@ final readonly class BackupStorageController
     public function run(Request $request): RedirectResponse
     {
         $actor = ResolvePanelActor::of($request);
+        if (!$this->receipts->confirms($request, self::OPERATIONS[(string) $request->input('op')] ?? '', $request->except(['_token', PlanReceipts::FIELD]))) {
+            // Keys kept for a confirmation that is refused are let go: the plan is made again with them typed.
+            $this->takeKeys($request, (string) $request->input('keys_ref'));
+
+            return $this->back($request, PlanReceipts::REFUSED);
+        }
         $asked = $this->asked($request, true);
         if (is_string($asked)) {
             return $this->back($request, $asked);

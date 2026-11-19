@@ -266,6 +266,15 @@ $asking = static function (PanelActor $actor, string $uri, string $method = 'GET
 
     return $request;
 };
+// A confirmation as the plan's page sends it: with the receipt of a plan of exactly these values (PlanReceipts). The
+// rights to files with passwords are asked again at the confirmation, receipt or not.
+$confirming = static function (PanelActor $actor, string $uri, string $method = 'GET', array $input = [], ?Store $session = null) use ($asking): Request {
+    $request = $asking($actor, $uri, $method, $input, $session);
+    $request->merge(['receipt' => (new \Larena\Env\Http\Support\PlanReceipts())->issue($request, SiteFilesController::FILE_OPERATIONS[$input['op']],
+        ['op' => $input['op'], 'args' => $input['args'] ?? [], 'staged' => $input['staged'] ?? null])]);
+
+    return $request;
+};
 $site = '/admin/server/sites/'.$domain;
 $filesTab = static function (PanelActor $actor, string $query) use ($card, $asking, $site, $domain): array {
     $view = $card->show($asking($actor, $site.'?tab=files&'.$query), $domain);
@@ -293,11 +302,41 @@ env_assert(ob_get_clean() === $password."\n", 'The file itself is handed over.')
 env_assert($last($history())->type === 'env.secret_file.downloaded', 'The download is in «История».');
 $save = ['op' => 'write', 'path' => '.env', 'content' => "DB_PASSWORD=changed\n", 'sha256' => $sha];
 env_assert($filesController->plan($asking($admin, $site.'/files/plan', 'POST', $save), $domain) instanceof \Illuminate\Contracts\View\View, 'Server level: the save is planned.');
-$ran = $filesController->run($asking($admin, $site.'/files/run', 'POST', ['op' => 'write', 'args' => ['domain' => $domain, 'path' => '.env', 'content' => "DB_PASSWORD=changed\n", 'expect-sha256' => $sha]]), $domain);
+$ran = $filesController->run($confirming($admin, $site.'/files/run', 'POST', ['op' => 'write', 'args' => ['domain' => $domain, 'path' => '.env', 'content' => "DB_PASSWORD=changed\n", 'expect-sha256' => $sha]]), $domain);
 env_assert(str_contains($ran->getTargetUrl(), '/admin/server/larena.env.admin.job/') && file_get_contents($root.'/sites/'.$domain.'/.env') === "DB_PASSWORD=changed\n", 'Confirmed, saved.');
 $saved = $history();
 env_assert(end($saved)->type === 'env.secret_file.saved' && end($saved)->payload === ['domain' => $domain, 'path' => '.env'], 'The save is in «История».');
 $sha = hash('sha256', "DB_PASSWORD=changed\n");
+
+// The plan's receipt (PlanReceipts): the confirmation sends back what the plan's page holds, and only that runs, once,
+// within 15 minutes. The same text written again here, so the file stays as the steps below expect it.
+$filesClock = time();
+$timedFiles = new SiteFilesController($operations, $overviews, $files, $factory, $translator, $host, $secrets, receipts: env_plan_receipts($filesClock));
+$filesSession = new Store('panel', new ArraySessionHandler(10));
+$planned = static function () use ($timedFiles, $asking, $admin, $site, $domain, $sha, $filesSession): array {
+    $view = $timedFiles->plan($asking($admin, $site.'/files/plan', 'POST', ['op' => 'write', 'path' => '.env', 'content' => "DB_PASSWORD=changed\n", 'sha256' => $sha], $filesSession), $domain);
+    env_assert($view instanceof \Illuminate\Contracts\View\View && strlen((string) ($view->getData()['hidden']['receipt'] ?? '')) === 32, 'The save is planned with its receipt.');
+    // The page's hidden fields as the browser sends them back: args[path] becomes args.path.
+    parse_str(http_build_query($view->getData()['hidden']), $sent);
+
+    return $sent;
+};
+$confirmWith = static fn (array $sent): RedirectResponse => $timedFiles->run($asking($admin, $site.'/files/run', 'POST', $sent, $filesSession), $domain);
+$savedCount = static fn (): int => count(array_filter($sink->events(), static fn ($event): bool => $event->type === 'env.secret_file.saved'));
+$savedBefore = $savedCount();
+$sent = $planned();
+env_assert($notice($confirmWith(array_diff_key($sent, ['receipt' => true]))) === $lines['reasons']['plan_receipt'] && $savedCount() === $savedBefore,
+    'Without the receipt: refused in words, nothing written.');
+$changedSent = $sent;
+$changedSent['args']['content'] = "DB_PASSWORD=swapped\n";
+env_assert($notice($confirmWith($changedSent)) === $lines['reasons']['plan_receipt'] && file_get_contents($root.'/sites/'.$domain.'/.env') === "DB_PASSWORD=changed\n",
+    'A text changed after the plan is refused, the file untouched.');
+$sent = $planned();
+$filesClock += 901;
+env_assert($notice($confirmWith($sent)) === $lines['reasons']['plan_receipt'] && $savedCount() === $savedBefore, 'A receipt older than 15 minutes is refused.');
+$sent = $planned();
+env_assert(str_contains($confirmWith($sent)->getTargetUrl(), 'larena.env.admin.job') && $savedCount() === $savedBefore + 1, 'The receipt of the plan: saved.');
+env_assert($notice($confirmWith($sent)) === $lines['reasons']['plan_receipt'] && $savedCount() === $savedBefore + 1, 'A receipt saves once.');
 
 // 4. «Свои сайты» without the tick: the file is listed and marked, everything else refused on the server.
 $before = count($sink->events());
@@ -325,9 +364,9 @@ foreach ($changes as $what => $input) {
     env_assert($refused instanceof RedirectResponse && $notice($refused) === $refusedLine, "Without the right, {$what} is refused before the server is asked.");
 }
 // The confirmation's own address, sent straight without a plan: refused too.
-$straight = $filesController->run($asking($staff, $site.'/files/run', 'POST', ['op' => 'write', 'args' => ['domain' => $domain, 'path' => '.env', 'content' => 'DB_PASSWORD=mine', 'expect-sha256' => $sha]]), $domain);
+$straight = $filesController->run($confirming($staff, $site.'/files/run', 'POST', ['op' => 'write', 'args' => ['domain' => $domain, 'path' => '.env', 'content' => 'DB_PASSWORD=mine', 'expect-sha256' => $sha]]), $domain);
 env_assert($notice($straight) === $refusedLine && file_get_contents($root.'/sites/'.$domain.'/.env') === "DB_PASSWORD=changed\n", 'The run address is refused, the file untouched.');
-$copied = $filesController->run($asking($staff, $site.'/files/run', 'POST', ['op' => 'copy', 'args' => ['domain' => $domain, 'path' => '.env', 'to' => 'copy.txt']]), $domain);
+$copied = $filesController->run($confirming($staff, $site.'/files/run', 'POST', ['op' => 'copy', 'args' => ['domain' => $domain, 'path' => '.env', 'to' => 'copy.txt']]), $domain);
 // (The stand-in has no file:copy, so it is refused as not offered there; a real server is refused by the right, as above.)
 env_assert($copied->getTargetUrl() !== '' && !file_exists($root.'/sites/'.$domain.'/copy.txt'), 'No copy out of a secret by the run address.');
 env_assert(!$gateway->touched('.env') && !$gateway->touched('wp-config.php') && !$gateway->touched('.env.local') && !$gateway->touched('ssl/site.key'),
@@ -362,7 +401,7 @@ env_assert($trustedDownload instanceof StreamedResponse, 'Ticked: downloaded aft
 ob_start();
 $trustedDownload->sendContent();
 ob_end_clean();
-$trustedRun = $filesController->run($asking($trusted, $site.'/files/run', 'POST', ['op' => 'write', 'args' => ['domain' => $domain, 'path' => '.env', 'content' => "DB_PASSWORD=third\n", 'expect-sha256' => $sha]]), $domain);
+$trustedRun = $filesController->run($confirming($trusted, $site.'/files/run', 'POST', ['op' => 'write', 'args' => ['domain' => $domain, 'path' => '.env', 'content' => "DB_PASSWORD=third\n", 'expect-sha256' => $sha]]), $domain);
 env_assert(file_get_contents($root.'/sites/'.$domain.'/.env') === "DB_PASSWORD=third\n" && str_contains($trustedRun->getTargetUrl(), 'job'), 'Ticked: saved.');
 $trustedEvents = array_map(static fn ($event): string => $event->type.' '.$event->actor, array_slice($history(), -3));
 env_assert($trustedEvents === ['env.secret_file.opened trusted@stand.test', 'env.secret_file.downloaded trusted@stand.test', 'env.secret_file.saved trusted@stand.test'],
@@ -434,7 +473,7 @@ env_assert(($planSent[1]['without-secrets'] ?? null) === 'yes' && !$planSent[2],
 $planPage = (string) $factory->make('larena-env::admin.plan', $planned->getData())->render();
 env_assert(str_contains($planPage, e($lines['plan']['args']['without-secrets'])), 'The plan names it in words.');
 // The confirmation sent straight with the argument taken out (or said `no`): the panel puts it back.
-$ranPack = $newerController->run($asking($staff, $site.'/files/run', 'POST', ['op' => 'archive', 'args' => ['domain' => $domain, 'path' => 'conf', 'to' => 'conf.zip', 'without-secrets' => 'no']]), $domain);
+$ranPack = $newerController->run($confirming($staff, $site.'/files/run', 'POST', ['op' => 'archive', 'args' => ['domain' => $domain, 'path' => 'conf', 'to' => 'conf.zip', 'without-secrets' => 'no']]), $domain);
 $runSent = $last(array_values(array_filter($newer->sent, static fn (array $one): bool => $one[0] === 'file:archive')));
 env_assert(str_contains($ranPack->getTargetUrl(), 'job') && ($runSent[1]['without-secrets'] ?? null) === 'yes' && $runSent[2], 'Confirmed: sent without them, whatever the form said.');
 $jobId = basename($ranPack->getTargetUrl());
@@ -445,14 +484,14 @@ $jobPage = (string) $factory->make('larena-env::admin.job', ['jobId' => $jobId, 
 env_assert(str_contains($jobPage, 'data-env-job-secret-skipped="1"') && str_contains($jobPage, '>conf/.env<') && str_contains($jobPage, e($lines['job']['secret_skipped_archive']))
     && !str_contains($jobPage, 'kept-out'), 'The job page says it in words and names the file, never its text.');
 // The server level packs with them (nothing added).
-$newerController->run($asking($admin, $site.'/files/run', 'POST', ['op' => 'archive', 'args' => ['domain' => $domain, 'path' => 'conf', 'to' => 'conf-all.zip']]), $domain);
+$newerController->run($confirming($admin, $site.'/files/run', 'POST', ['op' => 'archive', 'args' => ['domain' => $domain, 'path' => 'conf', 'to' => 'conf-all.zip']]), $domain);
 $adminSent = $last(array_values(array_filter($newer->sent, static fn (array $one): bool => $one[0] === 'file:archive')));
 env_assert(!isset($adminSent[1]['without-secrets']), 'The server level packs everything.');
 // Packing the .env itself stays refused before the server is asked.
 $self = $newerController->plan($planRequest($staff, ['op' => 'archive', 'path' => 'conf/.env', 'name' => 'env', 'format' => 'zip']), $domain);
 env_assert($self instanceof RedirectResponse && $notice($self) === $refusedLine, 'The .env itself is not packed by such a person.');
 if (class_exists(ZipArchive::class)) {
-    $unpack = $newerController->run($asking($staff, $site.'/files/run', 'POST', ['op' => 'extract', 'args' => ['domain' => $domain, 'path' => 'upload.zip', 'to' => '.', 'overwrite' => 'yes']]), $domain);
+    $unpack = $newerController->run($confirming($staff, $site.'/files/run', 'POST', ['op' => 'extract', 'args' => ['domain' => $domain, 'path' => 'upload.zip', 'to' => '.', 'overwrite' => 'yes']]), $domain);
     $unpacked = $newerOperations->view($staff, basename($unpack->getTargetUrl()))->status ?? null;
     env_assert($unpacked !== null && $unpacked->secretSkipped === ['paths' => ['.env', 'keys/id_rsa'], 'total' => 2], 'Unpacked without them: '.json_encode($unpacked?->secretSkipped));
     $unpackPage = (string) $factory->make('larena-env::admin.job', ['jobId' => 'x', 'source' => 'stand-in', 'status' => $unpacked, 'log' => null, 'refused' => false,
@@ -482,7 +521,7 @@ $marks = is_array($listed) ? array_map(static fn (FileEntry $one): array => [$on
 env_assert($marks === [['.env', true, true], ['app.php', false, false]], 'The list carries the server\'s mark: '.json_encode($marks));
 
 // The trash: a removed .env is marked, and put back only by a person with the right, never elsewhere.
-$newerController->run($asking($admin, $site.'/files/run', 'POST', ['op' => 'remove', 'args' => ['domain' => $domain, 'path' => 'conf/.env']]), $domain);
+$newerController->run($confirming($admin, $site.'/files/run', 'POST', ['op' => 'remove', 'args' => ['domain' => $domain, 'path' => 'conf/.env']]), $domain);
 $trashed = $newerFiles->trash($admin, $domain);
 $secretEntry = is_array($trashed) ? $trashed['entries'][0] : null;
 env_assert($secretEntry !== null && $secretEntry->secret && $secretEntry->name === '.env', 'The trash marks the .env.');
@@ -490,9 +529,9 @@ $trashRows = SiteFilesPage::trash($domain, $trashed['entries'], true, true, $tex
 env_assert($trashRows[0]['mark']['label'] === $lines['files']['secret'] && $trashRows[0]['_actions'] === ['purge'], 'Without the right: marked, not offered back.');
 $adminTrash = SiteFilesPage::trash($domain, $trashed['entries'], true, true, $text, 'tok')->rows;
 env_assert(in_array('restore', $adminTrash[0]['_actions'], true), 'With the right: offered back.');
-$restoreRefused = $newerController->run($asking($staff, $site.'/files/run', 'POST', ['op' => 'trash-restore', 'args' => ['domain' => $domain, 'id' => $secretEntry->id, 'to' => 'public/readme.txt']]), $domain);
+$restoreRefused = $newerController->run($confirming($staff, $site.'/files/run', 'POST', ['op' => 'trash-restore', 'args' => ['domain' => $domain, 'id' => $secretEntry->id, 'to' => 'public/readme.txt']]), $domain);
 env_assert($notice($restoreRefused) === $refusedLine && !file_exists($root.'/sites/'.$domain.'/public/readme.txt'), 'A restore elsewhere by such a person is refused.');
-$restoredByAdmin = $newerController->run($asking($admin, $site.'/files/run', 'POST', ['op' => 'trash-restore', 'args' => ['domain' => $domain, 'id' => $secretEntry->id, 'to' => 'public/readme.txt']]), $domain);
+$restoredByAdmin = $newerController->run($confirming($admin, $site.'/files/run', 'POST', ['op' => 'trash-restore', 'args' => ['domain' => $domain, 'id' => $secretEntry->id, 'to' => 'public/readme.txt']]), $domain);
 $restoreSent = $last(array_values(array_filter($newer->sent, static fn (array $one): bool => $one[0] === 'file:trash-restore')));
 env_assert(!isset($restoreSent[1]['to']) && file_exists($root.'/sites/'.$domain.'/conf/.env') && !file_exists($root.'/sites/'.$domain.'/public/readme.txt'),
     'Even the server level puts it back only where it was: the panel never sends `to`.');

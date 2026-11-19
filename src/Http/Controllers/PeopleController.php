@@ -24,6 +24,7 @@ use Larena\Env\Gateway\PanelActor;
 use Larena\Env\Gateway\PanelRefused;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\NoticeRedirect;
+use Larena\Env\Http\Support\PlanReceipts;
 use Larena\Env\Http\Support\PanelActorResolver;
 use Larena\Env\Mail\InvitationLetter;
 use Larena\Env\Mail\MailLetters;
@@ -78,6 +79,7 @@ final readonly class PeopleController
         private ?\Larena\Auth\Runtime\AdminCredentialLifecycleService $credentials = null,
         private ?\Larena\Auth\Contracts\ActivationChallengeStore $challenges = null,
         private ?\Illuminate\Database\DatabaseManager $database = null,
+        private PlanReceipts $receipts = new PlanReceipts(),
     ) {
     }
 
@@ -267,9 +269,11 @@ final readonly class PeopleController
             }
             $moves = $plan->plan->account;
         }
-        $token = bin2hex(random_bytes(16));
-        $request->session()->put(self::INVITE, $input + ['password' => $password, 'token' => $token, 'new' => $newAccount !== null,
-            'owner' => $account, 'at' => time()]);
+        // What the confirmation makes waits in the plan's receipt (PlanReceipts), with the password typed, for half an
+        // hour; the form sends back only the receipt. An invitation kept the former way, under INVITE, goes.
+        $request->session()->forget(self::INVITE);
+        $token = $this->receipts->issue($request, 'person:invite', [], $input + ['password' => $password, 'new' => $newAccount !== null,
+            'owner' => $account], 1800);
         $text = $this->text();
         $sites = $account === null ? [] : (PanelPeople::sitesByOwner($overview)[$account] ?? []);
         $facts = [
@@ -308,9 +312,8 @@ final readonly class PeopleController
     public function inviteRun(Request $request): RedirectResponse
     {
         $user = self::user($request);
-        $invite = $request->session()->pull(self::INVITE);
-        if (!is_array($invite) || !is_string($invite['token'] ?? null) || !hash_equals($invite['token'], (string) $request->input('invite'))
-            || (int) ($invite['at'] ?? 0) < time() - 1800 || $this->users === null) {
+        $invite = $this->receipts->take($request, 'person:invite', 'invite');
+        if ($invite === null || !isset($invite['email'], $invite['name'], $invite['level']) || $this->users === null) {
             return NoticeRedirect::to($request, route('larena.env.admin.people', [], false),
                 (string) $this->translator->get('larena-env::admin.people.invite.expired'));
         }
@@ -418,7 +421,8 @@ final readonly class PeopleController
                 question: $text('people.block.'.($block ? 'question' : 'unquestion'), ['name' => $found['name']]),
                 runUrl: route('larena.env.admin.people.block.run', ['person' => (string) $found['id']], false),
                 token: (string) $request->session()->token(),
-                runFields: ['blocked' => $block ? 'yes' : 'no'],
+                runFields: ['blocked' => $block ? 'yes' : 'no',
+                    PlanReceipts::FIELD => $this->receipts->issue($request, 'person:block', ['person' => $found['id'], 'blocked' => $block])],
                 acceptText: $text('people.block.'.($block ? 'accept' : 'unaccept')),
                 danger: $block,
                 consequence: $block ? $text('people.block.consequence') : '',
@@ -438,6 +442,9 @@ final readonly class PeopleController
             return $this->back($request, $found === null ? 'person_unknown' : 'person_self');
         }
         $block = $request->input('blocked') === 'yes';
+        if (!$this->receipts->confirms($request, 'person:block', ['person' => $found['id'], 'blocked' => $block])) {
+            return $this->back($request, PlanReceipts::REFUSED, self::cardOf($found['subject']));
+        }
         try {
             $this->users->setEnabled($found['id'], !$block, $user);
         } catch (DomainException|InvalidArgumentException $refused) {
@@ -492,7 +499,7 @@ final readonly class PeopleController
                 question: $text('people.removal.question', ['name' => $found['name']]),
                 runUrl: route('larena.env.admin.people.remove.run', ['person' => (string) $found['id']], false),
                 token: (string) $request->session()->token(),
-                runFields: ['remove' => 'yes'],
+                runFields: ['remove' => 'yes', PlanReceipts::FIELD => $this->receipts->issue($request, 'person:remove', ['person' => $found['id']])],
                 acceptText: $text('people.removal.accept'),
                 danger: true,
                 consequence: $text('people.removal.consequence'),
@@ -511,6 +518,9 @@ final readonly class PeopleController
         $refused = $this->removalRefused($found, $user, $overview) ?? ($request->input('remove') !== 'yes' ? 'person_remove_unconfirmed' : null);
         if ($refused !== null || $found === null) {
             return $this->back($request, $refused ?? 'person_unknown');
+        }
+        if (!$this->receipts->confirms($request, 'person:remove', ['person' => $found['id']])) {
+            return $this->back($request, PlanReceipts::REFUSED, self::cardOf($found['subject']));
         }
         if ($this->credentials === null) {
             return $this->back($request, 'person_remove_unavailable', self::cardOf($found['subject']));
@@ -640,14 +650,19 @@ final readonly class PeopleController
             'plan' => $result->plan,
             'runUrl' => route('larena.env.admin.people.owners.run', [], false),
             'cancelUrl' => route('larena.env.admin.people', [], false),
-            'hidden' => ['action' => $action] + $input,
+            'hidden' => ['action' => $action] + $input
+                + [PlanReceipts::FIELD => $this->receipts->issue($request, self::OWNER_ACTIONS[$action], ['action' => $action, 'args' => $input])],
         ]);
     }
 
     public function runOwner(Request $request): RedirectResponse
     {
         $action = self::ownerAction($request);
-        $started = $this->operations->startCommand(ResolvePanelActor::of($request), self::OWNER_ACTIONS[$action], self::ownerInput($request, $action));
+        $input = self::ownerInput($request, $action);
+        if (!$this->receipts->confirms($request, self::OWNER_ACTIONS[$action], ['action' => $action, 'args' => $input])) {
+            return $this->back($request, PlanReceipts::REFUSED);
+        }
+        $started = $this->operations->startCommand(ResolvePanelActor::of($request), self::OWNER_ACTIONS[$action], $input);
         if ($started->jobId === null) {
             return $this->back($request, $started->reason ?? 'answer_shape_invalid');
         }

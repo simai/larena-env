@@ -14,6 +14,7 @@ use Larena\Env\Gateway\PanelCommands;
 use Larena\Env\Gateway\PanelRefused;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\NoticeRedirect;
+use Larena\Env\Http\Support\PlanReceipts;
 use Larena\Env\Operations\PanelOperations;
 use Larena\Env\Server\ServerOverviewReader;
 use Larena\Env\Server\SiteExtrasReader;
@@ -36,6 +37,7 @@ final readonly class PanelAddressController
         private Factory $views,
         private Translator $translator,
         private ?AccessOperationAuthorizer $authorizer = null,
+        private PlanReceipts $receipts = new PlanReceipts(),
     ) {
     }
 
@@ -61,7 +63,7 @@ final readonly class PanelAddressController
             'plan' => $result->plan,
             'runUrl' => route('larena.env.admin.panel.address.run', [], false),
             'cancelUrl' => route('larena.env.admin.panel.access', [], false),
-            'hidden' => ['op' => $op] + $args,
+            'hidden' => ['op' => $op] + $args + [PlanReceipts::FIELD => $this->receipts->issue($request, $command, ['op' => $op, 'args' => $args])],
             'then' => $then,
         ]);
     }
@@ -74,6 +76,9 @@ final readonly class PanelAddressController
             return $this->back($request, $asked);
         }
         [$op, $command, $args] = $asked;
+        if (!$this->receipts->confirms($request, $command, ['op' => $op, 'args' => $args])) {
+            return $this->back($request, PlanReceipts::REFUSED);
+        }
         $address = in_array($op, ['port', 'ip-access'], true) ? $this->extras->panelAddress($actor) : null;
         $started = $this->operations->startCommand($actor, $command, $args);
         if ($started->jobId === null) {

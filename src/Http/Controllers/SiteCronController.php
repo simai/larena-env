@@ -13,6 +13,7 @@ use Larena\Env\Gateway\PanelActor;
 use Larena\Env\Gateway\PanelCapabilities;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\NoticeRedirect;
+use Larena\Env\Http\Support\PlanReceipts;
 use Larena\Env\Operations\PanelOperations;
 use Larena\Env\Server\ServerOverviewReader;
 use Larena\Env\Server\SiteExtrasReader;
@@ -34,6 +35,7 @@ final readonly class SiteCronController
         private SiteExtrasReader $extras,
         private Factory $views,
         private Translator $translator,
+        private PlanReceipts $receipts = new PlanReceipts(),
     ) {
     }
 
@@ -53,6 +55,7 @@ final readonly class SiteCronController
         foreach ($args as $name => $value) {
             $hidden['args['.$name.']'] = $value;
         }
+        $hidden[PlanReceipts::FIELD] = $this->receipts->issue($request, self::OPERATIONS[$op], ['op' => $op, 'args' => $args]);
 
         return $this->views->make('larena-env::admin.plan', [
             'heading' => (string) $this->translator->get('larena-env::admin.cron.operations.'.$op),
@@ -74,6 +77,9 @@ final readonly class SiteCronController
         $args = $this->arguments($request, $actor, $domain, $op, true);
         if (is_string($args)) {
             return $this->back($request, $domain, $args);
+        }
+        if (!$this->receipts->confirms($request, self::OPERATIONS[$op], ['op' => $op, 'args' => $args])) {
+            return $this->back($request, $domain, PlanReceipts::REFUSED);
         }
         $started = $this->operations->startCommand($actor, self::OPERATIONS[$op], $args);
         if ($started->jobId === null) {

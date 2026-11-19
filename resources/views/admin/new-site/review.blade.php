@@ -1,5 +1,6 @@
 {{-- What will be done, in words (part 1, «Действие с планом»): the server's plan for this site, one line per change with
      «Изменить» back to its step (the Framework's sf-wizard-plan); nothing changes until «Создать сайт». --}}
+<input type="hidden" name="receipt" value="{{ $receipt ?? '' }}">
 <ul class="sf-wizard-plan" data-env-new-plan="{{ $plan->command }}">
     @foreach ($facts as $fact)
         <li data-env-new-fact><span><b>{{ $fact['label'] }}</b> — {{ $fact['value'] }}</span>

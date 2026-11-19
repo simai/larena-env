@@ -556,6 +556,7 @@ return [
         'panel_site' => 'Questo è il sito del pannello stesso: non si può mettere in pausa.',
         'profile_unsupported' => 'Un sito di questo tipo non ha una cache propria: non c’è nulla da svuotare.',
         'setup_plan_expired' => 'Il piano non è più aggiornato (viene conservato per 15 minuti). Compila di nuovo il passo.',
+        'plan_receipt' => 'Questa conferma non corrisponde al piano mostrato oppure non è più valida. Non è stato modificato nulla: apri di nuovo il piano e confermalo.',
         'setup_login_needed' => 'L’accesso con codice non è ancora attivo. Apri le impostazioni di accesso, attivalo e torna qui.',
         'setup_alerts_needed' => 'Scegli dove inviare e indica l’indirizzo o la chat.',
         'geo_countries_needed' => 'Scegli almeno un paese.',

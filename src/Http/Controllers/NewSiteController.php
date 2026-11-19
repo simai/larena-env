@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Larena\Env\Gateway\PanelActor;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\NoticeRedirect;
+use Larena\Env\Http\Support\PlanReceipts;
 use Larena\Env\Operations\PanelOperations;
 use Larena\Env\Server\ServerOverviewReader;
 
@@ -53,6 +54,7 @@ final readonly class NewSiteController
         private Factory $views,
         private Translator $translator,
         private ?\Larena\Env\Server\SiteExtrasReader $extras = null,
+        private PlanReceipts $receipts = new PlanReceipts(),
     ) {
     }
 
@@ -138,6 +140,8 @@ final readonly class NewSiteController
             }
             $data['facts'] = $this->wizardFacts($values, $input, $chain, $server, $result->plan);
             $data['plan'] = $result->plan;
+            // «Создать сайт» confirms this plan only: the site and the steps after it, as shown here.
+            $data['receipt'] = $this->receipts->issue($request, 'site:add', self::chainValues($chain));
             $data['then'] = $this->laterSteps($server, $values);
         } elseif ($step === 'run') {
             $run = $this->advance($request, $actor, $run);
@@ -216,6 +220,10 @@ final readonly class NewSiteController
                     return $this->toStep($request, 'kind');
                 }
                 [, $input, $chain] = $this->wizardPlan($actor, $overview, $server, $values);
+                // The values may have changed in another tab since this plan was shown: then it is shown again.
+                if (!$this->receipts->confirms($request, 'site:add', self::chainValues($chain))) {
+                    return NoticeRedirect::to($request, route('larena.env.admin.sites.new.step', ['step' => 'review'], false), $this->reasonText(PlanReceipts::REFUSED));
+                }
                 $started = $this->operations->startCommand($actor, 'site:add', $input);
                 if ($started->jobId === null) {
                     return $this->toStep($request, 'address', ['domain' => $this->reasonText($started->reason ?? 'answer_shape_invalid')]);
@@ -282,7 +290,7 @@ final readonly class NewSiteController
             'plan' => $result->plan,
             'runUrl' => route('larena.env.admin.sites.enable.run', [], false),
             'cancelUrl' => route('larena.env.admin.sites.new', [], false),
-            'hidden' => ['id' => $id],
+            'hidden' => ['id' => $id, PlanReceipts::FIELD => $this->receipts->issue($request, 'profile:enable', ['id' => $id])],
         ]);
     }
 
@@ -292,6 +300,9 @@ final readonly class NewSiteController
         $id = (string) $request->input('id', '');
         if ($actor->owner !== null || !isset($this->extras?->disabledProfiles($actor)[$id])) {
             return NoticeRedirect::to($request, route('larena.env.admin.sites.new', [], false), $this->reasonText('not_allowed'));
+        }
+        if (!$this->receipts->confirms($request, 'profile:enable', ['id' => $id])) {
+            return NoticeRedirect::to($request, route('larena.env.admin.sites.new', [], false), $this->reasonText(PlanReceipts::REFUSED));
         }
         $started = $this->operations->startCommand($actor, 'profile:enable', ['id' => $id]);
         if ($started->jobId === null) {
@@ -807,6 +818,17 @@ final readonly class NewSiteController
     }
 
     /**
+     * What a wizard's run does, for its plan's receipt: each step's command and arguments in order.
+     *
+     * @param list<array{command: string, args: array<string, string>}> $chain
+     * @return list<array{0: string, 1: array<string, string>}>
+     */
+    private static function chainValues(array $chain): array
+    {
+        return array_map(static fn (array $step): array => [$step['command'], $step['args']], $chain);
+    }
+
+    /**
      * The plan of a site the property view was filled for (NewSitePropertyViewPort): the same plan the form makes, from
      * what the port kept in this person's session under the draft's id.
      */
@@ -892,6 +914,7 @@ final readonly class NewSiteController
         if ($result->plan === null) {
             return $this->back($request, $result->reason ?? 'answer_shape_invalid', $input + ($route === null ? [] : ['route' => $route->id]));
         }
+        $hidden = $input + ['daily-backup' => self::dailyBackup($raw) ? 'yes' : 'no'] + ($route === null ? [] : ['route' => $route->id]) + $later;
         $then = [];
         foreach ($route->steps ?? [] as $step) {
             if ($step['command'] !== 'site:add') {
@@ -907,7 +930,8 @@ final readonly class NewSiteController
             'plan' => $result->plan,
             'runUrl' => route('larena.env.admin.sites.run', [], false),
             'cancelUrl' => route('larena.env.admin.sites.new', [], false).(isset($input['profile']) ? '?profile='.$input['profile'] : '').($route !== null ? '&route='.$route->id : ''),
-            'hidden' => $input + ['daily-backup' => self::dailyBackup($raw) ? 'yes' : 'no'] + ($route === null ? [] : ['route' => $route->id]) + $later,
+            // The receipt holds everything the confirmation does: the site's arguments, the route's later values, the backup.
+            'hidden' => $hidden + [PlanReceipts::FIELD => $this->receipts->issue($request, 'site:add', $hidden)],
             'then' => array_merge($then === [] ? [] : [$this->text('routes.then', ['steps' => implode(' → ', $then)])],
                 $this->followsWithSchedule($raw, $overview, $input) ? [(string) $this->translator->get('larena-env::admin.new_site.daily_backup_after')] : []),
             // What the site asks of the server: its memory and, for a copy, the disk (simai-env 1.56.0).
@@ -925,6 +949,11 @@ final readonly class NewSiteController
         $route = self::routeOf($raw, $server);
         if ($route !== null && self::wrongLater($raw, $route) !== null) {
             return $this->back($request, 'invalid_argument', $input + ['route' => $route->id]);
+        }
+        $confirmed = $input + ['daily-backup' => self::dailyBackup($raw) ? 'yes' : 'no'] + ($route === null ? [] : ['route' => $route->id])
+            + ($route === null ? [] : self::laterValues($raw, $route));
+        if (!$this->receipts->confirms($request, 'site:add', $confirmed)) {
+            return $this->back($request, PlanReceipts::REFUSED, $input + ($route === null ? [] : ['route' => $route->id]));
         }
         $started = $this->operations->startCommand($actor, 'site:add', $input);
         if ($started->jobId === null) {

@@ -174,9 +174,11 @@ $gateway = new class () implements PanelGateway {
         return array_values(array_filter($this->asked, static fn (PanelRequest $one): bool => $one->command === $command));
     }
 };
-$asking = static function (string $uri, array $input): Request {
+// One person's session through a plan and its confirmation: the plan's receipt comes back with it (PlanReceipts).
+$actionsSession = new Store('test', new ArraySessionHandler(60));
+$asking = static function (string $uri, array $input) use ($actionsSession): Request {
     $request = Request::create($uri, 'POST', $input);
-    $request->setLaravelSession(new Store('test', new ArraySessionHandler(60)));
+    $request->setLaravelSession($actionsSession);
     $request->attributes->set(ResolvePanelActor::ATTRIBUTE, new PanelActor('admin@stand.test'));
 
     return $request;
@@ -232,9 +234,12 @@ env_assert(substr_count($page, 'data-env-service-op="stop"') === 1 && str_contai
     'Stop only for cron, start only for the stopped Redis, never stop for nginx: '.$page);
 env_assert(!str_contains($servicesPage($services, ['stop' => false, 'start' => false]), 'data-env-service-op="stop"'), 'Without the server\'s command or the right: no stop.');
 
-$servicesController = new ServicesController($operations, $overviews, $extras, $planViews, $translator);
+$servicesClock = 1_800_000_000;
+$servicesController = new ServicesController($operations, $overviews, $extras, $planViews, $translator, receipts: env_plan_receipts($servicesClock));
 $planned = $servicesController->plan($asking('/services/plan', ['op' => 'stop', 'name' => 'cron']));
-env_assert(!$planned instanceof RedirectResponse && $planViews->data['plan'] instanceof PanelPlan && $planViews->data['hidden'] === ['op' => 'stop', 'name' => 'cron']
+$cronReceipt = (string) ($planViews->data['hidden']['receipt'] ?? '');
+env_assert(!$planned instanceof RedirectResponse && $planViews->data['plan'] instanceof PanelPlan
+    && array_diff_key($planViews->data['hidden'], ['receipt' => true]) === ['op' => 'stop', 'name' => 'cron'] && strlen($cronReceipt) === 32
     && $planViews->data['serviceStop']['sites'] === [['domain' => 'block4-wp.test', 'uses' => ['scheduler']], ['domain' => 'panel.localhost', 'uses' => ['scheduler']]]
     && $planViews->data['serviceStop']['server'] === true && $planViews->data['plan']->checks->notes === [],
     'A stop is planned: the sites that lose their scheduler, the server\'s checks pausing; the server\'s English notes replaced by the panel\'s words.');
@@ -248,11 +253,27 @@ env_assert(!$refused instanceof RedirectResponse && $planViews->data['refusedRea
     && $planViews->data['refused'] === ['Web server nginx cannot be stopped: sites stop working without it. It can only be restarted.'],
     'A critical service\'s stop is refused by the server and said in words: '.json_encode($planViews->data['refused'] ?? null));
 $gateway->asked = [];
-$neverRun = $servicesController->run($asking('/services/run', ['op' => 'stop', 'name' => 'nginx']));
-env_assert(str_ends_with($neverRun->getTargetUrl(), 'services') && array_filter($gateway->of('service:stop'), static fn (PanelRequest $one): bool => $one->confirm) === [],
-    'A critical service is never stopped, whatever the form says.');
-$stopped = $servicesController->run($asking('/services/run', ['op' => 'stop', 'name' => 'cron']));
-env_assert(str_ends_with($stopped->getTargetUrl(), '/larena.env.admin.job/eeeeeeeeeeeeeeeeeeeeeeee') && $gateway->of('service:stop')[0]->confirm, 'Confirmed, cron stops as a job.');
+$stops = static fn (): array => array_values(array_filter($gateway->of('service:stop'), static fn (PanelRequest $one): bool => $one->confirm));
+// The plan of cron's stop does not stop nginx: another service with cron's receipt is refused before the server is asked.
+$neverRun = $servicesController->run($asking('/services/run', ['op' => 'stop', 'name' => 'nginx', 'receipt' => $cronReceipt]));
+env_assert(str_ends_with($neverRun->getTargetUrl(), 'services') && $stops() === [], 'A critical service is never stopped, whatever the form says.');
+$servicesController->run($asking('/services/run', ['op' => 'stop', 'name' => 'cron']));
+env_assert($stops() === [] && $actionsSession->get('larena_env_notice') === $lines['reasons']['plan_receipt'], 'Without the plan\'s receipt nothing stops, and the page says why.');
+$restarts = static fn (): array => array_values(array_filter($gateway->of('service:restart'), static fn (PanelRequest $one): bool => $one->confirm));
+$servicesController->run($asking('/services/run', ['op' => 'restart', 'name' => 'cron', 'receipt' => $cronReceipt]));
+env_assert($stops() === [] && $restarts() === [] && $actionsSession->get('larena_env_notice') === $lines['reasons']['plan_receipt'],
+    'The receipt of a stop does not restart: another action is refused.');
+$servicesController->plan($asking('/services/plan', ['op' => 'stop', 'name' => 'cron']));
+$late = (string) $planViews->data['hidden']['receipt'];
+$servicesClock += 901;
+$servicesController->run($asking('/services/run', ['op' => 'stop', 'name' => 'cron', 'receipt' => $late]));
+env_assert($stops() === [], 'A receipt older than 15 minutes is refused.');
+$servicesController->plan($asking('/services/plan', ['op' => 'stop', 'name' => 'cron']));
+$cronReceipt = (string) $planViews->data['hidden']['receipt'];
+$stopped = $servicesController->run($asking('/services/run', ['op' => 'stop', 'name' => 'cron', 'receipt' => $cronReceipt]));
+env_assert(str_ends_with($stopped->getTargetUrl(), '/larena.env.admin.job/eeeeeeeeeeeeeeeeeeeeeeee') && $stops()[0]->confirm, 'Confirmed, cron stops as a job.');
+$servicesController->run($asking('/services/run', ['op' => 'stop', 'name' => 'cron', 'receipt' => $cronReceipt]));
+env_assert(count($stops()) === 1, 'A receipt stops once.');
 env_assert($servicesController->plan($asking('/services/plan', ['op' => 'start', 'name' => 'cron'])) instanceof RedirectResponse, 'A running service is not started again.');
 $gateway->cronActive = false;
 env_assert(!$servicesController->plan($asking('/services/plan', ['op' => 'start', 'name' => 'cron'])) instanceof RedirectResponse && $planViews->data['plan']->command === 'service:start' && $planViews->data['then'] === ['The service starts at once.'],

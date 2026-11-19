@@ -10,6 +10,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\NoticeRedirect;
+use Larena\Env\Http\Support\PlanReceipts;
 use Larena\Env\Gateway\PanelActor;
 use Larena\Env\Operations\JobState;
 use Larena\Env\Operations\PanelJobStatus;
@@ -33,6 +34,7 @@ final readonly class ServerJobController
         private ?\Larena\Env\Server\ServerOverviewReader $overviews = null,
         private ?\Larena\Access\Runtime\AccessOperationAuthorizer $authorizer = null,
         private ?\Illuminate\Routing\Router $router = null,
+        private PlanReceipts $receipts = new PlanReceipts(),
     ) {
     }
 
@@ -140,7 +142,7 @@ final readonly class ServerJobController
             'update' => $result->plan->update,
             'runUrl' => route('larena.env.admin.job.again.run', ['job' => $job], false),
             'cancelUrl' => $address,
-            'hidden' => [],
+            'hidden' => [PlanReceipts::FIELD => $this->receipts->issue($request, 'job:again', ['job' => $job, 'command' => $status->command, 'args' => $status->args])],
         ]);
     }
 
@@ -152,6 +154,9 @@ final readonly class ServerJobController
         $address = route('larena.env.admin.job', ['job' => $job], false);
         if ($status === null || !\Larena\Env\Admin\JobOutcome::canAgain($status) || !$this->mayAgain($request, $status)) {
             return NoticeRedirect::to($request, $address, (string) $this->translator->get('larena-env::admin.job.again_refused'));
+        }
+        if (!$this->receipts->confirms($request, 'job:again', ['job' => $job, 'command' => $status->command, 'args' => $status->args])) {
+            return NoticeRedirect::to($request, $address, $this->reasonText(PlanReceipts::REFUSED));
         }
         $started = $this->operations->startCommand($actor, $status->command, $status->args);
         if ($started->jobId === null) {

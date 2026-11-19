@@ -556,6 +556,7 @@ return [
         'panel_site' => '这是面板自己的网站：无法暂停。',
         'profile_unsupported' => '此类型的网站没有自己的缓存：无需清除。',
         'setup_plan_expired' => '计划已过时（只保留 15 分钟）。请重新填写此步骤。',
+        'plan_receipt' => '此确认与显示的计划不一致或已过期。未做任何更改：请重新打开计划并确认。',
         'setup_login_needed' => '验证码登录尚未开启。请打开登录设置，开启后再返回。',
         'setup_alerts_needed' => '请选择发送位置，并填写地址或聊天。',
         'geo_countries_needed' => '请至少选择一个国家/地区。',

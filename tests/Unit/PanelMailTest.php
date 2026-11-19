@@ -352,12 +352,25 @@ $planPage = (string) $spam->render();
 env_assert(str_contains($planPage, e($lines['mail']['spam_warning'])) && !str_contains($planPage, 'box-secret') && str_contains($planPage, e($lines['mail']['plan']['password_new']))
     && str_contains($planPage, e($lines['mail']['plan']['after_retest_on'])), 'The plan: the spam warning, the password only as «новый», mail off until the test.');
 env_assert(count($caught->letters()) === 0 && $mail->settings()?->service === 'yandex', 'Nothing kept before the confirmation.');
-$planId = (string) array_key_last((array) $session->get('larena_env_mail_plans'));
+$planId = (string) array_key_last((array) $session->get('larena_env_plan_receipts'));
 env_assert(!str_contains(json_encode($session->all(), JSON_THROW_ON_ERROR), 'box-secret'), 'Between the plan and the confirmation the password waits sealed.');
 $ran = $screen->run($asking('/admin/server/settings/mail/run', 'POST', ['plan' => $planId]));
 env_assert($notice($ran) === $lines['mail']['done']['saved_test'] && $mail->state() === PanelMail::UNCHECKED && $mail->settings()?->service === 'mailru' && $mail->password() === 'box-secret-Pa55!',
     'Confirmed: kept, mail waits for the test letter.');
 env_assert($notice($screen->run($asking('/admin/server/settings/mail/run', 'POST', ['plan' => $planId]))) === $lines['mail']['reasons']['plan_expired'], 'A plan is confirmed once.');
+// The plan waits in the shared receipt (PlanReceipts): another person's confirmation and one after 15 minutes are refused.
+$mailClock = time();
+$timedScreen = new PanelMailController($mail, $mailer, $views, $translator, $key, null, static fn (Request $request): string => 'admin@example.ru', receipts: env_plan_receipts($mailClock));
+$timedScreen->plan($asking('/admin/server/settings/mail/plan', 'POST', ['action' => 'off']));
+$lateId = (string) array_key_last((array) $session->get('larena_env_plan_receipts'));
+$mailClock += 901;
+env_assert($notice($timedScreen->run($asking('/admin/server/settings/mail/run', 'POST', ['plan' => $lateId]))) === $lines['mail']['reasons']['plan_expired']
+    && $mail->state() !== PanelMail::OFF, 'A plan older than 15 minutes is not confirmed.');
+$timedScreen->plan($asking('/admin/server/settings/mail/plan', 'POST', ['action' => 'off']));
+$otherId = (string) array_key_last((array) $session->get('larena_env_plan_receipts'));
+$other = $asking('/admin/server/settings/mail/run', 'POST', ['plan' => $otherId]);
+$other->attributes->set(ResolvePanelActor::ATTRIBUTE, new PanelActor('user:admin_identity:2'));
+env_assert($notice($timedScreen->run($other)) === $lines['mail']['reasons']['plan_expired'] && $mail->state() !== PanelMail::OFF, 'Another person\'s confirmation is refused.');
 $spamCard = $page($screen);
 env_assert(str_contains($spamCard, 'data-env-mail-spam') && str_contains($spamCard, e($lines['mail']['spam_warning'])) && str_contains($spamCard, 'data-env-mail-test'), 'The card warns of spam above the test letter.');
 
@@ -375,7 +388,7 @@ env_assert($notice($sent) === str_replace(':to', 'admin@example.ru', $lines['mai
 
 $offPlan = $screen->plan($asking('/admin/server/settings/mail/plan', 'POST', ['action' => 'off']));
 env_assert($offPlan instanceof Illuminate\Contracts\View\View, '«Выключить почту» is planned too.');
-$offId = (string) array_key_last((array) $session->get('larena_env_mail_plans'));
+$offId = (string) array_key_last((array) $session->get('larena_env_plan_receipts'));
 $screen->run($asking('/admin/server/settings/mail/run', 'POST', ['plan' => $offId]));
 env_assert($mail->state() === PanelMail::OFF, 'Confirmed: off.');
 $nothing = $screen->plan($asking('/admin/server/settings/mail/plan', 'POST', ['service' => 'mailru', 'login' => 'box@corp.ru', 'from_address' => 'noreply@shop.example', 'from_name' => 'Shop', 'levels' => ['urgent']]));
@@ -424,7 +437,8 @@ env_assert($refuses(static fn () => $letters->queue('reset', 'a@example.ru', 'x'
 env_assert(Larena\Env\Mail\MailLetters::masked('rim@mail.ru') === 'r***@mail.ru' && Larena\Env\Mail\MailLetters::masked('nobody') === '***', 'The address partly hidden: r***@mail.ru.');
 $caught->clear();
 $letters->queue('warning', 'Owner@Example.ru', 'Larena Panel: срочно — диск', 'Текст уведомления');
-$t0 = new DateTimeImmutable('2026-11-19 10:00:00', new DateTimeZone('UTC'));
+// The queue stamps letters with the real clock: the runs count from just after it, not from a fixed hour.
+$t0 = Larena\Env\Mail\MailLetters::now()->modify('+1 second');
 env_assert($letters->run($mail, $mailer, $t0) === ['sent' => 1, 'retried' => 0, 'failed' => 0] && count($caught->letters()) === 1
     && $caught->letters()[0]->getTo()[0]->getAddress() === 'owner@example.ru', 'A waiting letter leaves on the next run.');
 $row = $db->table(Larena\Env\Mail\MailLetters::TABLE)->orderByDesc('id')->first();

@@ -556,6 +556,7 @@ return [
         'panel_site' => 'Es el propio sitio del panel: no se puede pausar.',
         'profile_unsupported' => 'Un sitio de este tipo no tiene caché propia: no hay nada que vaciar.',
         'setup_plan_expired' => 'El plan está desactualizado (se conserva 15 minutos). Vuelva a rellenar el paso.',
+        'plan_receipt' => 'Esta confirmación no coincide con el plan mostrado o está desactualizada. No se ha cambiado nada: abra el plan de nuevo y confírmelo.',
         'setup_login_needed' => 'El acceso con código todavía no está activado. Abra la configuración de acceso, actívelo y vuelva.',
         'setup_alerts_needed' => 'Elija adónde enviar e indique la dirección o el chat.',
         'geo_countries_needed' => 'Elija al menos un país.',
