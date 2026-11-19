@@ -9,12 +9,12 @@
     </section>
 @else
     @php($envWaits = ($plans['env'] ?? null)?->updateAvailable === true)
-    <div class="grid g-2 grid-col-1 xl:grid-col-2" style="align-items: start;">
+    <div class="grid gap-2 grid-col-1 xl:grid-col-2" style="align-items: start;">
     @foreach ($plans as $target => $update)
         @php($installed = $update?->current ?? (($versions ?? [])[$target]['installed'] ?? null) ?? ($target === 'panel' ? ($panelBuild ?? null) : null))
         @php($latest = $update?->available ?? (($versions ?? [])[$target]['pinned'] ?? null))
         <section class="larena-panel p-2" style="margin: 0;" data-env-update="{{ $target }}" data-env-update-state="{{ $update === null ? 'unknown' : ($update->blocked ?? ($update->updateAvailable ? 'available' : 'current')) }}" aria-labelledby="env-update-{{ $target }}">
-            <div class="flex flex-wrap items-cross-center content-main-between g-1 m-bottom-1">
+            <div class="flex flex-wrap items-cross-center content-main-between gap-1 m-bottom-1">
                 <h2 id="env-update-{{ $target }}" class="m-0 text-2">{{ __('larena-env::admin.update.targets.'.$target) }}</h2>
                 <sf-badge appearance="tonal" status="{{ $update === null ? 'error' : ($update->blocked !== null ? 'warning' : ($update->updateAvailable ? 'info' : 'success')) }}"
                     text="{{ __('larena-env::admin.update.states.'.($update === null ? 'unknown' : ($update->blocked !== null ? 'blocked' : ($update->updateAvailable ? 'available' : 'current')))) }}"></sf-badge>

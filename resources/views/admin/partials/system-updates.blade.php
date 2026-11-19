@@ -5,8 +5,8 @@
 @else
     <ul class="m-0 p-0" style="list-style: none;" data-env-system-packages="{{ count($system->packages) }}">
         @foreach ($system->packages as $package)
-            <li class="flex flex-wrap items-cross-center content-main-between g-1 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-system-package="{{ $package['name'] }}">
-                <span class="flex flex-wrap items-cross-center g-1 min-w-0">
+            <li class="flex flex-wrap items-cross-center content-main-between gap-1 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-system-package="{{ $package['name'] }}">
+                <span class="flex flex-wrap items-cross-center gap-1 min-w-0">
                     <span class="mono" style="overflow-wrap: anywhere;">{{ $package['name'] }}</span>
                     @if ($package['security'])
                         <sf-badge appearance="tonal" status="warning" text="{{ __('larena-env::admin.software.overview.security_badge') }}" data-env-system-security></sf-badge>

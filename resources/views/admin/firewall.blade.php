@@ -18,8 +18,8 @@
         @else
             @include('larena-env::admin.partials.timed-change', ['change' => $pending, 'canKeep' => $allows['keep']])
             <dl class="m-0" style="display: block;" data-env-facts data-larena-action-details>
-                <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.firewall.state') }}</dt><dd class="m-0 min-w-0 text-end"><sf-badge appearance="tonal" status="{{ $status->active ? 'success' : 'error' }}" @if (!$status->active) role="alert" @endif text="{{ $status->active ? __('larena-env::admin.firewall.on') : __('larena-env::admin.firewall.off') }}"></sf-badge></dd></div>
-                <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.firewall.default_incoming') }}</dt><dd class="m-0 min-w-0 text-end">{{ $status->defaultIncoming === null ? '—' : __('larena-env::admin.firewall.actions.'.($status->defaultIncoming === 'allow' ? 'allow' : 'deny')) }}</dd></div>
+                <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.firewall.state') }}</dt><dd class="m-0 min-w-0 text-end"><sf-badge appearance="tonal" status="{{ $status->active ? 'success' : 'error' }}" @if (!$status->active) role="alert" @endif text="{{ $status->active ? __('larena-env::admin.firewall.on') : __('larena-env::admin.firewall.off') }}"></sf-badge></dd></div>
+                <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.firewall.default_incoming') }}</dt><dd class="m-0 min-w-0 text-end">{{ $status->defaultIncoming === null ? '—' : __('larena-env::admin.firewall.actions.'.($status->defaultIncoming === 'allow' ? 'allow' : 'deny')) }}</dd></div>
             </dl>
             <p>{{ __('larena-env::admin.firewall.protected_note') }}</p>
         @endif
@@ -34,7 +34,7 @@
                 <ul class="m-0 p-0" style="list-style: none;">
                     {{-- A blocked address is a rule too; it is shown with the blocks, where it is unblocked. --}}
                     @foreach (array_filter($status->rules, static fn ($rule): bool => !($rule->port === null && in_array($rule->from, array_column($status->blocks, 'address'), true))) as $rule)
-                        <li data-env-firewall-rule="{{ $rule->id }}" @if ($rule->protected) data-env-firewall-protected @endif class="flex flex-wrap items-cross-center g-2 p-y-1 border-top-1 border-top-solid border-outline-variant">
+                        <li data-env-firewall-rule="{{ $rule->id }}" @if ($rule->protected) data-env-firewall-protected @endif class="flex flex-wrap items-cross-center gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant">
                             <span class="grow min-w-0" style="flex-basis: 12rem; overflow-wrap: anywhere;">
                                 {{ $rule->port === null
                                     ? __('larena-env::admin.firewall.rule_address', ['action' => __('larena-env::admin.firewall.actions.'.$rule->action), 'from' => $rule->from])
@@ -96,7 +96,7 @@
             @else
                 <ul class="m-0 p-0" style="list-style: none;">
                     @foreach ($status->blocks as $block)
-                        <li data-env-firewall-block="{{ $block['address'] }}" class="flex flex-wrap items-cross-center g-2 p-y-1 border-top-1 border-top-solid border-outline-variant">
+                        <li data-env-firewall-block="{{ $block['address'] }}" class="flex flex-wrap items-cross-center gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant">
                             <span class="grow min-w-0" style="flex-basis: 12rem; overflow-wrap: anywhere;">{{ $block['address'] }} · {{ $block['until'] === null ? __('larena-env::admin.firewall.until_unblocked') : __('larena-env::admin.firewall.until', ['time' => \Larena\Env\Server\Moment::human($block['until'])]) }}</span>
                             @if ($allows['unblock'])
                                 <form method="post" action="{{ route('larena.env.admin.firewall.plan', [], false) }}" class="m-0" data-env-firewall-op="unblock">

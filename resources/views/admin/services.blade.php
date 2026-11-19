@@ -10,9 +10,9 @@
 
     {{-- The server's services (Panel plan 5.1), state first: how many work in the head, a stopped one at the top (the controller
          puts it there) in its colour; short rows with large buttons, for an emergency from a phone. --}}
-    <div class="grid g-2">
+    <div class="grid gap-2">
         <section class="larena-panel" style="margin: 0;" data-env-services="{{ $allows['restart'] || $allows['reload'] ? 'on' : 'read' }}" aria-labelledby="env-services">
-            <div class="flex flex-wrap items-cross-center content-main-between g-1 p-2 p-bottom-1">
+            <div class="flex flex-wrap items-cross-center content-main-between gap-1 p-2 p-bottom-1">
                 <h2 id="env-services" class="sr-only">{{ __('larena-env::admin.services.list') }}</h2>
                 @if ($services !== [])
                     <sf-badge data-env-services-summary status="{{ count(array_filter($services, static fn ($service): bool => !$service->isActive() && !$service->isUnused())) === 0 ? 'success' : 'error' }}" appearance="tonal"
@@ -27,10 +27,10 @@
                 @endif
                 <ul class="m-0 p-0" style="list-style: none;">
                     @foreach ($services as $service)
-                        <li class="flex flex-wrap items-cross-center g-2 p-x-2 p-y-1 border-top-1 border-top-solid border-outline-variant"
+                        <li class="flex flex-wrap items-cross-center gap-2 p-x-2 p-y-1 border-top-1 border-top-solid border-outline-variant"
                             data-env-service="{{ $service->name }}" data-env-service-state="{{ $service->active }}">
                             <div class="grow min-w-0" style="flex-basis: 12rem;">
-                                <div class="flex flex-wrap items-cross-center g-1">
+                                <div class="flex flex-wrap items-cross-center gap-1">
                                     <span style="overflow-wrap: anywhere;" title="{{ $service->name }}">{{ \Larena\Env\Server\HostService::label($service->name) }}</span>
                                     {{-- A service not used on this server is grey, not the red of a stopped one (block 4, DATA-02). --}}
                                     <sf-badge status="{{ $service->isActive() ? 'success' : ($service->isUnused() ? 'neutral' : 'error') }}" appearance="tonal" @if (!$service->isActive() && !$service->isUnused()) role="alert" @endif
@@ -48,7 +48,7 @@
                                     </div>
                                 @endif
                             </div>
-                            <div class="flex flex-wrap items-cross-center g-1">
+                            <div class="flex flex-wrap items-cross-center gap-1">
                                 @if ($allows['restart'])
                                     <form method="post" action="{{ route('larena.env.admin.services.plan', [], false) }}" class="m-0" data-env-service-op="restart">
                                         @csrf

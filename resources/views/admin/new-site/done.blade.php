@@ -6,15 +6,15 @@
         <p class="m-0 text-medium">{{ __('larena-env::admin.routes.password.title') }}</p>
         <p class="m-0">{{ __('larena-env::admin.routes.password.save_now') }}</p>
         <dl class="m-0 m-y-1" style="display: block;" data-env-facts data-larena-action-details>
-            <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.routes.password.user') }}</dt><dd class="m-0 min-w-0 text-end mono">{{ $secret->user }}</dd></div>
-            <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.routes.password.password') }}</dt><dd class="m-0 min-w-0 text-end mono" style="overflow-wrap: anywhere;" data-env-job-password>{{ $secret->password }}</dd></div>
+            <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.routes.password.user') }}</dt><dd class="m-0 min-w-0 text-end mono">{{ $secret->user }}</dd></div>
+            <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.routes.password.password') }}</dt><dd class="m-0 min-w-0 text-end mono" style="overflow-wrap: anywhere;" data-env-job-password>{{ $secret->password }}</dd></div>
         </dl>
         <sf-button-copy value="{{ $secret->password }}" text="{{ __('larena-env::admin.job.copy_password') }}" label="{{ __('larena-env::admin.job.copy_password') }}" appearance="default" scheme="primary" data-env-job-copy></sf-button-copy>
     </div>
 @elseif ($secretShown)
     <p class="m-0" role="note" data-env-job-secret-shown>{{ __('larena-env::admin.routes.password.shown') }}</p>
 @endif
-<div class="flex flex-wrap g-1" data-env-new-next>
+<div class="flex flex-wrap gap-1" data-env-new-next>
     <sf-button href="{{ $siteUrl }}" target="_blank" text="{{ __('larena-env::admin.new_site.wizard.open_site') }}" appearance="outline" scheme="on-surface" icon-end="open_in_new" data-env-new-open-site></sf-button>
     @if ($wpLogin !== null)
         <sf-button href="{{ $wpLogin }}" target="_blank" text="{{ __('larena-env::admin.new_site.wizard.wp_login') }}" appearance="outline" scheme="on-surface" icon-end="open_in_new" data-env-new-wp-login></sf-button>

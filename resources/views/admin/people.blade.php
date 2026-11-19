@@ -31,7 +31,7 @@
         <sf-modal id="env-invite" position="inline-end" width="30rem" heading="{{ __('larena-env::admin.people.invite.heading') }}" @if ($inviteOpen ?? false) autoload @endif data-env-invite>
             <form method="post" action="{{ route('larena.env.admin.people.invite.plan', [], false) }}" class="m-0" autocomplete="off" data-env-invite-form>
                 @csrf
-                <div class="flex flex-column g-2">
+                <div class="flex flex-column gap-2">
                     <sf-input name="name" label="{{ __('larena-env::admin.people.invite.name') }}" default-value="{{ ($inviteOld ?? [])['name'] ?? '' }}" autocomplete="off" required></sf-input>
                     <sf-input name="email" input-type="email" label="{{ __('larena-env::admin.people.invite.email') }}" hint="{{ __('larena-env::admin.people.invite.'.(($inviteByMail ?? false) ? 'email_hint_mail' : 'email_hint')) }}" default-value="{{ ($inviteOld ?? [])['email'] ?? '' }}" autocomplete="off" required></sf-input>
                     @if ($inviteByMail ?? false)
@@ -44,7 +44,7 @@
                     @endif
                     <sf-input-choice name="level" label="{{ __('larena-env::admin.people.invite.level') }}" layout="list" required value="{{ (($inviteOld ?? [])['level'] ?? 'own') === 'all' ? 'all' : 'own' }}" data-env-invite-level
                         items="{{ json_encode(array_map(static fn (string $level): array => ['value' => $level, 'label' => __('larena-env::admin.people.invite.levels.'.$level.'.label'), 'caption' => __('larena-env::admin.people.invite.levels.'.$level.'.caption')], ['own', 'all']), JSON_UNESCAPED_UNICODE) }}"></sf-input-choice>
-                    <fieldset class="m-0 p-0 flex flex-column g-2" style="border: 0;" data-env-invite-own>
+                    <fieldset class="m-0 p-0 flex flex-column gap-2" style="border: 0;" data-env-invite-own>
                         <legend class="m-0 m-bottom-1 text-medium">{{ __('larena-env::admin.people.invite.own_title') }}</legend>
                         @if ($owners !== [])
                             <sf-dropdown name="account" label="{{ __('larena-env::admin.people.invite.account') }}" value="{{ ($inviteOld ?? [])['account'] ?? 'new' }}"
@@ -69,7 +69,7 @@
                         @endif
                     </fieldset>
                 </div>
-                <div class="flex flex-wrap g-1 m-top-2">
+                <div class="flex flex-wrap gap-1 m-top-2">
                     <sf-button native-type="submit" appearance="filled" text="{{ __('larena-env::admin.people.invite.show_plan') }}" data-env-invite-plan></sf-button>
                 </div>
             </form>
@@ -87,9 +87,9 @@
             @endif
             <ul class="m-0 p-0" style="list-style: none;">
                 @foreach ($owners as $owner)
-                    <li class="flex flex-wrap items-cross-center g-2 p-x-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-owner="{{ $owner }}" data-env-owner-blocked="{{ in_array($owner, $blockedOwners ?? [], true) ? 'yes' : 'no' }}">
+                    <li class="flex flex-wrap items-cross-center gap-2 p-x-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-owner="{{ $owner }}" data-env-owner-blocked="{{ in_array($owner, $blockedOwners ?? [], true) ? 'yes' : 'no' }}">
                         <div class="grow min-w-0" style="flex-basis: 12rem;">
-                            <div class="flex flex-wrap items-cross-center g-1">
+                            <div class="flex flex-wrap items-cross-center gap-1">
                                 <span class="mono" style="overflow-wrap: anywhere;">{{ $owner }}</span>
                                 @if (in_array($owner, $blockedOwners ?? [], true))
                                     <sf-badge status="error" appearance="tonal" text="{{ __('larena-env::admin.people.blocked') }}"></sf-badge>

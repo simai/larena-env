@@ -23,7 +23,7 @@
                 @if ($key === $step && ($message ?? null) !== null) message="{{ $message }}" @endif
                 data-env-new-step="{{ $key }}">
                 @if ($key === $step)
-                    <form method="post" action="{{ route('larena.env.admin.sites.new.submit', ['step' => $key], false) }}" id="env-new-site-form" class="m-0 flex flex-column g-2" data-env-new-site-form="{{ $key }}">
+                    <form method="post" action="{{ route('larena.env.admin.sites.new.submit', ['step' => $key], false) }}" id="env-new-site-form" class="m-0 flex flex-column gap-2" data-env-new-site-form="{{ $key }}">
                         @csrf
                         @include('larena-env::admin.new-site.'.$key)
                     </form>

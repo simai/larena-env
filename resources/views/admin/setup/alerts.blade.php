@@ -22,7 +22,7 @@
             </ol>
         </details>
     @elseif ($state === 'done')
-        <div class="flex flex-wrap g-2">
+        <div class="flex flex-wrap gap-2">
             @if ($canTest)
                 <sf-button appearance="outline" text="{{ __('larena-env::admin.alerts.test') }}" native-type="submit" name="intent" value="test" data-env-setup-test></sf-button>
             @endif

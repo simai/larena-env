@@ -11,7 +11,7 @@
         {{-- Where a removal goes, said before anything is removed: the site's trash and its term, or that it is final. --}}
         <p class="m-0 m-bottom-1 text-small color-on-surface-variant" data-env-files-term="{{ $files['trashKept'] ? 'trash' : 'final' }}">{{ $files['trashKept']
             ? __('larena-env::admin.files.explain_trash', ['days' => \Larena\Env\Admin\Plural::days((int) ($files['trash']['days'] ?? 7))]) : __('larena-env::admin.files.explain_final') }}</p>
-        <nav aria-label="{{ __('larena-env::admin.files.path') }}" data-env-files-crumbs class="flex flex-wrap g-1" style="overflow-wrap: anywhere;">
+        <nav aria-label="{{ __('larena-env::admin.files.path') }}" data-env-files-crumbs class="flex flex-wrap gap-1" style="overflow-wrap: anywhere;">
             <a href="{{ $files['base'] }}&amp;path=.">{{ $domain }}</a>
             @foreach ($files['crumbs'] as $crumb)
                 <span aria-hidden="true">/</span>
@@ -53,7 +53,7 @@
                 {{-- PX-92: a file with passwords is shown and downloaded only when the person says so. --}}
                 {{-- One warning: the mark and its sentence together. --}}
                 {{-- Without the right to such files (q-4997ae4e93): the refusal in plain words, nothing to open or download. --}}
-                <p role="note" data-env-files-secret class="m-y-1 flex flex-wrap items-cross-center g-1"><sf-badge status="warning" appearance="tonal" text="{{ __('larena-env::admin.files.secret') }}"></sf-badge> <span @if (($files['secretRefused'] ?? null) !== null) data-env-files-secret-refused @endif>{{ $files['secretRefused'] ?? __('larena-env::admin.files.secret_note') }}</span></p>
+                <p role="note" data-env-files-secret class="m-y-1 flex flex-wrap items-cross-center gap-1"><sf-badge status="warning" appearance="tonal" text="{{ __('larena-env::admin.files.secret') }}"></sf-badge> <span @if (($files['secretRefused'] ?? null) !== null) data-env-files-secret-refused @endif>{{ $files['secretRefused'] ?? __('larena-env::admin.files.secret_note') }}</span></p>
                 @if (($files['secretRefused'] ?? null) === null && !$files['revealed'] && $files['allows']['read'])
                     <p><a class="larena-button" href="{{ $files['base'] }}&amp;view={{ rawurlencode($files['view']) }}&amp;reveal=1" data-env-files-reveal>{{ __('larena-env::admin.files.secret_reveal') }}</a></p>
                 @endif
@@ -119,14 +119,14 @@
                         </div>
                         <p id="env-files-upload-note" class="m-0 text-small color-on-surface-variant">{{ __('larena-env::admin.files.upload_drop') }} {{ __('larena-env::admin.files.upload_note') }}</p>
                     </div>
-                    <div class="flex flex-wrap items-cross-center g-2">
-                        <label class="flex items-cross-center g-1 m-0"><input type="checkbox" name="overwrite" value="yes" style="width: auto; min-width: 1.25rem; min-height: 1.25rem;"> {{ __('larena-env::admin.files.overwrite') }}</label>
+                    <div class="flex flex-wrap items-cross-center gap-2">
+                        <label class="flex items-cross-center gap-1 m-0"><input type="checkbox" name="overwrite" value="yes" style="width: auto; min-width: 1.25rem; min-height: 1.25rem;"> {{ __('larena-env::admin.files.overwrite') }}</label>
                         <button type="submit" class="larena-button larena-button-primary">{{ __('larena-env::admin.files.upload') }}</button>
                     </div>
                 </form>
             @endif
             @if ($files['allows']['mkdir'] || $files['allows']['create'])
-                <div class="flex flex-wrap g-1 m-bottom-2" data-env-files-toolbar>
+                <div class="flex flex-wrap gap-1 m-bottom-2" data-env-files-toolbar>
                     @foreach (['mkdir' => 'new_folder', 'create' => 'new_file'] as $op => $label)
                         @continue(!$files['allows'][$op])
                         <button type="button" class="larena-button" data-sf-modal-open="env-files-{{ $op }}">{{ __('larena-env::admin.files.'.$label) }}</button>
@@ -218,7 +218,7 @@
                                     <label for="env-files-extract-to">{{ __('larena-env::admin.files.extract_to') }}</label>
                                     <input type="text" id="env-files-extract-to" name="folder" value="{{ $files['path'] }}" required maxlength="1024">
                                 </div>
-                                <label class="flex items-cross-center g-1 text-small"><input type="checkbox" name="overwrite" value="yes" style="width: auto; min-width: 1.25rem; min-height: 1.25rem;"> {{ __('larena-env::admin.files.extract_overwrite') }}</label>
+                                <label class="flex items-cross-center gap-1 text-small"><input type="checkbox" name="overwrite" value="yes" style="width: auto; min-width: 1.25rem; min-height: 1.25rem;"> {{ __('larena-env::admin.files.extract_overwrite') }}</label>
                                 @if (!($files['allows']['secrets'] ?? true))
                                     <p class="m-0 text-small color-on-surface-variant" data-env-files-without-secrets>{{ __('larena-env::admin.files.without_secrets_extract') }}</p>
                                 @endif

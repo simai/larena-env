@@ -16,10 +16,10 @@
             <h2 id="env-site-backups" class="text-2">{{ __('larena-env::admin.storages.site_backups') }}</h2>
             <ul class="m-0 p-0" style="list-style: none;">
                 @foreach ($siteBackups as $row)
-                    <li class="flex flex-wrap items-cross-center content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-site-backup="{{ $row['domain'] }}" data-env-site-backup-state="{{ $row['state'] }}">
+                    <li class="flex flex-wrap items-cross-center content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-site-backup="{{ $row['domain'] }}" data-env-site-backup-state="{{ $row['state'] }}">
                         <a href="{{ route('larena.env.admin.site', ['domain' => $row['domain']], false) }}?tab=backups">{{ $row['domain'] }}</a>
                         {{-- The words and colour of the sites list and the site's own tab (SiteBackupSummary), the daily backup apart. --}}
-                        <span class="flex flex-wrap items-cross-center g-1">
+                        <span class="flex flex-wrap items-cross-center gap-1">
                             <sf-badge appearance="tonal" status="{{ $row['color'] === 'success' ? 'success' : 'error' }}" text="{{ $row['words'] }}"></sf-badge>
                             <span class="text-small color-on-surface-variant" data-env-site-backup-schedule="{{ $row['scheduled'] ? 'daily' : 'none' }}">{{ $row['schedule'] }}</span>
                         </span>
@@ -44,7 +44,7 @@
             @else
                 <ul class="m-0 p-0" style="list-style: none;">
                     @foreach ($storages as $storage)
-                        <li class="flex flex-wrap items-cross-center g-2 p-y-2 border-top-1 border-top-solid border-outline-variant" data-env-storage="{{ $storage->name }}">
+                        <li class="flex flex-wrap items-cross-center gap-2 p-y-2 border-top-1 border-top-solid border-outline-variant" data-env-storage="{{ $storage->name }}">
                             <span class="grow min-w-0" style="flex-basis: 16rem;">
                                 <strong>{{ $storage->name }}</strong>
                                 @if ($storage->default)<sf-badge appearance="tonal" status="success" text="{{ __('larena-env::admin.storages.default') }}"></sf-badge>@endif
@@ -89,7 +89,7 @@
                 @else
                     <ul class="m-0 p-0" style="list-style: none;">
                         @foreach ($copies as $copy)
-                            <li class="flex flex-wrap items-cross-center g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-storage-copy="{{ $copy['domain'] }}/{{ $copy['backup'] }}">
+                            <li class="flex flex-wrap items-cross-center gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-storage-copy="{{ $copy['domain'] }}/{{ $copy['backup'] }}">
                                 <span class="grow min-w-0"><strong>{{ $copy['domain'] }}</strong> <span class="color-on-surface-variant">{{ \Larena\Env\Server\Moment::human($copy['created_at'] ?? null) }} · {{ $copy['backup'] }}</span></span>
                                 @if ($allows['fetch'])
                                     <form method="post" action="{{ route('larena.env.admin.storages.plan', [], false) }}" class="m-0" data-env-storage-op="fetch">
@@ -116,7 +116,7 @@
                     @csrf
                     <input type="hidden" name="op" value="add">
                     {{-- The same fields as the wizard's backups step, on the Framework's inputs (critics 2026-11-07). --}}
-                    <div class="flex flex-column g-2">
+                    <div class="flex flex-column gap-2">
                         <sf-dropdown name="provider" label="{{ __('larena-env::admin.storages.fields.provider') }}" value="{{ $providers[0] ?? '' }}" required
                             options="{{ json_encode(array_map(static fn (string $one): array => ['value' => $one, 'text' => __('larena-env::admin.storages.providers.'.$one)], array_values($providers)), JSON_UNESCAPED_UNICODE) }}"></sf-dropdown>
                         <sf-input name="name" label="{{ __('larena-env::admin.storages.fields.name') }}" hint="{{ __('larena-env::admin.storages.fields.name_hint') }}" pattern="[a-z0-9][a-z0-9-]{0,31}" placeholder="yandex" autocomplete="off" required></sf-input>
@@ -125,7 +125,7 @@
                         <sf-input name="secret_key" label="{{ __('larena-env::admin.storages.fields.secret_key') }}" input-type="password" autocomplete="new-password" required></sf-input>
                         <details>
                             <summary class="color-primary larena-control-floor" style="cursor: pointer; display: flex; align-items: center;">{{ __('larena-env::admin.more') }}</summary>
-                            <div class="flex flex-column g-2 m-t-2">
+                            <div class="flex flex-column gap-2 m-t-2">
                                 <sf-input name="prefix" label="{{ __('larena-env::admin.storages.fields.prefix') }}" placeholder="backups" autocomplete="off"></sf-input>
                                 <sf-input name="endpoint" label="{{ __('larena-env::admin.storages.fields.endpoint') }}" hint="{{ __('larena-env::admin.storages.fields.endpoint_hint') }}" placeholder="https://…" autocomplete="off"></sf-input>
                                 <sf-input name="region" label="{{ __('larena-env::admin.storages.fields.region') }}" autocomplete="off"></sf-input>
@@ -133,7 +133,7 @@
                             </div>
                         </details>
                     </div>
-                    <label class="flex items-cross-center g-1 m-t-2 larena-control-floor"><input type="checkbox" name="default" value="1" @checked($storages === [])> {{ __('larena-env::admin.storages.fields.default') }}</label>
+                    <label class="flex items-cross-center gap-1 m-t-2 larena-control-floor"><input type="checkbox" name="default" value="1" @checked($storages === [])> {{ __('larena-env::admin.storages.fields.default') }}</label>
                     <button type="submit" class="larena-button larena-button-primary m-t-2 larena-control-floor">{{ __('larena-env::admin.storages.add_go') }}</button>
                 </form>
             </section>

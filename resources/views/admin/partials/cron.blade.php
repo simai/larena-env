@@ -10,8 +10,8 @@
     @else
         <ul class="m-0 p-0" style="list-style: none;">
             @foreach ($cron['jobs'] as $job)
-                <li data-env-cron-job="{{ $job->id }}" data-env-cron-enabled="{{ $job->enabled ? 'yes' : 'no' }}" class="grid g-1 p-y-2 border-top-1 border-top-solid border-outline-variant">
-                    <div class="flex flex-wrap items-cross-center g-1">
+                <li data-env-cron-job="{{ $job->id }}" data-env-cron-enabled="{{ $job->enabled ? 'yes' : 'no' }}" class="grid gap-1 p-y-2 border-top-1 border-top-solid border-outline-variant">
+                    <div class="flex flex-wrap items-cross-center gap-1">
                         <strong data-env-cron-when>{{ $cron['when'][$job->id] ?? $job->schedule }}</strong>
                         @if (!$job->enabled)
                             <sf-badge appearance="tonal" status="neutral" text="{{ __('larena-env::admin.cron.off') }}"></sf-badge>
@@ -26,7 +26,7 @@
                         @endif
                     </div>
                     <code class="mono text-small" style="overflow-wrap: anywhere; white-space: pre-wrap;">{{ $job->command }}</code>
-                    <div class="flex flex-wrap items-cross-center g-1">
+                    <div class="flex flex-wrap items-cross-center gap-1">
                         @if ($cron['allows']['runs'])
                             <a href="{{ route('larena.env.admin.site', ['domain' => $domain], false) }}?tab=cron&amp;runs={{ urlencode($job->id) }}#env-cron-runs" data-env-cron-runs-link="{{ $job->id }}" class="flex items-cross-center larena-control-floor">{{ __('larena-env::admin.cron.runs') }}</a>
                         @endif

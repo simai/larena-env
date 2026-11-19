@@ -28,7 +28,7 @@
                             <h3 class="text-1 m-0">{{ __('larena-env::admin.panel_address.attach') }}</h3>
                             <p data-env-domain-point>{{ $panelAddress->ip !== null ? __('larena-env::admin.point_domain.ip', ['ip' => $panelAddress->ip]) : __('larena-env::admin.point_domain.unknown') }}</p>
                             <p class="color-on-surface-variant">{{ __('larena-env::admin.panel_address.dns_hint') }}</p>
-                            <div class="flex flex-wrap g-2 items-cross-end">
+                            <div class="flex flex-wrap gap-2 items-cross-end">
                                 <label class="grow" style="flex-basis: 14rem;"><span style="font-weight: 600; display: block;">{{ __('larena-env::admin.panel_address.domain') }}</span>
                                     <input type="text" name="domain" required class="larena-input larena-control-floor" style="inline-size: 100%;" placeholder="panel.example.com" autocomplete="off"></label>
                                 <label class="grow" style="flex-basis: 14rem;"><span style="font-weight: 600; display: block;">{{ __('larena-env::admin.panel_address.email') }}</span>
@@ -44,7 +44,7 @@
                         </form>
                     @endif
                     @if ($addressAllows['port'] && $panelAddress->ipAccess)
-                        <form method="post" action="{{ route('larena.env.admin.panel.address.plan', [], false) }}" class="m-0 m-t-2 flex flex-wrap g-2 items-cross-end" data-env-panel-address-op="port">
+                        <form method="post" action="{{ route('larena.env.admin.panel.address.plan', [], false) }}" class="m-0 m-t-2 flex flex-wrap gap-2 items-cross-end" data-env-panel-address-op="port">
                             @csrf
                             <input type="hidden" name="op" value="port">
                             <label><span style="font-weight: 600; display: block;">{{ __('larena-env::admin.panel_address.port') }}</span>
@@ -100,7 +100,7 @@
                                 <p>{{ __('larena-env::admin.panel_access.allow_hint') }}</p>
                             </div>
                             <p class="m-0 text-small color-on-surface-variant" data-env-settings-when="access">{{ __('larena-env::admin.panel_access.cards.when_access') }}</p>
-                            <div class="flex flex-wrap items-cross-center g-1 m-t-2">
+                            <div class="flex flex-wrap items-cross-center gap-1 m-t-2">
                                 <button type="submit" class="larena-button larena-button-primary larena-control-floor">{{ __('larena-env::admin.operations.plan') }}</button>
                                 <a href="{{ route('larena.env.admin.panel.access', [], false) }}" class="larena-button larena-control-floor" data-env-edit-cancel>{{ __('larena-env::admin.panel_access.cards.cancel') }}</a>
                             </div>

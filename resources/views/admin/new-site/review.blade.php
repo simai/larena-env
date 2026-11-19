@@ -11,7 +11,7 @@
 </ul>
 @if (($plan->resources ?? null) !== null)
     @foreach ($plan->resources->warnings as $warning)
-        <sf-alert type="{{ $plan->resources->ok ? 'warning' : 'danger' }}" text="{{ __('larena-env::admin.routes.resources.warnings.'.(in_array($warning, ['ram_below_recommended', 'size_unknown', 'disk_unknown'], true) ? $warning : 'other')) }}"></sf-alert>
+        <sf-alert status="{{ $plan->resources->ok ? 'warning' : 'error' }}" text="{{ __('larena-env::admin.routes.resources.warnings.'.(in_array($warning, ['ram_below_recommended', 'size_unknown', 'disk_unknown'], true) ? $warning : 'other')) }}"></sf-alert>
     @endforeach
 @endif
 @if ($then !== [])

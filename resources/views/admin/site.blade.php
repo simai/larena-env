@@ -9,7 +9,7 @@
 @if ($site !== null)
     {{-- The site's state at a glance in the page's head: whether it works, what it runs, its certificate. --}}
     @section('heading-meta')
-        <span class="flex flex-wrap items-cross-center g-1" data-env-site-state="{{ \Larena\Env\Admin\SiteState::of($site->answersChecked, $site->answers, $site->suspended) }}">
+        <span class="flex flex-wrap items-cross-center gap-1" data-env-site-state="{{ \Larena\Env\Admin\SiteState::of($site->answersChecked, $site->answers, $site->suspended) }}">
             @if ($site->suspended)
                 {{-- A paused site answers 503 on purpose (site:suspend): «На паузе», not «Ошибка сервера». --}}
                 <sf-badge status="warning" appearance="tonal" text="{{ __('larena-env::admin.site.paused') }}" data-env-site-paused></sf-badge>
@@ -51,20 +51,20 @@
                     <p role="note" data-env-site-paused-note>{{ __('larena-env::admin.site.paused_note') }}</p>
                 @endif
                 <dl class="m-0" style="display: block;" data-env-facts data-larena-action-details>
-                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-answers="{{ $site->answersChecked ? ($site->answers ?? 'none') : 'unchecked' }}"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.answers') }}</dt><dd class="m-0 min-w-0 text-end">{{ __('larena-env::admin.sites.state.'.\Larena\Env\Admin\SiteState::of($site->answersChecked, $site->answers, $site->suspended)) }}{{ $site->answers !== null ? ' · '.__('larena-env::admin.sites.answers_code', ['code' => (string) $site->answers]) : '' }}</dd></div>
-                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.owner') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->owner ?? __('larena-env::admin.access.own_account') }}</dd></div>
-                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.profile') }}</dt><dd class="m-0 min-w-0 text-end">{{ __('larena-env::admin.new_site.profiles.'.$site->profile) }}</dd></div>
-                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.php') }}</dt><dd class="m-0 min-w-0 text-end" data-env-site-php="{{ $site->php }}">{{ $site->php === 'none' ? __('larena-env::admin.site.php_none') : $site->php }}@if ($site->php !== 'none' && \Larena\Env\Software\PhpSupport::outdated($site->php)) <sf-badge status="warning" appearance="tonal" text="{{ __('larena-env::admin.php_outdated.mark') }}" data-env-php-outdated></sf-badge>@endif</dd></div>
-                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.ssl') }}</dt><dd class="m-0 min-w-0 text-end" data-env-https="{{ $site->certificate === null ? 'none' : 'on' }}">{{ $site->certificate === null ? __('larena-env::admin.sites.https_none') : ($site->certificate->daysLeft === null ? __('larena-env::admin.sites.https_on') : __('larena-env::admin.sites.https_yes', ['days' => (string) $site->certificate->daysLeft])) }}</dd></div>
+                    <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-answers="{{ $site->answersChecked ? ($site->answers ?? 'none') : 'unchecked' }}"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.answers') }}</dt><dd class="m-0 min-w-0 text-end">{{ __('larena-env::admin.sites.state.'.\Larena\Env\Admin\SiteState::of($site->answersChecked, $site->answers, $site->suspended)) }}{{ $site->answers !== null ? ' · '.__('larena-env::admin.sites.answers_code', ['code' => (string) $site->answers]) : '' }}</dd></div>
+                    <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.owner') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->owner ?? __('larena-env::admin.access.own_account') }}</dd></div>
+                    <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.profile') }}</dt><dd class="m-0 min-w-0 text-end">{{ __('larena-env::admin.new_site.profiles.'.$site->profile) }}</dd></div>
+                    <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.php') }}</dt><dd class="m-0 min-w-0 text-end" data-env-site-php="{{ $site->php }}">{{ $site->php === 'none' ? __('larena-env::admin.site.php_none') : $site->php }}@if ($site->php !== 'none' && \Larena\Env\Software\PhpSupport::outdated($site->php)) <sf-badge status="warning" appearance="tonal" text="{{ __('larena-env::admin.php_outdated.mark') }}" data-env-php-outdated></sf-badge>@endif</dd></div>
+                    <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.ssl') }}</dt><dd class="m-0 min-w-0 text-end" data-env-https="{{ $site->certificate === null ? 'none' : 'on' }}">{{ $site->certificate === null ? __('larena-env::admin.sites.https_none') : ($site->certificate->daysLeft === null ? __('larena-env::admin.sites.https_on') : __('larena-env::admin.sites.https_yes', ['days' => (string) $site->certificate->daysLeft])) }}</dd></div>
                     @if ($site->databaseEngine !== null)
-                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.database') }}</dt><dd class="m-0 min-w-0 text-end">{{ __('larena-env::admin.new_site.engines.'.$site->databaseEngine) === 'larena-env::admin.new_site.engines.'.$site->databaseEngine ? $site->databaseEngine : __('larena-env::admin.new_site.engines.'.$site->databaseEngine) }}</dd></div>
+                    <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.database') }}</dt><dd class="m-0 min-w-0 text-end">{{ __('larena-env::admin.new_site.engines.'.$site->databaseEngine) === 'larena-env::admin.new_site.engines.'.$site->databaseEngine ? $site->databaseEngine : __('larena-env::admin.new_site.engines.'.$site->databaseEngine) }}</dd></div>
                     @endif
                     @if ($site->release !== null)
-                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.release') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->release ?? '—' }}</dd></div>
+                    <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.release') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->release ?? '—' }}</dd></div>
                     @endif
                     {{-- The site's size with when the server measured it (simai-env disk.checked_at, at most hourly; FASTPANEL look §5.3).
                          The database's size waits for a measured time from the server (simai-env 1.63.0); it is on «База данных». --}}
-                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-disk><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.disk') }}</dt><dd class="m-0 min-w-0 text-end">{{ \Larena\Env\Server\Bytes::human($site->diskBytes) }}@if ($site->diskBytes !== null && \Larena\Env\Server\Moment::ago($site->diskCheckedAt, \Larena\Env\Warnings\PanelWarnings::now(), static fn (string $key, array $replace = []): string => __('larena-env::admin.'.$key, $replace)) !== null)<span class="color-on-surface-variant" title="{{ \Larena\Env\Server\Moment::human($site->diskCheckedAt) }}" data-env-disk-measured> · {{ __('larena-env::admin.site.measured', ['ago' => \Larena\Env\Server\Moment::ago($site->diskCheckedAt, \Larena\Env\Warnings\PanelWarnings::now(), static fn (string $key, array $replace = []): string => __('larena-env::admin.'.$key, $replace))]) }}</span>@endif</dd></div>
+                    <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-disk><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.disk') }}</dt><dd class="m-0 min-w-0 text-end">{{ \Larena\Env\Server\Bytes::human($site->diskBytes) }}@if ($site->diskBytes !== null && \Larena\Env\Server\Moment::ago($site->diskCheckedAt, \Larena\Env\Warnings\PanelWarnings::now(), static fn (string $key, array $replace = []): string => __('larena-env::admin.'.$key, $replace)) !== null)<span class="color-on-surface-variant" title="{{ \Larena\Env\Server\Moment::human($site->diskCheckedAt) }}" data-env-disk-measured> · {{ __('larena-env::admin.site.measured', ['ago' => \Larena\Env\Server\Moment::ago($site->diskCheckedAt, \Larena\Env\Warnings\PanelWarnings::now(), static fn (string $key, array $replace = []): string => __('larena-env::admin.'.$key, $replace))]) }}</span>@endif</dd></div>
                 </dl>
             </section>
             @if (($siteRoute ?? null) !== null)
@@ -111,7 +111,7 @@
                                     @elseif ($field === 'overwrite' && $siteRoute['operation'] === \Larena\Env\Operations\SiteOperation::PhpRestore)
                                         {{-- «Заменить существующее»: off by default; the plan says what it replaces and the copy before. --}}
                                         <input type="hidden" name="overwrite" value="no">
-                                        <label class="flex items-cross-center g-1" for="env-route-overwrite"><input type="checkbox" id="env-route-overwrite" name="overwrite" value="yes"> <span>{{ __('larena-env::admin.fields.overwrite') }}</span></label>
+                                        <label class="flex items-cross-center gap-1" for="env-route-overwrite"><input type="checkbox" id="env-route-overwrite" name="overwrite" value="yes"> <span>{{ __('larena-env::admin.fields.overwrite') }}</span></label>
                                     @elseif (in_array($field, ['files', 'dump'], true) && ($siteRoute['copies'] ?? null) !== null)
                                         <label for="env-route-{{ $field }}">{{ $siteRoute['operation'] === \Larena\Env\Operations\SiteOperation::PhpRestore ? __('larena-env::admin.restore.'.$field) : __('larena-env::admin.routes.inputs.'.$field) }}</label>
                                         <select id="env-route-{{ $field }}" name="{{ $field }}" @if ($siteRoute['operation'] !== \Larena\Env\Operations\SiteOperation::PhpRestore || $field === 'files') required @endif>
@@ -155,7 +155,7 @@
                         {{-- A rule of the site's profile (simai-env 1.55.1) says what the server found and since when, and where
                              the server offers a fix, «Исправить…» opens its plan; other checks are one line as before. --}}
                         @foreach (($checkProblems ?? \Larena\Env\Admin\SiteChecks::problems($doctor, $checkFixes ?? false, $site)) as $problem)
-                            <li class="flex flex-wrap items-cross-center g-1 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-problem="{{ $problem['status'] }}"@if ($problem['key'] !== null) data-env-rule="{{ $problem['key'] }}"@endif>
+                            <li class="flex flex-wrap items-cross-center gap-1 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-problem="{{ $problem['status'] }}"@if ($problem['key'] !== null) data-env-rule="{{ $problem['key'] }}"@endif>
                                 <sf-badge appearance="tonal" status="{{ $problem['tone'] }}" text="{{ __($problem['label']) }}"></sf-badge>
                                 <span class="grow min-w-0" style="overflow-wrap: anywhere;" data-env-check="{{ $problem['title'] }}">{{ $problem['text'] }}@if ($problem['detail'] !== null || $problem['since'] !== null)<span class="text-small color-on-surface-variant" style="display: block;" data-env-check-detail>{{ $problem['detail'] }}{{ $problem['detail'] !== null && $problem['since'] !== null ? ' · ' : '' }}{{ $problem['since'] !== null ? __('larena-env::admin.doctor.since', ['time' => $problem['since']]) : '' }}</span>@endif</span>
                                 <span class="text-small color-on-surface-variant">{{ $problem['area'] }}</span>
@@ -176,7 +176,7 @@
                         <summary class="larena-control-floor" style="cursor: pointer; display: flex; align-items: center;">{{ __('larena-env::admin.doctor.passed_rules', ['count' => (string) count(\Larena\Env\Admin\SiteChecks::passed($doctor))]) }}</summary>
                         <ul class="m-0 p-0" style="list-style: none;">
                             @foreach (\Larena\Env\Admin\SiteChecks::passed($doctor) as $rule)
-                                <li class="flex flex-wrap items-cross-center g-1 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-rule="{{ $rule['key'] }}" data-env-rule-state="{{ $rule['status'] }}">
+                                <li class="flex flex-wrap items-cross-center gap-1 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-rule="{{ $rule['key'] }}" data-env-rule-state="{{ $rule['status'] }}">
                                     <span class="grow min-w-0" style="overflow-wrap: anywhere;">{{ $rule['text'] }}</span>
                                     <span class="text-small color-on-surface-variant" style="overflow-wrap: anywhere;">{{ $rule['detail'] }}</span>
                                 </li>
@@ -202,13 +202,13 @@
                     @endif
                 @else
                     <dl class="m-0" style="display: block;" data-env-facts data-larena-action-details>
-                        <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.certificate.names') }}</dt><dd class="m-0 min-w-0 text-end">{{ implode(', ', $site->certificate->names) }}</dd></div>
-                        <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.certificate.issuer') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->certificate->issuer ?? '—' }}</dd></div>
-                        <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.certificate.not_after') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->certificate->notAfter ?? '—' }}</dd></div>
-                        <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.certificate.days_left') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->certificate->daysLeft ?? '—' }}</dd></div>
-                        <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.certificate.auto_renew') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->certificate->autoRenew ? __('larena-env::admin.yes') : __('larena-env::admin.no') }}</dd></div>
+                        <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.certificate.names') }}</dt><dd class="m-0 min-w-0 text-end">{{ implode(', ', $site->certificate->names) }}</dd></div>
+                        <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.certificate.issuer') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->certificate->issuer ?? '—' }}</dd></div>
+                        <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.certificate.not_after') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->certificate->notAfter ?? '—' }}</dd></div>
+                        <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.certificate.days_left') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->certificate->daysLeft ?? '—' }}</dd></div>
+                        <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.certificate.auto_renew') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->certificate->autoRenew ? __('larena-env::admin.yes') : __('larena-env::admin.no') }}</dd></div>
                         @if ($site->certificate->lastRenewOk !== null)
-                            <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-certificate-renew="{{ $site->certificate->lastRenewOk ? 'ok' : 'failed' }}"><dt class="color-on-surface-variant">{{ __('larena-env::admin.certificate.last_renew') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->certificate->lastRenewAt === null ? '—' : \Larena\Env\Server\Moment::human($site->certificate->lastRenewAt) }} · {{ $site->certificate->lastRenewOk ? __('larena-env::admin.certificate.renew_ok') : __('larena-env::admin.certificate.renew_failed') }}</dd></div>
+                            <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-certificate-renew="{{ $site->certificate->lastRenewOk ? 'ok' : 'failed' }}"><dt class="color-on-surface-variant">{{ __('larena-env::admin.certificate.last_renew') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->certificate->lastRenewAt === null ? '—' : \Larena\Env\Server\Moment::human($site->certificate->lastRenewAt) }} · {{ $site->certificate->lastRenewOk ? __('larena-env::admin.certificate.renew_ok') : __('larena-env::admin.certificate.renew_failed') }}</dd></div>
                         @endif
                     </dl>
                     @if ($site->certificate->endsSoon())
@@ -228,15 +228,15 @@
                 <dl class="m-0" style="display: block;" data-env-facts data-larena-action-details>
                     {{-- The version and its change on one line at the tab's top (FASTPANEL comparison 2026-11-18): no scrolling
                          past the extensions to reach the tab's main action. --}}
-                    <div class="flex items-cross-center content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.php') }}</dt><dd class="flex flex-wrap items-cross-center content-main-end g-1 m-0 min-w-0 text-end" data-env-site-php="{{ $site->php }}"><span>{{ $site->php === 'none' ? __('larena-env::admin.site.php_none') : 'PHP '.$site->php }}</span>@if ($site->php !== 'none' && \Larena\Env\Software\PhpSupport::outdated($site->php)) <sf-badge status="warning" appearance="tonal" text="{{ __('larena-env::admin.php_outdated.mark') }}" data-env-php-outdated></sf-badge>@endif
+                    <div class="flex items-cross-center content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.php') }}</dt><dd class="flex flex-wrap items-cross-center content-main-end gap-1 m-0 min-w-0 text-end" data-env-site-php="{{ $site->php }}"><span>{{ $site->php === 'none' ? __('larena-env::admin.site.php_none') : 'PHP '.$site->php }}</span>@if ($site->php !== 'none' && \Larena\Env\Software\PhpSupport::outdated($site->php)) <sf-badge status="warning" appearance="tonal" text="{{ __('larena-env::admin.php_outdated.mark') }}" data-env-php-outdated></sf-badge>@endif
                         @if (in_array(\Larena\Env\Operations\SiteOperation::PhpVersion, $tabOperations, true))
                             <button type="button" class="larena-button larena-button-primary" data-sf-modal-open="env-op-{{ \Larena\Env\Operations\SiteOperation::PhpVersion->value }}" data-env-php-change>{{ __('larena-env::admin.operations.php-version') }}</button>
                         @endif
                     </dd></div>
-                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.runtime.service') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->service ?? '—' }}</dd></div>
-                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.runtime.workers') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->workers === [] ? '—' : implode(', ', $site->workers) }}</dd></div>
+                    <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.runtime.service') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->service ?? '—' }}</dd></div>
+                    <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.runtime.workers') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->workers === [] ? '—' : implode(', ', $site->workers) }}</dd></div>
                     @if ($site->webServer !== null)
-                        <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-web-server="{{ $site->webServer }}"><dt class="color-on-surface-variant">{{ __('larena-env::admin.runtime.web_server') }}</dt><dd class="m-0 min-w-0 text-end">{{ __('larena-env::admin.runtime.web_servers.'.$site->webServer) }}</dd></div>
+                        <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-web-server="{{ $site->webServer }}"><dt class="color-on-surface-variant">{{ __('larena-env::admin.runtime.web_server') }}</dt><dd class="m-0 min-w-0 text-end">{{ __('larena-env::admin.runtime.web_servers.'.$site->webServer) }}</dd></div>
                     @endif
                 </dl>
             </section>
@@ -248,7 +248,7 @@
                     @else
                         <dl class="m-0" style="display: block;" data-env-facts data-larena-action-details>
                             @foreach ($phpSettings as $setting)
-                                <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-php-setting="{{ $setting->key }}"><dt class="color-on-surface-variant">{{ $setting->key }}</dt><dd class="m-0 min-w-0 text-end">{{ $setting->value }}@if ($setting->source !== null) · {{ $setting->source }}@endif</dd></div>
+                                <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-php-setting="{{ $setting->key }}"><dt class="color-on-surface-variant">{{ $setting->key }}</dt><dd class="m-0 min-w-0 text-end">{{ $setting->value }}@if ($setting->source !== null) · {{ $setting->source }}@endif</dd></div>
                             @endforeach
                         </dl>
                     @endif
@@ -261,7 +261,7 @@
                     <summary class="color-primary" style="cursor: pointer;"><h2 id="env-site-php-extensions" class="text-2 m-0" style="display: inline;">{{ __('larena-env::admin.runtime.extensions_count', ['php' => $site->php, 'count' => (string) count($phpExtensions)]) }}</h2></summary>
                     <ul class="m-0 m-top-1 p-0 grid g-x-3 grid-col-1 md:grid-col-2" style="list-style: none;">
                         @foreach ($phpExtensions as $extension)
-                            <li class="flex items-cross-center content-main-between g-1 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-php-extension="{{ $extension->name }}">
+                            <li class="flex items-cross-center content-main-between gap-1 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-php-extension="{{ $extension->name }}">
                                 <span class="mono min-w-0" style="overflow-wrap: anywhere;">{{ $extension->name }}</span>
                                 <sf-badge appearance="tonal" status="{{ $extension->enabled ? 'success' : 'neutral' }}" text="{{ $extension->enabled ? __('larena-env::admin.runtime.on') : __('larena-env::admin.runtime.off') }}"></sf-badge>
                             </li>
@@ -284,22 +284,22 @@
                     <p>{{ __('larena-env::admin.database.none') }}</p>
                     @if (in_array(\Larena\Env\Operations\SiteOperation::DatabaseCreate, $tabOperations, true))
                         <p class="m-0 m-bottom-1 text-small color-on-surface-variant">{{ __('larena-env::admin.database.create_note') }}</p>
-                        <p class="flex flex-wrap g-1"><button type="button" class="larena-button larena-button-primary" data-sf-modal-open="env-op-{{ \Larena\Env\Operations\SiteOperation::DatabaseCreate->value }}" data-env-database-create>{{ __('larena-env::admin.database.actions.create') }}</button></p>
+                        <p class="flex flex-wrap gap-1"><button type="button" class="larena-button larena-button-primary" data-sf-modal-open="env-op-{{ \Larena\Env\Operations\SiteOperation::DatabaseCreate->value }}" data-env-database-create>{{ __('larena-env::admin.database.actions.create') }}</button></p>
                     @endif
                 @else
                     <dl class="m-0" style="display: block;" data-env-facts data-larena-action-details>
                         @if (($databases[0] ?? null) !== null)
-                            <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.database.name') }}</dt><dd class="m-0 min-w-0 text-end mono" style="overflow-wrap: anywhere;" data-env-database-name>{{ $databases[0]->name }}</dd></div>
+                            <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.database.name') }}</dt><dd class="m-0 min-w-0 text-end mono" style="overflow-wrap: anywhere;" data-env-database-name>{{ $databases[0]->name }}</dd></div>
                         @endif
-                        <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.database.engine') }}</dt><dd class="m-0 min-w-0 text-end">{{ __('larena-env::admin.new_site.engines.'.$site->databaseEngine) === 'larena-env::admin.new_site.engines.'.$site->databaseEngine ? $site->databaseEngine : __('larena-env::admin.new_site.engines.'.$site->databaseEngine) }}</dd></div>
+                        <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.database.engine') }}</dt><dd class="m-0 min-w-0 text-end">{{ __('larena-env::admin.new_site.engines.'.$site->databaseEngine) === 'larena-env::admin.new_site.engines.'.$site->databaseEngine ? $site->databaseEngine : __('larena-env::admin.new_site.engines.'.$site->databaseEngine) }}</dd></div>
                         @if (($databases[0] ?? null) !== null)
-                            <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.database.size') }}</dt><dd class="m-0 min-w-0 text-end" data-env-database-size>{{ \Larena\Env\Server\Bytes::human($databases[0]->sizeBytes) }}</dd></div>
+                            <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.database.size') }}</dt><dd class="m-0 min-w-0 text-end" data-env-database-size>{{ \Larena\Env\Server\Bytes::human($databases[0]->sizeBytes) }}</dd></div>
                             @if ($databases[0]->users !== [])
-                                <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.database.users') }}</dt><dd class="m-0 min-w-0 text-end mono" style="overflow-wrap: anywhere;">{{ implode(', ', $databases[0]->users) }}</dd></div>
+                                <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.database.users') }}</dt><dd class="m-0 min-w-0 text-end mono" style="overflow-wrap: anywhere;">{{ implode(', ', $databases[0]->users) }}</dd></div>
                             @endif
                         @endif
                     </dl>
-                    <p class="flex flex-wrap g-1 m-top-1" data-env-database-actions>
+                    <p class="flex flex-wrap gap-1 m-top-1" data-env-database-actions>
                         @if (in_array(\Larena\Env\Operations\SiteOperation::DatabaseCredentials, $tabOperations, true))
                             <button type="button" class="larena-button larena-button-primary" data-sf-modal-open="env-op-{{ \Larena\Env\Operations\SiteOperation::DatabaseCredentials->value }}" data-env-database-credentials>{{ __('larena-env::admin.database.actions.credentials') }}</button>
                         @endif
@@ -321,7 +321,7 @@
                                 @if (\Larena\Env\Server\Moment::iso($dbBrowser['state']->expiresAt) !== null)<sf-time datetime="{{ \Larena\Env\Server\Moment::iso($dbBrowser['state']->expiresAt) }}" format="time"></sf-time>@else{{ \Larena\Env\Server\Moment::human($dbBrowser['state']->expiresAt) }}@endif
                             </p>
                             <p class="m-0 text-small color-on-surface-variant">{{ __('larena-env::admin.db_browser.open_note') }}</p>
-                            <p class="flex flex-wrap g-1 m-top-1">
+                            <p class="flex flex-wrap gap-1 m-top-1">
                                 @if (in_array(\Larena\Env\Operations\SiteOperation::DatabaseBrowse, $tabOperations, true))
                                     <button type="button" class="larena-button" data-sf-modal-open="env-op-{{ \Larena\Env\Operations\SiteOperation::DatabaseBrowse->value }}" data-env-db-browser-reopen>{{ __('larena-env::admin.db_browser.reopen') }}</button>
                                 @endif
@@ -331,7 +331,7 @@
                             </p>
                         @elseif ($dbBrowser['refusal'] === 'no_https')
                             {{-- No button that leads into a refusal: what is needed, and the certificate's own action right away. --}}
-                            <p class="flex flex-wrap items-cross-center g-1" role="note" data-env-db-browser-refusal="no_https">
+                            <p class="flex flex-wrap items-cross-center gap-1" role="note" data-env-db-browser-refusal="no_https">
                                 <span>{{ __('larena-env::admin.db_browser.need_https') }}</span>
                                 @if ($dbBrowser['certificate'])
                                     <a href="{{ route('larena.env.admin.site', ['domain' => $domain], false) }}?tab=domains&amp;action={{ \Larena\Env\Operations\SiteOperation::CertificateIssue->value }}" class="larena-button larena-button-primary" data-env-db-browser-certificate>{{ __('larena-env::admin.db_browser.certificate') }}</a>
@@ -391,7 +391,7 @@
                 @if ($site->backups !== [])
                     <ul class="m-0 p-0" style="list-style: none;">
                         @foreach ($site->backups as $backup)
-                            <li class="flex flex-wrap items-cross-center g-1 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-backup="{{ $backup->name }}">
+                            <li class="flex flex-wrap items-cross-center gap-1 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-backup="{{ $backup->name }}">
                                 <span class="grow min-w-0">{{ $backup->createdAt !== null ? \Larena\Env\Server\Moment::human($backup->createdAt) : $backup->name }}</span>
                                 @if ($backup->encrypted)
                                     <sf-badge appearance="tonal" status="info" text="{{ __('larena-env::admin.backups.encrypted') }}"></sf-badge>
@@ -410,8 +410,8 @@
             <section class="larena-panel larena-panel-padded" data-env-releases aria-labelledby="env-site-releases">
                 <h2 id="env-site-releases" class="text-2">{{ __('larena-env::admin.releases.title') }}</h2>
                 <dl class="m-0" style="display: block;" data-env-facts data-larena-action-details>
-                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.release') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->release ?? '—' }}</dd></div>
-                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.site.previous_release') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->previousRelease ?? '—' }}</dd></div>
+                    <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.release') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->release ?? '—' }}</dd></div>
+                    <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.site.previous_release') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->previousRelease ?? '—' }}</dd></div>
                 </dl>
                 @if ($site->release === null)
                     <p>{{ __('larena-env::admin.releases.in_place') }}</p>
@@ -482,7 +482,7 @@
                 {{-- One line «Работает от аккаунта» (roles study PX-68): the server's account the site runs as, and whether it is
                      the site's own; «Рабочее место» and «Чей сайт» said the same twice. --}}
                 <dl class="m-0" style="display: block;" data-env-facts data-larena-action-details>
-                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-runs-as><dt class="color-on-surface-variant">{{ __('larena-env::admin.access.runs_as') }}</dt><dd class="m-0 min-w-0 text-end"><span class="mono">{{ $site->owner ?? $site->runsAs ?? '—' }}</span>@if ($site->owner === null) <span class="color-on-surface-variant">· {{ __('larena-env::admin.access.own_account') }}</span>@endif</dd></div>
+                    <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-runs-as><dt class="color-on-surface-variant">{{ __('larena-env::admin.access.runs_as') }}</dt><dd class="m-0 min-w-0 text-end"><span class="mono">{{ $site->owner ?? $site->runsAs ?? '—' }}</span>@if ($site->owner === null) <span class="color-on-surface-variant">· {{ __('larena-env::admin.access.own_account') }}</span>@endif</dd></div>
                 </dl>
                 <p>{{ __('larena-env::admin.access.explain') }}</p>
                 @if ($sftpAccounts !== null)
@@ -494,13 +494,13 @@
                             @foreach ($sftpAccounts as $account)
                                 {{-- Each access with its own actions (roles study PX-71): a key, off or on, remove; each leads to its plan
                                      with the access already chosen. The time is the reader's own (sf-time), not the server's UTC. --}}
-                                <li class="flex flex-wrap items-cross-center g-1 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-sftp="{{ $account->login }}" data-env-sftp-path="{{ $account->path ?? '' }}">
+                                <li class="flex flex-wrap items-cross-center gap-1 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-sftp="{{ $account->login }}" data-env-sftp-path="{{ $account->path ?? '' }}">
                                     <div class="grow min-w-0" style="flex-basis: 16rem;">
-                                        <div class="flex flex-wrap items-cross-center g-1"><span class="mono" style="overflow-wrap: anywhere;">{{ $account->login }}</span>
+                                        <div class="flex flex-wrap items-cross-center gap-1"><span class="mono" style="overflow-wrap: anywhere;">{{ $account->login }}</span>
                                         <sf-badge appearance="tonal" status="{{ $account->enabled ? 'success' : 'neutral' }}" text="{{ $account->enabled ? __('larena-env::admin.access.on') : __('larena-env::admin.access.off') }}"></sf-badge></div>
                                         <div class="text-small color-on-surface-variant" style="overflow-wrap: anywhere;">{{ __('larena-env::admin.access.by_key') }}@if ($account->path !== null) · {{ __('larena-env::admin.access.lands', ['path' => $account->path]) }}@endif @if ($account->createdAt !== null) · {{ __('larena-env::admin.access.created', ['when' => '']) }}@if (\Larena\Env\Server\Moment::iso($account->createdAt) !== null)<sf-time datetime="{{ \Larena\Env\Server\Moment::iso($account->createdAt) }}" format="auto"></sf-time>@else{{ \Larena\Env\Server\Moment::human($account->createdAt) }}@endif @endif</div>
                                     </div>
-                                    <div class="flex flex-wrap items-cross-center g-1" data-env-sftp-actions="{{ $account->login }}">
+                                    <div class="flex flex-wrap items-cross-center gap-1" data-env-sftp-actions="{{ $account->login }}">
                                         @foreach ([\Larena\Env\Operations\SiteOperation::SftpAddKey, \Larena\Env\Operations\SiteOperation::SftpDisable, \Larena\Env\Operations\SiteOperation::SftpEnable, \Larena\Env\Operations\SiteOperation::SftpRemove] as $rowOperation)
                                             @continue(!in_array($rowOperation, $tabOperations ?? [], true) || !in_array($account, $rowOperation->accountChoices([$account]), true))
                                             @if ($rowOperation === \Larena\Env\Operations\SiteOperation::SftpAddKey)
@@ -544,7 +544,7 @@
                 <h2 id="env-site-operations" class="text-2">{{ __('larena-env::admin.operations.title') }}</h2>
                 {{-- The tab's actions as a row of buttons; each opens its fields in a side panel, and the plan comes next
                      (the panel's UX audit, LAY-03): the tab is no longer a column of long forms. --}}
-                <div class="flex flex-wrap g-1" data-env-operation-buttons>
+                <div class="flex flex-wrap gap-1" data-env-operation-buttons>
                     @foreach (\Larena\Env\Operations\SiteOperation::inRow($tabOperations, $sftpChoices ?? []) as $operation)
                         <button type="button" class="larena-button @if ($operation->destroys()) larena-button-danger @endif" data-sf-modal-open="env-op-{{ $operation->value }}" data-env-operation-open="{{ $operation->value }}">{{ __('larena-env::admin.operations.'.$operation->value) }}</button>
                     @endforeach
@@ -595,7 +595,7 @@
                             @if (in_array($field, \Larena\Env\Operations\SiteOperation::SWITCHES, true))
                                 <div class="larena-field" data-env-switch="{{ $field }}">
                                     <input type="hidden" name="{{ $field }}" value="no">
-                                    <label class="flex items-cross-center g-1" for="env-{{ $operation->value }}-{{ $field }}">
+                                    <label class="flex items-cross-center gap-1" for="env-{{ $operation->value }}-{{ $field }}">
                                         <input type="checkbox" id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}" value="yes" @if (\Larena\Env\Operations\SiteOperation::switchedOn($field, $site)) checked @endif @if ($field === 'verify') data-env-verify-field @endif>
                                         <span>{{ __('larena-env::admin.fields.'.$field) }}</span>
                                     </label>
@@ -758,7 +758,7 @@
                 @else
                     <ul class="m-0 p-0" style="list-style: none;">
                         @foreach ($siteHistory['rows'] as $row)
-                            <li class="flex flex-wrap items-cross-center g-1 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-site-history-row="{{ $row['state'] }}">
+                            <li class="flex flex-wrap items-cross-center gap-1 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-site-history-row="{{ $row['state'] }}">
                                 <sf-badge status="{{ $row['status'] }}" appearance="tonal" text="{{ $row['words'] }}"></sf-badge>
                                 <a href="{{ $row['href'] }}" class="grow min-w-0" style="overflow-wrap: anywhere;">{{ $row['title'] }}@if (($row['times'] ?? 1) > 1) <span class="color-on-surface-variant" data-env-site-history-times="{{ $row['times'] }}" title="{{ __('larena-env::admin.site.history.times', ['count' => (string) $row['times']]) }}">×{{ $row['times'] }}</span>@endif</a>
                                 @if ($row['ago'] !== null)

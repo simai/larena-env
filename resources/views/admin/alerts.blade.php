@@ -54,7 +54,7 @@
                     </div>
                     <div class="color-on-surface-variant text-small m-bottom-1">@include('larena-env::admin.partials.explanation', ['text' => __('larena-env::admin.alerts.token_help')])</div>
                     <p class="m-0 text-small color-on-surface-variant" data-env-settings-when="alerts">{{ __('larena-env::admin.alerts.card.when') }}</p>
-                    <div class="flex flex-wrap items-cross-center g-1 m-t-2">
+                    <div class="flex flex-wrap items-cross-center gap-1 m-t-2">
                         <button type="submit" class="larena-button larena-button-primary larena-control-floor">{{ __('larena-env::admin.alerts.plan') }}</button>
                         <a href="{{ route('larena.env.admin.alerts.channel', [], false) }}" class="larena-button larena-control-floor" data-env-edit-cancel>{{ __('larena-env::admin.alerts.card.cancel') }}</a>
                     </div>
@@ -63,7 +63,7 @@
                 <p class="m-0 p-x-1 p-top-1 text-small color-on-surface-variant" data-env-settings-when="alerts">{{ __('larena-env::admin.alerts.card.when') }}</p>
             @endif
             @if ($canTest)
-                <div class="flex flex-wrap items-cross-center g-2 p-x-1 p-top-2 m-top-1 border-top-1 border-top-solid border-outline-variant">
+                <div class="flex flex-wrap items-cross-center gap-2 p-x-1 p-top-2 m-top-1 border-top-1 border-top-solid border-outline-variant">
                     <p class="grow m-0 color-on-surface-variant" style="flex-basis: 14rem;"><strong class="color-on-surface">{{ __('larena-env::admin.alerts.test') }}.</strong> {{ __('larena-env::admin.alerts.test_explain') }}</p>
                     <form method="post" action="{{ route('larena.env.admin.alerts.test.plan', [], false) }}" class="m-0" data-env-alerts-test>
                         @csrf

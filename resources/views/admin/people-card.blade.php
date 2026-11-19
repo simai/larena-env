@@ -41,7 +41,7 @@
         @endif
 
         @if ($canOperate && !$self)
-            <div class="flex flex-wrap g-1 m-top-2" data-env-person-actions>
+            <div class="flex flex-wrap gap-1 m-top-2" data-env-person-actions>
                 @if ($person['owner'] !== null && !$person['blocked'])
                     <form method="post" action="{{ route('larena.env.admin.people.act', [], false) }}" class="m-0">
                         @csrf
@@ -72,7 +72,7 @@
             <form method="post" action="{{ route('larena.env.admin.people.assign', [], false) }}" class="m-0" data-env-person-change-form>
                 @csrf
                 <input type="hidden" name="subject" value="{{ $person['subject'] }}">
-                <div class="flex flex-column g-2">
+                <div class="flex flex-column gap-2">
                     <sf-dropdown name="owner" label="{{ $text('card.account_choose') }}" value="{{ $person['owner'] ?? '' }}"
                         options="{{ json_encode(array_merge([['value' => '', 'text' => $text('card.account_none')]],
                             array_map(static fn (string $owner): array => ['value' => $owner, 'text' => __('larena-env::admin.people.invite.account_existing', ['name' => $owner, 'count' => (string) ($ownerSites[$owner] ?? 0)])],
@@ -81,7 +81,7 @@
                         <sf-checkbox name="secret_files" value="yes" label="{{ __('larena-env::admin.people.secret_files') }}" description="{{ __('larena-env::admin.people.secret_files_hint') }}" @if ($person['secret']) checked @endif data-env-person-secret-files></sf-checkbox>
                     @endif
                 </div>
-                <div class="flex flex-wrap g-1 m-top-2">
+                <div class="flex flex-wrap gap-1 m-top-2">
                     <sf-button native-type="submit" appearance="filled" text="{{ $text('card.save') }}"></sf-button>
                 </div>
             </form>

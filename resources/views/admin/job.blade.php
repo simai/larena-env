@@ -76,10 +76,10 @@
                     <h3 class="m-top-0 text-medium">{{ __('larena-env::admin.routes.password.title') }}</h3>
                     <p>{{ __('larena-env::admin.routes.password.save_now') }}</p>
                     <dl class="m-0" style="display: block;" data-env-facts data-larena-action-details>
-                        <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.routes.password.user') }}</dt><dd class="m-0 min-w-0 text-end mono">{{ $status->secret->user }}</dd></div>
-                        <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.routes.password.password') }}</dt><dd class="m-0 min-w-0 text-end mono" style="overflow-wrap: anywhere;" data-env-job-password>{{ $status->secret->password }}</dd></div>
+                        <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.routes.password.user') }}</dt><dd class="m-0 min-w-0 text-end mono">{{ $status->secret->user }}</dd></div>
+                        <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.routes.password.password') }}</dt><dd class="m-0 min-w-0 text-end mono" style="overflow-wrap: anywhere;" data-env-job-password>{{ $status->secret->password }}</dd></div>
                     </dl>
-                    <p class="flex flex-wrap g-1 m-top-1">
+                    <p class="flex flex-wrap gap-1 m-top-1">
                         <sf-button-copy value="{{ $status->secret->password }}" text="{{ __('larena-env::admin.job.copy_password') }}" label="{{ __('larena-env::admin.job.copy_password') }}" appearance="outline" data-env-job-copy></sf-button-copy>
                         @if ($status->secret->loginUrl !== null)
                             <a href="{{ $status->secret->loginUrl }}" target="_blank" rel="noopener noreferrer" class="larena-button" data-env-job-login>{{ __('larena-env::admin.routes.password.login') }}</a>
@@ -99,7 +99,7 @@
                     @if ($status->browser->expiresAt !== null && \Larena\Env\Server\Moment::iso($status->browser->expiresAt) !== null)
                         <p data-env-job-browser-until>{{ __('larena-env::admin.db_browser.until_label') }} <sf-time datetime="{{ \Larena\Env\Server\Moment::iso($status->browser->expiresAt) }}" format="time"></sf-time>@if ($status->browser->database !== null) · <span class="mono">{{ $status->browser->database }}</span>@endif</p>
                     @endif
-                    <p class="flex flex-wrap g-1 m-top-1">
+                    <p class="flex flex-wrap gap-1 m-top-1">
                         <a href="{{ $status->browser->url }}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer" class="larena-button larena-button-primary" data-env-job-browser-open>{{ __('larena-env::admin.db_browser.open_link') }}</a>
                     </p>
                 </div>
@@ -116,12 +116,12 @@
                     <dl class="m-0" style="display: block;" data-env-facts data-larena-action-details>
                         @foreach (['engine', 'host', 'port', 'database', 'user'] as $field)
                             @if ($status->credentials->{$field} !== null)
-                                <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.database.credentials.'.$field) }}</dt><dd class="m-0 min-w-0 text-end mono" style="overflow-wrap: anywhere;" data-env-job-credential="{{ $field }}">{{ $field === 'engine' && __('larena-env::admin.new_site.engines.'.$status->credentials->engine) !== 'larena-env::admin.new_site.engines.'.$status->credentials->engine ? __('larena-env::admin.new_site.engines.'.$status->credentials->engine) : $status->credentials->{$field} }}</dd></div>
+                                <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.database.credentials.'.$field) }}</dt><dd class="m-0 min-w-0 text-end mono" style="overflow-wrap: anywhere;" data-env-job-credential="{{ $field }}">{{ $field === 'engine' && __('larena-env::admin.new_site.engines.'.$status->credentials->engine) !== 'larena-env::admin.new_site.engines.'.$status->credentials->engine ? __('larena-env::admin.new_site.engines.'.$status->credentials->engine) : $status->credentials->{$field} }}</dd></div>
                             @endif
                         @endforeach
-                        <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.database.credentials.password') }}</dt><dd class="m-0 min-w-0 text-end mono" style="overflow-wrap: anywhere;" data-env-job-db-password>{{ $status->credentials->password }}</dd></div>
+                        <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.database.credentials.password') }}</dt><dd class="m-0 min-w-0 text-end mono" style="overflow-wrap: anywhere;" data-env-job-db-password>{{ $status->credentials->password }}</dd></div>
                     </dl>
-                    <p class="flex flex-wrap g-1 m-top-1">
+                    <p class="flex flex-wrap gap-1 m-top-1">
                         <sf-button-copy value="{{ $status->credentials->password }}" text="{{ __('larena-env::admin.database.credentials.copy') }}" label="{{ __('larena-env::admin.database.credentials.copy') }}" appearance="outline" data-env-job-credentials-copy></sf-button-copy>
                     </p>
                     <p class="m-0 text-small color-on-surface-variant">{{ __('larena-env::admin.database.credentials.tunnel') }}</p>
@@ -160,11 +160,11 @@
                 {{-- In the server's own zone (simai-env 1.60.0 self:describe timezone), how long ago in the tooltip. --}}
                 @foreach (['started' => $status->startedAt ?? $status->createdAt, 'finished' => $status->finishedAt] as $which => $moment)
                     @if ($moment !== null)
-                        <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.job.'.$which.'_at') }}</dt><dd class="m-0 min-w-0 text-end" data-env-job-{{ $which }} title="{{ \Larena\Env\Server\Moment::ago($moment, $now ?? new \DateTimeImmutable(), static fn (string $key, array $replace = []): string => __('larena-env::admin.'.$key, $replace)) }}">@if (\Larena\Env\Server\Moment::iso($moment) !== null)<sf-time datetime="{{ \Larena\Env\Server\Moment::iso($moment) }}" format="datetime" @if (($timezone ?? null) !== null) time-zone="{{ $timezone }}" @endif></sf-time>@else{{ \Larena\Env\Server\Moment::human($moment) }}@endif</dd></div>
+                        <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.job.'.$which.'_at') }}</dt><dd class="m-0 min-w-0 text-end" data-env-job-{{ $which }} title="{{ \Larena\Env\Server\Moment::ago($moment, $now ?? new \DateTimeImmutable(), static fn (string $key, array $replace = []): string => __('larena-env::admin.'.$key, $replace)) }}">@if (\Larena\Env\Server\Moment::iso($moment) !== null)<sf-time datetime="{{ \Larena\Env\Server\Moment::iso($moment) }}" format="datetime" @if (($timezone ?? null) !== null) time-zone="{{ $timezone }}" @endif></sf-time>@else{{ \Larena\Env\Server\Moment::human($moment) }}@endif</dd></div>
                     @endif
                 @endforeach
                 @if ($status->state->isOver() && $status->seconds() !== null)
-                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.job.took') }}</dt><dd class="m-0 min-w-0 text-end" data-env-job-took>{{ \Larena\Admin\Http\Controllers\Product\AdminHistoryController::duration($status->seconds(), app('translator')) }}</dd></div>
+                    <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.job.took') }}</dt><dd class="m-0 min-w-0 text-end" data-env-job-took>{{ \Larena\Admin\Http\Controllers\Product\AdminHistoryController::duration($status->seconds(), app('translator')) }}</dd></div>
                 @endif
             </dl>
             {{-- One «Подробнее» for a specialist (PX-8): the server's command, its exit code and what it printed; open after a
@@ -172,8 +172,8 @@
             <details class="m-y-2" data-env-job-server @if ($status->state->value === 'failed') open @endif>
                 <summary class="color-primary" style="cursor: pointer;">{{ __('larena-env::admin.more') }}</summary>
                 <dl class="m-0" style="display: block;" data-env-facts data-larena-action-details>
-                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.plan.command') }}</dt><dd class="m-0 min-w-0 text-end mono">{{ $status->command }}</dd></div>
-                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.job.exit_code') }}</dt><dd class="m-0 min-w-0 text-end">{{ $status->exitCode ?? '—' }}</dd></div>
+                    <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.plan.command') }}</dt><dd class="m-0 min-w-0 text-end mono">{{ $status->command }}</dd></div>
+                    <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.job.exit_code') }}</dt><dd class="m-0 min-w-0 text-end">{{ $status->exitCode ?? '—' }}</dd></div>
                 </dl>
                 <div data-env-job-log>
                     <h3 class="m-top-2 m-bottom-1 text-medium">{{ __('larena-env::admin.job.log_details') }}</h3>

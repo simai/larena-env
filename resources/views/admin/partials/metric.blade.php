@@ -1,10 +1,10 @@
 {{-- One measure as a tile: its name, the value, a meter that takes the threshold's colour and the line over a day.
      Drawn with Framework utilities until the Framework's metric tile ships (msg-993e1e39151942c19b23); the line moves
      to the chart package (ui-chart) then. $tone: success, warning or error; $points: the day's points, or null. --}}
-<div class="larena-panel p-2 flex flex-col g-1 min-w-0" style="margin: 0;" data-env-metric="{{ $key }}" data-env-metric-tone="{{ $tone }}">
+<div class="larena-panel p-2 flex flex-col gap-1 min-w-0" style="margin: 0;" data-env-metric="{{ $key }}" data-env-metric-tone="{{ $tone }}">
     {{-- The name whole, the value with its mark, then the day's line across the tile (the panel's UX audit, VIS-01). --}}
     <span class="color-on-surface-variant">{{ $label }}</span>
-    <div class="flex items-cross-center flex-wrap g-1">
+    <div class="flex items-cross-center flex-wrap gap-1">
         <strong class="text-5 line-tight" style="font-variant-numeric: tabular-nums;">{{ $value }}</strong>
         @if ($tone !== 'success')
             <sf-badge status="{{ $tone }}" appearance="tonal" text="{{ __('larena-env::admin.warnings.severity.'.$tone) }}"></sf-badge>

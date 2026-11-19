@@ -351,7 +351,7 @@ env_assert($refusedOlder instanceof RedirectResponse && $refusedOlder->getTarget
 $older = $block((string) $controller($serving(null))->show($asking('/admin/server/sites/demo-php.test'), 'demo-php.test')->render());
 env_assert(preg_match('#\A<section class="larena-panel larena-panel-padded" data-env-doctor="WARN" aria-labelledby="env-site-doctor">\s*<h2 id="env-site-doctor" class="text-2">Check</h2>\s*'
     .'<p>1 need attention; 21 passed\.</p>\s*<ul class="m-0 p-0" style="list-style: none;">\s*'
-    .'<li class="flex flex-wrap items-cross-center g-1 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-problem="WARN">\s*'
+    .'<li class="flex flex-wrap items-cross-center gap-1 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-problem="WARN">\s*'
     .'<sf-badge appearance="tonal" status="warning" text="Warning"></sf-badge>\s*'
     .'<span class="grow min-w-0" style="overflow-wrap: anywhere;" data-env-check="Recommended extensions">Recommended extensions</span>\s*'
     .'<span class="text-small color-on-surface-variant">PHP</span>\s*</li>\s*</ul>\s*</section>\z#', $older) === 1, 'An older server: the check as before, nothing added: '.$older);

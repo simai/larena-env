@@ -14,7 +14,7 @@
     @if (isset($plans) || $system !== null)
         <section class="larena-panel m-bottom-3" style="margin-top: 0;" id="update" data-env-software-updates-summary aria-labelledby="env-software-updates">
             <details data-env-software-updates-details>
-                <summary class="flex flex-wrap items-cross-center g-1 p-2 larena-control-floor" style="cursor: pointer;">
+                <summary class="flex flex-wrap items-cross-center gap-1 p-2 larena-control-floor" style="cursor: pointer;">
                     <h2 id="env-software-updates" class="m-0 text-2" style="margin-inline-end: .5rem;">{{ __('larena-env::admin.software.overview.updates_title') }}</h2>
                     @if (isset($plans) && $supported)
                         @foreach (array_keys($plans) as $target)
@@ -44,7 +44,7 @@
                     @if ($system !== null)
                         {{-- The system's package updates: what waits, how fresh the list is, and the two ways to install it. --}}
                         <section class="larena-panel larena-panel-padded" style="margin: 0;" data-env-system-updates="{{ $system->updates }}" aria-labelledby="env-system-updates">
-                            <div class="flex flex-wrap items-cross-center content-main-between g-1">
+                            <div class="flex flex-wrap items-cross-center content-main-between gap-1">
                                 <h3 id="env-system-updates" class="m-0 text-2">{{ __('larena-env::admin.software.overview.system_title') }}</h3>
                                 @if ($allows['refresh'])
                                     <form method="post" action="{{ route('larena.env.admin.software.plan', [], false) }}" class="m-0" data-env-software-op="refresh">
@@ -54,7 +54,7 @@
                                     </form>
                                 @endif
                             </div>
-                            <div class="flex flex-wrap items-cross-center g-1 m-y-1">
+                            <div class="flex flex-wrap items-cross-center gap-1 m-y-1">
                                 @if ($system->security > 0)
                                     <span class="sr-only" data-env-system-security-count="{{ $system->security }}">{{ __('larena-env::admin.software.overview.security', ['count' => (string) $system->security]) }}</span>
                                 @endif
@@ -64,7 +64,7 @@
                             </div>
                             @include('larena-env::admin.partials.system-updates', ['system' => $system])
                             @if ($allows['update'] && $system->updates > 0)
-                                <div class="flex flex-wrap items-cross-center g-1 m-top-2">
+                                <div class="flex flex-wrap items-cross-center gap-1 m-top-2">
                                     @if ($system->security > 0)
                                         <form method="post" action="{{ route('larena.env.admin.software.plan', [], false) }}" class="m-0" data-env-software-op="update-security">
                                             @csrf
@@ -100,8 +100,8 @@
              screen. Filters and the search are a plain form, so a link keeps them. --}}
         <section class="larena-panel" style="margin: 0; overflow: visible;" data-env-software="on" aria-labelledby="env-software-components">
             <h2 id="env-software-components" class="sr-only">{{ __('larena-env::admin.software.overview.components_title') }}</h2>
-            <form method="get" action="{{ route('larena.env.admin.software', [], false) }}" class="flex flex-wrap items-cross-center g-1 p-2 m-0" role="search" data-env-software-filters>
-                <nav class="flex flex-wrap items-cross-center g-1" aria-label="{{ __('larena-env::admin.software.overview.filters.label') }}">
+            <form method="get" action="{{ route('larena.env.admin.software', [], false) }}" class="flex flex-wrap items-cross-center gap-1 p-2 m-0" role="search" data-env-software-filters>
+                <nav class="flex flex-wrap items-cross-center gap-1" aria-label="{{ __('larena-env::admin.software.overview.filters.label') }}">
                     @foreach (\Larena\Env\Software\SoftwareScreen::counts($software) as $key => $count)
                         <a href="{{ route('larena.env.admin.software', [], false) }}{{ $key === 'all' ? '' : '?show='.$key }}{{ ($query ?? '') !== '' ? ($key === 'all' ? '?' : '&amp;').'q='.rawurlencode($query) : '' }}"
                             class="larena-button{{ ($filter ?? 'all') === $key ? ' larena-button-primary' : '' }} larena-control-floor" data-env-software-filter="{{ $key }}"
@@ -111,7 +111,7 @@
                 @if (($filter ?? 'all') !== 'all')
                     <input type="hidden" name="show" value="{{ $filter }}">
                 @endif
-                <label class="flex items-cross-center g-1 grow" style="margin-inline-start: auto; max-width: 22rem;">
+                <label class="flex items-cross-center gap-1 grow" style="margin-inline-start: auto; max-width: 22rem;">
                     <span class="sr-only">{{ __('larena-env::admin.software.overview.search') }}</span>
                     <input class="larena-control-floor" type="search" name="q" value="{{ $query ?? '' }}" maxlength="64" placeholder="{{ __('larena-env::admin.software.overview.search') }}" style="width: 100%; padding-inline: .75rem; border: 1px solid var(--larena-line); border-radius: .5rem; background: transparent; color: inherit;" data-env-software-search>
                 </label>
@@ -147,7 +147,7 @@
                                         <div class="md:hidden text-small mono">{{ ($phpRow ?? null) === null || $phpRow['count'] === 0 ? '' : $phpRow['versions'] }}</div>
                                     </td>
                                     <td data-label="{{ __('larena-env::admin.software.overview.columns.state') }}" style="padding-inline: .625rem;">
-                                        <div class="flex flex-wrap items-cross-center g-1">
+                                        <div class="flex flex-wrap items-cross-center gap-1">
                                             @if (($phpRow ?? null) === null)
                                                 <span class="color-on-surface-variant">—</span>
                                             @elseif ($phpRow['count'] === 0)
@@ -180,7 +180,7 @@
                                         @endif
                                     </td>
                                     <td data-label="{{ __('larena-env::admin.software.overview.columns.state') }}" style="padding-inline: .625rem;">
-                                        <div class="flex flex-wrap items-cross-center g-1">
+                                        <div class="flex flex-wrap items-cross-center gap-1">
                                             @if (!$component->installed)
                                                 <sf-badge appearance="tonal" text="{{ __('larena-env::admin.software.overview.not_installed') }}" data-env-software-absent></sf-badge>
                                             @elseif ($component->service !== null)
@@ -211,9 +211,9 @@
                                             <details data-env-software-actions="{{ $component->name }}" style="position: relative;">
                                                 <summary class="flex items-cross-center larena-control-floor" style="cursor: pointer; white-space: nowrap;"
                                                     aria-label="{{ __('larena-env::admin.software.overview.actions_of', ['name' => $component->title ?? $component->name]) }}">{{ __('larena-env::admin.software.overview.columns.actions') }}</summary>
-                                                <div class="flex flex-column g-1 p-2" style="position: absolute; inset-inline-end: 0; top: 100%; z-index: 20; width: min(20rem, 80vw); background: var(--larena-panel); border: 1px solid var(--larena-line); border-radius: .75rem; box-shadow: 0 .5rem 1.5rem rgb(0 0 0 / .25);">
+                                                <div class="flex flex-column gap-1 p-2" style="position: absolute; inset-inline-end: 0; top: 100%; z-index: 20; width: min(20rem, 80vw); background: var(--larena-panel); border: 1px solid var(--larena-line); border-radius: .75rem; box-shadow: 0 .5rem 1.5rem rgb(0 0 0 / .25);">
                                                     @if ($allows['install'] && $component->installable)
-                                                        <form method="post" action="{{ route('larena.env.admin.software.plan', [], false) }}" class="flex flex-wrap items-cross-end g-1 m-0" data-env-software-op="install-{{ $component->name }}">
+                                                        <form method="post" action="{{ route('larena.env.admin.software.plan', [], false) }}" class="flex flex-wrap items-cross-end gap-1 m-0" data-env-software-op="install-{{ $component->name }}">
                                                             @csrf
                                                             <input type="hidden" name="op" value="install">
                                                             <input type="hidden" name="name" value="{{ $component->name }}">

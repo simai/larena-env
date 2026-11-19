@@ -20,9 +20,9 @@
         @else
             <ul class="m-0 p-0" style="list-style: none;">
                 @foreach ($php->versions as $version)
-                    <li class="flex flex-wrap items-cross-center g-2 p-x-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-php-version="{{ $version->version }}">
+                    <li class="flex flex-wrap items-cross-center gap-2 p-x-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-php-version="{{ $version->version }}">
                         <div class="grow min-w-0" style="flex-basis: 14rem;">
-                            <div class="flex flex-wrap items-cross-center g-1">
+                            <div class="flex flex-wrap items-cross-center gap-1">
                                 <span class="mono">PHP {{ $version->version }}</span>
                                 @if (\Larena\Env\Software\PhpSupport::outdated($version->version, $version->outdated))
                                     <sf-badge appearance="tonal" status="warning" text="{{ __('larena-env::admin.php_outdated.mark') }}" data-env-php-outdated></sf-badge>
@@ -47,7 +47,7 @@
                                 @endif
                             </div>
                         </div>
-                        <div class="flex flex-wrap items-cross-center g-1">
+                        <div class="flex flex-wrap items-cross-center gap-1">
                             @if ($allows['update'])
                                 <form method="post" action="{{ route('larena.env.admin.software.php.plan', [], false) }}" class="m-0" data-env-php-op="update">
                                     @csrf
@@ -106,7 +106,7 @@
                         </select>
                     </div>
                     <div class="larena-field">
-                        <label class="flex items-cross-center g-1"><input type="checkbox" name="include_common" value="1" checked> {{ __('larena-env::admin.software.php.include_common') }}</label>
+                        <label class="flex items-cross-center gap-1"><input type="checkbox" name="include_common" value="1" checked> {{ __('larena-env::admin.software.php.include_common') }}</label>
                     </div>
                     <p class="m-0 color-on-surface-variant text-small">{{ __('larena-env::admin.software.php.install_note') }}</p>
                     <div class="larena-form-actions"><button type="submit" class="larena-button">{{ __('larena-env::admin.operations.plan') }}</button></div>
@@ -123,9 +123,9 @@
             @else
                 <ul class="m-0 p-0 grid g-x-3 grid-col-1 md:grid-col-2" style="list-style: none;">
                     @foreach ($extensions as $extension)
-                        <li class="flex items-cross-center content-main-between g-1 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-php-extension="{{ $extension->name }}">
+                        <li class="flex items-cross-center content-main-between gap-1 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-php-extension="{{ $extension->name }}">
                             <span class="mono min-w-0" style="overflow-wrap: anywhere;">{{ $extension->name }}</span>
-                            <span class="flex items-cross-center g-1">
+                            <span class="flex items-cross-center gap-1">
                                 <sf-badge appearance="tonal" @if ($extension->enabled) status="success" @endif text="{{ $extension->enabled ? __('larena-env::admin.runtime.on') : __('larena-env::admin.runtime.off') }}"></sf-badge>
                                 @if ($allows['extension'])
                                     <form method="post" action="{{ route('larena.env.admin.software.php.plan', [], false) }}" class="m-0" data-env-php-op="extension">

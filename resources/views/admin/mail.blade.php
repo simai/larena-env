@@ -80,7 +80,7 @@
                     <legend class="p-0">{{ __('larena-env::mail.fields.levels') }}</legend>
                     @foreach (\Larena\Env\Mail\MailSettings::LEVELS as $level)
                         <div class="larena-field" data-env-mail-level="{{ $level }}">
-                            <label class="flex items-cross-center g-1" for="env-mail-level-{{ $level }}">
+                            <label class="flex items-cross-center gap-1" for="env-mail-level-{{ $level }}">
                                 <input type="checkbox" id="env-mail-level-{{ $level }}" name="levels[]" value="{{ $level }}" @checked(in_array($level, $settings?->levels ?? ['urgent'], true))>
                                 <span>{{ __('larena-env::mail.levels.'.$level) }}</span>
                             </label>
@@ -89,7 +89,7 @@
                     <p class="m-0 text-small color-on-surface-variant">{{ __('larena-env::mail.card.levels_hint') }}</p>
                 </fieldset>
                 <p class="m-0 m-top-1 text-small color-on-surface-variant" data-env-settings-when="mail">{{ __('larena-env::mail.form.when') }}</p>
-                <div class="flex flex-wrap items-cross-center g-1 m-t-2">
+                <div class="flex flex-wrap items-cross-center gap-1 m-t-2">
                     <button type="submit" class="larena-button larena-button-primary larena-control-floor">{{ __('larena-env::mail.form.plan') }}</button>
                     @if ($settings !== null && $state !== \Larena\Env\Mail\PanelMail::PASSWORD_LOST)
                         <a href="{{ route('larena.env.admin.settings.mail', [], false) }}" class="larena-button larena-control-floor" data-env-edit-cancel>{{ __('larena-env::mail.form.cancel') }}</a>
@@ -99,7 +99,7 @@
         @endif
 
         @if ($canTest && !$edit)
-            <div class="flex flex-wrap items-cross-center g-2 p-x-1 p-top-2 m-top-1 border-top-1 border-top-solid border-outline-variant" data-env-mail-test>
+            <div class="flex flex-wrap items-cross-center gap-2 p-x-1 p-top-2 m-top-1 border-top-1 border-top-solid border-outline-variant" data-env-mail-test>
                 <p class="grow m-0 color-on-surface-variant" style="flex-basis: 14rem; overflow-wrap: anywhere;"><strong class="color-on-surface">{{ __('larena-env::mail.test.title') }}.</strong> {{ __($state === \Larena\Env\Mail\PanelMail::ON ? 'larena-env::mail.test.explain_on' : 'larena-env::mail.test.explain', ['to' => $testTo]) }}</p>
                 <form method="post" action="{{ route('larena.env.admin.settings.mail.test', [], false) }}" class="m-0">
                     @csrf
@@ -109,7 +109,7 @@
         @endif
 
         @if ($canOperate && !$edit && $state === \Larena\Env\Mail\PanelMail::ON)
-            <div class="flex flex-wrap items-cross-center g-2 p-x-1 p-top-2 m-top-1 border-top-1 border-top-solid border-outline-variant" data-env-mail-off>
+            <div class="flex flex-wrap items-cross-center gap-2 p-x-1 p-top-2 m-top-1 border-top-1 border-top-solid border-outline-variant" data-env-mail-off>
                 <p class="grow m-0 color-on-surface-variant" style="flex-basis: 14rem;">{{ __('larena-env::mail.off.explain') }}</p>
                 <form method="post" action="{{ route('larena.env.admin.settings.mail.plan', [], false) }}" class="m-0">
                     @csrf

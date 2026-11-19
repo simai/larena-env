@@ -5,14 +5,14 @@
 <section class="larena-panel larena-panel-padded" data-env-charts="{{ $charts->period }}" aria-labelledby="env-charts">
     <h2 id="env-charts" class="text-2">{{ __('larena-env::admin.history.title') }}</h2>
     <p class="color-on-surface-variant" data-env-history-from-server>{{ __('larena-env::admin.history.from_server') }}</p>
-    <nav class="flex flex-wrap items-cross-center g-2" aria-label="{{ __('larena-env::admin.history.period_label') }}">
+    <nav class="flex flex-wrap items-cross-center gap-2" aria-label="{{ __('larena-env::admin.history.period_label') }}">
         <span style="font-weight: 600;">{{ __('larena-env::admin.history.period_label') }}</span>
         @foreach (array_keys(\Larena\Env\History\HistoryCharts::PERIODS) as $period)
             <a href="?{{ http_build_query(['period' => $period, 'scale' => $charts->scale]) }}#env-charts" class="larena-button @if ($charts->period === $period) larena-button-primary @endif"
                style="min-height: 2.5rem;" data-env-charts-period="{{ $period }}" @if ($charts->period === $period) aria-current="true" @endif>{{ __('larena-env::admin.history.periods.'.$period) }}</a>
         @endforeach
     </nav>
-    <nav class="flex flex-wrap items-cross-center g-2 m-t-2" aria-label="{{ __('larena-env::admin.history.scale_label') }}">
+    <nav class="flex flex-wrap items-cross-center gap-2 m-t-2" aria-label="{{ __('larena-env::admin.history.scale_label') }}">
         <span style="font-weight: 600;">{{ __('larena-env::admin.history.scale_label') }}</span>
         @foreach (\Larena\Env\History\HistoryCharts::SCALES as $scale)
             <a href="?{{ http_build_query(['period' => $charts->period, 'scale' => $scale]) }}#env-charts" class="larena-button @if ($charts->scale === $scale) larena-button-primary @endif"
@@ -25,16 +25,16 @@
         <div class="m-t-3" style="display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr));">
             @foreach ($charts->charts as $chart)
                 <figure class="m-0 p-3" style="border: 1px solid var(--larena-line); border-radius: .75rem;" data-env-chart="{{ $chart['key'] }}">
-                    <figcaption class="flex flex-wrap items-cross-baseline g-1">
+                    <figcaption class="flex flex-wrap items-cross-baseline gap-1">
                         <strong>{{ $chart['title'] }}</strong>
                         @if ($chart['capacity'] !== null)<span class="color-on-surface-variant">{{ $chart['capacity'] }}</span>@endif
                         <span class="grow"></span>
                         <span class="color-on-surface-variant">{{ __('larena-env::admin.history.now') }} <strong style="color: var(--sf-on-surface);">{{ $chart['last'] }}</strong></span>
                     </figcaption>
                     @if (count($chart['series']) > 1)
-                        <div class="flex flex-wrap g-2 m-t-1 text-0" data-env-chart-legend>
+                        <div class="flex flex-wrap gap-2 m-t-1 text-0" data-env-chart-legend>
                             @foreach ($chart['series'] as $index => $line)
-                                <span class="flex items-cross-center g-1" data-env-chart-series="{{ $line['key'] }}"><span aria-hidden="true" style="inline-size: .75rem; block-size: .2rem; border-radius: .1rem; background: {{ $index === 0 ? 'var(--sf-primary)' : 'var(--sf-warning, var(--sf-secondary))' }};"></span>{{ $line['name'] }}</span>
+                                <span class="flex items-cross-center gap-1" data-env-chart-series="{{ $line['key'] }}"><span aria-hidden="true" style="inline-size: .75rem; block-size: .2rem; border-radius: .1rem; background: {{ $index === 0 ? 'var(--sf-primary)' : 'var(--sf-warning, var(--sf-secondary))' }};"></span>{{ $line['name'] }}</span>
                             @endforeach
                         </div>
                     @endif

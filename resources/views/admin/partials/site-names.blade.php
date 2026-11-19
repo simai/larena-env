@@ -60,7 +60,7 @@
                 {{-- What the server suggests (www.<domain> while it is not a name yet) is one click to its plan: sent to the
                      main domain, checked in DNS, as most sites want www. --}}
                 @foreach ($siteNames->names->suggest as $suggested)
-                    <form method="post" action="{{ route('larena.env.admin.site.plan', ['domain' => $domain], false) }}" class="flex flex-wrap items-cross-center g-1 m-top-1" data-env-name-suggest="{{ $suggested }}">
+                    <form method="post" action="{{ route('larena.env.admin.site.plan', ['domain' => $domain], false) }}" class="flex flex-wrap items-cross-center gap-1 m-top-1" data-env-name-suggest="{{ $suggested }}">
                         @csrf
                         <input type="hidden" name="operation" value="{{ \Larena\Env\Operations\SiteOperation::NameAdd->value }}">
                         <input type="hidden" name="name" value="{{ $suggested }}">
@@ -70,20 +70,20 @@
                         <span class="text-small color-on-surface-variant">{{ __('larena-env::admin.names.suggest_note', ['name' => $suggested]) }}</span>
                     </form>
                 @endforeach
-                <div class="flex flex-wrap g-1 m-top-1">
+                <div class="flex flex-wrap gap-1 m-top-1">
                     <button type="button" class="larena-button" data-sf-modal-open="env-name-add" data-env-name-add-open>{{ __('larena-env::admin.names.add') }}</button>
                 </div>
                 <sf-modal id="env-name-add" position="inline-end" width="28rem" heading="{{ __('larena-env::admin.names.add') }}">
                     <form method="post" action="{{ route('larena.env.admin.site.plan', ['domain' => $domain], false) }}" class="larena-form m-0" style="padding: 0; box-shadow: none; background: none; border: 0; border-radius: 0;" data-env-name-add>
                         @csrf
                         <input type="hidden" name="operation" value="{{ \Larena\Env\Operations\SiteOperation::NameAdd->value }}">
-                        <div class="flex flex-column g-2">
+                        <div class="flex flex-column gap-2">
                             <sf-input name="name" label="{{ __('larena-env::admin.names.fields.name') }}" hint="{{ __('larena-env::admin.names.fields.name_hint', ['domain' => $domain]) }}" autocomplete="off" spellcheck="false" maxlength="253" required></sf-input>
                             <sf-dropdown name="mode" label="{{ __('larena-env::admin.names.fields.mode') }}" value="{{ \Larena\Env\Server\SiteName::REDIRECT }}" required
                                 options="{{ json_encode(array_map(static fn (string $one): array => ['value' => $one, 'text' => __('larena-env::admin.names.modes.'.$one)], [\Larena\Env\Server\SiteName::REDIRECT, \Larena\Env\Server\SiteName::SERVE]), JSON_UNESCAPED_UNICODE) }}"></sf-dropdown>
                             <div class="larena-field" data-env-switch="check-dns">
                                 <input type="hidden" name="check-dns" value="no">
-                                <label class="flex items-cross-center g-1" for="env-name-add-check-dns">
+                                <label class="flex items-cross-center gap-1" for="env-name-add-check-dns">
                                     <input type="checkbox" id="env-name-add-check-dns" name="check-dns" value="yes" checked>
                                     <span>{{ __('larena-env::admin.names.fields.check_dns') }}</span>
                                 </label>

@@ -15,10 +15,10 @@
             <p>{{ __('larena-env::admin.dns.token_help') }}</p>
         @else
             <dl class="m-0" style="display: block;" data-env-facts data-larena-action-details>
-                <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.dns.provider') }}</dt><dd class="m-0 min-w-0 text-end">{{ __('larena-env::admin.dns.providers.'.$connected->provider) }}</dd></div>
-                <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-dns-token-tail><dt class="color-on-surface-variant">{{ __('larena-env::admin.dns.token') }}</dt><dd class="m-0 min-w-0 text-end">•••• {{ $connected->tokenTail }}</dd></div>
-                <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.dns.token_status') }}</dt><dd class="m-0 min-w-0 text-end">{{ $connected->tokenStatus }}{{ $connected->tokenExpiresOn === null ? '' : ' · '.__('larena-env::admin.dns.token_expires', ['time' => \Larena\Env\Server\Moment::human($connected->tokenExpiresOn)]) }}</dd></div>
-                <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.dns.verified_at') }}</dt><dd class="m-0 min-w-0 text-end">{{ \Larena\Env\Server\Moment::human($connected->verifiedAt) }}</dd></div>
+                <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.dns.provider') }}</dt><dd class="m-0 min-w-0 text-end">{{ __('larena-env::admin.dns.providers.'.$connected->provider) }}</dd></div>
+                <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-dns-token-tail><dt class="color-on-surface-variant">{{ __('larena-env::admin.dns.token') }}</dt><dd class="m-0 min-w-0 text-end">•••• {{ $connected->tokenTail }}</dd></div>
+                <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.dns.token_status') }}</dt><dd class="m-0 min-w-0 text-end">{{ $connected->tokenStatus }}{{ $connected->tokenExpiresOn === null ? '' : ' · '.__('larena-env::admin.dns.token_expires', ['time' => \Larena\Env\Server\Moment::human($connected->tokenExpiresOn)]) }}</dd></div>
+                <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.dns.verified_at') }}</dt><dd class="m-0 min-w-0 text-end">{{ \Larena\Env\Server\Moment::human($connected->verifiedAt) }}</dd></div>
             </dl>
             @if ($reasonText !== null)
                 <p role="alert">{{ $reasonText }}</p>
@@ -79,7 +79,7 @@
                     <p data-env-dns-certificates-state>{{ __('larena-env::admin.dns.certificates.none') }}</p>
                 @endif
                 @if ($certificatesAllowed ?? false)
-                    <div class="flex flex-wrap g-1">
+                    <div class="flex flex-wrap gap-1">
                         <form method="post" action="{{ route('larena.env.admin.dns.certificates.plan', [], false) }}" class="m-0" data-env-dns-certificates-op="store">
                             @csrf
                             <input type="hidden" name="op" value="store">

@@ -20,7 +20,7 @@
                 @if ($one['message'] !== null) message="{{ $one['message'] }}" @endif
                 data-env-setup-step="{{ $key }}" data-env-setup-state="{{ $states[$key] }}">
                 @if ($key === $step)
-                    <form method="post" action="{{ route('larena.env.admin.overview.setup.submit', ['step' => $key], false) }}" id="env-setup-form" class="m-0 flex flex-column g-2">
+                    <form method="post" action="{{ route('larena.env.admin.overview.setup.submit', ['step' => $key], false) }}" id="env-setup-form" class="m-0 flex flex-column gap-2">
                         @csrf
                         <input type="hidden" name="phase" value="{{ $phase }}">
                         @if ($phase === 'review' && $plan !== null)
@@ -40,7 +40,7 @@
             @if ($step === 'finish')
                 <ul class="m-0 p-0" style="list-style: none;" data-env-setup-summary>
                     @foreach (array_intersect_key($states, $wizard) as $key => $state)
-                        <li class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-setup-summary-step="{{ $key }}">
+                        <li class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-setup-summary-step="{{ $key }}">
                             <span>{{ __('larena-env::admin.setup.step.'.$key.'.name') }}</span>
                             <sf-badge appearance="tonal" status="{{ $state === 'done' ? 'success' : '' }}" text="{{ __('larena-env::admin.setup.state.'.$state) }}"></sf-badge>
                         </li>

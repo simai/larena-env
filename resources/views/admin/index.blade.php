@@ -31,11 +31,11 @@
              measures as tiles, then the server and its services, then the load over time. --}}
         @if (($metrics ?? null) !== null)
             <section class="m-bottom-2" data-env-metrics aria-labelledby="env-server-metrics">
-                <div class="flex flex-wrap items-cross-center g-1 m-bottom-1">
+                <div class="flex flex-wrap items-cross-center gap-1 m-bottom-1">
                     <h2 id="env-server-metrics" class="m-0 text-2">{{ __('larena-env::admin.metrics.title') }}</h2>
                     <span class="color-on-surface-variant">{{ __('larena-env::admin.metrics.checked_at') }} {{ \Larena\Env\Server\Moment::human($metrics->checkedAt) }}</span>
                 </div>
-                <div class="grid g-2 grid-col-1 md:grid-col-2 xl:grid-col-4">
+                <div class="grid gap-2 grid-col-1 md:grid-col-2 xl:grid-col-4">
                     @foreach (\Larena\Env\Admin\ServerMetricTiles::of($metrics, ($history ?? null)['day'] ?? null, static fn (string $key, array $replace = []): string => __('larena-env::admin.'.$key, $replace)) as $tile)
                         @include('larena-env::admin.partials.metric', $tile)
                     @endforeach
@@ -44,7 +44,7 @@
         @endif
         @if (($sitesCount ?? null) !== null)
             {{-- The sites in one line under the load (critics of 0.4.1): how many work, have no fresh copy, go without HTTPS. --}}
-            <section class="larena-panel flex flex-wrap items-cross-center content-main-between g-2 p-2 m-bottom-2" data-env-sites-count="{{ $sitesCount['count'] }}"
+            <section class="larena-panel flex flex-wrap items-cross-center content-main-between gap-2 p-2 m-bottom-2" data-env-sites-count="{{ $sitesCount['count'] }}"
                 data-env-sites-works="{{ $sitesCount['works'] }}" data-env-sites-stale="{{ $sitesCount['stale'] }}" data-env-sites-plain="{{ $sitesCount['plain'] }}" aria-label="{{ __('larena-env::admin.overview_sites.label') }}">
                 <p class="grow min-w-0 m-0" style="overflow-wrap: anywhere;">{{ __('larena-env::admin.overview_sites.line', ['count' => (string) $sitesCount['count'], 'works' => (string) $sitesCount['works'], 'stale' => (string) $sitesCount['stale'], 'plain' => (string) $sitesCount['plain']]) }}</p>
                 <a class="larena-button larena-control-floor" href="{{ route('larena.env.admin.index', [], false) }}" data-env-sites-open>{{ __('larena-env::admin.overview_sites.open') }}</a>
@@ -53,9 +53,9 @@
         {{-- «Рекомендуемые действия» are in «Советы» above now (study 2026-11-17, PX-38): the advised fixes there, the
              urgent ones in the alert bar on every page. --}}
         @if (($updates ?? []) !== [])
-            <section class="larena-panel flex flex-wrap items-cross-center g-2 p-2 m-bottom-2" data-env-update-hint role="note" aria-labelledby="env-update-hint">
+            <section class="larena-panel flex flex-wrap items-cross-center gap-2 p-2 m-bottom-2" data-env-update-hint role="note" aria-labelledby="env-update-hint">
                 <sf-badge status="info" appearance="tonal" text="{{ __('larena-env::admin.update.hint_title') }}" id="env-update-hint"></sf-badge>
-                <ul class="grow min-w-0 m-0 p-0 flex flex-wrap g-2" style="list-style: none; flex-basis: 16rem;">
+                <ul class="grow min-w-0 m-0 p-0 flex flex-wrap gap-2" style="list-style: none; flex-basis: 16rem;">
                     @foreach ($updates as $update)
                         <li data-env-update-hint-target="{{ $update['target'] }}">{{ __('larena-env::admin.update.hint.'.$update['target'], ['available' => $update['available'] ?? '—']) }}</li>
                     @endforeach
@@ -63,27 +63,27 @@
                 <a class="larena-button" href="{{ route('larena.env.admin.software', [], false) }}#update">{{ __('larena-env::admin.update.hint_open') }}</a>
             </section>
         @endif
-        <div class="grid g-2 grid-col-1 lg:grid-col-2 m-bottom-2" style="align-items: start;">
+        <div class="grid gap-2 grid-col-1 lg:grid-col-2 m-bottom-2" style="align-items: start;">
             <section class="larena-panel p-2" style="margin: 0;" data-env-state="ok" aria-labelledby="env-server-status">
                 <h2 id="env-server-status" class="m-top-0 text-2">{{ __('larena-env::admin.status.server') }}</h2>
                 <dl class="m-0" style="display: block;" data-env-facts data-larena-action-details>
-                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.status.os') }}</dt><dd class="m-0" style="text-align: end;">{{ $overview->osName() }}</dd></div>
-                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.status.env') }}</dt><dd class="m-0" style="text-align: end;">{{ $overview->envVersion }}</dd></div>
-                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.status.php') }}</dt><dd class="m-0" style="text-align: end;">{{ implode(', ', $overview->phpVersions) }}</dd></div>
+                    <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.status.os') }}</dt><dd class="m-0" style="text-align: end;">{{ $overview->osName() }}</dd></div>
+                    <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.status.env') }}</dt><dd class="m-0" style="text-align: end;">{{ $overview->envVersion }}</dd></div>
+                    <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.status.php') }}</dt><dd class="m-0" style="text-align: end;">{{ implode(', ', $overview->phpVersions) }}</dd></div>
                     @if (($metrics ?? null) !== null && $metrics->cores !== null)
-                        <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.metrics.cores') }}</dt><dd class="m-0" style="text-align: end;">{{ $metrics->cores }}</dd></div>
+                        <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.metrics.cores') }}</dt><dd class="m-0" style="text-align: end;">{{ $metrics->cores }}</dd></div>
                     @endif
-                    <div class="flex content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.status.generated_at') }}</dt><dd class="m-0" style="text-align: end;">{{ \Larena\Env\Server\Moment::human($overview->generatedAt) }}</dd></div>
+                    <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.status.generated_at') }}</dt><dd class="m-0" style="text-align: end;">{{ \Larena\Env\Server\Moment::human($overview->generatedAt) }}</dd></div>
                 </dl>
             </section>
             <section class="larena-panel" style="margin: 0;" aria-labelledby="env-server-services">
-                <div class="flex items-cross-center content-main-between g-1 p-2 p-bottom-1">
+                <div class="flex items-cross-center content-main-between gap-1 p-2 p-bottom-1">
                     <h2 id="env-server-services" class="m-0 text-2">{{ __('larena-env::admin.status.services') }}</h2>
                     <a href="{{ route('larena.env.admin.services', [], false) }}">{{ __('larena-env::admin.status.all_services') }}</a>
                 </div>
                 <ul class="m-0 p-0" style="list-style: none;">
                     @foreach ($services ?? $overview->services as $service)
-                        <li class="flex items-cross-center content-main-between g-2 p-x-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-service="{{ $service->name }}">
+                        <li class="flex items-cross-center content-main-between gap-2 p-x-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-service="{{ $service->name }}">
                             <span class="truncate" title="{{ $service->name }}">{{ \Larena\Env\Server\HostService::label($service->name) }}</span>
                             <sf-badge status="{{ $service->isActive() ? 'success' : ($service->isUnused() ? 'neutral' : 'error') }}" appearance="tonal" @if ($service->isUnused()) data-env-service-unused @endif
                                 text="{{ $service->isActive() ? __('larena-env::admin.services.running') : ($service->isUnused() ? __('larena-env::admin.services.unused') : __('larena-env::admin.services.stopped')) }}"></sf-badge>

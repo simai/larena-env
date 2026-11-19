@@ -1,9 +1,9 @@
 {{-- Only the fields the kind and its way take (PX-20): the language by name, the database in words or as a switch, whose
      site only for the whole server with why. A way of making it (new, from a copy) is chosen above them. --}}
 @if (($routes ?? null) !== null && count($routes) > 1)
-    <div class="flex flex-column g-1" data-env-new-ways>
+    <div class="flex flex-column gap-1" data-env-new-ways>
         <p class="m-0 text-medium">{{ __('larena-env::admin.new_site.wizard.way') }}</p>
-        <div class="flex flex-wrap g-1">
+        <div class="flex flex-wrap gap-1">
             @foreach ($routes as $one)
                 <sf-button href="{{ route('larena.env.admin.sites.new.step', ['step' => 'address'], false) }}?route={{ $one['id'] }}" text="{{ $one['label'] }}"
                     @if ($one['id'] === $route) appearance="default" scheme="primary" aria-current="true" @else appearance="outline" scheme="on-surface" @endif data-env-new-way="{{ $one['id'] }}"></sf-button>

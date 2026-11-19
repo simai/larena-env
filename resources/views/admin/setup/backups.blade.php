@@ -25,7 +25,7 @@
     <sf-input name="secret_key" label="{{ __('larena-env::admin.storages.fields.secret_key') }}" input-type="password" autocomplete="off" required></sf-input>
     <details>
         <summary class="color-primary" style="cursor: pointer;">{{ __('larena-env::admin.more') }}</summary>
-        <div class="flex flex-column g-2 m-t-2">
+        <div class="flex flex-column gap-2 m-t-2">
             <sf-input name="prefix" label="{{ __('larena-env::admin.storages.fields.prefix') }}" autocomplete="off"></sf-input>
             <sf-input name="endpoint" label="{{ __('larena-env::admin.storages.fields.endpoint') }}" hint="{{ __('larena-env::admin.storages.fields.endpoint_hint') }}" autocomplete="off"></sf-input>
             <sf-input name="region" label="{{ __('larena-env::admin.storages.fields.region') }}" autocomplete="off"></sf-input>

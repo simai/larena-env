@@ -3,12 +3,12 @@
     items="{{ json_encode($kinds, JSON_UNESCAPED_UNICODE) }}" @if (($errors['profile'] ?? null) !== null) invalid error-message="{{ $errors['profile'] }}" @endif data-env-new-kinds></sf-input-choice>
 @if ($disabled !== [] && $canEnable)
     {{-- The kinds the server can make but are switched off (simai-env 1.57.5): «Включить», only for the server's administrator. --}}
-    <div class="flex flex-column g-1" data-env-new-disabled>
+    <div class="flex flex-column gap-1" data-env-new-disabled>
         <p class="m-0 text-medium">{{ __('larena-env::admin.new_site.wizard.disabled_title') }}</p>
         <p class="m-0 color-on-surface-variant">{{ __('larena-env::admin.new_site.wizard.disabled_text') }}</p>
         <ul class="m-0 p-0" style="list-style: none;">
             @foreach ($disabled as $id => $name)
-                <li class="flex flex-wrap items-cross-center content-main-between g-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-new-disabled-kind="{{ $id }}">
+                <li class="flex flex-wrap items-cross-center content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-new-disabled-kind="{{ $id }}">
                     <span>{{ $name }}</span>
                     <button type="button" class="larena-button larena-control-floor" data-sf-modal-open="env-enable-{{ $id }}" data-env-new-enable="{{ $id }}">{{ __('larena-env::admin.new_site.wizard.enable') }}</button>
                 </li>
