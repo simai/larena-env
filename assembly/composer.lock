@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "d9de4159281d5dca2d3ad4343c2f5d9d",
+    "content-hash": "93d53f2b7b9afb6a0d7654a888edf932",
     "packages": [
         {
             "name": "brick/math",
@@ -1574,12 +1574,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:simai/larena-admin.git",
-                "reference": "20693f61435d1adf6746383bfaaf25ee42833c42"
+                "reference": "c294da785e8044b963a572381d80ddb056c04ab5"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-admin/zipball/20693f61435d1adf6746383bfaaf25ee42833c42",
-                "reference": "20693f61435d1adf6746383bfaaf25ee42833c42",
+                "url": "https://api.github.com/repos/simai/larena-admin/zipball/c294da785e8044b963a572381d80ddb056c04ab5",
+                "reference": "c294da785e8044b963a572381d80ddb056c04ab5",
                 "shasum": ""
             },
             "require": {
@@ -1736,7 +1736,7 @@
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/FrontendConveyorDemoTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/LayoutPageBuilderDemoTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/SmartComponentBlockWidgetDemoTest.php",
-                    "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/SourceBackedSfPortableProvenanceTest.php",
+                    "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/ObjectCardTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/AdminFrontendAssetActivationBoundaryTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/AdminFrontendAssetTagsHtmlBoundaryTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/AdminFrontendRenderArtifactConsumptionBoundaryTest.php",
@@ -1809,7 +1809,7 @@
                 }
             ],
             "description": "Larena Admin: Object-based, permission-aware administration platform for package contributions, screens, actions and diagnostics.",
-            "time": "2026-11-19T14:28:55+00:00"
+            "time": "2026-11-20T19:20:54+00:00"
         },
         {
             "name": "larena/audit",
@@ -2695,12 +2695,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:simai/larena-property.git",
-                "reference": "67ec9ef3cb3691834814a54f5b9fb12a2cea2661"
+                "reference": "92e41c046420ff82b775daf6cf3ab28e234e27fd"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-property/zipball/67ec9ef3cb3691834814a54f5b9fb12a2cea2661",
-                "reference": "67ec9ef3cb3691834814a54f5b9fb12a2cea2661",
+                "url": "https://api.github.com/repos/simai/larena-property/zipball/92e41c046420ff82b775daf6cf3ab28e234e27fd",
+                "reference": "92e41c046420ff82b775daf6cf3ab28e234e27fd",
                 "shasum": ""
             },
             "require": {
@@ -2749,6 +2749,7 @@
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PropertyDocumentTypesTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PropertyItemsTypeTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PropertyPageContentTypesTest.php",
+                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PropertyCompositionTypeTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PropertyDisplayProjectorTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PropertyPresentationRegistryTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PropertyFieldDescriberTest.php",
@@ -2802,7 +2803,7 @@
                 }
             ],
             "description": "Larena Property: Universal property layer for field type registry, field definitions, structured render models, validation, templates and typed value interaction across settings, admin, storage and future content models.",
-            "time": "2026-11-17T23:29:07+00:00"
+            "time": "2026-11-20T18:10:47+00:00"
         },
         {
             "name": "larena/setting",
@@ -2810,12 +2811,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:simai/larena-setting.git",
-                "reference": "b3cc89fdfbd0c2eb21bf7712b9848fcdc2f00c4d"
+                "reference": "7c91380813dddd23f4171a0c8e6e566c922fd84b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-setting/zipball/b3cc89fdfbd0c2eb21bf7712b9848fcdc2f00c4d",
-                "reference": "b3cc89fdfbd0c2eb21bf7712b9848fcdc2f00c4d",
+                "url": "https://api.github.com/repos/simai/larena-setting/zipball/7c91380813dddd23f4171a0c8e6e566c922fd84b",
+                "reference": "7c91380813dddd23f4171a0c8e6e566c922fd84b",
                 "shasum": ""
             },
             "require": {
@@ -2888,6 +2889,7 @@
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Feature/SettingCommonPackRuntimeTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Integration/SettingCatalogSnapshotCostTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Feature/ViewSettingsRuntimeTest.php",
+                    "@php -d zend.assertions=1 -d assert.exception=1 tests/Feature/ViewConfigStoreTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Feature/ViewsTransferFixturesRuntimeTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Feature/ViewsTransferRuntimeTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Integration/ViewSettingsReadCostTest.php",
@@ -2935,7 +2937,7 @@
                 }
             ],
             "description": "Larena Settings: Machine-readable settings definitions, runtime value resolution, pending changes and import/export policy.",
-            "time": "2026-11-19T16:30:09+00:00"
+            "time": "2026-11-20T18:36:49+00:00"
         },
         {
             "name": "larena/ui",
