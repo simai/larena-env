@@ -7,7 +7,9 @@
 @section('description', __('larena-env::admin.site.description'))
 
 @if ($site !== null)
-    {{-- The site's state at a glance in the page's head: whether it works, what it runs, its certificate. --}}
+    {{-- The site's head on the admin's object card (study PX-29, PX-30): whether it works and what kind of site it is; its
+         PHP and certificate are the details', not repeated here. Three main actions by the kind of site and «⋯» with the
+         rest, «Удалить сайт…» last, opening the plan and the question of part 1. --}}
     @section('heading-meta')
         <span class="flex flex-wrap items-cross-center gap-1" data-env-site-state="{{ \Larena\Env\Admin\SiteState::of($site->answersChecked, $site->answers, $site->suspended) }}">
             @if ($site->suspended)
@@ -16,18 +18,11 @@
             @else
                 <sf-badge status="{{ \Larena\Env\Admin\SiteState::status(\Larena\Env\Admin\SiteState::of($site->answersChecked, $site->answers, $site->suspended)) }}" appearance="tonal" text="{{ __('larena-env::admin.sites.state.'.\Larena\Env\Admin\SiteState::of($site->answersChecked, $site->answers, $site->suspended)) }}"></sf-badge>
             @endif
-            <sf-badge appearance="outline" text="{{ in_array($site->profile, ['php', 'generic'], true) && $site->php !== 'none' ? 'PHP '.$site->php : __('larena-env::admin.new_site.profiles.'.$site->profile).($site->php !== 'none' ? ' · PHP '.$site->php : '') }}"></sf-badge>
-            @if ($site->certificate !== null)
-                <sf-badge status="{{ $site->certificate->daysLeft !== null && $site->certificate->daysLeft < \Larena\Env\Warnings\PanelWarnings::CERTIFICATE_DAYS ? 'warning' : 'success' }}" appearance="tonal"
-                    text="{{ $site->certificate->daysLeft === null ? 'HTTPS' : __('larena-env::admin.sites.certificate_left', ['days' => (string) $site->certificate->daysLeft]) }}"></sf-badge>
-            @else
-                <sf-badge appearance="outline" text="{{ __('larena-env::admin.site.no_https') }}"></sf-badge>
-            @endif
+            <sf-badge appearance="outline" text="{{ __('larena-env::admin.new_site.profiles.'.$site->profile) }}" data-env-site-kind="{{ $site->profile }}"></sf-badge>
         </span>
     @endsection
     @section('actions')
-        {{-- One line beside a long heading too («demo.test · PHP и веб-сервер» squeezed it onto two at 1440, audit 2026-11-18). --}}
-        <a class="larena-button" style="white-space: nowrap;" href="{{ $site->certificate !== null ? 'https' : 'http' }}://{{ $domain }}/" target="_blank" rel="noopener noreferrer" data-env-site-open>{{ __('larena-env::admin.site.open') }}</a>
+        @include('larena-admin::object-card.head', $card['head'] + ['label' => __('larena-env::admin.site.card.more')])
     @endsection
 @endif
 
@@ -45,30 +40,13 @@
              menus); what needs attention is in the admin's alert bar. The page carries only the open section. --}}
         <div class="min-w-0" data-env-section="{{ $tab }}" data-env-sections="{{ implode(' ', $tabs) }}">
         @if ($tab === 'overview')
-            <section class="larena-panel larena-panel-padded" data-env-state="ok" aria-labelledby="env-site-facts">
-                <h2 id="env-site-facts" class="text-2">{{ __('larena-env::admin.site.facts') }}</h2>
-                @if ($site->suspended)
-                    <p role="note" data-env-site-paused-note>{{ __('larena-env::admin.site.paused_note') }}</p>
-                @endif
-                <dl class="m-0" style="display: block;" data-env-facts data-larena-action-details>
-                    <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-answers="{{ $site->answersChecked ? ($site->answers ?? 'none') : 'unchecked' }}"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.answers') }}</dt><dd class="m-0 min-w-0 text-end">{{ __('larena-env::admin.sites.state.'.\Larena\Env\Admin\SiteState::of($site->answersChecked, $site->answers, $site->suspended)) }}{{ $site->answers !== null ? ' · '.__('larena-env::admin.sites.answers_code', ['code' => (string) $site->answers]) : '' }}</dd></div>
-                    <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.owner') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->owner ?? __('larena-env::admin.access.own_account') }}</dd></div>
-                    <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.profile') }}</dt><dd class="m-0 min-w-0 text-end">{{ __('larena-env::admin.new_site.profiles.'.$site->profile) }}</dd></div>
-                    <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.php') }}</dt><dd class="m-0 min-w-0 text-end" data-env-site-php="{{ $site->php }}">{{ $site->php === 'none' ? __('larena-env::admin.site.php_none') : $site->php }}@if ($site->php !== 'none' && \Larena\Env\Software\PhpSupport::outdated($site->php)) <sf-badge status="warning" appearance="tonal" text="{{ __('larena-env::admin.php_outdated.mark') }}" data-env-php-outdated></sf-badge>@endif</dd></div>
-                    <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.ssl') }}</dt><dd class="m-0 min-w-0 text-end" data-env-https="{{ $site->certificate === null ? 'none' : 'on' }}">{{ $site->certificate === null ? __('larena-env::admin.sites.https_none') : ($site->certificate->daysLeft === null ? __('larena-env::admin.sites.https_on') : __('larena-env::admin.sites.https_yes', ['days' => (string) $site->certificate->daysLeft])) }}</dd></div>
-                    @if ($site->databaseEngine !== null)
-                    <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.database') }}</dt><dd class="m-0 min-w-0 text-end">{{ __('larena-env::admin.new_site.engines.'.$site->databaseEngine) === 'larena-env::admin.new_site.engines.'.$site->databaseEngine ? $site->databaseEngine : __('larena-env::admin.new_site.engines.'.$site->databaseEngine) }}</dd></div>
-                    @endif
-                    @if ($site->release !== null)
-                    <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.release') }}</dt><dd class="m-0 min-w-0 text-end">{{ $site->release ?? '—' }}</dd></div>
-                    @endif
-                    {{-- The site's size with when the server measured it (simai-env disk.checked_at, at most hourly; FASTPANEL look §5.3).
-                         The database's size waits for a measured time from the server (simai-env 1.63.0); it is on «База данных». --}}
-                    <div class="flex content-main-between gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-disk><dt class="color-on-surface-variant">{{ __('larena-env::admin.sites.disk') }}</dt><dd class="m-0 min-w-0 text-end">{{ \Larena\Env\Server\Bytes::human($site->diskBytes) }}@if ($site->diskBytes !== null && \Larena\Env\Server\Moment::ago($site->diskCheckedAt, \Larena\Env\Warnings\PanelWarnings::now(), static fn (string $key, array $replace = []): string => __('larena-env::admin.'.$key, $replace)) !== null)<span class="color-on-surface-variant" title="{{ \Larena\Env\Server\Moment::human($site->diskCheckedAt) }}" data-env-disk-measured> · {{ __('larena-env::admin.site.measured', ['ago' => \Larena\Env\Server\Moment::ago($site->diskCheckedAt, \Larena\Env\Warnings\PanelWarnings::now(), static fn (string $key, array $replace = []): string => __('larena-env::admin.'.$key, $replace))]) }}</span>@endif</dd></div>
-                </dl>
-            </section>
-            @if (($siteRoute ?? null) !== null)
-                {{-- Where the site stands on its creation route (simai-env 1.56.0): its steps, the one it is on, and the next
+            <div data-env-state="ok" hidden></div>
+            @if ($site->suspended)
+                <p role="note" data-env-site-paused-note>{{ __('larena-env::admin.site.paused_note') }}</p>
+            @endif
+            @if (($siteRoute ?? null) !== null && $siteRoute['status']->step !== 'done')
+                {{-- Once the site is made the block goes: its making is in «Последние действия», the next step (HTTPS) in
+                     «Требует внимания» (PX-31). Until then, where the site stands on its creation route (simai-env 1.56.0): its steps, the one it is on, and the next
                      one: an address the browser opens, a section of the card, or an action through its plan. --}}
                 <section class="larena-panel larena-panel-padded" data-env-site-route="{{ $siteRoute['status']->route }}" data-env-site-step="{{ $siteRoute['status']->step }}" aria-labelledby="env-site-route">
                     <h2 id="env-site-route" class="text-2">{{ __('larena-env::admin.routes.site_title', ['route' => $siteRoute['route']]) }}</h2>
@@ -76,18 +54,9 @@
                         <sf-steps class="m-bottom-2" current="{{ $siteRoute['current'] ?? 0 }}" aria-label="{{ __('larena-env::admin.routes.steps_title') }}" data-env-site-route-steps
                             items="{{ json_encode(array_map(static fn (array $step): array => ['label' => $step['label']], $siteRoute['steps']), JSON_UNESCAPED_UNICODE) }}"></sf-steps>
                     @endif
-                    @if ($siteRoute['status']->step === 'done')
-                        <p data-env-site-route-done>{{ __('larena-env::admin.routes.done') }}</p>
-                        {{-- The site is made; without a certificate the next step is HTTPS, in «Домены и HTTPS» (block 4). --}}
-                        @if ($site->certificate === null && in_array('domains', $tabs, true))
-                            <p data-env-site-route-https>{{ __('larena-env::admin.routes.https_next') }}</p>
-                            <p><a href="{{ route('larena.env.admin.site', ['domain' => $domain], false) }}?tab=domains&amp;action={{ \Larena\Env\Operations\SiteOperation::CertificateIssue->value }}" class="larena-button larena-button-primary" data-env-site-route-https-go>{{ __('larena-env::admin.routes.https_go') }}</a></p>
-                        @endif
-                    @else
-                        <p data-env-site-route-at>{{ __('larena-env::admin.routes.now', ['step' => $siteRoute['stepText']]) }}</p>
-                        @if ($siteRoute['nextText'] !== null)
-                            <p data-env-site-route-next="{{ $siteRoute['status']->next }}">{{ __('larena-env::admin.routes.next', ['step' => $siteRoute['nextText']]) }}</p>
-                        @endif
+                    <p data-env-site-route-at>{{ __('larena-env::admin.routes.now', ['step' => $siteRoute['stepText']]) }}</p>
+                    @if ($siteRoute['nextText'] !== null)
+                        <p data-env-site-route-next="{{ $siteRoute['status']->next }}">{{ __('larena-env::admin.routes.next', ['step' => $siteRoute['nextText']]) }}</p>
                     @endif
                     @if ($siteRoute['pending'] !== [])
                         <p class="color-on-surface-variant" data-env-site-route-pending>{{ __('larena-env::admin.routes.pending', ['items' => implode(', ', $siteRoute['pending'])]) }}</p>
@@ -142,38 +111,24 @@
                     @endif
                 </section>
             @endif
-            <section class="larena-panel larena-panel-padded" data-env-doctor="{{ $doctor?->status ?? 'unknown' }}" aria-labelledby="env-site-doctor">
-                <h2 id="env-site-doctor" class="text-2">{{ __('larena-env::admin.doctor.title') }}</h2>
-                {{-- The site's own answer is the check's first row when it fails: the head and the check say one thing. --}}
-                @if ($doctor === null && ($checkProblems ?? \Larena\Env\Admin\SiteChecks::problems($doctor, $checkFixes ?? false, $site)) === [])
-                    <p>{{ __('larena-env::admin.doctor.none') }}</p>
-                @elseif (($checkProblems ?? \Larena\Env\Admin\SiteChecks::problems($doctor, $checkFixes ?? false, $site)) === [])
-                    <p>{{ __('larena-env::admin.doctor.clean', ['count' => (string) $doctor->passed]) }}</p>
-                @else
-                    <p>{{ __('larena-env::admin.doctor.summary', ['count' => (string) count($checkProblems ?? \Larena\Env\Admin\SiteChecks::problems($doctor, $checkFixes ?? false, $site)), 'passed' => (string) ($doctor->passed ?? 0)]) }}</p>
-                    <ul class="m-0 p-0" style="list-style: none;">
-                        {{-- A rule of the site's profile (simai-env 1.55.1) says what the server found and since when, and where
-                             the server offers a fix, «Исправить…» opens its plan; other checks are one line as before. --}}
-                        @foreach (($checkProblems ?? \Larena\Env\Admin\SiteChecks::problems($doctor, $checkFixes ?? false, $site)) as $problem)
-                            <li class="flex flex-wrap items-cross-center gap-1 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-problem="{{ $problem['status'] }}"@if ($problem['key'] !== null) data-env-rule="{{ $problem['key'] }}"@endif>
-                                <sf-badge appearance="tonal" status="{{ $problem['tone'] }}" text="{{ __($problem['label']) }}"></sf-badge>
-                                <span class="grow min-w-0" style="overflow-wrap: anywhere;" data-env-check="{{ $problem['title'] }}">{{ $problem['text'] }}@if ($problem['detail'] !== null || $problem['since'] !== null)<span class="text-small color-on-surface-variant" style="display: block;" data-env-check-detail>{{ $problem['detail'] }}{{ $problem['detail'] !== null && $problem['since'] !== null ? ' · ' : '' }}{{ $problem['since'] !== null ? __('larena-env::admin.doctor.since', ['time' => $problem['since']]) : '' }}</span>@endif</span>
-                                <span class="text-small color-on-surface-variant">{{ $problem['area'] }}</span>
-                                @if ($problem['fix'] !== null)
-                                    <form method="post" action="{{ route('larena.env.admin.site.plan', ['domain' => $domain], false) }}" class="m-0" data-env-check-fix="{{ $problem['fix'] }}">
-                                        @csrf
-                                        <input type="hidden" name="operation" value="{{ \Larena\Env\Operations\SiteOperation::CheckFix->value }}">
-                                        <input type="hidden" name="id" value="{{ $problem['fix'] }}">
-                                        <button type="submit" class="larena-button larena-control-floor">{{ __('larena-env::admin.doctor.fix') }}</button>
-                                    </form>
-                                @endif
-                            </li>
-                        @endforeach
-                    </ul>
-                @endif
+            {{-- «Требует внимания» (C37, PX-31, PX-32): the next step once the site is made, then each problem of the check in
+                 plain words with its one action, the server's fix (its plan) or the section it is put right in. --}}
+            <div data-env-doctor="{{ $doctor?->status ?? 'unknown' }}">
+                @foreach ($checkProblems as $index => $problem)
+                    @if ($problem['fix'] !== null)
+                        <form id="env-check-fix-{{ $index }}" method="post" action="{{ route('larena.env.admin.site.plan', ['domain' => $domain], false) }}" hidden data-env-check-fix="{{ $problem['fix'] }}">
+                            @csrf
+                            <input type="hidden" name="operation" value="{{ \Larena\Env\Operations\SiteOperation::CheckFix->value }}">
+                            <input type="hidden" name="id" value="{{ $problem['fix'] }}">
+                        </form>
+                    @endif
+                @endforeach
+                @include('larena-admin::object-card.attention', $card['attention'] + ['label' => __('larena-env::admin.site.card.attention'),
+                    'emptyText' => __('larena-env::admin.site.card.clean'), 'empty' => $doctor === null && $card['attention']['count'] === 0 ? 'none' : 'line'])
+                {{-- What passed is for a specialist: «Подробно», closed, the check's own words. --}}
                 @if (\Larena\Env\Admin\SiteChecks::passed($doctor) !== [])
-                    <details class="m-t-1" data-env-rules-passed>
-                        <summary class="larena-control-floor" style="cursor: pointer; display: flex; align-items: center;">{{ __('larena-env::admin.doctor.passed_rules', ['count' => (string) count(\Larena\Env\Admin\SiteChecks::passed($doctor))]) }}</summary>
+                    <details class="m-top-1" data-env-rules-passed>
+                        <summary class="larena-control-floor color-on-surface-variant" style="cursor: pointer; display: flex; align-items: center;">{{ __('larena-env::admin.site.card.passed', ['count' => (string) count(\Larena\Env\Admin\SiteChecks::passed($doctor))]) }}</summary>
                         <ul class="m-0 p-0" style="list-style: none;">
                             @foreach (\Larena\Env\Admin\SiteChecks::passed($doctor) as $rule)
                                 <li class="flex flex-wrap items-cross-center gap-1 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-rule="{{ $rule['key'] }}" data-env-rule-state="{{ $rule['status'] }}">
@@ -184,7 +139,8 @@
                         </ul>
                     </details>
                 @endif
-            </section>
+            </div>
+            @include('larena-admin::object-card.details', $card['details'] + ['title' => __('larena-env::admin.site.card.details')])
         @elseif ($tab === 'domains')
             @if (($siteNames ?? null) !== null)
                 @include('larena-env::admin.partials.site-names')
@@ -196,7 +152,12 @@
                     {{-- Where the domain must lead, and the certificate right here: the same action as among the tab's
                          buttons below, opening its side panel (block 4, texts for a newcomer). --}}
                     <p data-env-domain-point>{{ ($serverIp ?? null) !== null ? __('larena-env::admin.point_domain.ip', ['ip' => $serverIp]) : __('larena-env::admin.point_domain.unknown') }}</p>
-                    @if (in_array(\Larena\Env\Operations\SiteOperation::CertificateIssue, $tabOperations, true))
+                    {{-- A domain that leads to another server gets no certificate here (PX-33): the button says why it is not
+                         pressed, beside where the domain must lead. --}}
+                    @if (in_array(\Larena\Env\Operations\SiteOperation::CertificateIssue, $tabOperations, true) && $domainElsewhere)
+                        <p><button type="button" class="larena-button" disabled aria-describedby="env-certificate-elsewhere" data-env-certificate-get="elsewhere">{{ __('larena-env::admin.operations.certificate-issue') }}</button></p>
+                        <p id="env-certificate-elsewhere" class="text-small color-on-surface-variant" data-env-certificate-elsewhere>{{ __('larena-env::admin.plan.warnings.domain_elsewhere', ['domain' => $domain]) }}</p>
+                    @elseif (in_array(\Larena\Env\Operations\SiteOperation::CertificateIssue, $tabOperations, true))
                         <p>{{ __('larena-env::admin.certificate.get_now') }}</p>
                         <p><button type="button" class="larena-button larena-button-primary" data-sf-modal-open="env-op-{{ \Larena\Env\Operations\SiteOperation::CertificateIssue->value }}" data-env-certificate-get>{{ __('larena-env::admin.operations.certificate-issue') }}</button></p>
                     @endif
@@ -538,14 +499,15 @@
         @endif
 
         @if ($tabOperations !== [])
+            {{-- The overview's actions are the head's «⋯» (object card, PX-29): no row of buttons there, only their side panels. --}}
             {{-- The database browser and the database's own actions are offered by the «База данных» block, not the row. --}}
-            <section class="larena-panel larena-panel-padded" data-env-operations @if (\Larena\Env\Operations\SiteOperation::inRow($tabOperations, $sftpChoices ?? []) !== []) aria-labelledby="env-site-operations" @else style="display: contents;" @endif>
-                @if (\Larena\Env\Operations\SiteOperation::inRow($tabOperations, $sftpChoices ?? []) !== [])
+            <section class="larena-panel larena-panel-padded" data-env-operations @if ($rowOperations !== []) aria-labelledby="env-site-operations" @else style="display: contents;" @endif>
+                @if ($rowOperations !== [])
                 <h2 id="env-site-operations" class="text-2">{{ __('larena-env::admin.operations.title') }}</h2>
                 {{-- The tab's actions as a row of buttons; each opens its fields in a side panel, and the plan comes next
                      (the panel's UX audit, LAY-03): the tab is no longer a column of long forms. --}}
                 <div class="flex flex-wrap gap-1" data-env-operation-buttons>
-                    @foreach (\Larena\Env\Operations\SiteOperation::inRow($tabOperations, $sftpChoices ?? []) as $operation)
+                    @foreach ($rowOperations as $operation)
                         <button type="button" class="larena-button @if ($operation->destroys()) larena-button-danger @endif" data-sf-modal-open="env-op-{{ $operation->value }}" data-env-operation-open="{{ $operation->value }}">{{ __('larena-env::admin.operations.'.$operation->value) }}</button>
                     @endforeach
                 </div>
@@ -746,32 +708,18 @@
             </section>
         @endif
         @if ($tab === 'overview' && ($siteHistory ?? null) !== null)
-            {{-- «История» of this site at the bottom of its card (FASTPANEL look §5.3): its five latest runs from the server's
-                 list, each opening its own page; «Вся история» is the admin's «История» narrowed to the site. --}}
-            <section class="larena-panel larena-panel-padded" aria-labelledby="env-site-history" data-env-site-history>
-                <h2 id="env-site-history" class="text-2">{{ __('larena-env::admin.site.history.title') }}</h2>
+            {{-- «Последние действия» (object card, PX-31): the site's five latest runs from the server's list, each opening its
+                 own page, its making among them; «Вся история» is the admin's «История» narrowed to the site. --}}
+            <div data-env-site-history>
                 {{ \Larena\Env\Http\Controllers\SiteAdminController::historyHolder($siteHistory['pending'], $siteHistory['url']) }}
-                @if ($siteHistory['pending'])
-                    <p class="m-0 color-on-surface-variant" data-env-site-history-pending>{{ __('larena-env::admin.site.history.loading') }}</p>
-                @elseif ($siteHistory['rows'] === [])
-                    <p class="m-0 color-on-surface-variant" data-env-site-history-empty>{{ __('larena-env::admin.site.history.empty') }}</p>
-                @else
-                    <ul class="m-0 p-0" style="list-style: none;">
-                        @foreach ($siteHistory['rows'] as $row)
-                            <li class="flex flex-wrap items-cross-center gap-1 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-site-history-row="{{ $row['state'] }}">
-                                <sf-badge status="{{ $row['status'] }}" appearance="tonal" text="{{ $row['words'] }}"></sf-badge>
-                                <a href="{{ $row['href'] }}" class="grow min-w-0" style="overflow-wrap: anywhere;">{{ $row['title'] }}@if (($row['times'] ?? 1) > 1) <span class="color-on-surface-variant" data-env-site-history-times="{{ $row['times'] }}" title="{{ __('larena-env::admin.site.history.times', ['count' => (string) $row['times']]) }}">×{{ $row['times'] }}</span>@endif</a>
-                                @if ($row['ago'] !== null)
-                                    <span class="text-small color-on-surface-variant" title="{{ $row['time'] }}">{{ $row['ago'] }}{{ $row['who'] !== '' ? ' · '.$row['who'] : '' }}</span>
-                                @endif
-                            </li>
-                        @endforeach
-                    </ul>
-                @endif
+                @include('larena-admin::object-card.recent', \Larena\Admin\ObjectCard\ObjectCard::listView($siteHistory['pending'] ? []
+                    : \Larena\Env\Admin\SiteCard::recent($siteHistory['rows'], static fn (string $key, array $replace = []): string => (string) __('larena-env::admin.'.$key, $replace)))
+                    + ['title' => __('larena-env::admin.site.card.recent'), 'pending' => $siteHistory['pending'], 'pendingText' => __('larena-env::admin.site.history.loading'),
+                    'emptyText' => __('larena-env::admin.site.history.empty'), 'all' => $siteHistory['all'], 'allText' => __('larena-env::admin.site.history.all')])
                 {{ \Larena\Env\Http\Controllers\SiteAdminController::historyHolder() }}
-                <p class="m-0 m-top-1"><a href="{{ $siteHistory['all'] }}" data-env-site-history-all>{{ __('larena-env::admin.site.history.all') }}</a></p>
-            </section>
+            </div>
         @endif
+        @include('larena-admin::object-card.sections', $card['sections'] + ['title' => __('larena-env::admin.site.card.sections')])
         </div>
     @endif
 @endsection

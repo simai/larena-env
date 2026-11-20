@@ -245,18 +245,18 @@ $resolver = new EngineResolver();
 $resolver->register('blade', static fn () => new CompilerEngine(new BladeCompiler($files, env_temp_directory()), $files));
 $factory = new Factory($resolver, new FileViewFinder($files, []), new Dispatcher());
 $factory->addExtension('blade.php', 'blade');
-$factory->addNamespace('larena-admin', dirname(__DIR__).'/Support/admin-views');
+$factory->addNamespace('larena-admin', [dirname(__DIR__).'/Support/admin-views', dirname(__DIR__, 2).'/vendor/larena/admin/resources/views']);
 $factory->addNamespace('larena-env', dirname(__DIR__, 2).'/resources/views');
 $site = (new SiteDetailsReader($recorded))->read($admin, 'demo-php.test')->site;
 env_assert($site !== null, 'The site reads.');
-$screen = static fn (array $data): string => $factory->make('larena-env::admin.site', $data + [
+$screen = static fn (array $data): string => $factory->make('larena-env::admin.site', env_site_view($data + [
     'domain' => 'demo-php.test', 'source' => 'recorded', 'site' => $site, 'refused' => false, 'reasonText' => null, 'tab' => 'domains',
     'tabs' => SiteAdminController::TABS, 'doctor' => null, 'phpVersions' => [], 'tabOperations' => [], 'sftpChoices' => [],
     'phpSettings' => null, 'phpExtensions' => null, 'databases' => null, 'sftpAccounts' => null, 'capabilities' => null,
     'logKind' => 'access', 'logKinds' => ['access', 'error'], 'logLines' => 200, 'logLineChoices' => [200, 500, 1000], 'logSearch' => '',
     'logGroup' => '', 'logGroups' => [], 'log' => null, 'logReasonText' => null, 'notice' => null,
     'namesAllows' => ['add' => true, 'remove' => true], 'namesReasonText' => null,
-])->render();
+]))->render();
 
 $block = $screen(['siteNames' => $read, 'domain' => 'demo-names.test']);
 env_assert(str_contains($block, 'data-env-names="ok"') && substr_count($block, 'data-env-name="') === 4, 'One row per name: '.$block);

@@ -142,7 +142,27 @@
     "assembly/lang/vendor/larena-auth/ru/auth.php",
     "src/Providers/PanelEditionServiceProvider.php",
     "assembly/composer.json",
-    "assembly/composer.lock"
+    "assembly/composer.lock",
+    "resources/lang/ar/admin.php",
+    "resources/lang/de/admin.php",
+    "resources/lang/es/admin.php",
+    "resources/lang/fr/admin.php",
+    "resources/lang/it/admin.php",
+    "resources/lang/ja/admin.php",
+    "resources/lang/ko/admin.php",
+    "resources/lang/pt-BR/admin.php",
+    "resources/lang/zh-Hans/admin.php",
+    "src/Admin/SiteChecks.php",
+    "tests/Support/env-test.php",
+    "tests/Unit/PanelMailTest.php",
+    "tests/Unit/SecretFilesTest.php",
+    "tests/Unit/ServerActionsTest.php",
+    "tests/Unit/ServerScreenTest.php",
+    "tests/Unit/SiteChecksTest.php",
+    "tests/Unit/SiteNamesTest.php",
+    "tests/Unit/SiteRoutesTest.php",
+    "src/Admin/SiteCard.php",
+    ".larena/launch-context.json"
   ],
   "forbidden_files": [
     "../*"

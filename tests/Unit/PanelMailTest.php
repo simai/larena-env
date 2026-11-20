@@ -314,7 +314,7 @@ $resolver = new EngineResolver();
 $resolver->register('blade', static fn () => new CompilerEngine(new BladeCompiler($filesystem, env_temp_directory()), $filesystem));
 $views = new Factory($resolver, new FileViewFinder($filesystem, []), new Dispatcher());
 $views->addExtension('blade.php', 'blade');
-$views->addNamespace('larena-admin', dirname(__DIR__).'/Support/admin-views');
+$views->addNamespace('larena-admin', [dirname(__DIR__).'/Support/admin-views', dirname(__DIR__, 2).'/vendor/larena/admin/resources/views']);
 $views->addNamespace('larena-env', dirname(__DIR__, 2).'/resources/views');
 $session = new Store('panel', new ArraySessionHandler(10));
 $asking = static function (string $uri, string $method = 'GET', array $input = []) use ($session): Request {

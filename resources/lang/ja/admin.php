@@ -106,6 +106,23 @@ return [
     'no' => 'いいえ',
     'more' => 'その他',
     'site' => [
+        // The site's card on the admin's object card (study PX-29…PX-33): its head, «Требует внимания» and details.
+        'card' => [
+            'own_admin' => ['wordpress' => 'WordPress にログイン', 'bitrix' => 'Bitrix にログイン'],
+            'backup' => 'コピーを作成',
+            'remove' => 'サイトを削除…',
+            'more' => 'サイトのその他の操作',
+            'address' => 'アドレス',
+            'https' => ['title' => 'サイトが HTTPS なしで開きます', 'text' => 'ブラウザーが訪問者に警告します。証明書は無料で、数分で取得できます。'],
+            'open_section' => ['php' => '「PHP と Web サーバー」を開く', 'database' => '「データベース」を開く', 'domains' => '「ドメインと HTTPS」を開く', 'cron' => '「スケジューラー」を開く', 'files' => '「ファイル」を開く', 'log' => 'エラーを見る'],
+            'check_hint' => ['fix' => 'サーバーが自分で直します。先に何をするかを表示します。', 'section' => 'このセクションで直せます。', 'none' => 'サーバーはこれを自分で直せません。サポートに連絡してください。'],
+            'attention' => '対応が必要',
+            'details' => '詳細',
+            'recent' => '最近の操作',
+            'sections' => 'サイトのセクション',
+            'passed' => '詳しく: :count 件のチェックに合格',
+            'clean' => '問題ありません',
+        ],
         'history' => ['title' => '履歴', 'empty' => 'このサイトに対して、パネルからはまだ何も行われていません。', 'all' => 'サイトの全履歴', 'loading' => 'サイトの履歴を読み込んでいます…', 'times' => ':count 回連続。時刻とページは最新のものです'],
         'measured' => ':ago に測定',
         'php_none' => 'PHP なし',

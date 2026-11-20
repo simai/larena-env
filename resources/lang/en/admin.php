@@ -106,6 +106,23 @@ return [
     'no' => 'No',
     'more' => 'More',
     'site' => [
+        // The site's card on the admin's object card (study PX-29…PX-33): its head, «Требует внимания» and details.
+        'card' => [
+            'own_admin' => ['wordpress' => 'Sign in to WordPress', 'bitrix' => 'Sign in to Bitrix'],
+            'backup' => 'Make a copy',
+            'remove' => 'Delete the site…',
+            'more' => 'More actions with the site',
+            'address' => 'Address',
+            'https' => ['title' => 'The site opens without HTTPS', 'text' => 'Browsers warn visitors. The certificate is free and takes a couple of minutes.'],
+            'open_section' => ['php' => 'Open «PHP and web server»', 'database' => 'Open «Database»', 'domains' => 'Open «Domains and HTTPS»', 'cron' => 'Open «Scheduler»', 'files' => 'Open «Files»', 'log' => 'See the errors'],
+            'check_hint' => ['fix' => 'The server puts this right itself; it shows what it will do first.', 'section' => 'It is put right in this section.', 'none' => 'The server cannot put this right itself: write to support.'],
+            'attention' => 'Needs attention',
+            'details' => 'Details',
+            'recent' => 'Recent actions',
+            'sections' => 'Site sections',
+            'passed' => 'In detail: :count checks passed',
+            'clean' => 'All is well',
+        ],
         'history' => ['title' => 'History', 'empty' => 'Nothing has been done to this site through the panel yet.', 'all' => 'The site\'s whole history', 'loading' => 'Reading the site\'s history…', 'times' => ':count times in a row; the time and page are the latest\'s'],
         'measured' => 'measured :ago',
         'php_none' => 'No PHP',

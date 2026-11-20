@@ -221,7 +221,7 @@ $resolver = new EngineResolver();
 $resolver->register('blade', static fn () => new CompilerEngine(new BladeCompiler($filesystem, env_temp_directory()), $filesystem));
 $factory = new Factory($resolver, new FileViewFinder($filesystem, []), new Dispatcher());
 $factory->addExtension('blade.php', 'blade');
-$factory->addNamespace('larena-admin', dirname(__DIR__).'/Support/admin-views');
+$factory->addNamespace('larena-admin', [dirname(__DIR__).'/Support/admin-views', dirname(__DIR__, 2).'/vendor/larena/admin/resources/views']);
 $factory->addNamespace('larena-env', dirname(__DIR__, 2).'/resources/views');
 $translator = new class ($lines) implements \Illuminate\Contracts\Translation\Translator {
     /** @param array<string, mixed> $lines */
@@ -579,8 +579,8 @@ $firstData = $cardFirst->getData();
 env_assert(($firstData['siteHistory']['pending'] ?? null) === (class_exists(\Larena\Admin\Runtime\AdminLiveRegion::class)) && $jobsListed->lists === (class_exists(\Larena\Admin\Runtime\AdminLiveRegion::class) ? 0 : 1),
     'The card is drawn without the server\'s list; the part fills itself.');
 $firstPage = (string) $cardFirst->render();
-env_assert(str_contains($firstPage, 'data-env-disk-measured') && str_contains($firstPage, 'title="'.e(\Larena\Env\Server\Moment::human('2026-01-01T00:00:00Z')).'"'),
-    'The size says when it was measured, the exact time in the tooltip.');
+// The disk is a row of the card's details (sf-list-description), its hint says when it was measured.
+env_assert(preg_match('/"id":"disk","label":"[^"]+","value":"[^"]+","hint":"[^"]+"/', $firstPage) === 1, 'The size says when it was measured.');
 env_assert(str_contains($firstPage, 'data-env-site-history') && str_contains($firstPage, 'href="/admin/history?object=demo-owned.test"'), '«Вся история» is «История» narrowed to the site.');
 $filledRequest = $asking($admin, $site);
 $filledRequest->headers->set('X-Larena-Fragment', 'live:'.SiteAdminController::HISTORY_PART);
@@ -591,7 +591,7 @@ env_assert(!$filled['pending'] && count($filled['rows']) === SiteAdminController
 env_assert($filled['rows'][0]['who'] === $lines['runs']['by_schedule'] && $filled['rows'][1]['status'] === 'error' && str_contains($filled['rows'][0]['href'], sprintf('%024x', 1)),
     'Who started it, how it ended, its own page.');
 $filledPage = (string) $factory->make('larena-env::admin.site', $historyCard->show($filledRequest, $domain)->getData())->render();
-env_assert(substr_count($filledPage, 'data-env-site-history-row=') === 5 && !str_contains($filledPage, 'data-env-site-history-pending'), 'The part shows the five runs.');
+env_assert(str_contains($filledPage, 'data-larena-object-recent-rows="5"') && !str_contains($filledPage, 'data-larena-object-recent-pending'), 'The card\'s recent actions show the five runs.');
 
 // Equal runs one after another are one row «×N» with the newest's time and page (panel audit 2026-11-18).
 $run = static fn (string $title, string $href, string $state = 'succeeded', string $who = ''): array => ['title' => $title, 'state' => $state, 'who' => $who, 'href' => $href];
@@ -603,6 +603,6 @@ foreach ([$run('Очистка корзины', '/j/3'), $run('Очистка к
 env_assert(array_column($runs, 'times') === [3, 1, 1, 1] && $runs[0]['href'] === '/j/3' && $runs[1]['state'] === 'failed',
     'Three equal runs in a row are one row ×3 keeping the newest; a different end or a run between starts a new row: '.json_encode($runs, JSON_UNESCAPED_UNICODE));
 $timesPage = (string) $factory->make('larena-env::admin.site', ['siteHistory' => ['pending' => false, 'url' => '', 'all' => '', 'rows' => [['title' => 'Очистка корзины', 'state' => 'succeeded', 'status' => 'success', 'words' => 'Готово', 'ago' => null, 'time' => '', 'who' => '', 'href' => '/j/3', 'times' => 3]]]] + $historyCard->show($filledRequest, $domain)->getData())->render();
-env_assert(substr_count($timesPage, 'data-env-site-history-row=') === 1 && str_contains($timesPage, 'data-env-site-history-times="3"') && str_contains($timesPage, '×3'), 'The row says ×3.');
+env_assert(str_contains($timesPage, 'data-larena-object-recent-rows="1"') && str_contains($timesPage, '"title":"Очистка корзины ×3"'), 'The row says ×3.');
 
 echo "SecretFilesTest passed.\n";

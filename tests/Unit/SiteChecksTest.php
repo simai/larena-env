@@ -234,7 +234,7 @@ $resolver = new EngineResolver();
 $resolver->register('blade', static fn () => new CompilerEngine(new BladeCompiler($files, env_temp_directory()), $files));
 $factory = new Factory($resolver, new FileViewFinder($files, []), new Dispatcher());
 $factory->addExtension('blade.php', 'blade');
-$factory->addNamespace('larena-admin', dirname(__DIR__).'/Support/admin-views');
+$factory->addNamespace('larena-admin', [dirname(__DIR__).'/Support/admin-views', dirname(__DIR__, 2).'/vendor/larena/admin/resources/views']);
 $factory->addNamespace('larena-env', dirname(__DIR__, 2).'/resources/views');
 /** @param list<string> $lists the commands the server lists besides the recorded set's; null leaves the set's own server (simai-env 1.49.0) */
 $serving = static fn (?array $lists): PanelGateway => new class ($recorded, $lists) implements PanelGateway {
@@ -306,56 +306,57 @@ $asking = static function (string $uri, string $method = 'GET', array $input = [
 
     return $request;
 };
-$block = static function (string $page): string {
-    env_assert(preg_match('#<section[^>]*data-env-doctor=.*?</section>#s', $page, $found) === 1, 'The page has the check: '.$page);
+// «Проверка» on the object card (PX-31, PX-32): the check's problems are «Требует внимания» (sf-list-attention), each in
+// plain words with one action, the server's fix through the plan or the section it is put right in; what passed is in
+// «Подробно».
+$block = static function (string $page): array {
+    env_assert(preg_match('#<div data-env-doctor=.*?(?=<section[^>]*data-larena-object-details)#s', $page, $found) === 1, 'The page has the check: '.$page);
+    env_assert(preg_match('#<sf-list-attention[^>]*><script type="application/json" data-sf-settings>(.*?)</script>#s', $found[0], $island) === 1, 'The check is «Требует внимания».');
 
-    return $found[0];
+    return ['html' => $found[0], 'items' => json_decode($island[1], true, 512, JSON_THROW_ON_ERROR)['items']];
 };
+$titled = static fn (array $items, string $title): ?array => array_values(array_filter($items, static fn (array $item): bool => $item['title'] === $title))[0] ?? null;
 
 $current = $controller($serving(['site:check-state', 'site:check-fix']));
 $capabilities = (new ServerOverviewReader($serving(['site:check-fix'])))->read($admin)->overview?->capabilities;
 env_assert($capabilities instanceof PanelCapabilities && $capabilities->allows('site:check-fix') && $capabilities->takes('site:check-fix', 'id'), 'A server listing the fix has it.');
 $page = (string) $current->show($asking("/admin/server/sites/{$bitrix}"), $bitrix)->render();
-$checks = $block($page);
-env_assert(str_contains($checks, 'data-env-doctor="FAIL"') && str_contains($checks, '17 need attention; 39 passed.') && substr_count($checks, 'data-env-problem="') === 17
-    && substr_count($checks, 'data-env-problem="FAIL"') === 13 && substr_count($checks, 'data-env-problem="WARN"') === 4, 'One block, one list: every check that did not pass, counted as before.');
-env_assert(preg_match_all('/data-env-problem="[A-Z]+" data-env-rule="([^"]+)"/', $checks, $shown) === 5
-    && $shown[1] === ['bitrix.ownership', 'bitrix.docroot-leftovers', 'bitrix.db-session-modes', 'bitrix.db-charset', 'php.fpm-graceful-reload'], 'The profile\'s rules stand among them.');
+['html' => $checks, 'items' => $items] = $block($page);
+$statuses = array_count_values(array_column($items, 'status'));
+env_assert(str_contains($checks, 'data-env-doctor="FAIL"') && $statuses === ['error' => 4, 'warning' => 4] && str_contains(json_encode($items, JSON_UNESCAPED_UNICODE), 'INI required ×8'),
+    'Every check that did not pass, the same finding said again once with its count: '.json_encode($items, JSON_UNESCAPED_UNICODE));
 env_assert(preg_match_all('/data-env-check-fix="([^"]+)"/', $checks, $fixes) === 4
     && $fixes[1] === ['bitrix.docroot-leftovers', 'bitrix.db-session-modes', 'bitrix.db-charset', 'php.fpm-graceful-reload'], 'A fix where the server offers one, and only there.');
-env_assert(preg_match('#<li [^>]*data-env-problem="WARN" data-env-rule="bitrix\.db-charset">\s*<sf-badge appearance="tonal" status="warning" text="Warning"></sf-badge>\s*'
-    .'<span class="grow min-w-0" style="overflow-wrap: anywhere;" data-env-check="Bitrix database default charset">Default charset of the database'
-    .'<span class="text-small color-on-surface-variant" style="display: block;" data-env-check-detail>utf8mb3/utf8mb3_general_ci \(expected utf8mb4/utf8mb4_unicode_ci\) · since 01\.01\.2026 00:00 UTC</span></span>\s*'
-    .'<span class="text-small color-on-surface-variant">profile rules</span>\s*'
-    .'<form method="post" action="/admin/server/larena\.env\.admin\.site\.plan/demo-bitrix\.test" class="m-0" data-env-check-fix="bitrix\.db-charset">\s*<input type="hidden" name="_token" value="test">\s*'
-    .'<input type="hidden" name="operation" value="check-fix">\s*<input type="hidden" name="id" value="bitrix\.db-charset">\s*'
-    .'<button type="submit" class="larena-button larena-control-floor">Fix…</button>\s*</form>\s*</li>#', $checks) === 1, 'A rule: its state, title, what the server found, since when, and the fix through the plan: '.$checks);
-env_assert(preg_match('#data-env-rule="bitrix\.ownership">.*?</li>#s', $checks, $ownership) === 1 && !str_contains($ownership[0], '<form') && str_contains($ownership[0], '1 item(s) under')
-    && str_contains($ownership[0], 'since 01.01.2026'), 'A rule without a fix says what is wrong and offers nothing.');
-env_assert(preg_match('#<li [^>]*data-env-problem="FAIL">\s*<sf-badge appearance="tonal" status="error" text="Problem"></sf-badge>\s*<span class="grow min-w-0" style="overflow-wrap: anywhere;" data-env-check="Writable path">'
-    .'Writable path</span>\s*<span class="text-small color-on-surface-variant">files</span>\s*</li>#', $checks) === 1, 'A check that is not a rule is one line as before.');
-env_assert(preg_match('#<details class="m-t-1" data-env-rules-passed>\s*<summary[^>]*>Profile rules that pass: 7</summary>(.*?)</details>#s', $checks, $passedList) === 1
+$charset = $titled($items, 'Default charset of the database');
+env_assert($charset !== null && $charset['status'] === 'warning' && $charset['text'] === 'utf8mb3/utf8mb3_general_ci (expected utf8mb4/utf8mb4_unicode_ci) · since 01.01.2026 00:00 UTC'
+    && $charset['action']['label'] === 'Fix…' && preg_match('#<form id="env-check-fix-(\d+)" method="post" action="/admin/server/larena\.env\.admin\.site\.plan/demo-bitrix\.test" hidden data-env-check-fix="bitrix\.db-charset">\s*<input type="hidden" name="_token" value="test">\s*'
+    .'<input type="hidden" name="operation" value="check-fix">\s*<input type="hidden" name="id" value="bitrix\.db-charset">\s*</form>#', $checks, $form) === 1
+    && $charset['action']['event'] === 'fix-'.$form[1] && str_contains($checks, 'data-larena-object-trigger="fix-'.$form[1].'"'),
+    'A rule: what the server found, since when, and its one action, the fix through the plan: '.json_encode($charset, JSON_UNESCAPED_UNICODE));
+$ownership = $titled($items, 'Site files owned by root');
+env_assert($ownership !== null && !isset($ownership['action']['event']) && str_contains($ownership['text'], '1 item(s) under') && str_contains($ownership['text'], 'since 01.01.2026')
+    && str_contains((string) $ownership['action']['href'], '?tab=files'), 'A rule without a fix says what is wrong and opens the section it is put right in.');
+$writable = $titled($items, 'Writable path ×3');
+env_assert($writable !== null && $writable['status'] === 'error' && $writable['source'] === 'files' && str_contains((string) $writable['action']['href'], '?tab=files'), 'A check that is not a rule opens its section.');
+env_assert(!str_contains($checks, 'profile rules') && !in_array('profile rules', array_column($items, 'source'), true), 'No «правила профиля»: where it is put right instead.');
+env_assert(preg_match('#<details class="m-top-1" data-env-rules-passed>\s*<summary[^>]*>In detail: 7 checks passed</summary>(.*?)</details>#s', $checks, $passedList) === 1
     && substr_count($passedList[1], 'data-env-rule-state="PASS"') === 7 && str_contains($passedList[1], 'data-env-rule="bitrix.timezone"') && str_contains($passedList[1], '>UTC</span>')
-    && !str_contains($passedList[1], '<form') && strpos($checks, 'data-env-rules-passed') > strrpos($checks, 'data-env-problem='), 'The rules that pass are counted, their list under the problems.');
+    && !str_contains($passedList[1], '<form'), 'The rules that pass are in «Подробно», under the problems.');
 env_assert(!str_contains($page, 'data-env-operation-open="check-fix"') && !str_contains($page, 'data-env-operation="check-fix"'), 'The fix is not repeated among the tab\'s buttons.');
-env_assert(!str_contains($checks, 'check_ok') && !str_contains($checks, 'unknown_check') && preg_match('/<style\b|<script\b|\bsize=/i', $checks) !== 1, 'No codes, no script, no sizes.');
+env_assert(!str_contains($checks, 'check_ok') && !str_contains($checks, 'unknown_check') && preg_match('/<style\b|\bsize=/i', $checks) !== 1, 'No codes, no style, no sizes.');
 
 // A server that names the rules but does not list the fix: the rules are said, nothing is offered.
-$unlisted = $block((string) $controller($serving([]))->show($asking("/admin/server/sites/{$bitrix}"), $bitrix)->render());
-env_assert(!str_contains($unlisted, 'data-env-check-fix') && !str_contains($unlisted, '<form') && substr_count($unlisted, 'data-env-rule="') === 12 && str_contains($unlisted, 'data-env-check-detail'),
-    'Without site:check-fix no fix is offered.');
+['html' => $unlisted, 'items' => $unlistedItems] = $block((string) $controller($serving([]))->show($asking("/admin/server/sites/{$bitrix}"), $bitrix)->render());
+env_assert(!str_contains($unlisted, 'data-env-check-fix') && !str_contains($unlisted, '<form') && !str_contains(json_encode($unlistedItems), '"event"')
+    && $titled($unlistedItems, 'Default charset of the database')['text'] === $charset['text'], 'Without site:check-fix no fix is offered.');
 $refusedOlder = $controller($serving([]))->plan($asking("/admin/server/sites/{$bitrix}/plan", 'POST', ['operation' => 'check-fix', 'id' => 'bitrix.db-session-modes']), $bitrix);
 env_assert($refusedOlder instanceof RedirectResponse && $refusedOlder->getTargetUrl() === "/admin/server/larena.env.admin.site/{$bitrix}?tab=overview", 'And a form left from another page is not sent.');
 
-// An older server (the recorded set's own: no profile, no rules, no site:check-fix): the block exactly as it was.
-$older = $block((string) $controller($serving(null))->show($asking('/admin/server/sites/demo-php.test'), 'demo-php.test')->render());
-env_assert(preg_match('#\A<section class="larena-panel larena-panel-padded" data-env-doctor="WARN" aria-labelledby="env-site-doctor">\s*<h2 id="env-site-doctor" class="text-2">Check</h2>\s*'
-    .'<p>1 need attention; 21 passed\.</p>\s*<ul class="m-0 p-0" style="list-style: none;">\s*'
-    .'<li class="flex flex-wrap items-cross-center gap-1 p-y-1 border-top-1 border-top-solid border-outline-variant" data-env-problem="WARN">\s*'
-    .'<sf-badge appearance="tonal" status="warning" text="Warning"></sf-badge>\s*'
-    .'<span class="grow min-w-0" style="overflow-wrap: anywhere;" data-env-check="Recommended extensions">Recommended extensions</span>\s*'
-    .'<span class="text-small color-on-surface-variant">PHP</span>\s*</li>\s*</ul>\s*</section>\z#', $older) === 1, 'An older server: the check as before, nothing added: '.$older);
-$clean = $block((string) $controller($serving(null))->show($asking('/admin/server/sites/demo-static.test'), 'demo-static.test')->render());
+// An older server (the recorded set's own: no profile, no rules, no site:check-fix): its one finding, nothing added.
+['html' => $older, 'items' => $olderItems] = $block((string) $controller($serving(null))->show($asking('/admin/server/sites/demo-php.test'), 'demo-php.test')->render());
+env_assert(str_contains($older, 'data-env-doctor="WARN"') && count($olderItems) === 1 && $olderItems[0]['title'] === 'Recommended extensions' && $olderItems[0]['source'] === 'PHP'
+    && !str_contains($older, '<details') && !str_contains($older, '<form'), 'An older server: its finding, nothing added: '.$older);
+['html' => $clean] = $block((string) $controller($serving(null))->show($asking('/admin/server/sites/demo-static.test'), 'demo-static.test')->render());
 env_assert(!str_contains($clean, 'data-env-rule') && !str_contains($clean, '<details') && !str_contains($clean, '<form'), 'Nor on a site whose check found nothing.');
 
 // «Исправить…» opens the server's plan, which names the rule in words; the confirmation starts the job.

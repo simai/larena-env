@@ -22,7 +22,7 @@ final class SiteChecks
     /**
      * @param bool $fixes whether this server's gateway lists site:check-fix: without it no fix is offered
      *
-     * @return list<array{status: string, tone: string, label: string, title: string, text: string, area: string, key: ?string, detail: ?string, since: ?string, fix: ?string}>
+     * @return list<array{status: string, tone: string, label: string, title: string, text: string, area: string, key: ?string, detail: ?string, since: ?string, fix: ?string, area_key: string}>
      */
     public static function problems(?SiteDoctor $doctor, bool $fixes = false, ?SiteDetails $site = null): array
     {
@@ -35,7 +35,7 @@ final class SiteChecks
      * «Ошибка сервера» (panel audit 2026-11-18). Both now say the one answer the server measured (site:describe
      * `answers`); a paused site answers 503 on purpose and is no problem of the check.
      *
-     * @return list<array{status: string, tone: string, label: string, title: string, text: string, area: string, key: ?string, detail: ?string, since: ?string, fix: ?string}>
+     * @return list<array{status: string, tone: string, label: string, title: string, text: string, area: string, key: ?string, detail: ?string, since: ?string, fix: ?string, area_key: string}>
      */
     public static function answer(SiteDetails $site): array
     {
@@ -56,10 +56,11 @@ final class SiteChecks
             'detail' => $site->answers === null ? null : $word('sites.answers_code', ['code' => (string) $site->answers]),
             'since' => null,
             'fix' => null,
+            'area_key' => 'http',
         ]];
     }
 
-    /** @return list<array{status: string, tone: string, label: string, title: string, text: string, area: string, key: ?string, detail: ?string, since: ?string, fix: ?string}> */
+    /** @return list<array{status: string, tone: string, label: string, title: string, text: string, area: string, key: ?string, detail: ?string, since: ?string, fix: ?string, area_key: string}> */
     public static function passed(?SiteDoctor $doctor): array
     {
         return array_map(static fn (array $check): array => self::row($check, false), $doctor->passedRules ?? []);
@@ -68,7 +69,7 @@ final class SiteChecks
     /**
      * @param array{status: string, area: string, title: string, key?: ?string, fix?: ?string, since?: ?string, detail?: ?string} $check
      *
-     * @return array{status: string, tone: string, label: string, title: string, text: string, area: string, key: ?string, detail: ?string, since: ?string, fix: ?string}
+     * @return array{status: string, tone: string, label: string, title: string, text: string, area: string, key: ?string, detail: ?string, since: ?string, fix: ?string, area_key: string}
      */
     private static function row(array $check, bool $fixes): array
     {
@@ -88,6 +89,8 @@ final class SiteChecks
             'since' => $since === null ? null : Moment::human($since),
             // Offered only where the server would take it: it lists the command, names a fix, and the rule does not pass.
             'fix' => $fixes && $status !== 'pass' ? ($check['fix'] ?? null) : null,
+            // The part of the site as the server names it (php, db, ssl…): the card opens the section it is put right in.
+            'area_key' => $check['area'],
         ];
     }
 }

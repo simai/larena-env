@@ -235,7 +235,7 @@ $resolver = new EngineResolver();
 $resolver->register('blade', static fn () => new CompilerEngine(new BladeCompiler($files, env_temp_directory()), $files));
 $factory = new Factory($resolver, new FileViewFinder($files, []), new Dispatcher());
 $factory->addExtension('blade.php', 'blade');
-$factory->addNamespace('larena-admin', dirname(__DIR__).'/Support/admin-views');
+$factory->addNamespace('larena-admin', [dirname(__DIR__).'/Support/admin-views', dirname(__DIR__, 2).'/vendor/larena/admin/resources/views']);
 $factory->addNamespace('larena-env', dirname(__DIR__, 2).'/resources/views');
 $translating = static fn (array $lines): \Illuminate\Contracts\Translation\Translator => new class ($lines) implements \Illuminate\Contracts\Translation\Translator {
     /** @param array<string, mixed> $lines */
@@ -454,9 +454,12 @@ $php = $card($siteCard($current), 'demo-php.test');
 env_assert(str_contains($php, 'data-env-site-route="none" data-env-site-step="prepare"') && str_contains($php, 'Now: the site waits for its content.')
     && str_contains($php, 'data-env-site-route-tab="files"') && str_contains($php, '?tab=files'), 'A PHP site waiting for its code: to its files: '.$php);
 env_assert($card($siteCard($current), 'demo-redirect.test') === '', 'A redirect is ready from the start: no block.');
+// Once made, «Создание сайта» leaves the card for its history and the next step is «Требует внимания» (PX-31): HTTPS
+// for a site without a certificate, through the domains section's plan.
 $staticCard = $card($siteCard($current), 'demo-static.test');
-env_assert(str_contains($staticCard, 'data-env-site-route-done>The site is ready.') && str_contains($staticCard, 'data-env-site-route-steps')
-    && str_contains($staticCard, 'current="3"'), 'A release deployed: all its steps done.');
+$staticPage = (string) $siteCard($current)->show($asking('/admin/server/sites/demo-static.test'), 'demo-static.test')->render();
+env_assert($staticCard === '' && str_contains($staticPage, '"id":"https-next","status":"info"') && str_contains($staticPage, '?tab=domains\\u0026action=certificate-issue'),
+    'A release deployed: no route block, HTTPS next in «Требует внимания».');
 $bitrixAt = static function (string $step) use ($recorded, $listed, $document): ServingGateway {
     $gateway = new ServingGateway($recorded, $listed);
     $gateway->answers['site:status demo-bitrix.test'] = $document("site-status.demo-bitrix.test.{$step}.json");
@@ -510,7 +513,7 @@ env_assert(str_contains($wpCard, 'data-env-site-route="none" data-env-site-step=
     && str_contains($wpCard, 'name="title"') && str_contains($wpCard, 'value="Demo WordPress"') && str_contains($wpCard, 'value="admin@stand.test"'),
     'WordPress\'s install, its values offered again: '.$wpCard);
 $wpDone = $card($siteCard($at('demo-wp.test', 'done')), 'demo-wp.test');
-env_assert(str_contains($wpDone, 'data-env-site-route-done>The site is ready.') && !str_contains($wpDone, 'name="operation"'), 'WordPress installed: ready: '.$wpDone);
+env_assert($wpDone === '', 'WordPress installed: ready, the route left for the history: '.$wpDone);
 // A WordPress copy: its files first, then the restore from what the server found, the setup finished, and ready.
 $wpUpload = $card($siteCard($at('demo-wp-copy.test', 'upload')), 'demo-wp-copy.test');
 env_assert(str_contains($wpUpload, 'data-env-site-step="upload"') && str_contains($wpUpload, 'data-env-site-route-tab="files"') && !str_contains($wpUpload, 'data-env-site-route-outside'),
@@ -522,7 +525,7 @@ $wpFinal = $card($siteCard($at('demo-wp-copy.test', 'finalize')), 'demo-wp-copy.
 env_assert(str_contains($wpFinal, 'name="operation" value="wordpress-finalize"') && str_contains($wpFinal, 'data-env-site-route-pending>The next step also puts right: Permissions of wp-config.php.')
     && str_contains($wpFinal, 'current="3"'),
     'The copy\'s setup finished, with what is left: '.$wpFinal);
-env_assert(str_contains($card($siteCard($at('demo-wp-copy.test', 'restore-done')), 'demo-wp-copy.test'), 'data-env-site-route-done'), 'The copy is ready.');
+env_assert($card($siteCard($at('demo-wp-copy.test', 'restore-done')), 'demo-wp-copy.test') === '', 'The copy is ready: no route block.');
 // Laravel from Git: made with the repository and its ref kept for the deploy, deployed through its plan, then finished.
 $appSession = new Store('panel', new ArraySessionHandler(10));
 $appForm = ['domain' => 'demo-laravel.test', 'profile' => 'laravel', 'route' => 'repo', 'php' => '8.3', 'git' => 'https://github.com/example/app', 'ref' => 'main'];

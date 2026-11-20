@@ -106,6 +106,23 @@ return [
     'no' => 'Não',
     'more' => 'Mais',
     'site' => [
+        // The site's card on the admin's object card (study PX-29…PX-33): its head, «Требует внимания» and details.
+        'card' => [
+            'own_admin' => ['wordpress' => 'Entrar no WordPress', 'bitrix' => 'Entrar no Bitrix'],
+            'backup' => 'Fazer uma cópia',
+            'remove' => 'Excluir o site…',
+            'more' => 'Mais ações com o site',
+            'address' => 'Endereço',
+            'https' => ['title' => 'O site abre sem HTTPS', 'text' => 'Os navegadores avisam os visitantes. O certificado é gratuito e leva poucos minutos.'],
+            'open_section' => ['php' => 'Abrir «PHP e servidor web»', 'database' => 'Abrir «Banco de dados»', 'domains' => 'Abrir «Domínios e HTTPS»', 'cron' => 'Abrir «Agendador»', 'files' => 'Abrir «Arquivos»', 'log' => 'Ver os erros'],
+            'check_hint' => ['fix' => 'O servidor corrige isso sozinho; antes mostra o que fará.', 'section' => 'Isso se corrige nesta seção.', 'none' => 'O servidor não sabe corrigir isso sozinho: escreva ao suporte.'],
+            'attention' => 'Requer atenção',
+            'details' => 'Informações',
+            'recent' => 'Últimas ações',
+            'sections' => 'Seções do site',
+            'passed' => 'Em detalhe: :count verificações aprovadas',
+            'clean' => 'Tudo certo',
+        ],
         'history' => ['title' => 'Histórico', 'empty' => 'Nada foi feito neste site pelo painel ainda.', 'all' => 'Todo o histórico do site', 'loading' => 'Lendo o histórico do site…', 'times' => ':count vezes seguidas; a hora e a página são as da última'],
         'measured' => 'medido :ago',
         'php_none' => 'Sem PHP',

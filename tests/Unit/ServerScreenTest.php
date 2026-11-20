@@ -181,7 +181,7 @@ $resolver->register('blade', static fn () => new CompilerEngine(new BladeCompile
 $finder = new FileViewFinder($files, []);
 $factory = new Factory($resolver, $finder, new Dispatcher());
 $factory->addExtension('blade.php', 'blade');
-$factory->addNamespace('larena-admin', dirname(__DIR__).'/Support/admin-views');
+$factory->addNamespace('larena-admin', [dirname(__DIR__).'/Support/admin-views', dirname(__DIR__, 2).'/vendor/larena/admin/resources/views']);
 $factory->addNamespace('larena-env', dirname(__DIR__, 2).'/resources/views');
 
 $hostile = new ServerOverview('now', '1.25.0', '<img src=x onerror=alert(1)>', '24.04', [], ['8.3'], []);

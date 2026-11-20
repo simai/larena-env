@@ -123,10 +123,10 @@ $resolver = new EngineResolver();
 $resolver->register('blade', static fn () => new CompilerEngine(new BladeCompiler($files, $compiled), $files));
 $factory = new Factory($resolver, new FileViewFinder($files, []), new Dispatcher());
 $factory->addExtension('blade.php', 'blade');
-$factory->addNamespace('larena-admin', dirname(__DIR__).'/Support/admin-views');
+$factory->addNamespace('larena-admin', [dirname(__DIR__).'/Support/admin-views', dirname(__DIR__, 2).'/vendor/larena/admin/resources/views']);
 $factory->addNamespace('larena-env', dirname(__DIR__, 2).'/resources/views');
 
-$screen = static fn (array $data): string => $factory->make('larena-env::admin.site', $data + [
+$screen = static fn (array $data): string => $factory->make('larena-env::admin.site', env_site_view($data + [
     // As the controller: each account action chooses among the accounts it suits.
     'sftpChoices' => array_combine(array_map(static fn (SiteOperation $operation): string => $operation->value, $data['tabOperations'] ?? []),
         array_map(static fn (SiteOperation $operation): array => $operation->accountChoices($data['sftpAccounts'] ?? []), $data['tabOperations'] ?? [])),
@@ -137,7 +137,7 @@ $screen = static fn (array $data): string => $factory->make('larena-env::admin.s
     'logGroup' => '', 'logGroups' => \Larena\Env\Server\SiteLogView::STATUS_GROUPS, 'log' => null, 'logReasonText' => null, 'notice' => null,
     'logView' => 'access', 'logViews' => \Larena\Env\Server\SiteLogView::VIEWS, 'logMore' => null, 'logDownload' => '/admin/server/sites/demo-php.test/log/download?log=access&lines=200',
     'logRows' => isset($data['log']) && $data['log'] instanceof \Larena\Env\Server\SiteLogView ? $data['log']->display(\Larena\Env\Server\SiteLogView::PAGE) : [],
-])->render();
+]))->render();
 $capabilities = (new \Larena\Env\Server\ServerOverviewReader($gateway))->read(new PanelActor($user))->overview->capabilities;
 $onTab = static fn (string $tab, ?\Larena\Env\Gateway\PanelCapabilities $with = null): array => array_values(array_filter(SiteOperation::offeredFor($site, $with ?? $capabilities), static fn (SiteOperation $operation): bool => $operation->tab() === $tab));
 
@@ -149,10 +149,16 @@ env_assert(str_contains($missing, 'data-env-state="missing"') && (str_contains($
 $doctor = $reader->doctor(new PanelActor($user), 'demo-php.test');
 env_assert($doctor !== null && $doctor->status === 'WARN' && $doctor->problems !== [] && $doctor->passed > 0, 'The check reads: what did not pass is named.');
 $ok = $screen(['site' => $site, 'doctor' => $doctor, 'tabOperations' => $onTab('overview')]);
-env_assert(str_contains($ok, 'data-env-state="ok"') && str_contains($ok, 'data-env-doctor="WARN"') && str_contains($ok, 'data-env-problem="WARN"'), 'The overview shows the check and its problems.');
-env_assert(str_contains($ok, 'data-env-answers="') && str_contains($ok, 'data-env-disk') && !str_contains($ok, 'data-env-no-backup'), 'Whether it answers and its disk; it has a backup.');
-env_assert(str_contains($screen(['site' => $site]), 'text="PHP 8.3"'), 'A PHP site\'s badge says PHP once.');
-env_assert(str_contains($ok, '>MySQL</dd>') && !str_contains($ok, '>mysql</dd>'), 'The overview names the database engine as the database tab does.');
+// The object card (PX-29…PX-34): the check's problems are «Требует внимания» with an action each, the facts are its
+// details, the database named as the database tab does.
+env_assert(str_contains($ok, 'data-env-state="ok"') && str_contains($ok, 'data-env-doctor="WARN"') && str_contains($ok, '<sf-list-attention')
+    && str_contains($ok, '"id":"check-0","status":"warning"') && str_contains($ok, '"action":{"label":'), 'The overview shows the check and its problems, each with its action.');
+env_assert(str_contains($ok, '<sf-list-description') && str_contains($ok, '"id":"disk"') && !str_contains($ok, 'data-env-no-backup'), 'Its details and disk; it has a backup.');
+env_assert(str_contains($screen(['site' => $site]), 'text="PHP" data-env-site-kind="generic"'), 'A PHP site\'s kind badge says PHP once, its version is in the details.');
+env_assert(str_contains($ok, '"id":"database","label":"Database","value":"MySQL"') && !str_contains($ok, '"value":"mysql"'), 'The overview names the database engine as the database tab does.');
+// «Удалить сайт…» is in «⋯», the last row, not a button of its own (PX-29, C116).
+env_assert(str_contains($ok, 'data-larena-object-more') && str_contains($ok, 'data-larena-object-trigger="site-remove"') && !str_contains($ok, 'data-larena-object-main="site-remove"')
+    && str_contains($ok, 'data-sf-modal-open="env-op-site-remove"'), 'Removing the site is a «⋯» row that opens its plan.');
 // The backups tab says the failed attempt the bar warns about in one line, not three (critics of 0.4.1: «no new backup
 // for more than two days», «the last backup failed» and «no backup yet» at once for a site that never had one).
 $siteText = static fn (string $key, array $replace = []): string => __('larena-env::admin.'.$key, $replace);
@@ -442,10 +448,11 @@ env_assert(\Larena\Env\Http\Controllers\PeopleController::sitesByOwner([
     new \Larena\Env\Server\SiteSummary('c.test', 'static', 'none', 'none', null, null, null, null),
 ]) === ['demo' => 2], 'Sites counted by workspace.');
 
-// A removal on the site's card: a danger button with a warning, the database's ticks only where there is one; the plan's
-// «Remove» is a danger button that asks once more in the Framework question window, with the site named.
+// A removal on the site's card: the danger row of «⋯» (PX-29) opens its side panel with a warning, the database's ticks
+// only where there is one; the plan's «Remove» is a danger button that asks once more in the Framework question window.
 $removeTab = $screen(['site' => $site, 'tabOperations' => [SiteOperation::SiteRemove], 'tab' => 'overview']);
-env_assert(str_contains($removeTab, 'data-env-operation-open="site-remove"') && str_contains($removeTab, 'larena-button-danger')
+env_assert(str_contains($removeTab, '&quot;id&quot;:&quot;site-remove&quot;') && str_contains($removeTab, '&quot;status&quot;:&quot;danger&quot;')
+    && str_contains($removeTab, 'data-sf-modal-open="env-op-site-remove"')
     && str_contains($removeTab, 'data-env-remove-note') && str_contains($removeTab, 'data-env-switch="remove-files"'), 'Removing a site: a danger button, the files by choice, the warning.');
 env_assert(str_contains($removeTab, 'data-env-switch="drop-db"') === ($site->databaseEngine !== null), 'The database is offered with it only where the site has one.');
 env_assert(!preg_match('#id="env-site-remove-remove-files"[^>]*checked#', $removeTab), 'Nothing is removed unless ticked.');

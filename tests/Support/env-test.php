@@ -45,3 +45,16 @@ function env_plan_receipts(int &$now): Larena\Env\Http\Support\PlanReceipts
         return $now;
     });
 }
+
+/**
+ * The site view's data as the controller gives it: what SiteCard adds from the rest (the card, the check's problems,
+ * the section's row of actions), so a screen of tests draws the page the controller draws.
+ *
+ * @param array<string, mixed> $data
+ * @return array<string, mixed>
+ */
+function env_site_view(array $data): array
+{
+    return $data + \Larena\Env\Admin\SiteCard::forView($data, static fn (string $key, array $replace = []): string => (string) __('larena-env::admin.'.$key, $replace),
+        route('larena.env.admin.site', ['domain' => (string) ($data['domain'] ?? '')], false));
+}

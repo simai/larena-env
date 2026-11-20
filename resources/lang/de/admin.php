@@ -106,6 +106,23 @@ return [
     'no' => 'Nein',
     'more' => 'Mehr',
     'site' => [
+        // The site's card on the admin's object card (study PX-29…PX-33): its head, «Требует внимания» and details.
+        'card' => [
+            'own_admin' => ['wordpress' => 'Bei WordPress anmelden', 'bitrix' => 'Bei Bitrix anmelden'],
+            'backup' => 'Kopie erstellen',
+            'remove' => 'Website löschen…',
+            'more' => 'Weitere Aktionen mit der Website',
+            'address' => 'Adresse',
+            'https' => ['title' => 'Die Website öffnet ohne HTTPS', 'text' => 'Browser warnen die Besucher. Das Zertifikat ist kostenlos und in wenigen Minuten da.'],
+            'open_section' => ['php' => '«PHP und Webserver» öffnen', 'database' => '«Datenbank» öffnen', 'domains' => '«Domains und HTTPS» öffnen', 'cron' => '«Zeitplaner» öffnen', 'files' => '«Dateien» öffnen', 'log' => 'Fehler ansehen'],
+            'check_hint' => ['fix' => 'Der Server behebt das selbst und zeigt vorher, was er tut.', 'section' => 'Das wird in diesem Bereich behoben.', 'none' => 'Der Server kann das nicht selbst beheben: schreiben Sie dem Support.'],
+            'attention' => 'Erfordert Aufmerksamkeit',
+            'details' => 'Angaben',
+            'recent' => 'Letzte Aktionen',
+            'sections' => 'Bereiche der Website',
+            'passed' => 'Im Einzelnen: :count Prüfungen bestanden',
+            'clean' => 'Alles in Ordnung',
+        ],
         'history' => ['title' => 'Verlauf', 'empty' => 'Über das Panel wurde mit dieser Website noch nichts gemacht.', 'all' => 'Gesamter Verlauf der Website', 'loading' => 'Verlauf der Website wird gelesen…', 'times' => ':count Mal hintereinander; Zeit und Seite sind die des letzten Mals'],
         'measured' => 'gemessen :ago',
         'php_none' => 'Kein PHP',

@@ -106,6 +106,23 @@ return [
     'no' => '아니요',
     'more' => '자세히',
     'site' => [
+        // The site's card on the admin's object card (study PX-29…PX-33): its head, «Требует внимания» and details.
+        'card' => [
+            'own_admin' => ['wordpress' => 'WordPress에 로그인', 'bitrix' => 'Bitrix에 로그인'],
+            'backup' => '사본 만들기',
+            'remove' => '사이트 삭제…',
+            'more' => '사이트의 다른 작업',
+            'address' => '주소',
+            'https' => ['title' => '사이트가 HTTPS 없이 열립니다', 'text' => '브라우저가 방문자에게 경고합니다. 인증서는 무료이며 몇 분이면 됩니다.'],
+            'open_section' => ['php' => '«PHP 및 웹 서버» 열기', 'database' => '«데이터베이스» 열기', 'domains' => '«도메인 및 HTTPS» 열기', 'cron' => '«스케줄러» 열기', 'files' => '«파일» 열기', 'log' => '오류 보기'],
+            'check_hint' => ['fix' => '서버가 직접 고칩니다. 먼저 무엇을 할지 보여 줍니다.', 'section' => '이 섹션에서 고칠 수 있습니다.', 'none' => '서버가 직접 고칠 수 없습니다. 지원팀에 문의하세요.'],
+            'attention' => '주의 필요',
+            'details' => '정보',
+            'recent' => '최근 작업',
+            'sections' => '사이트 섹션',
+            'passed' => '자세히: 검사 :count개 통과',
+            'clean' => '모두 정상입니다',
+        ],
         'history' => ['title' => '기록', 'empty' => '아직 패널에서 이 사이트에 한 작업이 없습니다.', 'all' => '사이트 전체 기록', 'loading' => '사이트 기록을 읽는 중…', 'times' => '연속 :count회. 시각과 페이지는 마지막 것입니다'],
         'measured' => '측정: :ago',
         'php_none' => 'PHP 없음',

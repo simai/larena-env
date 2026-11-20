@@ -106,6 +106,23 @@ return [
     'no' => 'No',
     'more' => 'Altro',
     'site' => [
+        // The site's card on the admin's object card (study PX-29…PX-33): its head, «Требует внимания» and details.
+        'card' => [
+            'own_admin' => ['wordpress' => 'Accedi a WordPress', 'bitrix' => 'Accedi a Bitrix'],
+            'backup' => 'Fai una copia',
+            'remove' => 'Elimina il sito…',
+            'more' => 'Altre azioni sul sito',
+            'address' => 'Indirizzo',
+            'https' => ['title' => 'Il sito si apre senza HTTPS', 'text' => 'I browser avvisano i visitatori. Il certificato è gratuito e richiede un paio di minuti.'],
+            'open_section' => ['php' => 'Apri «PHP e server web»', 'database' => 'Apri «Database»', 'domains' => 'Apri «Domini e HTTPS»', 'cron' => 'Apri «Pianificatore»', 'files' => 'Apri «File»', 'log' => 'Vedi gli errori'],
+            'check_hint' => ['fix' => 'Il server lo corregge da solo; prima mostra cosa farà.', 'section' => 'Si corregge in questa sezione.', 'none' => 'Il server non sa correggerlo da solo: scrivi all’assistenza.'],
+            'attention' => 'Richiede attenzione',
+            'details' => 'Dettagli',
+            'recent' => 'Ultime azioni',
+            'sections' => 'Sezioni del sito',
+            'passed' => 'In dettaglio: :count controlli superati',
+            'clean' => 'Tutto a posto',
+        ],
         'history' => ['title' => 'Cronologia', 'empty' => 'Su questo sito non è ancora stato fatto nulla tramite il pannello.', 'all' => 'Tutta la cronologia del sito', 'loading' => 'Lettura della cronologia del sito…', 'times' => ':count volte di fila; ora e pagina sono quelle dell’ultima'],
         'measured' => 'misurato :ago',
         'php_none' => 'Senza PHP',

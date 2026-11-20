@@ -106,6 +106,23 @@ return [
     'no' => '否',
     'more' => '更多',
     'site' => [
+        // The site's card on the admin's object card (study PX-29…PX-33): its head, «Требует внимания» and details.
+        'card' => [
+            'own_admin' => ['wordpress' => '登录 WordPress', 'bitrix' => '登录 Bitrix'],
+            'backup' => '创建副本',
+            'remove' => '删除网站…',
+            'more' => '网站的更多操作',
+            'address' => '地址',
+            'https' => ['title' => '网站在没有 HTTPS 的情况下打开', 'text' => '浏览器会警告访客。证书免费，几分钟即可获得。'],
+            'open_section' => ['php' => '打开「PHP 和 Web 服务器」', 'database' => '打开「数据库」', 'domains' => '打开「域名和 HTTPS」', 'cron' => '打开「计划任务」', 'files' => '打开「文件」', 'log' => '查看错误'],
+            'check_hint' => ['fix' => '服务器会自行修复，并先显示将要做什么。', 'section' => '可以在此部分修复。', 'none' => '服务器无法自行修复：请联系支持。'],
+            'attention' => '需要注意',
+            'details' => '详情',
+            'recent' => '最近的操作',
+            'sections' => '网站各部分',
+            'passed' => '详细：通过 :count 项检查',
+            'clean' => '一切正常',
+        ],
         'history' => ['title' => '历史记录', 'empty' => '尚未通过面板对此网站进行过任何操作。', 'all' => '网站的全部历史记录', 'loading' => '正在读取网站的历史记录…', 'times' => '连续 :count 次；显示的时间和页面为最近一次'],
         'measured' => '测量于 :ago',
         'php_none' => '无 PHP',

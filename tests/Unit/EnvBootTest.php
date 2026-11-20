@@ -158,6 +158,8 @@ env_assert($adminNames === [
     // «Люди» in the admin's shared data view (roles study part 7).
     'src/Admin/ServerPeoplePage.php',
     'src/Admin/ServerSitesPage.php',
+    // The site's card on the admin's object card (larena/admin ObjectCard, study PX-29…PX-34).
+    'src/Admin/SiteCard.php',
     // A site's folder and its trash in the admin's shared data view (files study PX-93, PX-94).
     'src/Admin/SiteFilesPage.php',
     'src/Admin/SiteObjectMenu.php',

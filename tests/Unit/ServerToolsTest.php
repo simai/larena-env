@@ -282,7 +282,7 @@ $resolver = new EngineResolver();
 $resolver->register('blade', static fn () => new CompilerEngine(new BladeCompiler($files, env_temp_directory()), $files));
 $factory = new Factory($resolver, new FileViewFinder($files, []), new Dispatcher());
 $factory->addExtension('blade.php', 'blade');
-$factory->addNamespace('larena-admin', dirname(__DIR__).'/Support/admin-views');
+$factory->addNamespace('larena-admin', [dirname(__DIR__).'/Support/admin-views', dirname(__DIR__, 2).'/vendor/larena/admin/resources/views']);
 $factory->addNamespace('larena-env', dirname(__DIR__, 2).'/resources/views');
 $overview = (new ServerOverviewReader($gateway))->read($admin)->overview;
 $servicesPage = static fn (array $data): string => $factory->make('larena-env::admin.services', $data + ['source' => 'recorded', 'services' => $services,

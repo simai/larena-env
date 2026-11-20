@@ -258,8 +258,17 @@ final readonly class SiteAdminController
         };
 
         $this->breadcrumbs($request, $domain, $tab);
+        // Where the site stands on its creation route (simai-env 1.56.0), with its next step through the plan; a server
+        // without site:status shows the overview as before, without a refusal.
+        $siteRoute = $site !== null && $tab === 'overview' && $capabilities->allows('site:status')
+            ? $this->routeBlock($request, $actor, $site, $capabilities, $copiesOnce) : null;
+        // The check's rows with the site's own answer first when it fails: the card's head and its check say one thing.
+        $checkProblems = $site === null || $tab !== 'overview' ? [] : \Larena\Env\Admin\SiteChecks::problems($doctor, $capabilities->allows(SiteOperation::CheckFix->command()), $site);
 
-        return $this->views->make('larena-env::admin.site', [
+        $data = [
+            // The admin's object card (larena-admin::object-card, study PX-29…PX-33): its head, «Требует внимания», the
+            // details and the sections, as the site gives them.
+            'card' => $site === null ? null : $this->card($site, $domain, $tab, $operations, $tabs, $siteRoute, $checkProblems),
             'domain' => $domain,
             'tab' => $tab,
             'tabs' => $tabs,
@@ -312,13 +321,12 @@ final readonly class SiteAdminController
                 && !in_array($operation, SiteOperation::NAMES, true) && !in_array($operation, SiteOperation::CHECKS, true) && !$operation->isRouteStep())),
             // Where the site stands on its creation route (simai-env 1.56.0), with its next step through the plan; a server
             // without site:status shows the overview as before, without a refusal.
-            'siteRoute' => $site !== null && $tab === 'overview' && $capabilities->allows('site:status')
-                ? $this->routeBlock($request, $actor, $site, $capabilities, $copiesOnce) : null,
+            'siteRoute' => $siteRoute,
             // The fix of a profile's rule that does not pass (simai-env 1.55.1), offered on the rule's own row of «Проверка»
             // only where the server lists site:check-fix; an older server shows the block as before.
             'checkFixes' => $capabilities->allows(SiteOperation::CheckFix->command()),
             // The check's rows with the site's own answer first when it fails: the card's head and its check say one thing.
-            'checkProblems' => $site === null || $tab !== 'overview' ? [] : \Larena\Env\Admin\SiteChecks::problems($doctor, $capabilities->allows(SiteOperation::CheckFix->command()), $site),
+            'checkProblems' => $checkProblems,
             // The site's names (simai-env 1.53.0): the block is there only where the server lists site:names, so an older
             // server shows the tab as before, without a refusal; adding and removing go through the plan as every action.
             'siteNames' => $siteNames,
@@ -352,7 +360,29 @@ final readonly class SiteAdminController
             // start of simai-env, so the card is drawn without it and the part fills itself a moment later (larena/admin
             // AdminLiveRegion, asked once): the click stays within the 0.5 s of the UX audit.
             'siteHistory' => $site !== null && $tab === 'overview' && $capabilities->allows('job:list') ? $this->historyPart($request, $actor, $domain) : null,
-        ]);
+        ];
+
+        // The row of the section's actions and whether the main name points elsewhere, from the same data.
+        return $this->views->make('larena-env::admin.site', $data + \Larena\Env\Admin\SiteCard::forView($data,
+            fn (string $key, array $replace = []): string => (string) $this->translator->get('larena-env::admin.'.$key, $replace), route('larena.env.admin.site', ['domain' => $domain], false)));
+    }
+
+    /**
+     * The site's card on the admin's object card: the head, «Требует внимания», the details and the sections.
+     *
+     * @param list<SiteOperation> $operations
+     * @param list<string> $tabs
+     * @param array<string, mixed>|null $siteRoute
+     * @param list<array{status: string, tone: string, label: string, title: string, text: string, area: string, key: ?string, detail: ?string, since: ?string, fix: ?string, area_key: string}> $checkProblems
+     * @return array{head: array<string, mixed>, attention: array<string, mixed>, details: array<string, mixed>, sections: array<string, mixed>}
+     */
+    private function card(\Larena\Env\Server\SiteDetails $site, string $domain, string $tab, array $operations, array $tabs, ?array $siteRoute, array $checkProblems): array
+    {
+        $url = route('larena.env.admin.site', ['domain' => $domain], false);
+        $text = fn (string $key, array $replace = []): string => (string) $this->translator->get('larena-env::admin.'.$key, $replace);
+        $measured = $site->diskBytes === null ? null : \Larena\Env\Server\Moment::ago($site->diskCheckedAt, PanelWarnings::now(), $text);
+
+        return \Larena\Env\Admin\SiteCard::card($site, $domain, $tab, $operations, $tabs, $siteRoute, $checkProblems, $url, $text, $measured);
     }
 
     /** The live part of the card that holds the site's history. */
@@ -395,7 +425,7 @@ final readonly class SiteAdminController
      * last 100 runs are read and this site's kept): what, how it ended, how long ago and who, each opening its own page;
      * «Вся история» is the admin's «История» narrowed to the site (its object is the domain, EnvHistorySource).
      *
-     * @return array{rows: list<array{title: string, state: string, status: string, words: string, ago: ?string, time: string, who: string, href: string, times: int}>, all: string}
+     * @return array{rows: list<array{title: string, state: string, status: string, words: string, ago: ?string, time: string, at: ?string, who: string, href: string, times: int}>, all: string}
      */
     private function siteHistory(PanelActor $actor, string $domain): array
     {
@@ -420,6 +450,7 @@ final readonly class SiteAdminController
                 'words' => \Larena\Env\Admin\JobOutcome::stateWords($status),
                 'ago' => \Larena\Env\Server\Moment::ago($at, PanelWarnings::now(), $text),
                 'time' => \Larena\Env\Server\Moment::human($at),
+                'at' => \Larena\Env\Server\Moment::iso($at),
                 'who' => match ($status->actorKind) {
                     'schedule' => $text('runs.by_schedule'),
                     'server' => $text('runs.by_server'),

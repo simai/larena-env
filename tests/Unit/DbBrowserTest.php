@@ -224,7 +224,7 @@ $compiled = env_temp_directory();
 $resolver->register('blade', static fn () => new CompilerEngine(new BladeCompiler($files, $compiled), $files));
 $factory = new Factory($resolver, new FileViewFinder($files, []), new Dispatcher());
 $factory->addExtension('blade.php', 'blade');
-$factory->addNamespace('larena-admin', dirname(__DIR__).'/Support/admin-views');
+$factory->addNamespace('larena-admin', [dirname(__DIR__).'/Support/admin-views', dirname(__DIR__, 2).'/vendor/larena/admin/resources/views']);
 $factory->addNamespace('larena-env', dirname(__DIR__, 2).'/resources/views');
 $job = static fn ($status): string => $factory->make('larena-env::admin.job', ['jobId' => 'b00000000000000000000001', 'source' => 'stand-in', 'status' => $status,
     'log' => null, 'refused' => false, 'reasonText' => null, 'notice' => null])->render();
@@ -234,11 +234,11 @@ env_assert(str_contains($shown, 'data-env-job-browser') && str_contains($shown, 
 $later = $job($again->status);
 env_assert(!str_contains($later, '.simai-db') && str_contains($later, 'data-env-job-browser-shown'), 'Later the screen says it was shown, nothing else.');
 
-$card = static fn (array $data): string => $factory->make('larena-env::admin.site', $data + [
+$card = static fn (array $data): string => $factory->make('larena-env::admin.site', env_site_view($data + [
     'domain' => 'shop.example.com', 'source' => 'stand-in', 'refused' => false, 'reasonText' => null, 'tab' => 'database', 'tabs' => \Larena\Env\Http\Controllers\SiteAdminController::TABS,
     'doctor' => null, 'phpVersions' => ['8.3'], 'phpSettings' => null, 'phpExtensions' => null, 'databases' => null, 'sftpAccounts' => null, 'capabilities' => null, 'notice' => null,
     'sftpChoices' => [], 'tabOperations' => [SiteOperation::DatabaseBrowse, SiteOperation::DatabaseBrowseClose, SiteOperation::DatabaseExport],
-])->render();
+]))->render();
 $closed = $card(['site' => $site(), 'dbBrowser' => ['state' => new DbBrowserState(false, null), 'refusal' => null, 'certificate' => true]]);
 env_assert(str_contains($closed, 'data-env-db-browser="closed"') && str_contains($closed, 'data-env-db-browser-open') && str_contains($closed, 'data-env-db-browser-minutes')
     && str_contains($closed, '<option value="60"  selected >1 hour</option>') && str_contains($closed, '<option value="15" >15 minutes</option>') && str_contains($closed, '<option value="240" >4 hours</option>')
