@@ -113,6 +113,16 @@ $server = new class (new RecordedAnswersGateway(env_recorded_path())) implements
 
             return $answer('job', ['state' => 'running'], str_repeat('e', 24));
         }
+        // The backups the server holds (simai-env 1.64.0): a removed site's last copy and one before a database went.
+        if ($request->command === 'backup:data-list') {
+            $item = static fn (string $domain, bool $exists, string $backup, string $reason, array $parts): array => ['domain' => $domain, 'site_exists' => $exists,
+                'backup' => $backup, 'path' => '/var/backups/simai/'.$domain.'/'.$backup, 'created_at' => '2026-11-20T01:00:00', 'size_bytes' => 4096,
+                'parts' => $parts, 'checksums' => true, 'encrypted' => false, 'reason' => $reason, 'keep_until' => '2026-11-27T01:00:00'];
+
+            return $answer('result', ['schema' => 'simai-backup-list/1', 'dest' => '/var/backups/simai', 'count' => 2, 'items' => [
+                $item('gone.test', false, '20261120-010000', 'site-remove', ['config', 'db', 'files']),
+                $item('demo-php.test', true, '20261120-020000', 'db-drop', ['db'])]]);
+        }
         if (PanelCommands::kind($request->command) !== 'read') {
             return $answer('plan', ['command' => $request->command, 'args' => array_map(static fn (mixed $value): mixed => $value, $request->args),
                 'description' => 'What the server would do', 'effects' => 'write', 'lock' => 'host', 'applied' => false]);
@@ -224,6 +234,13 @@ $cases = [
     'storage' => [($storage = new BackupStorageController($operations, $overviews, $extras, $views, $translator, $encrypter, $authorizer, $timed))->plan(...), $storage->run(...),
         ['op' => 'add', 'name' => 'offsite', 'provider' => 'other', 'bucket' => 'backups', 'endpoint' => 'https://s3.example.org', 'region' => 'eu-1',
             'access_key' => 'AKIAEXAMPLE', 'secret_key' => 'very-secret-key'], ['bucket' => 'elsewhere'], 'backup:storage-add'],
+    // The way back of a held backup (simai-env 1.64.0): a removed site is made again first; a database the site has
+    // again comes back from the backup, its files left as they are.
+    'return site' => [($held = new BackupStorageController($operations, $overviews, $extras, $views, $translator, $encrypter, $authorizer, $timed,
+        new \Larena\Env\Server\SiteDetailsReader($server)))->plan(...), $held->run(...),
+        ['op' => 'return-site', 'domain' => 'gone.test', 'backup' => '20261120-010000'], ['step' => 'restore'], 'site:add'],
+    'return database' => [$held->plan(...), $held->run(...),
+        ['op' => 'return-db', 'domain' => 'demo-php.test', 'backup' => '20261120-020000'], ['db' => 'no'], 'backup:data-restore'],
     'security' => [($security = new SecurityController($operations, $overviews, $extras, $views, $translator, $authorizer, null, $timed))->plan(...), $security->run(...),
         ['op' => 'level', 'set' => 'enhanced'], ['set' => 'strict'], 'security:level'],
     'kind of site' => [($newSite = new NewSiteController($overviews, $operations, $views, $translator, $extras, $timed))->enablePlan(...), $newSite->enableRun(...),
@@ -264,5 +281,15 @@ foreach ($cases as $name => [$plan, $run, $input, $changed, $command]) {
     env_assert($starts() === 1 && $session->get('larena_env_notice') === $refusal, "{$name}: a receipt starts it once.");
     $session->forget('larena_env_notice');
 }
+
+// What each step of the way back says comes next, and what it asks of the server.
+$held->plan($asking(['op' => 'return-site', 'domain' => 'gone.test', 'backup' => '20261120-010000']));
+env_assert(($views->data['hidden']['step'] ?? null) === 'add' && $views->data['then'] === [$lines['storages']['held']['then']['return-site']['add']],
+    'A removed site is made again first, and the plan says the data comes back after.');
+$held->plan($asking(['op' => 'return-db', 'domain' => 'demo-php.test', 'backup' => '20261120-020000']));
+env_assert(($views->data['hidden']['step'] ?? null) === 'restore' && ($views->data['plan']->args['files'] ?? null) === 'no', 'A database the site has again: only the database is put back.');
+$unknown = $held->plan($asking(['op' => 'return-db', 'domain' => 'demo-php.test', 'backup' => '20990101-000000']));
+env_assert($unknown instanceof RedirectResponse && $session->get('larena_env_notice') === $lines['reasons']['backup_unknown'], 'A backup the server does not hold is refused in words.');
+$session->forget('larena_env_notice');
 
 echo "PlanReceiptsTest passed.\n";

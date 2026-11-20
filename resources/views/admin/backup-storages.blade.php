@@ -28,6 +28,58 @@
             </ul>
         </section>
     @endif
+    {{-- The backups the server holds (simai-env 1.64.0), those of removed sites too: why each was made, until when it is
+         kept, and the way back of a removed site or database, each step planned and confirmed. --}}
+    @if ($heldSupported ?? false)
+        <section class="larena-panel larena-panel-padded m-bottom-2" data-env-held-backups="{{ $held === null ? 'unreadable' : count($held) }}" aria-labelledby="env-held-backups">
+            <h2 id="env-held-backups" class="text-2">{{ __('larena-env::admin.storages.held.title') }}</h2>
+            <p class="color-on-surface-variant">{{ __('larena-env::admin.storages.held.note') }}</p>
+            @if ($held === null)
+                <p class="m-0" role="alert">{{ __('larena-env::admin.storages.held.unreadable') }}</p>
+            @elseif ($held === [])
+                <p class="m-0">{{ __('larena-env::admin.storages.held.none') }}</p>
+            @else
+                <ul class="m-0 p-0" style="list-style: none;">
+                    @foreach ($held as $item)
+                        @php($ops = ($returns ?? false) ? $item->ways() : [])
+                        <li class="flex flex-wrap items-cross-center gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"
+                            data-env-held-backup="{{ $item->domain }}/{{ $item->backup->name }}" data-env-held-reason="{{ $item->backup->reason ?? 'none' }}">
+                            <span class="grow min-w-0" style="flex-basis: 16rem;">
+                                @if ($item->siteExists)
+                                    <a href="{{ route('larena.env.admin.site', ['domain' => $item->domain], false) }}?tab=backups"><strong>{{ $item->domain }}</strong></a>
+                                @else
+                                    <strong>{{ $item->domain }}</strong>
+                                    <sf-badge appearance="tonal" status="warning" text="{{ __('larena-env::admin.storages.held.removed') }}"></sf-badge>
+                                @endif
+                                <span class="color-on-surface-variant" style="display: block;">
+                                    {{ $item->backup->createdAt !== null ? \Larena\Env\Server\Moment::human($item->backup->createdAt) : $item->backup->name }}
+                                    · {{ \Larena\Env\Server\Bytes::human($item->backup->sizeBytes) }}
+                                    @if (in_array($item->backup->reason, \Larena\Env\Backup\HeldBackup::REASONS, true))
+                                        · {{ __('larena-env::admin.storages.held.reasons.'.$item->backup->reason) }}
+                                    @endif
+                                    @if ($item->backup->keepUntil !== null)
+                                        · <span data-env-held-until>{{ __('larena-env::admin.storages.held.until', ['time' => \Larena\Env\Server\Moment::human($item->backup->keepUntil)]) }}</span>
+                                    @endif
+                                </span>
+                                @if (in_array('return-site', $ops, true))
+                                    <span class="text-small color-on-surface-variant" style="display: block;" data-env-held-files-note>{{ __('larena-env::admin.storages.held.files_note') }}</span>
+                                @endif
+                            </span>
+                            @foreach ($ops as $op)
+                                <form method="post" action="{{ route('larena.env.admin.storages.plan', [], false) }}" class="m-0" data-env-held-op="{{ $op }}">
+                                    @csrf
+                                    <input type="hidden" name="op" value="{{ $op }}">
+                                    <input type="hidden" name="domain" value="{{ $item->domain }}">
+                                    <input type="hidden" name="backup" value="{{ $item->backup->name }}">
+                                    <button type="submit" class="larena-button larena-control-floor">{{ __('larena-env::admin.storages.operations.'.$op) }}</button>
+                                </form>
+                            @endforeach
+                        </li>
+                    @endforeach
+                </ul>
+            @endif
+        </section>
+    @endif
     @if (!$supported)
         <section class="larena-panel larena-panel-padded" data-env-storages="unsupported">
             <p class="m-0">{{ __('larena-env::admin.storages.unsupported') }}</p>

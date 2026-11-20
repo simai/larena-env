@@ -129,7 +129,8 @@ final readonly class SiteFilesController
             'runUrl' => route($tab === 'nginx' ? 'larena.env.admin.site.nginx.run' : 'larena.env.admin.site.files.run', ['domain' => $domain], false),
             'cancelUrl' => route('larena.env.admin.site', ['domain' => $domain], false).'?tab='.$tab,
             'hidden' => $hidden,
-            'replaces' => $this->replaces($op, $args, $this->capabilities($actor)->allows('file:trash-list')),
+            'replaces' => $this->replaces($op, $args, $this->capabilities($actor)->allows('file:trash-list'),
+                $this->capabilities($actor)->allows('backup:data-list'), $result->plan->purge),
         ]);
     }
 
@@ -178,6 +179,7 @@ final readonly class SiteFilesController
         $hidden[PlanReceipts::FIELD] = $this->receipts->issue($request, 'file:upload', ['op' => 'upload', 'staged' => $hidden['staged'],
             'args' => ['domain' => $domain, 'path' => $hidden['args[path]'], 'expect-sha256' => $expect]]);
         $names = array_column($planned, 'name');
+        $keeps = $this->capabilities($actor)->allows('backup:data-list');
 
         return $this->views->make('larena-env::admin.plan', [
             'heading' => count($planned) === 1 ? (string) $this->translator->get('larena-env::admin.files.operations.upload')
@@ -189,9 +191,9 @@ final readonly class SiteFilesController
             'runUrl' => route('larena.env.admin.site.files.run', ['domain' => $domain], false),
             'cancelUrl' => route('larena.env.admin.site', ['domain' => $domain], false).'?tab=files&path='.rawurlencode($folder),
             'hidden' => $hidden,
-            'replaces' => count($planned) === 1 ? $this->replaces('upload', ['path' => FilePath::join($folder, $names[0]), 'expect-sha256' => $expect], false)
+            'replaces' => count($planned) === 1 ? $this->replaces('upload', ['path' => FilePath::join($folder, $names[0]), 'expect-sha256' => $expect], false, $keeps)
                 : (string) $this->translator->get('larena-env::admin.files.upload_into', ['folder' => $folder === '.' ? '/' : $folder.'/', 'names' => implode(', ', $names)])
-                    .($expect === 'any' ? ' '.(string) $this->translator->get('larena-env::admin.files.upload_replaces') : ''),
+                    .($expect === 'any' ? ' '.(string) $this->translator->get('larena-env::admin.files.'.($keeps ? 'upload_replaces_trash' : 'upload_replaces')) : ''),
         ]);
     }
 
@@ -600,16 +602,27 @@ final readonly class SiteFilesController
         $request->session()->put(self::STAGED, $staged);
     }
 
-    /** @param array<string, string> $args */
-    private function replaces(string $op, array $args, bool $trash = false): ?string
+    /**
+     * What the change replaces or deletes, in a sentence. A server that keeps what it replaces (simai-env 1.64.0) says the
+     * previous version waits in the site's trash; emptying the trash says how many entries and bytes go for good.
+     *
+     * @param array<string, string> $args
+     * @param array{items: int, bytes: int}|null $purge
+     */
+    private function replaces(string $op, array $args, bool $trash = false, bool $keeps = false, ?array $purge = null): ?string
     {
+        if ($op === 'trash-empty' && $purge !== null) {
+            return (string) $this->translator->get('larena-env::admin.files.replaces_purge_counted', ['count' => (string) $purge['items'],
+                'size' => \Larena\Env\Server\Bytes::human($purge['bytes'])]);
+        }
+        $kept = $keeps ? '_trash' : '';
         $key = match ($op) {
-            'write' => 'replaces_write',
-            'upload' => ($args['expect-sha256'] ?? 'new') === 'any' ? 'replaces_upload' : null,
+            'write' => 'replaces_write'.$kept,
+            'upload' => ($args['expect-sha256'] ?? 'new') === 'any' ? 'replaces_upload'.$kept : null,
             // Into the trash where the server keeps one (simai-env 1.57.0); final otherwise.
             'remove' => $trash ? 'replaces_remove_trash' : 'replaces_remove',
             'trash-empty' => isset($args['id']) ? 'replaces_purge' : 'replaces_purge_all',
-            'extract' => ($args['overwrite'] ?? 'no') === 'yes' ? 'replaces_extract' : null,
+            'extract' => ($args['overwrite'] ?? 'no') === 'yes' ? 'replaces_extract'.$kept : null,
             'nginx-save', 'nginx-clear' => 'replaces_nginx',
             default => null,
         };

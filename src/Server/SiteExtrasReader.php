@@ -275,6 +275,21 @@ final readonly class SiteExtrasReader
         return $data === null ? null : \Larena\Env\Backup\BackupStorage::copies($data);
     }
 
+    /**
+     * The backups the server holds, newest first, those of removed sites too (backup:data-list, simai-env 1.64.0).
+     *
+     * @return list<\Larena\Env\Backup\HeldBackup>|null null when the server did not answer
+     */
+    public function heldBackups(PanelActor $actor, ?string $domain = null): ?array
+    {
+        $held = $this->list($actor, 'backup:data-list', $domain === null ? [] : ['domain' => $domain], 'items', \Larena\Env\Backup\HeldBackup::fromData(...));
+        if ($held !== null) {
+            usort($held, static fn (\Larena\Env\Backup\HeldBackup $a, \Larena\Env\Backup\HeldBackup $b): int => strcmp((string) $b->backup->createdAt, (string) $a->backup->createdAt));
+        }
+
+        return $held;
+    }
+
     /** Where the panel answers: by IP and port, and by its domain (simai-panel-address/1, simai-env 1.51.0). */
     public function panelAddress(PanelActor $actor): ?\Larena\Env\Panel\PanelAddress
     {

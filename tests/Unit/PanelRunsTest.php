@@ -294,6 +294,16 @@ env_assert(SiteOperation::inRow([SiteOperation::DatabaseCredentials, SiteOperati
     'The block offers its own actions, the row the rest.');
 env_assert(JobOutcome::next(PanelJobStatus::fromData(['job_id' => 'j', 'state' => 'succeeded', 'command' => 'site:db-rotate', 'args' => ['domain' => 'shop.example.com']]))[0]
     === '/admin/server/larena.env.admin.site/shop.example.com?tab=database&action=database-credentials', 'After a new password: «Показать данные».');
+// A text saved over its previous version (simai-env 1.64.0): the end says the previous version is in the site's trash and
+// opens it; an unpacking that replaced nothing says plainly «Готово».
+$saved = PanelJobStatus::fromData(['job_id' => 'j', 'state' => 'succeeded', 'command' => 'file:write', 'args' => ['domain' => 'shop.example.com', 'path' => 'a.txt'],
+    'result' => ['previous_trash_id' => '20261120T010000Z-abcdef']]);
+env_assert($saved->replacedIntoTrash === 1 && JobOutcome::heading($saved) === $lines['job']['done']['file-replaced']
+    && JobOutcome::next($saved) === ['/admin/server/larena.env.admin.site/shop.example.com?tab=files&trash=1', $lines['job']['next']['trash']], 'After a save: the previous version is in the trash.');
+$unpacked = PanelJobStatus::fromData(['job_id' => 'j', 'state' => 'succeeded', 'command' => 'file:extract', 'args' => ['domain' => 'shop.example.com'],
+    'result' => ['trashed' => 0, 'trash_ids' => []]]);
+env_assert($unpacked->replacedIntoTrash === 0 && JobOutcome::heading($unpacked) === $lines['job']['done']['other'], 'Nothing replaced: plainly done.');
+env_assert(PanelJobStatus::fromData(['job_id' => 'j', 'state' => 'succeeded', 'command' => 'file:upload', 'result' => ['trashed' => 2]])->replacedIntoTrash === 2, 'Counted by trashed too.');
 
 // The password once: the first job:status hands it out, the panel keeps it nowhere, a later answer says it was shown.
 $cached = new PanelOperations(new CachingPanelGateway($server, $cache));

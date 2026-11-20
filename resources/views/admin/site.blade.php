@@ -358,6 +358,10 @@
                                     <sf-badge appearance="tonal" status="info" text="{{ __('larena-env::admin.backups.encrypted') }}"></sf-badge>
                                 @endif
                                 <span class="text-small color-on-surface-variant">{{ \Larena\Env\Server\Bytes::human($backup->sizeBytes) }} · {{ implode(', ', array_map(static fn (string $part): string => __('larena-env::admin.backups.parts.'.$part) === 'larena-env::admin.backups.parts.'.$part ? $part : __('larena-env::admin.backups.parts.'.$part), $backup->parts)) }}</span>
+                                {{-- A last copy before the site's database went (simai-env 1.64.0): why, and until when it is kept. --}}
+                                @if (in_array($backup->reason, \Larena\Env\Backup\HeldBackup::REASONS, true))
+                                    <span class="text-small color-on-surface-variant" data-env-backup-reason="{{ $backup->reason }}">· {{ __('larena-env::admin.storages.held.reasons.'.$backup->reason) }}@if ($backup->keepUntil !== null), {{ __('larena-env::admin.storages.held.until', ['time' => \Larena\Env\Server\Moment::human($backup->keepUntil)]) }}@endif</span>
+                                @endif
                             </li>
                         @endforeach
                     </ul>

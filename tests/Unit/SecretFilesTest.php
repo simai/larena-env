@@ -523,6 +523,8 @@ env_assert($marks === [['.env', true, true], ['app.php', false, false]], 'The li
 // The trash: a removed .env is marked, and put back only by a person with the right, never elsewhere.
 $newerController->run($confirming($admin, $site.'/files/run', 'POST', ['op' => 'remove', 'args' => ['domain' => $domain, 'path' => 'conf/.env']]), $domain);
 $trashed = $newerFiles->trash($admin, $domain);
+// The removed one: a text saved earlier left its previous versions there too (simai-env 1.64.0, «заменён»).
+$trashed = is_array($trashed) ? ['entries' => array_values(array_filter($trashed['entries'], static fn (\Larena\Env\Files\TrashEntry $one): bool => $one->reason === 'removed'))] + $trashed : $trashed;
 $secretEntry = is_array($trashed) ? $trashed['entries'][0] : null;
 env_assert($secretEntry !== null && $secretEntry->secret && $secretEntry->name === '.env', 'The trash marks the .env.');
 $trashRows = SiteFilesPage::trash($domain, $trashed['entries'], true, true, $text, 'tok', null, false)->rows;

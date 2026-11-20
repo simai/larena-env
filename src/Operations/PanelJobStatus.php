@@ -52,6 +52,9 @@ final readonly class PanelJobStatus
         // 1.62.2): at most 30 paths as the server keeps them, and how many in all.
         /** @var array{paths: list<string>, total: int}|null */
         public ?array $secretSkipped = null,
+        // How many replaced files a write, an upload or an unpacking put into the site's trash (simai-env 1.64.0
+        // previous_trash_id, trashed / trash_ids): the panel then says the previous version is there.
+        public int $replacedIntoTrash = 0,
     ) {
     }
 
@@ -130,7 +133,21 @@ final readonly class PanelJobStatus
                 ? ['cancellable' => $data['cancel']['cancellable'], 'leaves' => self::words($data['cancel']['leaves'] ?? null)] : null,
             credentials: is_array($data['result'] ?? null) ? DbCredentials::fromData($data['result']) : null,
             secretSkipped: is_array($data['result'] ?? null) ? self::secretSkipped($data['result']) : null,
+            replacedIntoTrash: is_array($data['result'] ?? null) ? self::replacedIntoTrash($data['result']) : 0,
         );
+    }
+
+    /** @param array<array-key, mixed> $result */
+    private static function replacedIntoTrash(array $result): int
+    {
+        if (is_string($result['previous_trash_id'] ?? null) && $result['previous_trash_id'] !== '') {
+            return 1;
+        }
+        if (is_array($result['trash_ids'] ?? null)) {
+            return count(array_filter($result['trash_ids'], 'is_string'));
+        }
+
+        return is_int($result['trashed'] ?? null) ? max(0, $result['trashed']) : 0;
     }
 
     /**

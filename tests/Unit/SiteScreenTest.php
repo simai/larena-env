@@ -472,6 +472,11 @@ env_assert(str_contains($removePlanned, 'question="'.str_replace(':target', 'dem
     && str_contains($removePlanned, '>'.$text('plan.said.site-remove.drop-db.no').'</dd>')
     && preg_match('/data-larena-action-option="remove-files"[^>]*checked/', $removePlanned) === 1 && !str_contains($removePlanned, 'data-larena-confirm-submit'),
     'The removal asks once, in words, with the name typed.');
+// A server that keeps a last backup first (simai-env 1.64.0): the plate says the copy is kept seven days.
+$keptPlanned = $factory->make('larena-env::admin.plan', ['heading' => 'Remove the site', 'eyebrow' => 'demo-php.test', 'target' => 'demo-php.test', 'keepsCopy' => true,
+    'source' => 'recorded', 'plan' => $removal, 'runUrl' => '/run', 'cancelUrl' => '/cancel', 'hidden' => ['operation' => 'site-remove', 'remove-files' => 'yes', 'drop-db' => 'no']])->render();
+env_assert(str_contains($keptPlanned, 'consequence="'.e($text('plan.consequence_kept.site-remove')).'"') && str_contains($keptPlanned, 'require="demo-php.test"'),
+    'The removal says the panel keeps a backup for 7 days first.');
 env_assert(\Larena\Env\Admin\PlanValues::removesWith('site:remove', ['drop-db' => 'yes']) === 'db'
     && \Larena\Env\Admin\PlanValues::removesWith('site:db-drop', ['drop-db' => 'yes']) === null, 'Only a site\'s removal says what goes with it.');
 env_assert(str_contains($removeTab, 'data-env-remove-backup') && str_contains($removeTab, '?tab=backups'), '«Make a backup first» leads to the backups tab.');

@@ -172,6 +172,16 @@ $job = $operations->startCommand($admin, 'file:write', $save);
 env_assert($job->jobId !== null && $files->text($admin, 'demo-php.test', 'notes.txt')['content'] === "<h1>new</h1>\n", 'Confirmed, the file is saved.');
 $view = $operations->view($admin, (string) $job->jobId);
 env_assert($view->status !== null && $view->log !== null, 'Its job is followed like any other.');
+// simai-env 1.64.0: the text replaced waits in the site's trash, marked «заменён», and the job names it; emptying the
+// trash is planned with how many entries and bytes go for good.
+$replaced = $files->trash($admin, 'demo-php.test');
+env_assert(is_array($replaced) && count($replaced['entries']) === 1 && $replaced['entries'][0]->path === 'notes.txt' && $replaced['entries'][0]->reason === 'overwritten',
+    'The previous version of a saved file is in the trash, replaced.');
+env_assert($view->status->replacedIntoTrash === 1, 'The job says the previous version went to the trash.');
+$purge = $operations->planCommand($admin, 'file:trash-empty', ['domain' => 'demo-php.test']);
+env_assert($purge->plan?->purge === ['items' => 1, 'bytes' => strlen("Notes of demo-php.test\n")], 'Emptying the trash is planned with its count and size.');
+$operations->startCommand($admin, 'file:trash-empty', ['domain' => 'demo-php.test']);
+env_assert($files->trash($admin, 'demo-php.test')['entries'] === [], 'Emptied.');
 env_assert($operations->planCommand($admin, 'file:write', $save)->reason === 'changed', 'Saved again over a newer text: refused changed, never overwritten.');
 env_assert($operations->planCommand($admin, 'file:write', ['domain' => 'demo-php.test', 'path' => 'notes.txt', 'content' => '', 'expect-sha256' => 'new'])->reason === 'exists', 'A new file where one is: refused exists.');
 env_assert($operations->planCommand($admin, 'file:mkdir', ['domain' => 'demo-php.test', 'path' => 'public'])->reason === 'exists', 'Something of that name: refused exists.');
@@ -243,5 +253,34 @@ env_assert($nginxPlan->plan?->command === 'site:nginx-custom' && $nginxPlan->pla
 env_assert(PanelCommands::since('site:nginx-custom') === '1.41.0' && PanelCommands::attachmentLimit('site:nginx-custom') === null, 'From 1.41.0, in the request line.');
 $waiting = \Larena\Env\Firewall\TimedChange::fromData(['change_id' => 'c0ffee12', 'expires_at' => '2026-01-01T00:02:00Z', 'kind' => 'nginx_custom']);
 env_assert($waiting?->kind === 'nginx_custom' && $waiting->secondsLeft(new DateTimeImmutable('2026-01-01T00:00:30Z')) === 90, 'A change applied, kept within its time.');
+
+// simai-env 1.64.0 in the stand-in: a site or its database removed keeps a last backup first, listed with the removed
+// sites' (backup:data-list); a backup that fails stops the removal, and the trash names why each entry is there.
+env_assert(PanelCommands::since('backup:data-list') === '1.64.0' && PanelCommands::kind('backup:data-list') === PanelCommands::READ, 'The list of held backups, a read.');
+$extrasHeld = new \Larena\Env\Server\SiteExtrasReader($gateway);
+env_assert($extrasHeld->heldBackups($admin) === [], 'Nothing held yet.');
+env_assert($operations->startCommand($admin, 'site:remove', ['domain' => 'demo-static.test'])->jobId !== null, 'A site removed.');
+$operations->startCommand($admin, 'site:db-drop', ['domain' => 'demo-php.test']);
+$heldList = $extrasHeld->heldBackups($admin);
+$byDomain = [];
+foreach ($heldList ?? [] as $one) {
+    $byDomain[$one->domain] = $one;
+}
+env_assert(count($heldList ?? []) === 2 && !$byDomain['demo-static.test']->siteExists && $byDomain['demo-static.test']->backup->reason === 'site-remove'
+    && $byDomain['demo-php.test']->siteExists && $byDomain['demo-php.test']->backup->reason === 'db-drop' && $byDomain['demo-php.test']->backup->keepUntil !== null
+    && $byDomain['demo-static.test']->ways() === ['return-site'] && $byDomain['demo-php.test']->ways() === ['return-db'], 'Each kept seven days, the removed site\'s too.');
+env_assert(count($extrasHeld->heldBackups($admin, 'demo-php.test') ?? []) === 1, 'One site\'s only.');
+touch($root.'/backup-fails');
+env_assert($operations->startCommand($admin, 'site:remove', ['domain' => 'demo-php.test'])->reason === 'backup_failed' && count($extrasHeld->heldBackups($admin) ?? []) === 2,
+    'No backup, nothing removed: refused backup_failed.');
+unlink($root.'/backup-fails');
+$english = require dirname(__DIR__, 2).'/resources/lang/en/admin.php';
+env_assert(is_string($english['reasons']['backup_failed'] ?? null) && is_string($english['reasons']['trash_failed'] ?? null), 'Both refusals said in words.');
+$saveAgain = $files->text($admin, 'demo-php.test', 'page.html');
+$operations->startCommand($admin, 'file:write', ['domain' => 'demo-php.test', 'path' => 'page.html', 'content' => 'again', 'expect-sha256' => $saveAgain['sha256']]);
+$trashWords = static fn (string $key, array $replace = []): string => (string) (data_get($english, $key) ?? $key);
+$rows = \Larena\Env\Admin\SiteFilesPage::trash('demo-php.test', $files->trash($admin, 'demo-php.test')['entries'], true, true, $trashWords, 'tok')->rows;
+$replacedRow = array_values(array_filter($rows, static fn (array $row): bool => $row['name'] === 'page.html'))[0] ?? null;
+env_assert(is_array($replacedRow) && str_starts_with((string) ($replacedRow['deleted']['label'] ?? ''), $english['files']['trash']['reasons']['overwritten'].' '), 'The trash says «заменён».');
 
 echo "FilesTest passed.\n";

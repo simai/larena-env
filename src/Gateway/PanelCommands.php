@@ -228,6 +228,9 @@ final class PanelCommands
             'verify' => self::YES_NO],
             'required' => ['domain', 'enabled'], 'since' => '1.28.0', 'kind' => self::ACTION],
         'backup:data-verify' => ['args' => ['domain' => self::DOMAIN, 'backup' => self::BACKUP], 'required' => ['domain', 'backup'], 'since' => '1.28.0', 'kind' => self::ACTION],
+        // The backups the server holds (simai-backup-list/1, simai-env 1.64.0), those of removed sites too: site:remove and
+        // site:db-drop keep a last one for seven days (reason site-remove, db-drop; keep_until) before anything goes.
+        'backup:data-list' => ['args' => ['domain' => self::DOMAIN], 'required' => [], 'since' => '1.64.0', 'kind' => self::READ],
         'php:extensions' => ['args' => ['php' => self::PHP], 'required' => ['php'], 'since' => '1.28.0', 'kind' => self::READ],
         'site:php-ini-list' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => '1.28.0', 'kind' => self::READ],
         'site:php-ini-set' => ['args' => ['domain' => self::DOMAIN, 'name' => self::INI_KEY, 'value' => self::INI_VALUE],

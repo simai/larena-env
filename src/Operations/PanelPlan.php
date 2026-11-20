@@ -58,6 +58,9 @@ final readonly class PanelPlan
         // database and its tables, files already there, whether a backup is taken (\Larena\Env\Admin\RestoreWords::found).
         /** @var array<string, mixed>|null */
         public ?array $restore = null,
+        // file:trash-empty (simai-env 1.64.0): how many entries and bytes go for good, all of them or the one asked.
+        /** @var array{items: int, bytes: int}|null */
+        public ?array $purge = null,
     ) {
     }
 
@@ -131,6 +134,8 @@ final readonly class PanelPlan
             account: $command === 'owner:create' ? self::account($data['owner'] ?? null) : null,
             transfer: $command === 'site:transfer' ? self::transfer($data['transfer'] ?? null) : null,
             restore: $command === 'site:restore-ready' ? \Larena\Env\Admin\RestoreWords::found($data['restore'] ?? null) : null,
+            purge: $command === 'file:trash-empty' && is_array($data['trash'] ?? null) && is_int($data['trash']['items'] ?? null) && is_int($data['trash']['bytes'] ?? null)
+                ? ['items' => max(0, $data['trash']['items']), 'bytes' => max(0, $data['trash']['bytes'])] : null,
         );
     }
 

@@ -9,7 +9,8 @@ use Larena\Env\Contracts\PanelGateway;
 use Throwable;
 
 /**
- * A stand-in for the server's file commands (simai-env 1.39.0–1.40.0; the trash of 1.57.0) on recorded answers, for tests and the install
+ * A stand-in for the server's file commands (simai-env 1.39.0–1.40.0; the trash of 1.57.0; a replaced file kept in the trash and
+ * the last backup before a site or its database goes, 1.64.0) on recorded answers, for tests and the install
  * check only: the recordings hold one folder and a few plans, never the bytes of a download or an upload. It answers
  * file:* the way the gateway does, on a local folder per site; everything else goes to the recorded answers it wraps. Paths are checked as the gateway
  * checks them: nothing outside a site's folder, no `..`, no link that leaves it.
@@ -18,7 +19,10 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
 {
     /** The commands this stand-in answers, added to the host description's own list. */
     public const array COMMANDS = ['file:list', 'file:stat', 'file:read', 'file:preview', 'file:download', 'file:write', 'file:upload', 'file:mkdir', 'file:rename',
-        'file:remove', 'file:archive', 'file:extract', 'file:trash-list', 'file:trash-restore', 'file:trash-empty'];
+        'file:remove', 'file:archive', 'file:extract', 'file:trash-list', 'file:trash-restore', 'file:trash-empty', 'backup:data-list'];
+
+    /** What the stand-in backs up before passing on (simai-env 1.64.0): a last copy kept seven days, or nothing removed. */
+    private const array BACKED_UP = ['site:remove' => 'site-remove', 'site:db-drop' => 'db-drop'];
 
     /** How long the stand-in keeps a removed entry, as simai-env 1.61.0 does. */
     public const int TRASH_DAYS = 7;
@@ -45,6 +49,16 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
         if (in_array($command, ['job:status', 'job:log'], true) && is_file($this->jobFile($request->args['job_id'] ?? ''))) {
             return $this->job($request);
         }
+        if (isset(self::BACKED_UP[$command]) && $request->confirm) {
+            $kept = $this->keepLast($request);
+            if ($kept !== null) {
+                return $kept;
+            }
+        }
+        if ($command === 'backup:data-list') {
+            return $request->actor->owner === null ? $this->ok($request, 'result', $this->held($request->args['domain'] ?? null))
+                : PanelAnswer::refused($request->requestId, 'owner_admin_only');
+        }
         if (!in_array($command, self::COMMANDS, true)) {
             $answer = $this->inner->ask($request);
 
@@ -67,8 +81,11 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
                 // As the gateway, a plan shows a text's size, never the text.
                 $shown = isset($request->args['content']) ? ['content' => '('.strlen((string) $request->args['content']).' bytes)'] + $request->args : $request->args;
 
+                // What emptying deletes for good (1.64.0): the entries, their bytes and ids; with an id that one only.
+                $trash = $command === 'file:trash-empty' ? ['trash' => $this->purged($domain, $request->args['id'] ?? null)] : [];
+
                 return $this->ok($request, 'plan', ['command' => $command, 'args' => $shown, 'target' => $domain,
-                    'description' => self::DESCRIPTIONS[$command] ?? $command, 'effects' => 'write', 'lock' => $domain, 'applied' => false]);
+                    'description' => self::DESCRIPTIONS[$command] ?? $command, 'effects' => 'write', 'lock' => $domain, 'applied' => false] + $trash);
             }
             $lines = $this->act($command, $domain, $request);
         } catch (FakeRefusal $refusal) {
@@ -327,18 +344,21 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
         switch ($command) {
             case 'file:write':
                 $target = $this->path($domain, $args['path']);
+                // A file replaced goes to the trash first (1.64.0, reason overwritten); nothing is replaced without it.
+                $previous = is_file($target) ? $this->intoTrash($domain, $args['path'], 'overwritten') : null;
                 file_put_contents($target, (string) $args['content']);
 
-                return ["Wrote {$args['path']} (".strlen((string) $args['content']).' bytes)'];
+                return [["Wrote {$args['path']} (".strlen((string) $args['content']).' bytes)'], ['previous_trash_id' => $previous]];
             case 'file:upload':
                 $target = $this->path($domain, $args['path']);
                 $attachment = $request->attachment ?? throw new FakeRefusal('bad_request');
                 if (!hash_equals($attachment->sha256, (string) hash_file('sha256', $attachment->path))) {
                     throw new FakeRefusal('attachment_mismatch');
                 }
+                $previous = is_file($target) ? $this->intoTrash($domain, $args['path'], 'overwritten') : null;
                 copy($attachment->path, $target);
 
-                return ["Uploaded {$args['path']} ({$attachment->size} bytes)"];
+                return [["Uploaded {$args['path']} ({$attachment->size} bytes)"], ['previous_trash_id' => $previous]];
             case 'file:mkdir':
                 if (!is_dir(dirname($this->path($domain, $args['path'])))) {
                     throw new FakeRefusal('not_found');
@@ -352,14 +372,7 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
                 return ["Renamed {$args['path']} to {$args['to']}"];
             case 'file:remove':
                 // Into the site's trash, as simai-env 1.57.0: kept there, put back by file:trash-restore.
-                $id = gmdate('Ymd\THis\Z').'-'.bin2hex(random_bytes(3));
-                $entry = $this->path($domain, '.').'/.simai-trash/'.$id;
-                mkdir($entry, 0o700, true);
-                $from = $this->path($domain, $args['path']);
-                $meta = ['id' => $id, 'path' => trim($args['path'], '/'), 'name' => basename($args['path'])] + self::stat($from)
-                    + ['deleted_at' => gmdate('Y-m-d\TH:i:s\Z'), 'expires_at' => gmdate('Y-m-d\TH:i:s\Z', time() + self::TRASH_DAYS * 86400)];
-                rename($from, $entry.'/item');
-                file_put_contents($entry.'/meta.json', json_encode($meta, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES));
+                $id = $this->intoTrash($domain, $args['path'], 'removed');
 
                 return ["Moved {$args['path']} to the trash ({$id})"];
             case 'file:trash-restore':
@@ -406,10 +419,11 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
                         $zip->close();
                     }
 
-                    return [["Unpacked {$args['path']} into {$args['to']}", 'files: 0, dirs: 0, skipped: 0'], self::skipped($skipped)];
+                    return [["Unpacked {$args['path']} into {$args['to']}", 'files: 0, dirs: 0, skipped: 0'], self::skipped($skipped) + ['trashed' => 0, 'trash_ids' => []]];
                 }
 
-                return ["Unpacked {$args['path']} into {$args['to']}", 'files: 0, dirs: 0, skipped: 0'];
+                // The stand-in unpacks nothing, so nothing it replaced went to the trash (1.64.0 names what did).
+                return [["Unpacked {$args['path']} into {$args['to']}", 'files: 0, dirs: 0, skipped: 0'], ['trashed' => 0, 'trash_ids' => []]];
         }
 
         throw new FakeRefusal('not_allowed');
@@ -455,13 +469,83 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
             if (is_array($meta)) {
                 $entries[] = ['id' => (string) $id, 'path' => $meta['path'] ?? null, 'name' => $meta['name'] ?? null, 'type' => $meta['type'] ?? 'file',
                     'size' => (int) ($meta['size'] ?? 0), 'deleted_at' => $meta['deleted_at'] ?? null, 'expires_at' => $meta['expires_at'] ?? null,
-                    'secret' => ($meta['type'] ?? 'file') === 'file' && \Larena\Env\Files\FileEntry::secret((string) ($meta['name'] ?? ''))];
+                    'secret' => ($meta['type'] ?? 'file') === 'file' && \Larena\Env\Files\FileEntry::secret((string) ($meta['name'] ?? '')),
+                    'reason' => ($meta['reason'] ?? 'removed') === 'overwritten' ? 'overwritten' : 'removed'];
             }
         }
         rsort($entries);
 
         return ['schema' => 'simai-file-trash/1', 'dir' => '.simai-trash', 'retention_days' => self::TRASH_DAYS, 'entries' => $entries,
             'count' => count($entries), 'total_bytes' => array_sum(array_column($entries, 'size'))];
+    }
+
+    /**
+     * A path moved into the site's trash with why it went (removed, or overwritten by a write, an upload or an unpacking).
+     *
+     * @throws FakeRefusal
+     */
+    private function intoTrash(string $domain, string $relative, string $reason): string
+    {
+        $id = gmdate('Ymd\THis\Z').'-'.bin2hex(random_bytes(3));
+        $entry = $this->path($domain, '.').'/.simai-trash/'.$id;
+        mkdir($entry, 0o700, true);
+        $from = $this->path($domain, $relative);
+        $meta = ['id' => $id, 'path' => trim($relative, '/'), 'name' => basename($relative)] + self::stat($from)
+            + ['deleted_at' => gmdate('Y-m-d\TH:i:s\Z'), 'expires_at' => gmdate('Y-m-d\TH:i:s\Z', time() + self::TRASH_DAYS * 86400), 'reason' => $reason];
+        $reason === 'overwritten' ? copy($from, $entry.'/item') : rename($from, $entry.'/item');
+        file_put_contents($entry.'/meta.json', json_encode($meta, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES));
+
+        return $id;
+    }
+
+    /**
+     * What file:trash-empty would delete for good (1.64.0 plan `trash`): all entries, or the one asked.
+     *
+     * @return array{items: int, bytes: int, ids: list<string>}
+     */
+    private function purged(string $domain, ?string $id): array
+    {
+        $entries = array_values(array_filter($this->trashList($domain)['entries'], static fn (array $entry): bool => $id === null || $entry['id'] === $id));
+
+        return ['items' => count($entries), 'bytes' => array_sum(array_column($entries, 'size')), 'ids' => array_column($entries, 'id')];
+    }
+
+    /**
+     * The last backup before a site or its database goes (1.64.0): kept in the stand-in's list seven days, then the
+     * action passes on; a file `backup-fails` in its folder makes the backup fail, and nothing is removed.
+     */
+    private function keepLast(PanelRequest $request): ?PanelAnswer
+    {
+        if (is_file($this->root.'/backup-fails')) {
+            return PanelAnswer::refused($request->requestId, 'backup_failed');
+        }
+        $domain = (string) ($request->args['domain'] ?? '');
+        $stamp = gmdate('Ymd-His');
+        $held = $this->heldItems();
+        $held[] = ['domain' => $domain, 'site_exists' => $request->command !== 'site:remove', 'backup' => $stamp,
+            'path' => '/var/backups/simai/'.$domain.'/'.$stamp, 'created_at' => gmdate('Y-m-d\TH:i:s'), 'size_bytes' => 4374,
+            'parts' => $request->command === 'site:remove' ? ['config', 'db', 'files'] : ['db'], 'checksums' => true, 'encrypted' => false,
+            'reason' => self::BACKED_UP[$request->command], 'keep_until' => gmdate('Y-m-d\TH:i:s', time() + 7 * 86400)];
+        @mkdir($this->root, 0o775, true);
+        file_put_contents($this->root.'/held-backups.json', json_encode($held, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES));
+
+        return null;
+    }
+
+    /** @return array<string, mixed> backup:data-list as 1.64.0 answers it (simai-backup-list/1) */
+    private function held(?string $domain): array
+    {
+        $items = array_values(array_filter($this->heldItems(), static fn (array $item): bool => $domain === null || $item['domain'] === $domain));
+
+        return ['schema' => 'simai-backup-list/1', 'dest' => '/var/backups/simai', 'count' => count($items), 'items' => $items];
+    }
+
+    /** @return list<array<string, mixed>> */
+    private function heldItems(): array
+    {
+        $held = json_decode((string) @file_get_contents($this->root.'/held-backups.json'), true);
+
+        return is_array($held) ? array_values(array_filter($held, 'is_array')) : [];
     }
 
     /** @return array<string, mixed> @throws FakeRefusal */

@@ -27,6 +27,9 @@ final class JobOutcome
     /** The end's heading in words: what became, or that it did not work. */
     public static function heading(PanelJobStatus $status): string
     {
+        if ($status->state === JobState::Succeeded && self::replaced($status)) {
+            return self::text('job.done.file-replaced');
+        }
         if ($status->state === JobState::Succeeded) {
             $key = in_array($status->command, self::DONE, true) ? str_replace(':', '-', $status->command) : 'other';
 
@@ -53,6 +56,8 @@ final class JobOutcome
         }
 
         return match (true) {
+            // A file replaced is kept in the site's trash (simai-env 1.64.0): the next step opens it.
+            self::replaced($status) && $domain !== null => [self::site($domain).'?tab=files&trash=1', self::text('job.next.trash')],
             $status->command === 'site:remove' => [route('larena.env.admin.index', [], false), self::text('job.next.sites')],
             // A kind switched on goes back to «Новый сайт» with it chosen.
             $status->command === 'profile:enable' && is_string($status->args['id'] ?? null) => [route('larena.env.admin.sites.new', [], false).'?profile='.rawurlencode($status->args['id']), self::text('job.next.new_site')],
@@ -65,6 +70,12 @@ final class JobOutcome
             $domain !== null => [self::site($domain), self::text('job.next.site')],
             default => null,
         };
+    }
+
+    /** A write, an upload or an unpacking that put the files it replaced into the site's trash. */
+    private static function replaced(PanelJobStatus $status): bool
+    {
+        return $status->replacedIntoTrash > 0 && in_array($status->command, ['file:write', 'file:upload', 'file:extract'], true);
     }
 
     /** The mark the admin reads once the action is over; nothing while it runs. */

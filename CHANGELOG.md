@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- simai-env 1.64.0: «Хранилища копий» lists the backups the server holds (backup:data-list), removed sites' too, with
+  why each was made («перед удалением сайта», «перед удалением базы») and «хранится до …»; «Вернуть сайт» (site:add,
+  then backup:data-restore, the files coming back into a folder of their own until ENV puts them in place) and «Вернуть
+  базу» (site:db-create where the site has none, then backup:data-restore files no), each step planned and confirmed.
+- Removing a site or its database says the panel keeps a backup for 7 days first, where the server does; a failed
+  backup (backup_failed) and a replaced file the trash could not take (trash_failed) are said in words.
+- Saving, uploading and unpacking over a file say the previous version goes to the site's trash, and the end of the
+  job opens it; trash entries say «удалён» or «заменён»; «Очистить корзину» plans with how many entries and bytes go.
+- The stand-in gateway answers all of it as 1.64.0 does, for the tests and the install check.
+
 ## 0.4.7 — released 2026-11-18 (the owner: q-08faf69798)
 
 Install with simai-env 1.25.0 or newer, as before; the new screens ask the server for commands of later versions, and

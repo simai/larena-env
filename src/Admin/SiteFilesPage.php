@@ -86,7 +86,8 @@ final class SiteFilesPage
             'id' => $entry->id,
             'name' => $entry->name.($entry->type === 'dir' ? '/' : ''),
             'place' => $entry->path !== null ? $text('files.trash.from', ['path' => $entry->path]) : '',
-            'deleted' => self::when($entry->deletedAt, $now, $text),
+            // «удалён» or «заменён» (simai-env 1.64.0), before when.
+            'deleted' => self::why($entry->reason, self::when($entry->deletedAt, $now, $text), $text),
             'expires' => $entry->expiresAt === null ? '' : ['label' => $text('files.trash.until', ['time' => Moment::human($entry->expiresAt)]),
                 'text' => $text('files.trash.until', ['time' => Moment::human($entry->expiresAt)])],
             // A file with passwords is marked here too, and put back only by a person with that right (q-4997ae4e93).
@@ -180,6 +181,26 @@ final class SiteFilesPage
             // A link is shown, never followed: nothing opens it.
             '_actions' => $actions,
         ];
+    }
+
+    /**
+     * «удалён 2 часа назад» or «заменён 2 часа назад» (simai-env 1.64.0); just when from an older server.
+     *
+     * @param array{label: string, text: string, tip?: string}|string $when
+     * @param callable(string, array<string, string>=): string $text
+     * @return array<string, string>|string
+     */
+    private static function why(?string $reason, array|string $when, callable $text): array|string
+    {
+        if ($reason === null) {
+            return $when;
+        }
+        $why = $text('files.trash.reasons.'.$reason);
+        if (is_string($when)) {
+            return $why;
+        }
+
+        return ['label' => $why.' '.$when['label'], 'text' => $why.' '.$when['text']] + (isset($when['tip']) ? ['tip' => $when['tip']] : []);
     }
 
     /**

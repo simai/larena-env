@@ -926,6 +926,9 @@ final readonly class SiteAdminController
             'resources' => $result->plan->resources,
             'then' => $operation === SiteOperation::WordpressInstall ? [(string) $this->translator->get('larena-env::admin.routes.password_once')] : [],
             'warnings' => $this->knownWarnings($actor, $operation, $domain, $input),
+            // «Перед удалением панель сохранит копию на 7 дней» where the server keeps one (simai-env 1.64.0).
+            'keepsCopy' => in_array($operation, [SiteOperation::SiteRemove, SiteOperation::DatabaseDrop], true)
+                && ($this->overviews->read($actor)->overview->capabilities ?? PanelCapabilities::none())->allows('backup:data-list'),
         ]);
     }
 

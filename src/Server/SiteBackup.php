@@ -18,6 +18,10 @@ final readonly class SiteBackup
         public array $parts,
         public bool $checksums,
         public bool $encrypted,
+        // Why the server made it and until when it holds it (simai-env 1.64.0): a last copy before a site or its database
+        // goes (site-remove, db-drop) is kept seven days; a scheduled or manual copy has no reason.
+        public ?string $reason = null,
+        public ?string $keepUntil = null,
     ) {
     }
 
@@ -35,13 +39,17 @@ final readonly class SiteBackup
             }
         }
 
+        $name = is_string($data['backup'] ?? null) && $data['backup'] !== '' ? $data['backup'] : basename($path);
+
         return new self(
-            name: basename($path),
+            name: $name,
             createdAt: is_string($data['created_at'] ?? null) ? $data['created_at'] : null,
             sizeBytes: is_int($data['size_bytes'] ?? null) ? $data['size_bytes'] : null,
             parts: $parts,
             checksums: ($data['checksums'] ?? false) === true,
             encrypted: ($data['encrypted'] ?? false) === true,
+            reason: is_string($data['reason'] ?? null) && preg_match('/\A[a-z][a-z-]{0,31}\z/D', $data['reason']) === 1 ? $data['reason'] : null,
+            keepUntil: is_string($data['keep_until'] ?? null) && $data['keep_until'] !== '' ? $data['keep_until'] : null,
         );
     }
 }

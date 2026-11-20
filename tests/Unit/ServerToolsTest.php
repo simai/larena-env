@@ -791,6 +791,24 @@ env_assert(str_contains($listed, 'data-env-storages="2"') && str_contains($liste
     && str_contains($listed, 'name="secret_key"') && str_contains($listed, 'acme-backups/srv1') && !str_contains($listed, 'name="default" value="1" checked'), 'The storages page: '.$listed);
 env_assert(str_contains($storagePage(['storages' => []]), 'name="default" value="1" checked') && str_contains($storagePage(['supported' => false]), 'data-env-storages="unsupported"')
     && !str_contains($storagePage(['allows' => ['add' => false, 'test' => false, 'remove' => false, 'fetch' => false]]), 'data-env-storage-op='), 'First storage takes new copies; older server; read only.');
+// The backups the server holds (simai-env 1.64.0): a removed site's last copy with «Вернуть сайт» and where its files come
+// back, a dropped database's with «Вернуть базу», why each was made and until when it is kept; a copy of no reason offers
+// nothing here. An older server shows no such list; an unreadable one says so.
+$heldItem = static fn (string $domain, bool $exists, string $reason, array $parts): ?\Larena\Env\Backup\HeldBackup => \Larena\Env\Backup\HeldBackup::fromData(['domain' => $domain,
+    'site_exists' => $exists, 'backup' => '20261120-010000', 'path' => '/var/backups/simai/'.$domain.'/20261120-010000', 'created_at' => '2026-11-20T01:00:00',
+    'size_bytes' => 4096, 'parts' => $parts, 'checksums' => true, 'encrypted' => false, 'reason' => $reason, 'keep_until' => '2026-11-27T01:00:00']);
+$held = array_values(array_filter([$heldItem('gone.test', false, 'site-remove', ['config', 'db', 'files']), $heldItem('demo-php.test', true, 'db-drop', ['db']),
+    $heldItem('daily.test', true, 'scheduled', ['db', 'files'])]));
+env_assert(count($held) === 3 && $held[0]->ways() === ['return-site'] && $held[1]->ways() === ['return-db'] && $held[2]->ways() === []
+    && $held[0]->backup->keepUntil === '2026-11-27T01:00:00' && \Larena\Env\Backup\HeldBackup::fromData(['domain' => '../x', 'path' => '/a/b']) === null, 'Held backups from the server.');
+$heldPage = $storagePage(['heldSupported' => true, 'held' => $held, 'returns' => true]);
+env_assert(str_contains($heldPage, 'data-env-held-backups="3"') && substr_count($heldPage, 'data-env-held-op="return-site"') === 1
+    && substr_count($heldPage, 'data-env-held-op="return-db"') === 1 && str_contains($heldPage, e($lines['storages']['held']['reasons']['site-remove']))
+    && str_contains($heldPage, e($lines['storages']['held']['removed'])) && str_contains($heldPage, 'data-env-held-files-note')
+    && substr_count($heldPage, 'data-env-held-until') === 3, 'The held backups with the way back: '.$heldPage);
+env_assert(!str_contains($storagePage(['heldSupported' => true, 'held' => $held, 'returns' => false]), 'data-env-held-op=') && !str_contains($storagePage(['held' => $held]), 'data-env-held-backups')
+    && str_contains($storagePage(['heldSupported' => true, 'held' => null]), 'data-env-held-backups="unreadable"'), 'Read only; an older server; unreadable.');
+env_assert((new PanelCapabilities('1.64.0'))->allows('backup:data-list') && !(new PanelCapabilities('1.63.4'))->allows('backup:data-list'), 'The list from simai-env 1.64.0.');
 // Every site's last backup on the backups page, the ones in need first (critics 2026-11-07).
 $summary = \Larena\Env\Admin\SiteBackupSummary::of([
     new \Larena\Env\Server\SiteSummary('fresh.ru', 'generic', '8.3', 'none', null, null, null, null, true, lastBackup: '2026-01-05T00:00:00Z'),

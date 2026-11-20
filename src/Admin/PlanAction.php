@@ -55,6 +55,8 @@ final class PlanAction
             'check' => isset($data['check']) && is_object($data['check']) && is_string($data['check']->id ?? null) ? $data['check']->id : null,
             'warnings' => is_array($data['warnings'] ?? null) ? $data['warnings'] : [],
             'more' => $more,
+            // A server that keeps a last copy before a site or its database goes (simai-env 1.64.0).
+            'keeps_copy' => ($data['keepsCopy'] ?? false) === true,
         ])->html();
     }
 
@@ -63,7 +65,7 @@ final class PlanAction
 
     /**
      * @param array<array-key, mixed> $hidden what the confirmation sends back
-     * @param array{heading: string, target: ?string, cancel: string, check: ?string, warnings: array<mixed>, more: string} $screen
+     * @param array{heading: string, target: ?string, cancel: string, check: ?string, warnings: array<mixed>, more: string, keeps_copy?: bool} $screen
      */
     public static function of(PanelPlan $plan, string $runUrl, array $hidden, string $token, array $screen): AdminPlannedAction
     {
@@ -140,7 +142,8 @@ final class PlanAction
             danger: $destroys,
             // What deletes, replaces or stops something says so on the plate: the panel's sentence, else the server's (simai-env 1.60.0).
             consequence: $command === 'site:restore-ready' ? RestoreWords::consequence(self::restoreArgs($plan, $hidden), $plan->restore, self::restoreText(...))
-                : (($destroys || in_array($key, self::SAID_CONSEQUENCES, true) ? self::text('plan.consequence.'.$key) : null) ?? $plan->consequence ?? ''),
+                : (($destroys && ($screen['keeps_copy'] ?? false) ? self::text('plan.consequence_kept.'.$key) : null)
+                    ?? ($destroys || in_array($key, self::SAID_CONSEQUENCES, true) ? self::text('plan.consequence.'.$key) : null) ?? $plan->consequence ?? ''),
             require: $destroys && $target !== null ? $target : '',
             facts: $facts,
             // What the panel knows, then what the server's check found: what would stop it, then what is worth knowing.

@@ -28,11 +28,20 @@ use Throwable;
  * removal, and the copies kept in one with «Забрать на сервер», after which the site's backups restore it. Every change is
  * planned and confirmed; the keys go to the server only, through the session encrypted between the plan and its
  * confirmation, never into the page.
+ *
+ * Above them the backups the server holds (simai-env 1.64.0), those of removed sites too, with why each was made and
+ * until when it is kept, and the way back: «Вернуть сайт» makes the site again (site:add) and then puts its backup back
+ * (backup:data-restore; its files wait in a folder of their own beside the site until ENV puts them in place), «Вернуть
+ * базу» makes the database again (site:db-create) and then puts the backup's database back (files no). Each step is
+ * its own plan and confirmation; the page decides the next step from what the server has now.
  */
 final readonly class BackupStorageController
 {
     public const array OPERATIONS = ['add' => 'backup:storage-add', 'test' => 'backup:storage-test', 'remove' => 'backup:storage-remove',
         'fetch' => 'backup:storage-fetch'];
+    /** The way back of a held backup: its two operations, each step a command of its own. */
+    public const array RETURNS = ['return-site', 'return-db'];
+    private const array STEPS = ['add' => 'site:add', 'create' => 'site:db-create', 'restore' => 'backup:data-restore'];
     private const string KEYS = 'larena_env_storage_keys';
     private const int KEYS_SECONDS = 900;
 
@@ -45,6 +54,8 @@ final readonly class BackupStorageController
         private StringEncrypter $encrypter,
         private ?AccessOperationAuthorizer $authorizer = null,
         private PlanReceipts $receipts = new PlanReceipts(),
+        // The site a held backup goes back to: whether it has its database again.
+        private ?\Larena\Env\Server\SiteDetailsReader $sites = null,
     ) {
     }
 
@@ -80,6 +91,9 @@ final readonly class BackupStorageController
             'copies' => $copies,
             'allows' => $allows,
             'providers' => array_keys(BackupStorage::PROVIDERS),
+            'heldSupported' => $capabilities->allows('backup:data-list'),
+            'held' => $capabilities->allows('backup:data-list') ? $this->extras->heldBackups($actor) : null,
+            'returns' => $canOperate && $capabilities->allows('backup:data-restore'),
             // Every site's last backup at a glance, the panel's own left out (critics 2026-11-07: /backups showed only storages).
             // A failure named as in the sites list and on the site's tab (critics of 0.4.1: here it read «Копий нет»).
             'siteBackups' => \Larena\Env\Admin\SiteBackupSummary::of($read->overview?->withoutSites([$request->getHost()])->sites ?? [],
@@ -98,6 +112,7 @@ final readonly class BackupStorageController
             return $this->back($request, $asked);
         }
         [$command, $args, $hidden] = $asked;
+        $op = (string) $request->input('op');
         $result = $this->operations->planCommand($actor, $command, $args);
         if ($result->plan === null) {
             return $this->back($request, $result->reason ?? 'answer_shape_invalid');
@@ -108,10 +123,14 @@ final readonly class BackupStorageController
         // The receipt holds what the confirmation sends back, the keys by their reference: checked before the keys are taken.
         $hidden[PlanReceipts::FIELD] = $this->receipts->issue($request, $command, $hidden);
 
+        $step = $hidden['step'] ?? null;
+
         return $this->views->make('larena-env::admin.plan', [
-            'heading' => $this->text('storages.operations.'.(string) $request->input('op')),
+            'heading' => $this->text('storages.operations.'.$op),
             'eyebrow' => $this->text('storages.title'),
-            'target' => $args['name'],
+            'target' => $args['name'] ?? $args['domain'] ?? null,
+            // What comes after this step of the way back, in words.
+            'then' => in_array($op, self::RETURNS, true) && is_string($step) ? [$this->text('storages.held.then.'.$op.'.'.$step)] : [],
             'source' => $result->source,
             'plan' => $result->plan,
             'runUrl' => route('larena.env.admin.storages.run', [], false),
@@ -123,7 +142,9 @@ final readonly class BackupStorageController
     public function run(Request $request): RedirectResponse
     {
         $actor = ResolvePanelActor::of($request);
-        if (!$this->receipts->confirms($request, self::OPERATIONS[(string) $request->input('op')] ?? '', $request->except(['_token', PlanReceipts::FIELD]))) {
+        $op = (string) $request->input('op');
+        $command = self::OPERATIONS[$op] ?? (in_array($op, self::RETURNS, true) ? (self::STEPS[(string) $request->input('step')] ?? '') : '');
+        if (!$this->receipts->confirms($request, $command, $request->except(['_token', PlanReceipts::FIELD]))) {
             // Keys kept for a confirmation that is refused are let go: the plan is made again with them typed.
             $this->takeKeys($request, (string) $request->input('keys_ref'));
 
@@ -154,6 +175,9 @@ final readonly class BackupStorageController
         }
         $capabilities = $this->overviews->read(ResolvePanelActor::of($request))->overview->capabilities ?? PanelCapabilities::none();
         $op = (string) $request->input('op');
+        if (in_array($op, self::RETURNS, true)) {
+            return $this->way($request, $op, $capabilities, $confirming);
+        }
         $command = self::OPERATIONS[$op] ?? null;
         if ($command === null || !$capabilities->allows($command)) {
             return 'not_allowed';
@@ -185,6 +209,66 @@ final readonly class BackupStorageController
         }
 
         return [$command, $args, $hidden];
+    }
+
+    /**
+     * The next step back of a held backup: a removed site made again, then its backup put back; a dropped database made
+     * again, then the backup's database put back. On the plan the step follows from what the server has now; on the
+     * confirmation it is the one the receipt holds.
+     *
+     * @return array{0: string, 1: array<string, string>, 2: array<string, string>}|string
+     */
+    private function way(Request $request, string $op, PanelCapabilities $capabilities, bool $confirming): array|string
+    {
+        $domain = strtolower(trim((string) $request->input('domain')));
+        $backup = (string) $request->input('backup');
+        if ($confirming) {
+            $step = (string) $request->input('step');
+            $database = (string) $request->input('db') === 'yes';
+        } else {
+            $actor = ResolvePanelActor::of($request);
+            $held = null;
+            foreach ($this->extras->heldBackups($actor, $domain) ?? [] as $candidate) {
+                if ($candidate->domain === $domain && $candidate->backup->name === $backup) {
+                    $held = $candidate;
+                }
+            }
+            if ($held === null) {
+                return 'backup_unknown';
+            }
+            $database = $held->holdsDatabase();
+            if ($op === 'return-db' && !$database) {
+                return 'backup_unknown';
+            }
+            $site = $held->siteExists ? $this->sites?->read($actor, $domain)->site : null;
+            if ($held->siteExists && $site === null) {
+                return 'site_unreadable';
+            }
+            $step = match (true) {
+                $site === null => $op === 'return-site' ? 'add' : 'site_missing',
+                $op === 'return-db' && $site->databaseEngine === null => 'create',
+                default => 'restore',
+            };
+            if (!isset(self::STEPS[$step])) {
+                return $step;
+            }
+        }
+        $command = self::STEPS[$step] ?? null;
+        if ($command === null || !$capabilities->allows($command)) {
+            return 'not_allowed';
+        }
+        $args = match ($step) {
+            'add' => ['domain' => $domain] + ($database ? ['create-db' => 'yes'] : []),
+            'create' => ['domain' => $domain],
+            default => ['domain' => $domain, 'backup' => $backup] + ($op === 'return-db' ? ['files' => 'no'] : []),
+        };
+        try {
+            PanelCommands::check($command, $args, true);
+        } catch (PanelRefused $refused) {
+            return $refused->reasonCode;
+        }
+
+        return [$command, $args, ['op' => $op, 'step' => $step, 'domain' => $domain, 'backup' => $backup, 'db' => $database ? 'yes' : 'no']];
     }
 
     /**
