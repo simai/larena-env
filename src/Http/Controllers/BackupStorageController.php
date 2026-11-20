@@ -92,7 +92,8 @@ final readonly class BackupStorageController
             'allows' => $allows,
             'providers' => array_keys(BackupStorage::PROVIDERS),
             'heldSupported' => $capabilities->allows('backup:data-list'),
-            'held' => $capabilities->allows('backup:data-list') ? $this->extras->heldBackups($actor) : null,
+            // The panel's own copies left out, as in the sites' list below (its own update keeps them).
+            'held' => $capabilities->allows('backup:data-list') ? $this->withoutPanel($this->extras->heldBackups($actor), $request->getHost()) : null,
             'returns' => $canOperate && $capabilities->allows('backup:data-restore'),
             // Every site's last backup at a glance, the panel's own left out (critics 2026-11-07: /backups showed only storages).
             // A failure named as in the sites list and on the site's tab (critics of 0.4.1: here it read «Копий нет»).
@@ -102,6 +103,15 @@ final readonly class BackupStorageController
                 fn (string $key, array $replace = []): string => (string) $this->translator->get('larena-env::admin.'.$key, $replace)),
             'notice' => $request->session()->get('larena_env_notice'),
         ]);
+    }
+
+    /**
+     * @param list<\Larena\Env\Backup\HeldBackup>|null $held
+     * @return list<\Larena\Env\Backup\HeldBackup>|null
+     */
+    private function withoutPanel(?array $held, string $host): ?array
+    {
+        return $held === null ? null : array_values(array_filter($held, static fn (\Larena\Env\Backup\HeldBackup $one): bool => strcasecmp($one->domain, $host) !== 0));
     }
 
     public function plan(Request $request): mixed
