@@ -1,5 +1,5 @@
 {
   "version": "0.4.7",
-  "root_revision": "f60f6066694c3c977eaaecc529721177f01355ce",
+  "root_revision": "dbc767461a353544b6e602364e998c35fc3827c9",
   "packages": ["access", "admin", "audit", "auth", "core", "dataview", "env", "filesystem", "notification", "property", "setting", "ui"]
 }

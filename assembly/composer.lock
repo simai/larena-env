@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "e1f22ce67326454f6247e6b9ddd975d9",
+    "content-hash": "d9de4159281d5dca2d3ad4343c2f5d9d",
     "packages": [
         {
             "name": "brick/math",
@@ -1415,12 +1415,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:simai/larena-access.git",
-                "reference": "176ef06a9031217e08d96f0412cf032cc38379bf"
+                "reference": "5cce157c3f34888f4f13db928ce216200821a3cc"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-access/zipball/176ef06a9031217e08d96f0412cf032cc38379bf",
-                "reference": "176ef06a9031217e08d96f0412cf032cc38379bf",
+                "url": "https://api.github.com/repos/simai/larena-access/zipball/5cce157c3f34888f4f13db928ce216200821a3cc",
+                "reference": "5cce157c3f34888f4f13db928ce216200821a3cc",
                 "shasum": ""
             },
             "require": {
@@ -1574,12 +1574,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:simai/larena-admin.git",
-                "reference": "95852efb3d015ee9330686260a7690beb3fb7507"
+                "reference": "20693f61435d1adf6746383bfaaf25ee42833c42"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-admin/zipball/95852efb3d015ee9330686260a7690beb3fb7507",
-                "reference": "95852efb3d015ee9330686260a7690beb3fb7507",
+                "url": "https://api.github.com/repos/simai/larena-admin/zipball/20693f61435d1adf6746383bfaaf25ee42833c42",
+                "reference": "20693f61435d1adf6746383bfaaf25ee42833c42",
                 "shasum": ""
             },
             "require": {
@@ -2048,12 +2048,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/simai/larena-core.git",
-                "reference": "f59af6629ffd5371a3c98c2e92f6b53fbbb0200d"
+                "reference": "bac9b420e3d63de78b235886ef97e3d86d98eed7"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-core/zipball/f59af6629ffd5371a3c98c2e92f6b53fbbb0200d",
-                "reference": "f59af6629ffd5371a3c98c2e92f6b53fbbb0200d",
+                "url": "https://api.github.com/repos/simai/larena-core/zipball/bac9b420e3d63de78b235886ef97e3d86d98eed7",
+                "reference": "bac9b420e3d63de78b235886ef97e3d86d98eed7",
                 "shasum": ""
             },
             "require": {
@@ -2092,6 +2092,7 @@
             "scripts": {
                 "test": [
                     "@php tests/Unit/FeatureSetTest.php",
+                    "@php tests/Unit/InstalledReleaseSealTest.php",
                     "@php tests/Unit/OperationRuntimeContractTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/CatalogOperationExecutionTest.php",
                     "@php tests/Unit/OperationRuntimeFailsClosedTest.php",
@@ -2238,7 +2239,7 @@
                 "source": "https://github.com/simai/larena-core/tree/main",
                 "issues": "https://github.com/simai/larena-core/issues"
             },
-            "time": "2026-11-19T16:26:34+00:00"
+            "time": "2026-11-20T10:59:20+00:00"
         },
         {
             "name": "larena/dataview",
@@ -2246,12 +2247,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/simai/larena-dataview.git",
-                "reference": "9e18f3f120f3c9db74bedaf5655a8e90d74e62e2"
+                "reference": "f81e8078c710033b2fd0bc596b94687cd9991ec6"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-dataview/zipball/9e18f3f120f3c9db74bedaf5655a8e90d74e62e2",
-                "reference": "9e18f3f120f3c9db74bedaf5655a8e90d74e62e2",
+                "url": "https://api.github.com/repos/simai/larena-dataview/zipball/f81e8078c710033b2fd0bc596b94687cd9991ec6",
+                "reference": "f81e8078c710033b2fd0bc596b94687cd9991ec6",
                 "shasum": ""
             },
             "require": {
@@ -2344,7 +2345,7 @@
                 "source": "https://github.com/simai/larena-dataview/tree/main",
                 "issues": "https://github.com/simai/larena-dataview/issues"
             },
-            "time": "2026-11-18T06:00:16+00:00"
+            "time": "2026-11-20T11:04:48+00:00"
         },
         {
             "name": "larena/env",
@@ -2424,7 +2425,9 @@
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/SecretFilesTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PanelPeopleTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/AccountMovesTest.php",
-                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PanelMailTest.php"
+                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PanelMailTest.php",
+                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PanelTranslationsTest.php",
+                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PlanReceiptsTest.php"
                 ],
                 "test:unit": [
                     "@test"
@@ -2482,12 +2485,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:simai/larena-filesystem.git",
-                "reference": "6873c1a2e94aaf015baeb21deac76d91825f05fe"
+                "reference": "de6158f374561dd7fa6a29b98bf7ea6fb2e197b1"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-filesystem/zipball/6873c1a2e94aaf015baeb21deac76d91825f05fe",
-                "reference": "6873c1a2e94aaf015baeb21deac76d91825f05fe",
+                "url": "https://api.github.com/repos/simai/larena-filesystem/zipball/de6158f374561dd7fa6a29b98bf7ea6fb2e197b1",
+                "reference": "de6158f374561dd7fa6a29b98bf7ea6fb2e197b1",
                 "shasum": ""
             },
             "require": {
@@ -2500,6 +2503,7 @@
                 "php": "^8.3"
             },
             "require-dev": {
+                "larena/audit": "dev-main",
                 "orchestra/testbench": "^11.1",
                 "phpstan/phpstan": "^2.0",
                 "phpunit/phpunit": "^12.5"
@@ -2591,7 +2595,7 @@
                 }
             ],
             "description": "Larena Filesystem: File metadata, blob storage abstraction and safe file delivery layer used by content, storage, media, file-manager, link and search surfaces.",
-            "time": "2026-11-16T16:08:44+00:00"
+            "time": "2026-11-19T14:33:57+00:00"
         },
         {
             "name": "larena/notification",
@@ -2806,12 +2810,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:simai/larena-setting.git",
-                "reference": "f157c2a4d3d56f00934acf807f1c8230b72481a1"
+                "reference": "b3cc89fdfbd0c2eb21bf7712b9848fcdc2f00c4d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-setting/zipball/f157c2a4d3d56f00934acf807f1c8230b72481a1",
-                "reference": "f157c2a4d3d56f00934acf807f1c8230b72481a1",
+                "url": "https://api.github.com/repos/simai/larena-setting/zipball/b3cc89fdfbd0c2eb21bf7712b9848fcdc2f00c4d",
+                "reference": "b3cc89fdfbd0c2eb21bf7712b9848fcdc2f00c4d",
                 "shasum": ""
             },
             "require": {
@@ -2939,12 +2943,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/simai/larena-ui.git",
-                "reference": "50a7f478bd2a22be6bc0e787318717c6f3cdc95d"
+                "reference": "e9b29e30e97e042ae3caea6936549ca22617030c"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-ui/zipball/50a7f478bd2a22be6bc0e787318717c6f3cdc95d",
-                "reference": "50a7f478bd2a22be6bc0e787318717c6f3cdc95d",
+                "url": "https://api.github.com/repos/simai/larena-ui/zipball/e9b29e30e97e042ae3caea6936549ca22617030c",
+                "reference": "e9b29e30e97e042ae3caea6936549ca22617030c",
                 "shasum": ""
             },
             "require": {
@@ -2991,7 +2995,6 @@
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/FrameworkContractRegistryTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/FrontendRuntimeLockTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/ComponentPackageRequirementsTest.php",
-                    "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/SourceBackedAssetProvenanceLockTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/SmartTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/SmartManagerTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/SmartFacadeTest.php",
@@ -3088,7 +3091,7 @@
                 "source": "https://github.com/simai/larena-ui/tree/main",
                 "issues": "https://github.com/simai/larena-ui/issues"
             },
-            "time": "2026-11-19T05:16:58+00:00"
+            "time": "2026-11-20T12:11:08+00:00"
         },
         {
             "name": "league/commonmark",
