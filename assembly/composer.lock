@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "cc3fa7a079c4e97a748b94dc876d1823",
+    "content-hash": "323d95d0f5cc3d4035333f230fcc6460",
     "packages": [
         {
             "name": "brick/math",
@@ -1574,12 +1574,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:simai/larena-admin.git",
-                "reference": "22238a829a38cd24ec2d16595d782e1e64524536"
+                "reference": "57cfc81d6dd4e7de66f3fd05770c62c38582a0f7"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-admin/zipball/22238a829a38cd24ec2d16595d782e1e64524536",
-                "reference": "22238a829a38cd24ec2d16595d782e1e64524536",
+                "url": "https://api.github.com/repos/simai/larena-admin/zipball/57cfc81d6dd4e7de66f3fd05770c62c38582a0f7",
+                "reference": "57cfc81d6dd4e7de66f3fd05770c62c38582a0f7",
                 "shasum": ""
             },
             "require": {
@@ -1809,7 +1809,7 @@
                 }
             ],
             "description": "Larena Admin: Object-based, permission-aware administration platform for package contributions, screens, actions and diagnostics.",
-            "time": "2026-11-22T14:16:06+00:00"
+            "time": "2026-11-22T23:20:15+00:00"
         },
         {
             "name": "larena/audit",
