@@ -197,7 +197,8 @@ final class PanelCommands
             'create-db' => self::YES_NO, 'db-engine' => self::ENGINE, 'redirect-to' => self::ORIGIN, 'redirect-code' => self::CODE,
             'redirect-path' => self::KEEP_DROP, 'backup' => self::YES_NO, 'upstream-port' => self::PORT, 'upstream-path' => self::UPSTREAM_PATH,
             'websockets' => self::YES_NO, 'bitrix-files' => self::BITRIX_FILES, 'ssl' => self::YES_NO, 'ssl-email' => self::EMAIL, 'ssl-redirect' => self::YES_NO],
-            'required' => ['domain'], 'since' => '1.22.0', 'kind' => self::ACTION],
+            // The kind is required as simai-env's gateway requires it (panel_gate.py, 1.65.0): a site is never made without one.
+            'required' => ['domain', 'profile'], 'since' => '1.22.0', 'kind' => self::ACTION],
         'site:set-php' => ['args' => ['domain' => self::DOMAIN, 'php' => self::PHP], 'required' => ['domain', 'php'], 'since' => '1.22.0', 'kind' => self::ACTION],
         // A site paused (a 503 page, its scheduler, jobs, workers and pool stopped, data untouched) and resumed, and one site's
         // caches cleared (simai-env 1.57.0).

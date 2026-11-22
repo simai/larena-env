@@ -18,6 +18,20 @@ Needs simai-env 1.65.0 for everything below; with an older server these screens 
   1.65.0 is not offered «Вернуть сайт» («Вернуть базу» stays).
 - The stand-in gateway answers 1.65.0's temporary link (renew, close, status, site:describe preview_link, the link once)
   and the live restore with root_not_empty, for the tests and the install check.
+- Checked on the local stand with simai-env 1.65.0:
+  - «Вернуть сайт» of a removed site asks first what kind of site it was and whether a database is made: the kinds the
+    server makes (self:profiles, those that need nothing but a domain), the backup's own chosen where the server names
+    it, the database ticked where the backup holds one. 1.65.0's backup:data-list names no kind and its gateway takes no
+    site:add without one, so the first step was refused («Значение в запросе недопустимо.»). The panel's rules now
+    require the kind for site:add as the gateway does.
+  - A step of the way back the server refuses with a bare reason (a value it did not take, an answer the panel could not
+    read) is said with the step and the site and what to check, then the server's reason.
+  - The plan of the second step says in words what comes back: the files straight into the site, the database only
+    where the backup holds one (no raw `files-live`); the end says «Сайт … возвращён: файлы (и база) на месте» and
+    leads to the site's card.
+  - The temporary link's runs are named in the panel's language in «История» and on the run's progress, not by the
+    server's English title; extending an open link is confirmed with «Продлить».
+  - The run's start and end are said in the panel's time zone setting, not the server's.
 
 - simai-env 1.64.0: «Хранилища копий» lists the backups the server holds (backup:data-list), removed sites' too, with
   why each was made («перед удалением сайта», «перед удалением базы») and «хранится до …»; «Вернуть сайт» (site:add,

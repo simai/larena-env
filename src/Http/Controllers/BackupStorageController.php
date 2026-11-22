@@ -43,6 +43,12 @@ final readonly class BackupStorageController
     /** The way back of a held backup: its two operations, each step a command of its own. */
     public const array RETURNS = ['return-site', 'return-db'];
     private const array STEPS = ['add' => 'site:add', 'create' => 'site:db-create', 'restore' => 'backup:data-restore'];
+    /** Kinds a backup cannot make again by itself: a redirect needs its target, a proxy its port. */
+    private const array NOT_RETURNED = ['redirect', 'proxy'];
+    /** The kinds every server makes, with their database, where the server does not list its own (self:profiles). */
+    private const array FALLBACK_KINDS = ['static' => 'no', 'generic' => 'optional', 'laravel' => 'optional', 'wordpress' => 'required'];
+    /** The server's reasons that say nothing of the step: a value it did not take, an answer the panel could not read. */
+    private const array BARE_REASONS = ['invalid_argument', 'answer_shape_invalid', 'plan_failed', 'command_failed'];
     private const string KEYS = 'larena_env_storage_keys';
     private const int KEYS_SECONDS = 900;
 
@@ -120,15 +126,21 @@ final readonly class BackupStorageController
     public function plan(Request $request): mixed
     {
         $actor = ResolvePanelActor::of($request);
+        // «Вернуть сайт» of a removed site asks its kind and its database first (a backup may not name its kind: simai-env
+        // 1.65.0's backup:data-list does not, while its gateway takes no site:add without one).
+        $choose = $this->choice($request);
+        if ($choose !== null) {
+            return $choose;
+        }
         $asked = $this->asked($request);
         if (is_string($asked)) {
-            return $this->back($request, $asked);
+            return $this->back($request, $asked, $this->wayContext($request));
         }
         [$command, $args, $hidden] = $asked;
         $op = (string) $request->input('op');
         $result = $this->operations->planCommand($actor, $command, $args);
         if ($result->plan === null) {
-            return $this->back($request, $result->reason ?? 'answer_shape_invalid');
+            return $this->back($request, $result->reason ?? 'answer_shape_invalid', $this->wayContext($request, $hidden));
         }
         if (isset($args['access-key'], $args['secret-key'])) {
             $hidden['keys_ref'] = $this->keepKeys($request, $args['access-key'], $args['secret-key']);
@@ -143,7 +155,9 @@ final readonly class BackupStorageController
             'eyebrow' => $this->text('storages.title'),
             'target' => $args['name'] ?? $args['domain'] ?? null,
             // What comes after this step of the way back, in words.
-            'then' => in_array($op, self::RETURNS, true) && is_string($step) ? [$this->text('storages.held.then.'.$op.'.'.$step)] : [],
+            // The database is named only where the backup holds one.
+            'then' => in_array($op, self::RETURNS, true) && is_string($step)
+                ? [$this->text('storages.held.then.'.$op.'.'.$step.($op === 'return-site' && $step === 'restore' && ($hidden['db'] ?? 'no') !== 'yes' ? '_files' : ''))] : [],
             'source' => $result->source,
             'plan' => $result->plan,
             'runUrl' => route('larena.env.admin.storages.run', [], false),
@@ -165,13 +179,13 @@ final readonly class BackupStorageController
         }
         $asked = $this->asked($request, true);
         if (is_string($asked)) {
-            return $this->back($request, $asked);
+            return $this->back($request, $asked, $this->wayContext($request));
         }
-        [$command, $args] = $asked;
+        [$command, $args, $hidden] = $asked;
         $started = $this->operations->startCommand($actor, $command, $args);
 
         return $started->jobId === null
-            ? $this->back($request, $started->reason ?? 'answer_shape_invalid')
+            ? $this->back($request, $started->reason ?? 'answer_shape_invalid', $this->wayContext($request, $hidden))
             : new RedirectResponse(route('larena.env.admin.job', ['job' => $started->jobId], false));
     }
 
@@ -240,23 +254,19 @@ final readonly class BackupStorageController
         $domain = strtolower(trim((string) $request->input('domain')));
         $backup = (string) $request->input('backup');
         $profile = null;
+        $createDb = false;
         if ($confirming) {
             $step = (string) $request->input('step');
             $database = (string) $request->input('db') === 'yes';
             $profile = is_string($request->input('profile')) && $request->input('profile') !== '' ? (string) $request->input('profile') : null;
+            $createDb = (string) $request->input('create-db') === 'yes';
         } else {
             $actor = ResolvePanelActor::of($request);
-            $held = null;
-            foreach ($this->extras->heldBackups($actor, $domain) ?? [] as $candidate) {
-                if ($candidate->domain === $domain && $candidate->backup->name === $backup) {
-                    $held = $candidate;
-                }
-            }
+            $held = $this->held($actor, $domain, $backup);
             if ($held === null) {
                 return 'backup_unknown';
             }
             $database = $held->holdsDatabase();
-            $profile = $held->profile;
             if ($op === 'return-db' && !$database) {
                 return 'backup_unknown';
             }
@@ -272,17 +282,31 @@ final readonly class BackupStorageController
             if (!isset(self::STEPS[$step])) {
                 return $step;
             }
+            if ($step === 'add') {
+                // The kind and the database as the person chose them (choice()), the kind one the server makes.
+                $kinds = $this->kinds($actor, $capabilities);
+                $profile = is_string($request->input('profile')) ? (string) $request->input('profile') : '';
+                if (!isset($kinds[$profile])) {
+                    return 'return_kind_missing';
+                }
+                $createDb = match ($kinds[$profile]) {
+                    'no' => false,
+                    'required' => true,
+                    default => (string) $request->input('create-db') === 'yes',
+                };
+            }
         }
         $command = self::STEPS[$step] ?? null;
         if ($command === null || !$capabilities->allows($command)) {
             return 'not_allowed';
         }
         $args = match ($step) {
-            // The same domain, the same kind where the server names it, a database where the backup holds one.
-            'add' => ['domain' => $domain] + ($profile !== null && $op === 'return-site' ? ['profile' => $profile] : []) + ($database ? ['create-db' => 'yes'] : []),
+            // The same domain, the kind chosen (the backup's where the server names it), a database where asked.
+            'add' => ['domain' => $domain] + ($profile !== null ? ['profile' => $profile] : []) + ($createDb ? ['create-db' => 'yes'] : []),
             'create' => ['domain' => $domain],
-            // The site's files straight into the new, empty site (simai-env 1.65.0), its database with them.
-            default => ['domain' => $domain, 'backup' => $backup] + ($op === 'return-db' ? ['files' => 'no'] : ['files-live' => 'yes']),
+            // The site's files straight into the new, empty site (simai-env 1.65.0), its database with them where the
+            // backup holds one: said to the server, so the run says what came back.
+            default => ['domain' => $domain, 'backup' => $backup] + ($op === 'return-db' ? ['files' => 'no'] : ['files-live' => 'yes', 'db' => $database ? 'yes' : 'no']),
         };
         try {
             PanelCommands::check($command, $args, true);
@@ -291,7 +315,114 @@ final readonly class BackupStorageController
         }
 
         return [$command, $args, ['op' => $op, 'step' => $step, 'domain' => $domain, 'backup' => $backup, 'db' => $database ? 'yes' : 'no']
-            + ($step === 'add' && isset($args['profile']) ? ['profile' => $args['profile']] : [])];
+            + ($step === 'add' && isset($args['profile']) ? ['profile' => $args['profile'], 'create-db' => $createDb ? 'yes' : 'no'] : [])];
+    }
+
+    /** The held backup by its domain and name, as the server lists it now; null when it holds none such. */
+    private function held(\Larena\Env\Gateway\PanelActor $actor, string $domain, string $backup): ?\Larena\Env\Backup\HeldBackup
+    {
+        $held = null;
+        foreach ($this->extras->heldBackups($actor, $domain) ?? [] as $candidate) {
+            if ($candidate->domain === $domain && $candidate->backup->name === $backup) {
+                $held = $candidate;
+            }
+        }
+
+        return $held;
+    }
+
+    /**
+     * The kinds «Вернуть сайт» may make the site again as, by id with their database (no, optional, required): the
+     * server's own list (self:profiles) where it gives one, else the kinds every server makes; a kind that needs more
+     * than its domain (a redirect's target, an application's port) is not offered, as the backup cannot say it.
+     *
+     * @return array<string, string>
+     */
+    private function kinds(\Larena\Env\Gateway\PanelActor $actor, PanelCapabilities $capabilities): array
+    {
+        $kinds = [];
+        $listed = $capabilities->allows('self:profiles') ? $this->extras->profiles($actor) : null;
+        foreach ($listed ?? [] as $profile) {
+            if (!in_array($profile->name, NewSiteController::KNOWN_PROFILES, true) || in_array($profile->name, self::NOT_RETURNED, true)) {
+                continue;
+            }
+            foreach ($profile->args as $name => $arg) {
+                if ($arg['required'] && !in_array($name, ['domain', 'profile'], true)) {
+                    continue 2;
+                }
+            }
+            $kinds[$profile->name] = in_array($profile->db, ['no', 'optional', 'required'], true) ? $profile->db : 'optional';
+        }
+        if ($listed === null || $listed === []) {
+            foreach (self::FALLBACK_KINDS as $name => $db) {
+                $kinds[$name] = $db;
+            }
+        }
+        uksort($kinds, static fn (string $a, string $b): int => array_search($a, NewSiteController::KNOWN_PROFILES, true) <=> array_search($b, NewSiteController::KNOWN_PROFILES, true));
+
+        return $kinds;
+    }
+
+    /**
+     * The question before the first step of «Вернуть сайт»: the kind of the site (the backup's own chosen where it names
+     * one) and whether a database is made (as the backup holds one); null when there is nothing to ask — another
+     * operation, the confirmation, a site that exists again, or the answer already given.
+     */
+    private function choice(Request $request): mixed
+    {
+        if ((string) $request->input('op') !== 'return-site' || $request->has('profile')
+            || !($this->authorizer?->authorize($request, 'env.server.operate')->isAllowed() ?? false)) {
+            return null;
+        }
+        $actor = ResolvePanelActor::of($request);
+        $capabilities = $this->overviews->read($actor)->overview->capabilities ?? PanelCapabilities::none();
+        if (!$capabilities->takes('backup:data-restore', 'files-live')) {
+            return null;
+        }
+        $domain = strtolower(trim((string) $request->input('domain')));
+        $backup = (string) $request->input('backup');
+        $held = $this->held($actor, $domain, $backup);
+        if ($held === null || $held->siteExists) {
+            return null;
+        }
+        $kinds = $this->kinds($actor, $capabilities);
+        $labels = [];
+        foreach (array_keys($kinds) as $name) {
+            $labels[$name] = $this->text('new_site.profiles.'.$name);
+        }
+
+        return $this->views->make('larena-env::admin.held-return', [
+            'heading' => $this->text('storages.operations.return-site'),
+            'eyebrow' => $this->text('storages.title'),
+            'domain' => $domain,
+            'backup' => $backup,
+            'kinds' => $kinds,
+            'labels' => $labels,
+            // The backup's own kind preselected where the server names it and makes it.
+            'chosen' => $held->profile !== null && isset($kinds[$held->profile]) ? $held->profile : null,
+            'known' => $held->profile,
+            'database' => $held->holdsDatabase(),
+            'planUrl' => route('larena.env.admin.storages.plan', [], false),
+            'cancelUrl' => route('larena.env.admin.storages', [], false),
+        ]);
+    }
+
+    /**
+     * Which step of the way back a refusal stops, for its sentence: [op, step, domain], or null for any other operation.
+     *
+     * @param array<string, string> $hidden
+     * @return array{0: string, 1: string, 2: string}|null
+     */
+    private function wayContext(Request $request, array $hidden = []): ?array
+    {
+        $op = (string) $request->input('op');
+        if (!in_array($op, self::RETURNS, true)) {
+            return null;
+        }
+        $step = (string) ($hidden['step'] ?? $request->input('step', ''));
+
+        return [$op, in_array($step, array_keys(self::STEPS), true) ? $step : ($op === 'return-site' ? 'add' : 'restore'),
+            strtolower(trim((string) $request->input('domain')))];
     }
 
     /**
@@ -360,17 +491,25 @@ final readonly class BackupStorageController
         return is_array($keys) && is_string($keys[0] ?? null) && is_string($keys[1] ?? null) ? [$keys[0], $keys[1]] : null;
     }
 
-    private function back(Request $request, string $reason): RedirectResponse
+    /** @param array{0: string, 1: string, 2: string}|null $way the step of the way back the refusal stops */
+    private function back(Request $request, string $reason, ?array $way = null): RedirectResponse
     {
         $key = 'larena-env::admin.reasons.'.$reason;
         $line = (string) $this->translator->get($key);
+        $said = $line !== $key ? $line : (string) $this->translator->get('larena-env::admin.reasons.unknown', ['reason' => $reason]);
+        // A step of the way back refused for a reason the panel has no sentence of its own for (a value the server did not
+        // take, an answer it could not read): which step, over which site, and what to do, then the server's reason.
+        if ($way !== null && (in_array($reason, self::BARE_REASONS, true) || $line === $key)) {
+            [$op, $step, $domain] = $way;
+            $said = $this->text('storages.held.refused.'.$op.'.'.$step, ['domain' => $domain]).' '.$this->text('storages.held.refused.why', ['reason' => rtrim($said, '.')]);
+        }
 
-        return NoticeRedirect::to($request, route('larena.env.admin.storages', [], false),
-            $line !== $key ? $line : (string) $this->translator->get('larena-env::admin.reasons.unknown', ['reason' => $reason]));
+        return NoticeRedirect::to($request, route('larena.env.admin.storages', [], false), $said);
     }
 
-    private function text(string $key): string
+    /** @param array<string, string> $replace */
+    private function text(string $key, array $replace = []): string
     {
-        return (string) $this->translator->get('larena-env::admin.'.$key);
+        return (string) $this->translator->get('larena-env::admin.'.$key, $replace);
     }
 }

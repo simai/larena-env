@@ -120,11 +120,18 @@ $server = new class (new RecordedAnswersGateway(env_recorded_path())) implements
                 'parts' => $parts, 'checksums' => true, 'encrypted' => false, 'reason' => $reason, 'keep_until' => '2026-11-27T01:00:00'];
 
             // A removed site made again (demo-static.test) and one that has its own files again (demo-php.test, 1.65.0).
-            return $answer('result', ['schema' => 'simai-backup-list/1', 'dest' => '/var/backups/simai', 'count' => 4, 'items' => [
+            // nokind.test as simai-env 1.65.0 lists a removed site's copy: no `profile` in the item.
+            return $answer('result', ['schema' => 'simai-backup-list/1', 'dest' => '/var/backups/simai', 'count' => 5, 'items' => [
                 $item('gone.test', false, '20261120-010000', 'site-remove', ['config', 'db', 'files']) + ['profile' => 'wordpress'],
                 $item('demo-php.test', true, '20261120-020000', 'db-drop', ['db']),
                 $item('demo-static.test', true, '20261120-030000', 'site-remove', ['config', 'files']),
-                $item('demo-php.test', true, '20261120-040000', 'site-remove', ['config', 'db', 'files'])]]);
+                $item('demo-php.test', true, '20261120-040000', 'site-remove', ['config', 'db', 'files']),
+                $item('nokind.test', false, '20261120-050000', 'site-remove', ['config', 'files'])]]);
+        }
+        // A value the server's gateway does not take (simai-env 1.65.0 panel_gate.py: invalid_argument), as for a site
+        // made again of a kind it refuses.
+        if ($request->command === 'site:add' && ($request->args['domain'] ?? null) === 'nokind.test' && ($request->args['profile'] ?? null) === 'laravel') {
+            return PanelAnswer::refused($request->requestId, 'invalid_argument');
         }
         // Files straight into a site that has files of its own are refused in the plan (simai-env 1.65.0 files-live).
         if ($request->command === 'backup:data-restore' && ($request->args['files-live'] ?? null) === 'yes' && ($request->args['domain'] ?? null) === 'demo-php.test') {
@@ -186,6 +193,9 @@ $translator = new class ($lines) implements \Illuminate\Contracts\Translation\Tr
     public function get($key, array $replace = [], $locale = null): mixed
     {
         $value = data_get($this->lines, substr((string) $key, strlen('larena-env::admin.')));
+        foreach ($replace as $name => $with) {
+            $value = is_string($value) ? str_replace(':'.$name, (string) $with, $value) : $value;
+        }
 
         return is_string($value) ? $value : $key;
     }
@@ -245,7 +255,7 @@ $cases = [
     // again comes back from the backup, its files left as they are.
     'return site' => [($held = new BackupStorageController($operations, $overviews, $extras, $views, $translator, $encrypter, $authorizer, $timed,
         new \Larena\Env\Server\SiteDetailsReader($server)))->plan(...), $held->run(...),
-        ['op' => 'return-site', 'domain' => 'gone.test', 'backup' => '20261120-010000'], ['step' => 'restore'], 'site:add'],
+        ['op' => 'return-site', 'domain' => 'gone.test', 'backup' => '20261120-010000', 'profile' => 'wordpress', 'create-db' => 'yes'], ['profile' => 'static'], 'site:add'],
     'return database' => [$held->plan(...), $held->run(...),
         ['op' => 'return-db', 'domain' => 'demo-php.test', 'backup' => '20261120-020000'], ['db' => 'no'], 'backup:data-restore'],
     'security' => [($security = new SecurityController($operations, $overviews, $extras, $views, $translator, $authorizer, null, $timed))->plan(...), $security->run(...),
@@ -290,19 +300,56 @@ foreach ($cases as $name => [$plan, $run, $input, $changed, $command]) {
 }
 
 // What each step of the way back says comes next, and what it asks of the server.
-$held->plan($asking(['op' => 'return-site', 'domain' => 'gone.test', 'backup' => '20261120-010000']));
+$held->plan($asking(['op' => 'return-site', 'domain' => 'gone.test', 'backup' => '20261120-010000', 'profile' => 'wordpress', 'create-db' => 'yes']));
 env_assert(($views->data['hidden']['step'] ?? null) === 'add' && $views->data['then'] === [$lines['storages']['held']['then']['return-site']['add']],
     'A removed site is made again first, and the plan says the data comes back after.');
 $held->plan($asking(['op' => 'return-db', 'domain' => 'demo-php.test', 'backup' => '20261120-020000']));
 env_assert(($views->data['hidden']['step'] ?? null) === 'restore' && ($views->data['plan']->args['files'] ?? null) === 'no', 'A database the site has again: only the database is put back.');
-// The site made again with its kind where the server names it, a database where the backup holds one (simai-env 1.65.0)…
-$held->plan($asking(['op' => 'return-site', 'domain' => 'gone.test', 'backup' => '20261120-010000']));
+// «Вернуть сайт» of a removed site asks its kind and database first: the backup's kind chosen where the server names it,
+// the database ticked where the backup holds one (simai-env 1.65.0)…
+$asked = $held->plan($asking(['op' => 'return-site', 'domain' => 'gone.test', 'backup' => '20261120-010000']));
+env_assert(!$asked instanceof RedirectResponse && !isset($views->data['plan']) && ($views->data['chosen'] ?? null) === 'wordpress' && ($views->data['database'] ?? null) === true
+    && isset($views->data['kinds']['static'], $views->data['kinds']['wordpress']) && !isset($views->data['kinds']['redirect']) && !isset($views->data['kinds']['proxy']),
+    'The kind and database asked first, the backup\'s chosen: '.json_encode(array_intersect_key($views->data, ['chosen' => 1, 'database' => 1, 'kinds' => 1])));
+// …and where the backup names none (1.65.0's backup:data-list), nothing is chosen for the person: never a site:add without a kind.
+$asked = $held->plan($asking(['op' => 'return-site', 'domain' => 'nokind.test', 'backup' => '20261120-050000']));
+env_assert(!$asked instanceof RedirectResponse && array_key_exists('chosen', $views->data) && $views->data['chosen'] === null && $views->data['known'] === null && ($views->data['database'] ?? null) === false
+    && $views->data['kinds'] !== [], 'A backup without its kind: the person chooses, no database ticked: '.json_encode([$asked instanceof RedirectResponse ? $session->get('larena_env_notice') : 'view', array_intersect_key($views->data, ['chosen' => 1, 'known' => 1, 'database' => 1, 'kinds' => 1])]));
+$server->started = [];
+$noKind = $held->plan($asking(['op' => 'return-site', 'domain' => 'nokind.test', 'backup' => '20261120-050000', 'profile' => '']));
+env_assert($noKind instanceof RedirectResponse && str_contains((string) $session->get('larena_env_notice'), $lines['reasons']['return_kind_missing']),
+    'No kind chosen: refused in words, the server not asked: '.(string) $session->get('larena_env_notice'));
+$session->forget('larena_env_notice');
+env_assert((static function (): bool {
+    try {
+        \Larena\Env\Gateway\PanelCommands::check('site:add', ['domain' => 'nokind.test'], true);
+    } catch (\Larena\Env\Gateway\PanelRefused $refused) {
+        return $refused->reasonCode === 'invalid_argument';
+    }
+
+    return false;
+})(), 'The panel\'s rules take no site:add without its kind, as the gateway (1.65.0).');
+$held->plan($asking(['op' => 'return-site', 'domain' => 'nokind.test', 'backup' => '20261120-050000', 'profile' => 'static', 'create-db' => 'yes']));
+env_assert(($views->data['plan']->args ?? null) === ['domain' => 'nokind.test', 'profile' => 'static'] && ($views->data['hidden']['create-db'] ?? null) === 'no',
+    'The kind chosen; a static site gets no database even if ticked: '.json_encode($views->data['plan']->args ?? null));
+$held->plan($asking(['op' => 'return-site', 'domain' => 'nokind.test', 'backup' => '20261120-050000', 'profile' => 'generic', 'create-db' => 'yes']));
+env_assert(($views->data['plan']->args ?? null) === ['domain' => 'nokind.test', 'profile' => 'generic', 'create-db' => 'yes'], 'A PHP site with the database ticked.');
+// A step the server refuses with a bare «invalid value» is said with the step and the site, never that sentence alone.
+$bare = $held->plan($asking(['op' => 'return-site', 'domain' => 'nokind.test', 'backup' => '20261120-050000', 'profile' => 'laravel', 'create-db' => 'no']));
+$said = (string) $session->get('larena_env_notice');
+env_assert($bare instanceof RedirectResponse && $said !== $lines['reasons']['invalid_argument'] && str_contains($said, str_replace(':domain', 'nokind.test', $lines['storages']['held']['refused']['return-site']['add']))
+    && str_contains($said, rtrim($lines['reasons']['invalid_argument'], '.')), 'The refusal in words: '.$said);
+$session->forget('larena_env_notice');
+// The site made again with the kind chosen, a database where asked (simai-env 1.65.0)…
+$held->plan($asking(['op' => 'return-site', 'domain' => 'gone.test', 'backup' => '20261120-010000', 'profile' => 'wordpress', 'create-db' => 'yes']));
 env_assert(($views->data['plan']->args['profile'] ?? null) === 'wordpress' && ($views->data['plan']->args['create-db'] ?? null) === 'yes'
     && ($views->data['hidden']['profile'] ?? null) === 'wordpress', 'The same domain and kind, with a database: '.json_encode($views->data['plan']->args ?? null));
 // …then its files straight into the new, empty site, in place: no folder beside it.
 $held->plan($asking(['op' => 'return-site', 'domain' => 'demo-static.test', 'backup' => '20261120-030000']));
 env_assert(($views->data['hidden']['step'] ?? null) === 'restore' && ($views->data['plan']->args['files-live'] ?? null) === 'yes'
-    && $views->data['then'] === [$lines['storages']['held']['then']['return-site']['restore']]
+    && ($views->data['plan']->args['db'] ?? null) === 'no'
+    // A backup without a database does not promise one back.
+    && $views->data['then'] === [$lines['storages']['held']['then']['return-site']['restore_files']]
     && !str_contains($lines['storages']['held']['then']['return-site']['restore'], 'folder'), 'The backup\'s files go back into the site itself.');
 // A site that has files of its own again is refused by the server's plan, in words.
 $notEmpty = $held->plan($asking(['op' => 'return-site', 'domain' => 'demo-php.test', 'backup' => '20261120-040000']));

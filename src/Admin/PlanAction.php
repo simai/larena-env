@@ -100,6 +100,11 @@ final class PlanAction
             // A temporary link (simai-env 1.65.0): the site, the address it opens on (never the key), for how long, and
             // whether the open link is renewed (the same link, a new deadline).
             $facts = self::previewFacts($plan, (string) $target);
+        } elseif ($command === 'backup:data-restore' && ($plan->args['files-live'] ?? null) === 'yes') {
+            // «Вернуть сайт», its second step (simai-env 1.65.0 files-live): the site, the backup, and what comes back in
+            // words — the files straight into the site, the database only where the backup holds one; never the server's
+            // argument names.
+            $facts = self::returnFacts($plan, (string) $target, ($plan->args['db'] ?? $hidden['db'] ?? 'no') === 'yes');
         } elseif ($plan->transfer !== null || ($plan->account !== null && $plan->account['sites'] !== [])) {
             // Sites moving between server accounts (simai-env 1.57.0, 1.63.1): from whom to whom in the panel's words, not
             // the server's values.
@@ -142,7 +147,9 @@ final class PlanAction
             runUrl: $runUrl,
             token: $token,
             runFields: $fields,
-            acceptText: $destroys ? $heading : ($heading !== $command ? $heading : (self::text('plan.confirm') ?? '')),
+            // A temporary link that is open already is extended: the answer says «Продлить» (simai-env 1.65.0 renew).
+            acceptText: $command === 'site:preview-link' && ($plan->preview['renew'] ?? false) ? (self::text('preview_link.renew') ?? $heading)
+                : ($destroys ? $heading : ($heading !== $command ? $heading : (self::text('plan.confirm') ?? ''))),
             danger: $destroys,
             // What deletes, replaces or stops something says so on the plate: the panel's sentence, else the server's (simai-env 1.60.0).
             consequence: $command === 'site:restore-ready' ? RestoreWords::consequence(self::restoreArgs($plan, $hidden), $plan->restore, self::restoreText(...))
@@ -248,6 +255,29 @@ final class PlanAction
         $minutes = $plan->preview['minutes'] ?? (is_numeric($plan->args['minutes'] ?? null) ? (int) $plan->args['minutes'] : 60);
         $facts[] = [self::text('preview_link.plan.term') ?? 'For', self::previewTerm($minutes)];
         $facts[] = [self::text('preview_link.plan.link') ?? 'Link', self::text('preview_link.plan.'.(($plan->preview['renew'] ?? false) ? 'renew' : 'new')) ?? ''];
+
+        return $facts;
+    }
+
+    /**
+     * What «Вернуть сайт» puts back, in words: over which site, from which backup, the files straight into the site, and
+     * the database where the backup holds one.
+     *
+     * @return list<array{0: string, 1: string}>
+     */
+    private static function returnFacts(PanelPlan $plan, string $target, bool $database): array
+    {
+        $facts = [];
+        if ($target !== '') {
+            $facts[] = [self::text('plan.target') ?? 'Target', $target];
+        }
+        if (is_string($plan->args['backup'] ?? null)) {
+            $facts[] = [self::text('storages.held.plan.backup') ?? 'Backup', $plan->args['backup']];
+        }
+        $facts[] = [self::text('storages.held.plan.files') ?? 'Files', self::text('storages.held.plan.files_value') ?? ''];
+        if ($database) {
+            $facts[] = [self::text('storages.held.plan.db') ?? 'Database', self::text('storages.held.plan.db_value') ?? ''];
+        }
 
         return $facts;
     }

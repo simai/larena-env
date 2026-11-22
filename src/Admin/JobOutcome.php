@@ -30,6 +30,10 @@ final class JobOutcome
         if ($status->state === JobState::Succeeded && self::replaced($status)) {
             return self::text('job.done.file-replaced');
         }
+        if ($status->state === JobState::Succeeded && self::returned($status)) {
+            // «Вернуть сайт» done: what came back — the files, and the database where the backup held one.
+            return self::text('job.done.backup-data-restore-'.(($status->args['db'] ?? 'no') === 'yes' ? 'site-db' : 'site'), ['domain' => $status->args['domain'] ?? '']);
+        }
         if ($status->state === JobState::Succeeded) {
             $key = in_array($status->command, self::DONE, true) ? str_replace(':', '-', $status->command) : 'other';
 
@@ -72,6 +76,12 @@ final class JobOutcome
             $domain !== null => [self::site($domain), self::text('job.next.site')],
             default => null,
         };
+    }
+
+    /** «Вернуть сайт»'s last step: a backup's files put straight back into the site (simai-env 1.65.0 files-live). */
+    private static function returned(PanelJobStatus $status): bool
+    {
+        return $status->command === 'backup:data-restore' && ($status->args['files-live'] ?? null) === 'yes';
     }
 
     /** A write, an upload or an unpacking that put the files it replaced into the site's trash. */
@@ -119,8 +129,12 @@ final class JobOutcome
             JobState::Cancelled => self::text('job.states.cancelled'),
             default => $status->outcome['words'] ?? self::text('job.failed_text'),
         };
-        $label = $status->title ?? (is_string($status->args['domain'] ?? null) && $status->args['domain'] !== ''
-            ? self::text('job.progress_of', ['domain' => $status->args['domain']]) : self::text('job.progress'));
+        // What it does in the panel's words, as «История» says it («Временная ссылка на demo.test»); the server's own
+        // title only where the panel has none (simai-env 1.65.0 named its new commands in English).
+        $label = $status->title !== null && function_exists('__')
+            ? EnvHistorySource::words($status, static fn (string $key, array $replace = []): mixed => __($key, $replace))
+            : (is_string($status->args['domain'] ?? null) && $status->args['domain'] !== ''
+                ? self::text('job.progress_of', ['domain' => $status->args['domain']]) : self::text('job.progress'));
 
         [$started, $finished] = self::span($status);
 

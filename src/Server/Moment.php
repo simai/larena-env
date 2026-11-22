@@ -49,6 +49,29 @@ final class Moment
     }
 
     /**
+     * The panel's own time zone (the admin's site.timezone setting, UTC until one is chosen), as sf-time's time-zone, so
+     * a time reads the same on every panel screen; null outside the admin or when it cannot be read.
+     */
+    public static function zone(): ?string
+    {
+        $settings = \Larena\Admin\Settings\AdminSiteSettings::class;
+        if (!class_exists($settings) || !class_exists(\Illuminate\Container\Container::class)) {
+            return null;
+        }
+        $container = \Illuminate\Container\Container::getInstance();
+        if (!$container->bound($settings)) {
+            return null;
+        }
+        try {
+            $zone = $container->make($settings)->timezone();
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return $zone !== '' ? $zone : null;
+    }
+
+    /**
      * The moment as ISO 8601 with its offset, for the Framework's sf-time to say it in the reader's own time (PX-6), or
      * null when the server wrote none or not a time.
      */

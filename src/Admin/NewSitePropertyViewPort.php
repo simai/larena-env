@@ -227,7 +227,8 @@ final class NewSitePropertyViewPort extends PropertyViewPort
                 continue;
             }
             try {
-                PanelCommands::check('site:add', ['domain' => $argument === 'domain' ? $raw[$argument] : 'example.com', $argument => $raw[$argument]]);
+                // One field at a time, beside a domain and a kind (both required by the gateway) that pass.
+                PanelCommands::check('site:add', [$argument => $raw[$argument]] + ['domain' => 'example.com', 'profile' => 'generic']);
             } catch (PanelRefused) {
                 return $field;
             }

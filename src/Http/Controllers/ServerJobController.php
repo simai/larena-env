@@ -80,8 +80,9 @@ final readonly class ServerJobController
             'missing' => $result->status === null && $result->reason === self::UNKNOWN_JOB,
             'reasonText' => $result->reason === null ? null : $this->reasonText($result->reason),
             'notice' => $request->session()->get('larena_env_notice'),
-            // The server's own zone (simai-env 1.60.0): its times are said in it, how long ago in the tooltip.
-            'timezone' => $result->status === null ? null : $this->overviews?->read($actor)->overview?->timezone,
+            // The panel's own zone (the admin's time zone setting), as every panel screen says a time: the job's start and
+            // end read as «История» reads them; the server's zone only where the panel's cannot be read.
+            'timezone' => $result->status === null ? null : (\Larena\Env\Server\Moment::zone() ?? $this->overviews?->read($actor)->overview?->timezone),
             // «Повторить» for a job that ended without success, where the person may run it (owner 2026-11-18).
             'canAgain' => $result->status !== null && $result->status->state->isOver() && $this->mayAgain($request, $result->status),
         ]);

@@ -181,6 +181,56 @@ $renewed = $operations->view($admin, (string) $operations->start($admin, SiteOpe
 env_assert($renewed instanceof PreviewLink && $renewed->renewed && $renewed->url === $link->url && strcmp((string) $renewed->expiresAt, (string) $link->expiresAt) > 0,
     'Renewed: the same port and key, the deadline moved, the link given again.');
 env_assert(!str_contains($kept(), $key), 'Still nothing of the key in the cache.');
+// Extending an open link is answered «Продлить», not with the action's name.
+$renewAction = \Larena\Env\Admin\PlanAction::of($renew->plan, '/run', ['operation' => 'preview-link', 'minutes' => '1440'], 'test',
+    ['heading' => $text('operations.preview-link'), 'target' => 'demo-php.test', 'cancel' => '/', 'check' => null, 'warnings' => [], 'more' => '']);
+$openAction = \Larena\Env\Admin\PlanAction::of($plan->plan, '/run', ['operation' => 'preview-link', 'minutes' => '60'], 'test',
+    ['heading' => $text('operations.preview-link'), 'target' => 'demo-php.test', 'cancel' => '/', 'check' => null, 'warnings' => [], 'more' => '']);
+env_assert($renewAction->acceptText === $text('preview_link.renew') && $openAction->acceptText === $text('operations.preview-link'),
+    'Renewing says «Продлить»; a new link keeps the action\'s name: '.$renewAction->acceptText.' / '.$openAction->acceptText);
+// «Вернуть сайт» (1.65.0 files-live): the plan says what comes back in words, never the server's argument names: the files into the site, the database only
+// where the backup holds one.
+$words = static fn (bool $db): array => array_map(static fn (array $fact): array => [$fact['label'], $fact['value']], \Larena\Env\Admin\PlanAction::of(
+    \Larena\Env\Operations\PanelPlan::fromData(['command' => 'backup:data-restore', 'args' => ['domain' => 'demo-static.test', 'backup' => '20261120-030000', 'files-live' => 'yes',
+        'db' => $db ? 'yes' : 'no'], 'description' => 'x', 'effects' => 'write', 'lock' => 'site']),
+    '/run', ['op' => 'return-site', 'step' => 'restore', 'db' => $db ? 'yes' : 'no'], 'test',
+    ['heading' => 'Return', 'target' => 'demo-static.test', 'cancel' => '/', 'check' => null, 'warnings' => [], 'more' => ''])->facts);
+$flat = json_encode([$words(false), $words(true)], JSON_UNESCAPED_UNICODE) ?: '';
+env_assert(!str_contains($flat, 'files-live') && in_array([$text('storages.held.plan.files'), $text('storages.held.plan.files_value')], $words(false), true)
+    && !in_array([$text('storages.held.plan.db'), $text('storages.held.plan.db_value')], $words(false), true)
+    && in_array([$text('storages.held.plan.db'), $text('storages.held.plan.db_value')], $words(true), true), 'The plan in words: '.$flat);
+// …and its end says what came back, the files and the database where the backup held one, and opens the site's card.
+$returned = static fn (string $db): \Larena\Env\Operations\PanelJobStatus => new \Larena\Env\Operations\PanelJobStatus(jobId: '0123456789abcdef01234567',
+    state: \Larena\Env\Operations\JobState::Succeeded, command: 'backup:data-restore', args: ['domain' => 'demo-static.test', 'backup' => '20261120-030000', 'files-live' => 'yes', 'db' => $db],
+    exitCode: 0, createdAt: null, actor: null);
+env_assert(\Larena\Env\Admin\JobOutcome::heading($returned('no')) === 'The site demo-static.test is back: its files are in place'
+    && \Larena\Env\Admin\JobOutcome::heading($returned('yes')) === 'The site demo-static.test is back: its files and database are in place'
+    && \Larena\Env\Admin\JobOutcome::next($returned('no')) === ['/admin/server/larena.env.admin.site/demo-static.test', $text('job.next.site')],
+    'The end of «Вернуть сайт» in words: '.\Larena\Env\Admin\JobOutcome::heading($returned('no')).' → '.json_encode(\Larena\Env\Admin\JobOutcome::next($returned('no'))));
+// One clock for a job (owner check of 0.4.7 on 1.65.0: the run's side panel said 13:36, «История» 16:36): the job's times
+// are said in the panel's own time zone setting, as the panel's other times; the server's only outside the admin.
+$container = \Illuminate\Container\Container::getInstance();
+env_assert(\Larena\Env\Server\Moment::zone() === null || $container->bound(\Larena\Admin\Settings\AdminSiteSettings::class), 'Outside the admin no zone of the panel.');
+$container->instance(\Larena\Admin\Settings\AdminSiteSettings::class, new class {
+    public function timezone(): string { return 'Europe/Moscow'; }
+});
+env_assert(\Larena\Env\Server\Moment::zone() === 'Europe/Moscow', 'The panel\'s time zone setting is the job\'s.');
+$container->forgetInstance(\Larena\Admin\Settings\AdminSiteSettings::class);
+$job = (string) file_get_contents(dirname(__DIR__, 2).'/src/Http/Controllers/ServerJobController.php');
+env_assert(str_contains($job, "'timezone' => \$result->status === null ? null : (\\Larena\\Env\\Server\\Moment::zone() ??"), 'The job\'s page says its times in the panel\'s zone first.');
+// The link's runs in «История» and on the job's progress in the panel's words, in every language, never the server's English title.
+$run = static fn (string $command): \Larena\Env\Operations\PanelJobStatus => new \Larena\Env\Operations\PanelJobStatus(jobId: '0123456789abcdef01234567',
+    command: $command, args: ['domain' => 'demo-php.test'], state: \Larena\Env\Operations\JobState::Succeeded, exitCode: 0, createdAt: null, actor: null, title: 'Site preview link demo-php.test');
+$history = static fn (string $command): string => \Larena\Env\Admin\EnvHistorySource::words($run($command), static fn (string $key, array $replace = []): string => __($key, $replace));
+env_assert($history('site:preview-link') === 'Temporary link to demo-php.test' && $history('site:preview-link-close') === 'Temporary link to demo-php.test closed',
+    'History says the link\'s runs in the panel\'s words: '.$history('site:preview-link'));
+foreach (glob(dirname(__DIR__, 2).'/resources/lang/*/admin.php') ?: [] as $file) {
+    $words = require $file;
+    foreach (['preview_link', 'preview_link_close'] as $name) {
+        $line = $words['runs']['commands']['site'][$name] ?? null;
+        env_assert(is_string($line) && str_contains($line, ':domain') && !str_contains($line, 'preview link'), basename(dirname($file)).": runs.commands.site.{$name} in its own words.");
+    }
+}
 
 // An owner opens a link on their own site, not on another's.
 env_assert($operations->plan($owner, SiteOperation::PreviewLink, 'demo-owned.test', ['minutes' => '60'])->plan?->command === 'site:preview-link', 'An owner\'s own site.');
