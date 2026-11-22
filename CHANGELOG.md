@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.8 — built 2026-11-22, on the local stand, not released (waits for the owner's acceptance)
 
 Needs simai-env 1.65.0 for everything below; with an older server these screens are not offered.
 
