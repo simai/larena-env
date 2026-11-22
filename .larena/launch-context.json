@@ -162,7 +162,11 @@
     "tests/Unit/SiteNamesTest.php",
     "tests/Unit/SiteRoutesTest.php",
     "src/Admin/SiteCard.php",
-    ".larena/launch-context.json"
+    ".larena/launch-context.json",
+    "src/Operations/PreviewLink.php",
+    "src/Server/PreviewLinkState.php",
+    "resources/views/admin/partials/preview-link.blade.php",
+    "tests/Unit/PreviewLinkTest.php"
   ],
   "forbidden_files": [
     "../*"

@@ -18,6 +18,7 @@ use Larena\Env\Http\Support\PlanReceipts;
 use Larena\Env\Operations\PanelOperations;
 use Larena\Env\Gateway\PanelActor;
 use Larena\Env\Gateway\PanelCapabilities;
+use Larena\Env\Gateway\PanelCommands;
 use Larena\Env\Gateway\PanelRequest;
 use Larena\Env\Operations\SiteOperation;
 use Larena\Env\Server\Moment;
@@ -286,6 +287,12 @@ final readonly class SiteAdminController
                 'state' => $capabilities->allows('site:db-browser-status') ? $this->extras->dbBrowser($actor, $domain) : null,
                 'refusal' => \Larena\Env\Server\DbBrowserState::refusal($site),
                 'certificate' => $capabilities->allows(SiteOperation::CertificateIssue->command()),
+            ] : null,
+            // The site's temporary link (simai-env 1.65.0) on «Домены и HTTPS», where its names and their DNS are: open until
+            // when (site:describe preview_link, never the key), or what stops it, said before anyone asks.
+            'previewLink' => $site !== null && $tab === 'domains' && $capabilities->allows('site:preview-link') ? [
+                'state' => $site->previewLink,
+                'refusal' => \Larena\Env\Server\PreviewLinkState::refusal($site),
             ] : null,
             'sftpAccounts' => $sftpAccounts,
             // The domain's records through the panel's DNS provider, and whether it points here (Panel plan, stage 7).
@@ -901,6 +908,10 @@ final readonly class SiteAdminController
         if ($operation === SiteOperation::BitrixRestoreReady && isset($input['source'], $input['url'])) {
             return $this->back($request, $domain, 'source_and_url', $operation->tab(), $operation);
         }
+        // A temporary link's own term out of 10 to 1440 minutes is said as such, not as an invalid request.
+        if ($operation === SiteOperation::PreviewLink && isset($input['minutes']) && !PanelCommands::valid('site:preview-link', 'minutes', $input['minutes'])) {
+            return $this->back($request, $domain, 'preview_minutes', $operation->tab(), $operation);
+        }
         $result = $this->operations->plan($actor, $operation, $domain, $input);
         if ($result->plan === null) {
             $refused = $this->refusedPlan($operation, $domain, $result, $input);
@@ -945,6 +956,11 @@ final readonly class SiteAdminController
         $reasons = [];
         if ($operation === SiteOperation::DatabaseBrowse && in_array($reason, \Larena\Env\Server\DbBrowserState::REFUSALS, true)) {
             $reasons[] = (string) $this->translator->get('larena-env::admin.db_browser.refusals.'.$reason);
+        }
+        // A temporary link the server will not open (simai-env 1.65.0): an alias, a paused site, no public address, no
+        // nginx, no free port — the panel's sentence.
+        if ($operation === SiteOperation::PreviewLink && in_array($reason, \Larena\Env\Server\PreviewLinkState::REFUSALS, true)) {
+            $reasons[] = (string) $this->translator->get('larena-env::admin.preview_link.refusals.'.$reason);
         }
         // A site's handing over refused (same_owner, owner_missing, owner_blocked, panel_site): the panel's sentence.
         $transferRefusal = $operation === SiteOperation::SiteTransfer ? \Larena\Env\Admin\AccountMoves::refusal($operation->command(), $reason,
@@ -1103,7 +1119,8 @@ final readonly class SiteAdminController
             if (!$dns && in_array($field, SiteOperation::DNS_FIELDS, true)) {
                 continue;
             }
-            $value = $request->input($field);
+            $value = $operation === SiteOperation::PreviewLink && $field === 'minutes'
+                ? SiteOperation::previewMinutes($request->input('minutes'), $request->input('minutes-custom')) : $request->input($field);
             if (is_string($value) && $value !== '') {
                 $input[$field] = $value;
             }

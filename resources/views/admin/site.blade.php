@@ -145,6 +145,11 @@
             @if (($siteNames ?? null) !== null)
                 @include('larena-env::admin.partials.site-names')
             @endif
+            {{-- «Временная ссылка» beside the site's names (object card study: one place for where the site answers), before its
+                 domain points here (simai-env 1.65.0). --}}
+            @if (($previewLink ?? null) !== null)
+                @include('larena-env::admin.partials.preview-link')
+            @endif
             <section class="larena-panel larena-panel-padded" data-env-certificate="{{ $site->certificate ? 'present' : 'none' }}" aria-labelledby="env-site-certificate">
                 <h2 id="env-site-certificate" class="text-2">{{ __('larena-env::admin.certificate.title') }}</h2>
                 @if ($site->certificate === null)
@@ -572,7 +577,7 @@
                                 @continue
                             @endif
                             <div class="larena-field">
-                                <label for="env-{{ $operation->value }}-{{ $field }}">{{ __('larena-env::admin.fields.'.$field) }}</label>
+                                <label for="env-{{ $operation->value }}-{{ $field }}" id="env-{{ $operation->value }}-{{ $field }}-label">{{ __('larena-env::admin.fields.'.$field) }}</label>
                                 @if ($field === 'email')
                                     {{-- Optional: the person's own email is sent when the field is left empty (block 4). --}}
                                     <input type="email" id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}" value="{{ $personEmail ?? '' }}" @if (($personEmail ?? null) === null) required @endif>
@@ -624,6 +629,18 @@
                                         <option value="dns">{{ __('larena-env::admin.fields.challenge_dns') }}</option>
                                     </select>
                                     <p id="env-{{ $operation->value }}-{{ $field }}-hint" class="m-0 text-small color-on-surface-variant">{{ __('larena-env::admin.fields.challenge_hint') }}</p>
+                                @elseif ($field === 'minutes' && $operation === \Larena\Env\Operations\SiteOperation::PreviewLink)
+                                    {{-- The temporary link's term (the server takes 10 to 1440 minutes): an hour first, a day, or its own
+                                         number of minutes typed beside «Своё». --}}
+                                    <div class="flex flex-column gap-1" role="radiogroup" aria-labelledby="env-{{ $operation->value }}-{{ $field }}-label" data-env-preview-minutes>
+                                        @foreach (\Larena\Env\Operations\SiteOperation::PREVIEW_TERMS as $minutes)
+                                            <label class="flex items-cross-center gap-1"><input type="radio" @if ($loop->first) id="env-{{ $operation->value }}-{{ $field }}" @endif name="minutes" value="{{ $minutes }}" @if ($loop->first) checked @endif data-env-preview-term="{{ $minutes }}"> <span>{{ __('larena-env::admin.preview_link.terms.'.$minutes) }}</span></label>
+                                        @endforeach
+                                        <label class="flex flex-wrap items-cross-center gap-1"><input type="radio" name="minutes" value="custom" data-env-preview-term="custom"> <span>{{ __('larena-env::admin.preview_link.terms.custom') }}</span>
+                                            <input type="number" name="minutes-custom" min="10" max="1440" step="1" inputmode="numeric" style="width: 7rem;" aria-label="{{ __('larena-env::admin.preview_link.custom_label') }}" data-env-preview-custom>
+                                            <span class="text-small color-on-surface-variant">{{ __('larena-env::admin.preview_link.custom_unit') }}</span></label>
+                                    </div>
+                                    <p class="m-0 text-small color-on-surface-variant">{{ __('larena-env::admin.preview_link.minutes_hint') }}</p>
                                 @elseif ($field === 'minutes')
                                     {{-- Three terms (the server takes 5 to 480 minutes): an hour first. --}}
                                     <select id="env-{{ $operation->value }}-{{ $field }}" name="{{ $field }}" data-env-db-browser-minutes>

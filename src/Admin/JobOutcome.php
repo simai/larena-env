@@ -18,7 +18,7 @@ final class JobOutcome
 {
     /** The words of the end, by command (`job.done.<command>`); any other says «Готово». */
     private const array DONE = ['site:remove', 'site:db-drop', 'site:redirect-add', 'site:redirect-remove', 'ssl:letsencrypt', 'wp:install', 'profile:enable', 'profile:disable', 'site:db-browser', 'site:db-browser-close',
-        'site:db-create', 'site:db-rotate', 'site:db-credentials'];
+        'site:db-create', 'site:db-rotate', 'site:db-credentials', 'site:preview-link', 'site:preview-link-close'];
 
     private function __construct()
     {
@@ -67,6 +67,8 @@ final class JobOutcome
             // A new database password (simai-env 1.59.0) is shown by asking for the connection details, once.
             $status->command === 'site:db-rotate' && $domain !== null => [self::site($domain).'?tab=database&action=database-credentials', self::text('job.next.credentials')],
             in_array($status->command, ['site:db-create', 'site:db-credentials'], true) && $domain !== null => [self::site($domain).'?tab=database', self::text('job.next.database')],
+            // A temporary link opened, renewed or closed (simai-env 1.65.0): back to it, beside the site's names.
+            in_array($status->command, ['site:preview-link', 'site:preview-link-close'], true) && $domain !== null => [self::site($domain).'?tab=domains', self::text('job.next.site')],
             $domain !== null => [self::site($domain), self::text('job.next.site')],
             default => null,
         };

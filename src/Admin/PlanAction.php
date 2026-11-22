@@ -96,6 +96,10 @@ final class PlanAction
             // «Восстановить из архива»: what is unpacked where, which database the dump goes to and what it holds now, what
             // is replaced and the copy before, from what the server's check found (simai-env 1.63.4), in the panel's words.
             $facts = RestoreWords::facts((string) $target, self::restoreArgs($plan, $hidden), $plan->restore, self::restoreText(...));
+        } elseif ($command === 'site:preview-link') {
+            // A temporary link (simai-env 1.65.0): the site, the address it opens on (never the key), for how long, and
+            // whether the open link is renewed (the same link, a new deadline).
+            $facts = self::previewFacts($plan, (string) $target);
         } elseif ($plan->transfer !== null || ($plan->account !== null && $plan->account['sites'] !== [])) {
             // Sites moving between server accounts (simai-env 1.57.0, 1.63.1): from whom to whom in the panel's words, not
             // the server's values.
@@ -143,7 +147,12 @@ final class PlanAction
             // What deletes, replaces or stops something says so on the plate: the panel's sentence, else the server's (simai-env 1.60.0).
             consequence: $command === 'site:restore-ready' ? RestoreWords::consequence(self::restoreArgs($plan, $hidden), $plan->restore, self::restoreText(...))
                 : (($destroys && ($screen['keeps_copy'] ?? false) ? self::text('plan.consequence_kept.'.$key) : null)
-                    ?? ($destroys || in_array($key, self::SAID_CONSEQUENCES, true) ? self::text('plan.consequence.'.$key) : null) ?? $plan->consequence ?? ''),
+                    ?? ($destroys || in_array($key, self::SAID_CONSEQUENCES, true) ? self::text('plan.consequence.'.$key) : null)
+                    // Who reaches the site through a temporary link, and until when (simai-env 1.65.0).
+                    ?? ($command === 'site:preview-link' ? self::text('preview_link.plan.consequence') : null)
+                    // A held backup's files going back into the empty site itself (simai-env 1.65.0 files-live).
+                    ?? ($command === 'backup:data-restore' && ($plan->args['files-live'] ?? null) === 'yes' ? self::text('storages.held.files_live') : null)
+                    ?? $plan->consequence ?? ''),
             require: $destroys && $target !== null ? $target : '',
             facts: $facts,
             // What the panel knows, then what the server's check found: what would stop it, then what is worth knowing.
@@ -220,6 +229,37 @@ final class PlanAction
     private static function restoreText(string $key, array $replace = []): string
     {
         return self::text('restore.'.$key, $replace) ?? $key;
+    }
+
+    /**
+     * A temporary link's plan in the panel's words: the site, the address (IP and port, no key), the term, renewed or new.
+     *
+     * @return list<array{0: string, 1: string}>
+     */
+    private static function previewFacts(PanelPlan $plan, string $target): array
+    {
+        $facts = [];
+        if ($target !== '') {
+            $facts[] = [self::text('plan.target') ?? 'Target', $target];
+        }
+        if (($plan->preview['address'] ?? null) !== null) {
+            $facts[] = [self::text('preview_link.plan.address') ?? 'Address', (string) $plan->preview['address']];
+        }
+        $minutes = $plan->preview['minutes'] ?? (is_numeric($plan->args['minutes'] ?? null) ? (int) $plan->args['minutes'] : 60);
+        $facts[] = [self::text('preview_link.plan.term') ?? 'For', self::previewTerm($minutes)];
+        $facts[] = [self::text('preview_link.plan.link') ?? 'Link', self::text('preview_link.plan.'.(($plan->preview['renew'] ?? false) ? 'renew' : 'new')) ?? ''];
+
+        return $facts;
+    }
+
+    /** «1 час», «1 день», else «90 минут»: the term in words. */
+    public static function previewTerm(int $minutes): string
+    {
+        return match ($minutes) {
+            60 => self::text('preview_link.terms.60') ?? '1 hour',
+            1440 => self::text('preview_link.terms.1440') ?? '1 day',
+            default => self::text('preview_link.plan.minutes', ['count' => (string) $minutes]) ?? $minutes.' min',
+        };
     }
 
     /** «Удалить сайт demo.test? Отменить это нельзя.» asks its first sentence; the rest is the plate's own words. */

@@ -40,8 +40,9 @@ foreach (['site:remove', 'site:db-drop', 'site:redirect-add', 'site:redirect-rem
 // the deploy from Git of the Laravel repository route (simai-env 1.56.2); 6 removals, redirects and a workspace's key (audit block 5, A2);
 // 2 of a site's trash (1.57.0); 2 of a site's database browser (1.58.0); the database's connection details (1.59.0);
 // a site paused, resumed, its caches cleared, its certificate removed, a file copied (1.57.0) and a PHP site restored (1.57.1);
-// 2 of the services stopped and started (1.62.0); a site handed to another server account (1.57.0).
-env_assert(count(PanelCommands::actions()) === 110, 'The card\'s actions, a new site, the owners, the nginx directives, the alerts, the update, the services, the jobs, the firewall, the DNS token, PHP, the server\'s software, the files, the security, the countries, the MCP keys, the backup storages and the panel\'s address.');
+// 2 of the services stopped and started (1.62.0); a site handed to another server account (1.57.0); 2 of a site's temporary
+// link (1.65.0).
+env_assert(count(PanelCommands::actions()) === 112, 'The card\'s actions, a new site, the owners, the nginx directives, the alerts, the update, the services, the jobs, the firewall, the DNS token, PHP, the server\'s software, the files, the security, the countries, the MCP keys, the backup storages and the panel\'s address.');
 // The addresses that reach the panel are the one list an argument may be; nothing else takes a list.
 try {
     PanelCommands::check('file:remove', ['domain' => 'demo-php.test', 'path' => ['public']]);

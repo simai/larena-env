@@ -70,6 +70,8 @@ final class PanelCommands
     private const string TRASH_ID = '/\A[0-9]{8}T[0-9]{6}Z-[a-f0-9]{6}\z/D';
     // How long a database browser stays open: 5 to 480 minutes (simai-env 1.58.0).
     private const string BROWSER_MINUTES = '/\A(?:[5-9]|[1-9][0-9]|[1-3][0-9]{2}|4[0-7][0-9]|480)\z/D';
+    // How long a site's temporary link stays open: 10 to 1440 minutes (simai-env 1.65.0 site:preview-link).
+    private const string PREVIEW_MINUTES = '/\A(?:[1-9][0-9]|[1-9][0-9]{2}|1[0-3][0-9]{2}|14[0-3][0-9]|1440)\z/D';
     private const string CHANGE_ID = '/\A[A-Za-z0-9][A-Za-z0-9._-]{0,63}\z/D';
     // The server's alerts and where it sends them (simai-env 1.31.0). A webhook is https only; a Telegram chat is its
     // id or @name; the bot's token travels as text and reaches the command as a file, shown as (stored) everywhere.
@@ -222,7 +224,8 @@ final class PanelCommands
         'owner:add-key' => ['args' => ['name' => self::OWNER, 'pubkey' => self::PUBKEY], 'required' => ['name', 'pubkey'], 'since' => '1.22.0', 'kind' => self::ACTION],
         // Panel plan stage 3 (simai-env 1.28.0): restore, check and schedule backups, PHP's extensions and php.ini, the
         // server's load (administrator only), the databases and a new database password.
-        'backup:data-restore' => ['args' => ['domain' => self::DOMAIN, 'backup' => self::BACKUP, 'db' => self::YES_NO, 'files' => self::YES_NO],
+        // `files-live` (simai-env 1.65.0): the files straight into an empty site instead of a folder beside it.
+        'backup:data-restore' => ['args' => ['domain' => self::DOMAIN, 'backup' => self::BACKUP, 'db' => self::YES_NO, 'files' => self::YES_NO, 'files-live' => self::YES_NO],
             'required' => ['domain', 'backup'], 'since' => '1.28.0', 'kind' => self::ACTION],
         'backup:data-schedule' => ['args' => ['domain' => self::DOMAIN, 'enabled' => self::YES_NO, 'time' => self::TIME, 'keep' => self::KEEP,
             'verify' => self::YES_NO],
@@ -325,6 +328,13 @@ final class PanelCommands
         'site:db-browser' => ['args' => ['domain' => self::DOMAIN, 'minutes' => self::BROWSER_MINUTES], 'required' => ['domain'], 'since' => '1.58.0', 'kind' => self::ACTION],
         'site:db-browser-close' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => '1.58.0', 'kind' => self::ACTION],
         'site:db-browser-status' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => '1.58.0', 'kind' => self::READ],
+        // A temporary link to a site before its domain points here (simai-env 1.65.0): http://<server IP>:<port>/ with a key,
+        // closing by itself after 10 to 1440 minutes; asked again while open, the same link lives longer. The link with its
+        // key is in the job's result once (ONCE_RESULT preview_url), never in its log; the status and site:describe's
+        // preview_link carry the address and the deadline only.
+        'site:preview-link' => ['args' => ['domain' => self::DOMAIN, 'minutes' => self::PREVIEW_MINUTES], 'required' => ['domain'], 'since' => '1.65.0', 'kind' => self::ACTION],
+        'site:preview-link-close' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => '1.65.0', 'kind' => self::ACTION],
+        'site:preview-link-status' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => '1.65.0', 'kind' => self::READ],
         // The site's own nginx directives, the system level's (simai-env 1.41.0): a timed change, applied once nginx takes
         // them and the site answers, then undone after two minutes unless change:confirm keeps it. Empty removes them.
         'site:nginx-custom-show' => ['args' => ['domain' => self::DOMAIN], 'required' => ['domain'], 'since' => '1.41.0', 'kind' => self::READ],
@@ -455,6 +465,8 @@ final class PanelCommands
         'self:alerts-channel' => ['levels' => '1.63.0'],
         // A new server account with the sites it takes, one job (simai-env 1.63.1).
         'owner:create' => ['sites' => '1.63.1'],
+        // The files of a backup straight into a new, empty site (simai-env 1.65.0): «Вернуть сайт» brings it back whole.
+        'backup:data-restore' => ['files-live' => '1.65.0'],
     ];
 
     /**

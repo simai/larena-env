@@ -56,6 +56,8 @@ final readonly class SiteDetails
         public string $publicDir = 'public',
         // When the server last measured the directory (simai-env `disk.checked_at`, at most hourly by self status-refresh).
         public ?string $diskCheckedAt = null,
+        // simai-env 1.65.0: the site's open temporary link (address and deadline, never the key), null when closed.
+        public ?PreviewLinkState $previewLink = null,
     ) {
     }
 
@@ -119,6 +121,7 @@ final readonly class SiteDetails
             suspended: ($data['suspended'] ?? false) === true,
             publicDir: is_string($data['public_dir'] ?? null) && \Larena\Env\Files\FilePath::clean($data['public_dir']) !== null
                 ? (string) \Larena\Env\Files\FilePath::clean($data['public_dir']) : 'public',
+            previewLink: PreviewLinkState::fromData($data['preview_link'] ?? null),
         );
     }
 

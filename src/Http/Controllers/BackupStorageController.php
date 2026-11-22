@@ -30,8 +30,9 @@ use Throwable;
  * confirmation, never into the page.
  *
  * Above them the backups the server holds (simai-env 1.64.0), those of removed sites too, with why each was made and
- * until when it is kept, and the way back: «Вернуть сайт» makes the site again (site:add) and then puts its backup back
- * (backup:data-restore; its files wait in a folder of their own beside the site until ENV puts them in place), «Вернуть
+ * until when it is kept, and the way back: «Вернуть сайт» makes the site again (site:add, the same domain, its kind where
+ * the server names it, a database where the backup holds one) and then puts its backup back, the files straight into the
+ * new, empty site (backup:data-restore files-live, simai-env 1.65.0; refused root_not_empty, said in words), «Вернуть
  * базу» makes the database again (site:db-create) and then puts the backup's database back (files no). Each step is
  * its own plan and confirmation; the page decides the next step from what the server has now.
  */
@@ -95,6 +96,8 @@ final readonly class BackupStorageController
             // The panel's own copies left out, as in the sites' list below (its own update keeps them).
             'held' => $capabilities->allows('backup:data-list') ? $this->withoutPanel($this->extras->heldBackups($actor), $request->getHost()) : null,
             'returns' => $canOperate && $capabilities->allows('backup:data-restore'),
+            // «Вернуть сайт» puts the files back into the site itself: only where the server takes files-live (1.65.0).
+            'returnsSite' => $canOperate && $capabilities->takes('backup:data-restore', 'files-live'),
             // Every site's last backup at a glance, the panel's own left out (critics 2026-11-07: /backups showed only storages).
             // A failure named as in the sites list and on the site's tab (critics of 0.4.1: here it read «Копий нет»).
             'siteBackups' => \Larena\Env\Admin\SiteBackupSummary::of($read->overview?->withoutSites([$request->getHost()])->sites ?? [],
@@ -186,6 +189,10 @@ final readonly class BackupStorageController
         $capabilities = $this->overviews->read(ResolvePanelActor::of($request))->overview->capabilities ?? PanelCapabilities::none();
         $op = (string) $request->input('op');
         if (in_array($op, self::RETURNS, true)) {
+            if ($op === 'return-site' && !$capabilities->takes('backup:data-restore', 'files-live')) {
+                return 'not_allowed';
+            }
+
             return $this->way($request, $op, $capabilities, $confirming);
         }
         $command = self::OPERATIONS[$op] ?? null;
@@ -232,9 +239,11 @@ final readonly class BackupStorageController
     {
         $domain = strtolower(trim((string) $request->input('domain')));
         $backup = (string) $request->input('backup');
+        $profile = null;
         if ($confirming) {
             $step = (string) $request->input('step');
             $database = (string) $request->input('db') === 'yes';
+            $profile = is_string($request->input('profile')) && $request->input('profile') !== '' ? (string) $request->input('profile') : null;
         } else {
             $actor = ResolvePanelActor::of($request);
             $held = null;
@@ -247,6 +256,7 @@ final readonly class BackupStorageController
                 return 'backup_unknown';
             }
             $database = $held->holdsDatabase();
+            $profile = $held->profile;
             if ($op === 'return-db' && !$database) {
                 return 'backup_unknown';
             }
@@ -268,9 +278,11 @@ final readonly class BackupStorageController
             return 'not_allowed';
         }
         $args = match ($step) {
-            'add' => ['domain' => $domain] + ($database ? ['create-db' => 'yes'] : []),
+            // The same domain, the same kind where the server names it, a database where the backup holds one.
+            'add' => ['domain' => $domain] + ($profile !== null && $op === 'return-site' ? ['profile' => $profile] : []) + ($database ? ['create-db' => 'yes'] : []),
             'create' => ['domain' => $domain],
-            default => ['domain' => $domain, 'backup' => $backup] + ($op === 'return-db' ? ['files' => 'no'] : []),
+            // The site's files straight into the new, empty site (simai-env 1.65.0), its database with them.
+            default => ['domain' => $domain, 'backup' => $backup] + ($op === 'return-db' ? ['files' => 'no'] : ['files-live' => 'yes']),
         };
         try {
             PanelCommands::check($command, $args, true);
@@ -278,7 +290,8 @@ final readonly class BackupStorageController
             return $refused->reasonCode;
         }
 
-        return [$command, $args, ['op' => $op, 'step' => $step, 'domain' => $domain, 'backup' => $backup, 'db' => $database ? 'yes' : 'no']];
+        return [$command, $args, ['op' => $op, 'step' => $step, 'domain' => $domain, 'backup' => $backup, 'db' => $database ? 'yes' : 'no']
+            + ($step === 'add' && isset($args['profile']) ? ['profile' => $args['profile']] : [])];
     }
 
     /**

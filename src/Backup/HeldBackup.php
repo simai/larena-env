@@ -17,7 +17,11 @@ final readonly class HeldBackup
 
     public const string DOMAIN = '/\A(?=.{1,253}\z)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+\z/D';
 
-    public function __construct(public string $domain, public bool $siteExists, public SiteBackup $backup)
+    /** The kinds of site a backup may name (its manifest's profile), as site:add takes them. */
+    private const string PROFILE = '/\A(?:static|generic|laravel|wordpress|node|redirect|bitrix|proxy)\z/D';
+
+    /** @param ?string $profile the kind of site the backup was made of, where the server names it; site:add makes it so again */
+    public function __construct(public string $domain, public bool $siteExists, public SiteBackup $backup, public ?string $profile = null)
     {
     }
 
@@ -30,7 +34,10 @@ final readonly class HeldBackup
             return null;
         }
 
-        return new self($domain, ($data['site_exists'] ?? true) !== false, $backup);
+        $profile = $data['profile'] ?? null;
+
+        return new self($domain, ($data['site_exists'] ?? true) !== false, $backup,
+            is_string($profile) && preg_match(self::PROFILE, $profile) === 1 ? $profile : null);
     }
 
     /**

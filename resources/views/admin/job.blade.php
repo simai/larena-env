@@ -106,6 +106,27 @@
             @elseif ($status->command === 'site:db-browser' && in_array('browser_url', $status->shownOnce, true))
                 <p role="note" data-env-job-browser-shown>{{ __('larena-env::admin.db_browser.shown') }}</p>
             @endif
+            {{-- A site's temporary link (site:preview-link, simai-env 1.65.0): the server gives the link with its key in this one
+                 answer and never in the log; the panel keeps it nowhere (not its cache, session, logs or history). Copied with
+                 one press or opened in a new tab with no referrer; the side panel asks before it closes over it. Later answers
+                 only say it was shown; asked again while open, the same link lives longer and is shown again. --}}
+            @if ($status->preview !== null)
+                <div class="larena-panel larena-panel-padded m-y-2" role="alert" data-env-job-preview data-larena-action-keep="{{ __('larena-env::admin.preview_link.keep') }}">
+                    <h3 class="m-top-0 text-medium">{{ $status->preview->renewed ? __('larena-env::admin.preview_link.renewed') : __('larena-env::admin.preview_link.ready') }}</h3>
+                    <p><strong>{{ __('larena-env::admin.preview_link.once') }}</strong> {{ __('larena-env::admin.preview_link.again') }}</p>
+                    <p class="mono" style="overflow-wrap: anywhere;" data-env-job-preview-url>{{ $status->preview->url }}</p>
+                    @if ($status->preview->expiresAt !== null && \Larena\Env\Server\Moment::iso($status->preview->expiresAt) !== null)
+                        <p data-env-job-preview-until>{{ __('larena-env::admin.preview_link.valid_until') }} <sf-time datetime="{{ \Larena\Env\Server\Moment::iso($status->preview->expiresAt) }}" format="datetime"></sf-time></p>
+                    @endif
+                    <p class="flex flex-wrap gap-1 m-top-1">
+                        <sf-button-copy value="{{ $status->preview->url }}" text="{{ __('larena-env::admin.preview_link.copy') }}" label="{{ __('larena-env::admin.preview_link.copy') }}" appearance="outline" data-env-job-preview-copy></sf-button-copy>
+                        <a href="{{ $status->preview->url }}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer" class="larena-button" data-env-job-preview-open>{{ __('larena-env::admin.preview_link.open_link') }}</a>
+                    </p>
+                    <p class="m-0 text-small color-on-surface-variant">{{ __('larena-env::admin.preview_link.cookie_note') }}</p>
+                </div>
+            @elseif ($status->command === 'site:preview-link' && in_array('preview_url', $status->shownOnce, true))
+                <p role="note" data-env-job-preview-shown>{{ __('larena-env::admin.preview_link.shown') }}</p>
+            @endif
             {{-- How to connect to the site's database (site:db-credentials, simai-env 1.59.0): the server gives the password in
                  this one answer and never in the log; the panel keeps it nowhere. Copied with one press; the side panel asks
                  before it closes over it. Later answers only say it was shown. --}}

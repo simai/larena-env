@@ -119,9 +119,16 @@ $server = new class (new RecordedAnswersGateway(env_recorded_path())) implements
                 'backup' => $backup, 'path' => '/var/backups/simai/'.$domain.'/'.$backup, 'created_at' => '2026-11-20T01:00:00', 'size_bytes' => 4096,
                 'parts' => $parts, 'checksums' => true, 'encrypted' => false, 'reason' => $reason, 'keep_until' => '2026-11-27T01:00:00'];
 
-            return $answer('result', ['schema' => 'simai-backup-list/1', 'dest' => '/var/backups/simai', 'count' => 2, 'items' => [
-                $item('gone.test', false, '20261120-010000', 'site-remove', ['config', 'db', 'files']),
-                $item('demo-php.test', true, '20261120-020000', 'db-drop', ['db'])]]);
+            // A removed site made again (demo-static.test) and one that has its own files again (demo-php.test, 1.65.0).
+            return $answer('result', ['schema' => 'simai-backup-list/1', 'dest' => '/var/backups/simai', 'count' => 4, 'items' => [
+                $item('gone.test', false, '20261120-010000', 'site-remove', ['config', 'db', 'files']) + ['profile' => 'wordpress'],
+                $item('demo-php.test', true, '20261120-020000', 'db-drop', ['db']),
+                $item('demo-static.test', true, '20261120-030000', 'site-remove', ['config', 'files']),
+                $item('demo-php.test', true, '20261120-040000', 'site-remove', ['config', 'db', 'files'])]]);
+        }
+        // Files straight into a site that has files of its own are refused in the plan (simai-env 1.65.0 files-live).
+        if ($request->command === 'backup:data-restore' && ($request->args['files-live'] ?? null) === 'yes' && ($request->args['domain'] ?? null) === 'demo-php.test') {
+            return PanelAnswer::refused($request->requestId, 'root_not_empty');
         }
         if (PanelCommands::kind($request->command) !== 'read') {
             return $answer('plan', ['command' => $request->command, 'args' => array_map(static fn (mixed $value): mixed => $value, $request->args),
@@ -288,6 +295,25 @@ env_assert(($views->data['hidden']['step'] ?? null) === 'add' && $views->data['t
     'A removed site is made again first, and the plan says the data comes back after.');
 $held->plan($asking(['op' => 'return-db', 'domain' => 'demo-php.test', 'backup' => '20261120-020000']));
 env_assert(($views->data['hidden']['step'] ?? null) === 'restore' && ($views->data['plan']->args['files'] ?? null) === 'no', 'A database the site has again: only the database is put back.');
+// The site made again with its kind where the server names it, a database where the backup holds one (simai-env 1.65.0)…
+$held->plan($asking(['op' => 'return-site', 'domain' => 'gone.test', 'backup' => '20261120-010000']));
+env_assert(($views->data['plan']->args['profile'] ?? null) === 'wordpress' && ($views->data['plan']->args['create-db'] ?? null) === 'yes'
+    && ($views->data['hidden']['profile'] ?? null) === 'wordpress', 'The same domain and kind, with a database: '.json_encode($views->data['plan']->args ?? null));
+// …then its files straight into the new, empty site, in place: no folder beside it.
+$held->plan($asking(['op' => 'return-site', 'domain' => 'demo-static.test', 'backup' => '20261120-030000']));
+env_assert(($views->data['hidden']['step'] ?? null) === 'restore' && ($views->data['plan']->args['files-live'] ?? null) === 'yes'
+    && $views->data['then'] === [$lines['storages']['held']['then']['return-site']['restore']]
+    && !str_contains($lines['storages']['held']['then']['return-site']['restore'], 'folder'), 'The backup\'s files go back into the site itself.');
+// A site that has files of its own again is refused by the server's plan, in words.
+$notEmpty = $held->plan($asking(['op' => 'return-site', 'domain' => 'demo-php.test', 'backup' => '20261120-040000']));
+env_assert($notEmpty instanceof RedirectResponse && $session->get('larena_env_notice') === $lines['reasons']['root_not_empty'], 'root_not_empty in words: '.(string) $session->get('larena_env_notice'));
+$session->forget('larena_env_notice');
+foreach (['ru', 'en'] as $locale) {
+    $words = require dirname(__DIR__, 2).'/resources/lang/'.$locale.'/admin.php';
+    foreach (['root_not_empty', 'no_files_archive', 'root_missing', 'releases'] as $why) {
+        env_assert(is_string($words['reasons'][$why] ?? null), "{$locale}: the words of the live restore's {$why}.");
+    }
+}
 $unknown = $held->plan($asking(['op' => 'return-db', 'domain' => 'demo-php.test', 'backup' => '20990101-000000']));
 env_assert($unknown instanceof RedirectResponse && $session->get('larena_env_notice') === $lines['reasons']['backup_unknown'], 'A backup the server does not hold is refused in words.');
 $session->forget('larena_env_notice');

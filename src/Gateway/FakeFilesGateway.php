@@ -10,7 +10,8 @@ use Throwable;
 
 /**
  * A stand-in for the server's file commands (simai-env 1.39.0–1.40.0; the trash of 1.57.0; a replaced file kept in the trash and
- * the last backup before a site or its database goes, 1.64.0) on recorded answers, for tests and the install
+ * the last backup before a site or its database goes, 1.64.0; a site's temporary link and a backup's files put back into an
+ * empty site, 1.65.0) on recorded answers, for tests and the install
  * check only: the recordings hold one folder and a few plans, never the bytes of a download or an upload. It answers
  * file:* the way the gateway does, on a local folder per site; everything else goes to the recorded answers it wraps. Paths are checked as the gateway
  * checks them: nothing outside a site's folder, no `..`, no link that leaves it.
@@ -20,6 +21,19 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
     /** The commands this stand-in answers, added to the host description's own list. */
     public const array COMMANDS = ['file:list', 'file:stat', 'file:read', 'file:preview', 'file:download', 'file:write', 'file:upload', 'file:mkdir', 'file:rename',
         'file:remove', 'file:archive', 'file:extract', 'file:trash-list', 'file:trash-restore', 'file:trash-empty', 'backup:data-list'];
+
+    /**
+     * A site's temporary link (simai-env 1.65.0), answered as the gateway does: a plan with the address and whether it renews,
+     * a job whose result has the link with its key once (ONCE_RESULT), the status and site:describe without the key.
+     */
+    public const array PREVIEW = ['site:preview-link', 'site:preview-link-close', 'site:preview-link-status'];
+
+    /** The values a job's result gives once, as the gateway's ONCE_RESULT: the first job:status after the job, never again. */
+    private const array ONCE = ['admin_password', 'browser_url', 'db_password', 'preview_url'];
+
+    /** The stand-in server's address and the first port of its temporary links. */
+    public const string PREVIEW_IP = '203.0.113.10';
+    public const int PREVIEW_PORT = 7700;
 
     /** What the stand-in backs up before passing on (simai-env 1.64.0): a last copy kept seven days, or nothing removed. */
     private const array BACKED_UP = ['site:remove' => 'site-remove', 'site:db-drop' => 'db-drop'];
@@ -54,6 +68,15 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
             if ($kept !== null) {
                 return $kept;
             }
+        }
+        if (in_array($command, self::PREVIEW, true)) {
+            return $this->previewLink($request);
+        }
+        if ($command === 'backup:data-restore' && ($request->args['files-live'] ?? 'no') === 'yes' && ($request->args['files'] ?? 'yes') !== 'no') {
+            return $this->restoreLive($request);
+        }
+        if ($command === 'site:describe') {
+            return $this->described($request, $this->inner->ask($request));
         }
         if ($command === 'backup:data-list') {
             return $request->actor->owner === null ? $this->ok($request, 'result', $this->held($request->args['domain'] ?? null))
@@ -139,7 +162,143 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
     /** @return list<string> */
     private function offered(PanelRequest $request): array
     {
-        return self::COMMANDS;
+        return [...self::COMMANDS, ...self::PREVIEW];
+    }
+
+    /**
+     * site:preview-link, its close and its status, as simai-env 1.65.0 answers them. An owner asks for their own sites
+     * only; an alias or a paused site is refused in the plan, and a file `preview-refuse` in the stand-in's folder names
+     * another refusal (no_address, no_nginx, no_port). A second link while one is open keeps its port and key and moves
+     * the deadline (renew).
+     */
+    private function previewLink(PanelRequest $request): PanelAnswer
+    {
+        $domain = (string) ($request->args['domain'] ?? '');
+        $site = $this->inner->ask(PanelRequest::read($request->actor, 'site:describe', ['domain' => $domain]));
+        if ($site->status !== PanelAnswerStatus::Ok) {
+            return PanelAnswer::refused($request->requestId, $site->reason ?? 'site_missing');
+        }
+        $open = $this->previewOpen($domain);
+        if ($request->command === 'site:preview-link-status') {
+            return $this->ok($request, 'result', ['schema' => 'simai-preview-link/1', 'domain' => $domain, 'preview_link' => self::previewShown($open)]);
+        }
+        if ($request->command === 'site:preview-link-close') {
+            if (!$request->confirm) {
+                return $this->ok($request, 'plan', ['command' => $request->command, 'args' => $request->args, 'target' => $domain,
+                    'description' => 'Close a site\'s temporary link now', 'effects' => 'write', 'lock' => $domain, 'applied' => false]);
+            }
+            @unlink($this->previewFile($domain));
+
+            return $this->started($request, [['Closing the temporary link of '.$domain, 'Done'], ['domain' => $domain, 'closed' => $open !== null]]);
+        }
+        $profile = $site->data['profile'] ?? null;
+        $refusal = match (true) {
+            $profile === 'alias' => 'alias',
+            ($site->data['suspended'] ?? false) === true => 'suspended',
+            is_file($this->root.'/preview-refuse') => trim((string) file_get_contents($this->root.'/preview-refuse')),
+            default => null,
+        };
+        if ($refusal !== null && $refusal !== '') {
+            return PanelAnswer::refused($request->requestId, $refusal);
+        }
+        $minutes = (int) ($request->args['minutes'] ?? '60');
+        $port = $open['port'] ?? self::PREVIEW_PORT + count(glob($this->root.'/preview/*.json') ?: []);
+        $address = 'http://'.self::PREVIEW_IP.':'.$port.'/';
+        if (!$request->confirm) {
+            return $this->ok($request, 'plan', ['command' => $request->command, 'args' => $request->args, 'target' => $domain,
+                'description' => 'Open a temporary link to a site before its domain points here (renews an open one)', 'effects' => 'write',
+                'lock' => $domain, 'applied' => false, 'preview' => ['address' => $address, 'minutes' => $minutes, 'renew' => $open !== null, 'mode' => 'ip_port']]);
+        }
+        $state = ['port' => $port, 'key' => $open['key'] ?? bin2hex(random_bytes(16)), 'expires' => time() + $minutes * 60];
+        @mkdir($this->root.'/preview', 0o700, true);
+        file_put_contents($this->previewFile($domain), json_encode($state, JSON_THROW_ON_ERROR));
+
+        // The job's lines never carry the key: the link goes to the panel in the result only.
+        return $this->started($request, [['Opening a temporary link to '.$domain.' on port '.$port, 'Link: (handed to the panel)', 'Done'],
+            ['preview_url' => $address.'.simai-preview/'.$state['key'], 'address' => $address,
+                'expires_at' => gmdate('Y-m-d\TH:i:s\Z', $state['expires']), 'mode' => 'ip_port', 'renewed' => $open !== null]]);
+    }
+
+    /** site:describe with the site's open temporary link (address and deadline, never the key), as 1.65.0 describes it. */
+    private function described(PanelRequest $request, PanelAnswer $answer): PanelAnswer
+    {
+        if ($answer->status !== PanelAnswerStatus::Ok) {
+            return $answer;
+        }
+        $data = $answer->data;
+        $data['preview_link'] = self::previewShown($this->previewOpen((string) ($request->args['domain'] ?? '')));
+
+        return PanelAnswer::fromDocument($request->requestId, ['status' => 'ok', 'kind' => 'result', 'data' => $data,
+            'command_status' => $answer->commandStatus, 'operation_id' => $answer->operationId]);
+    }
+
+    /** @return array{port: int, key: string, expires: int}|null the site's temporary link while it is open */
+    private function previewOpen(string $domain): ?array
+    {
+        $state = json_decode((string) @file_get_contents($this->previewFile($domain)), true);
+        if (!is_array($state) || !is_int($state['port'] ?? null) || !is_string($state['key'] ?? null) || !is_int($state['expires'] ?? null)) {
+            return null;
+        }
+
+        return $state['expires'] > time() ? ['port' => $state['port'], 'key' => $state['key'], 'expires' => $state['expires']] : null;
+    }
+
+    /**
+     * @param array{port: int, key: string, expires: int}|null $open
+     * @return array{url: string, expires_at: string, mode: string}|null
+     */
+    private static function previewShown(?array $open): ?array
+    {
+        return $open === null ? null : ['url' => 'http://'.self::PREVIEW_IP.':'.$open['port'].'/', 'expires_at' => gmdate('Y-m-d\TH:i:s\Z', $open['expires']), 'mode' => 'ip_port'];
+    }
+
+    private function previewFile(string $domain): string
+    {
+        return $this->root.'/preview/'.(preg_match(\Larena\Env\Backup\HeldBackup::DOMAIN, $domain) === 1 ? $domain : 'none').'.json';
+    }
+
+    /**
+     * backup:data-restore with files-live (simai-env 1.65.0): the files go straight into the site only when its folder
+     * holds nothing but what site:add put there (a placeholder, the health check, empty folders); otherwise refused
+     * root_not_empty, in the plan as on the confirmation. The stand-in unpacks nothing: it leaves a note of the files.
+     */
+    private function restoreLive(PanelRequest $request): PanelAnswer
+    {
+        $domain = (string) ($request->args['domain'] ?? '');
+        if ($request->actor->owner !== null) {
+            return PanelAnswer::refused($request->requestId, 'owner_admin_only');
+        }
+        if (!$this->siteEmpty($this->root.'/sites/'.(preg_match(\Larena\Env\Backup\HeldBackup::DOMAIN, $domain) === 1 ? $domain : 'none'))) {
+            return PanelAnswer::refused($request->requestId, 'root_not_empty');
+        }
+        if (!$request->confirm) {
+            return $this->ok($request, 'plan', ['command' => $request->command, 'args' => $request->args, 'target' => $domain,
+                'description' => 'Restore a site database and put its files live into the empty site', 'effects' => 'write', 'lock' => $domain, 'applied' => false]);
+        }
+        $site = $this->root.'/sites/'.$domain;
+        @mkdir($site.'/public', 0o775, true);
+        file_put_contents($site.'/public/index.html', "<h1>{$domain}</h1>\n");
+
+        return $this->started($request, ['Restoring the database of '.$domain, 'Putting the files live into the site directory', 'Done']);
+    }
+
+    /** Whether a site's folder holds nothing of its own: missing, or only placeholders, the health check and empty folders. */
+    private function siteEmpty(string $folder): bool
+    {
+        if (!is_dir($folder)) {
+            return true;
+        }
+        $files = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($folder, \FilesystemIterator::SKIP_DOTS));
+        foreach ($files as $file) {
+            if (str_contains($file->getPathname(), '/.simai-trash/') || $file->getFilename() === 'healthcheck.php') {
+                continue;
+            }
+            if (!str_contains((string) @file_get_contents($file->getPathname(), false, null, 0, 4096), 'SIMAI placeholder')) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /** An owner works on their own sites only: as the gateway, through the recorded description. */
@@ -656,6 +815,13 @@ final readonly class FakeFilesGateway implements PanelGateway, PanelFileGateway
         $lines = (array) $job['lines'];
         unset($job['lines']);
         $after = (int) ($request->args['after'] ?? 0);
+        // ONCE_RESULT: the first job:status of a finished job hands the values out and the file keeps only their names.
+        $once = is_array($job['result'] ?? null) ? array_values(array_intersect(self::ONCE, array_keys($job['result']))) : [];
+        if ($request->command === 'job:status' && $once !== []) {
+            $kept = $job + ['lines' => $lines];
+            $kept['result'] = array_diff_key($job['result'], array_flip($once)) + ['shown_once' => $once];
+            file_put_contents($this->jobFile($request->args['job_id'] ?? ''), json_encode($kept, JSON_THROW_ON_ERROR));
+        }
 
         return $this->ok($request, 'result', $request->command === 'job:status' ? $job
             : ['job_id' => $job['job_id'], 'state' => $job['state'], 'lines' => array_slice($lines, $after), 'next' => count($lines)]);

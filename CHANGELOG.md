@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+Needs simai-env 1.65.0 for everything below; with an older server these screens are not offered.
+
+- simai-env 1.65.0: «Временная ссылка» on «Домены и HTTPS», beside the site's names: the site on the server's own IP and a
+  port with a key, before its domain points here, for an hour, a day or 10–1440 minutes of one's own; planned (the
+  address, the term, a new link or the same one renewed) and confirmed. The run's screen shows the link once, with
+  «Скопировать ссылку» and «действует до …», and says it will not be shown again and that asking again extends it and
+  shows it again; the card then says «Временная ссылка открыта до …» with «Продлить» and «Закрыть». An alias or a paused
+  site is said before anyone asks; no address, no nginx and no free port in the server's plan, in words. The key is
+  kept nowhere: not in the panel's cache, its logs, its history or an address it builds; the job's log never has it.
+  Owners have it on their own sites as administrators do.
+- «Вернуть сайт» puts the backup's files straight into the new, empty site (backup:data-restore files-live): the note of
+  a folder beside the site is gone from the list, the plan and its next step; the site is made with its kind where the
+  server names it; root_not_empty, no_files_archive, root_missing and releases are said in words. A server before
+  1.65.0 is not offered «Вернуть сайт» («Вернуть базу» stays).
+- The stand-in gateway answers 1.65.0's temporary link (renew, close, status, site:describe preview_link, the link once)
+  and the live restore with root_not_empty, for the tests and the install check.
+
 - simai-env 1.64.0: «Хранилища копий» lists the backups the server holds (backup:data-list), removed sites' too, with
   why each was made («перед удалением сайта», «перед удалением базы») and «хранится до …»; «Вернуть сайт» (site:add,
   then backup:data-restore, the files coming back into a folder of their own until ENV puts them in place) and «Вернуть

@@ -55,6 +55,8 @@ final readonly class PanelJobStatus
         // How many replaced files a write, an upload or an unpacking put into the site's trash (simai-env 1.64.0
         // previous_trash_id, trashed / trash_ids): the panel then says the previous version is there.
         public int $replacedIntoTrash = 0,
+        // A site's temporary link (site:preview-link, simai-env 1.65.0): the link with its key given once, the same way.
+        public ?PreviewLink $preview = null,
     ) {
     }
 
@@ -134,6 +136,7 @@ final readonly class PanelJobStatus
             credentials: is_array($data['result'] ?? null) ? DbCredentials::fromData($data['result']) : null,
             secretSkipped: is_array($data['result'] ?? null) ? self::secretSkipped($data['result']) : null,
             replacedIntoTrash: is_array($data['result'] ?? null) ? self::replacedIntoTrash($data['result']) : 0,
+            preview: $command === 'site:preview-link' && is_array($data['result'] ?? null) ? PreviewLink::fromData($data['result']) : null,
         );
     }
 

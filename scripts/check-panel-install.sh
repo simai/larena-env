@@ -448,7 +448,7 @@ _, dns_tab = get("/admin/server/sites/demo-php.test?tab=dns")
 assert 'data-env-dns="not_connected"' in dns_tab and "/admin/server/dns/connection" in dns_tab, "the site's DNS tab says how to connect"
 print("dns:", "ok")
 # Files (simai-env 1.39.0–1.40.0) on a stand-in for the folders and bytes the recordings do not hold.
-import os
+import glob, os
 fake = sys.argv[3] + "/fake-files"
 with open(sys.argv[5] + "/.env", "a") as dotenv:
     dotenv.write("LARENA_ENV_RECORDED_FILES=" + fake + "\n")
@@ -520,6 +520,36 @@ assert 'data-env-nginx="on"' in nginx and "data-env-nginx-allowlist" in nginx an
 planned, done = plan_and_run("/admin/server/sites/demo-php.test/nginx/plan", {"_token": form_token(nginx), "op": "nginx-save", "content": "add_header X-Check 1;\n"})
 assert 'data-env-plan="site:nginx-custom"' in planned and "data-env-plan-replaces" in planned and "data-env-job" in done, "directives applied by plan, followed as a job"
 print("files:", "ok")
+# A temporary link before the domain points here (simai-env 1.65.0) on the stand-in: «Домены и HTTPS» offers it beside the
+# names; its plan says the address and the term, never a key; the run's screen shows the link once with its copy, a second
+# look only says it was shown; the card says until when it is open with «Продлить» and «Закрыть»; a second call renews it.
+_, domains = get("/admin/server/sites/demo-php.test?tab=domains")
+# The recorded server says it is 1.49.0 while the stand-in lists the commands: its term is not asked (an argument by the
+# release), so the link opens for the server's hour; the term's choices are the unit test's.
+assert 'data-env-preview-link="closed"' in domains and "data-env-preview-link-open" in domains and 'data-env-operation="preview-link"' in domains, "the temporary link beside the names"
+planned, done = plan_and_run("/admin/server/sites/demo-php.test/plan", {"_token": form_token(domains), "operation": "preview-link"})
+assert 'data-env-plan="site:preview-link"' in planned and "203.0.113.10:7700" in planned and ".simai-preview" not in planned, "planned with its address, no key"
+preview = re.search(r'data-env-job-preview-url>(http://[0-9.]+:[0-9]+/\.simai-preview/([a-f0-9]{32}))<', done)
+assert preview and 'data-env-job-preview-copy' in done and "data-env-job-preview-until" in done, "the link once, with its copy and deadline"
+preview_key = preview.group(2)
+job_path = urllib.parse.urlparse(landed[0])
+opened_job = urllib.parse.parse_qs(job_path.query).get("open")
+assert opened_job, "the run opens in its side panel"
+_, again = get(opened_job[0] + "?after=0")
+assert preview_key not in again and "data-env-job-preview-shown" in again, "a second look says it was shown, nothing more"
+_, open_card = get("/admin/server/sites/demo-php.test?tab=domains")
+assert 'data-env-preview-link="open"' in open_card and "data-env-preview-link-renew" in open_card and "data-env-preview-link-close" in open_card and preview_key not in open_card, "open until when, never the key"
+planned, renewed = plan_and_run("/admin/server/sites/demo-php.test/plan", {"_token": form_token(open_card), "operation": "preview-link"})
+assert preview_key in renewed and "data-env-job-preview" in renewed, "renewed: the same link again"
+planned, closed = plan_and_run("/admin/server/sites/demo-php.test/plan", {"_token": form_token(open_card), "operation": "preview-link-close"})
+assert 'data-env-plan="site:preview-link-close"' in planned and 'data-env-job-state="succeeded"' in closed, "closed by plan"
+_, closed_card = get("/admin/server/sites/demo-php.test?tab=domains")
+assert 'data-env-preview-link="closed"' in closed_card, "closed"
+for kept in glob.glob(sys.argv[5] + "/storage/**/*", recursive=True) + glob.glob(sys.argv[5] + "/database/*.sqlite"):
+    if os.path.isfile(kept):
+        with open(kept, "rb") as kept_file:
+            assert preview_key.encode() not in kept_file.read(), ("the link's key is kept nowhere by the panel", kept)
+print("temporary link:", "ok")
 _, sftp = get("/admin/server/sites/demo-owned.test?tab=access")
 assert 'data-env-sftp="demo-staff"' in sftp and 'data-env-sftp-path="/site"' in sftp, "the site's own SFTP access, where it lands"
 for shownAction in ("sftp-add-key", "sftp-disable", "sftp-remove"):

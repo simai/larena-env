@@ -41,7 +41,8 @@
             @else
                 <ul class="m-0 p-0" style="list-style: none;">
                     @foreach ($held as $item)
-                        @php($ops = ($returns ?? false) ? $item->ways() : [])
+                        {{-- «Вернуть сайт» only where the server puts the files back into the site itself (simai-env 1.65.0). --}}
+                        @php($ops = ($returns ?? false) ? array_values(array_filter($item->ways(), static fn (string $way): bool => $way !== 'return-site' || ($returnsSite ?? false))) : [])
                         <li class="flex flex-wrap items-cross-center gap-2 p-y-1 border-top-1 border-top-solid border-outline-variant"
                             data-env-held-backup="{{ $item->domain }}/{{ $item->backup->name }}" data-env-held-reason="{{ $item->backup->reason ?? 'none' }}">
                             <span class="grow min-w-0" style="flex-basis: 16rem;">
@@ -61,9 +62,6 @@
                                         · <span data-env-held-until>{{ __('larena-env::admin.storages.held.until', ['time' => \Larena\Env\Server\Moment::human($item->backup->keepUntil)]) }}</span>
                                     @endif
                                 </span>
-                                @if (in_array('return-site', $ops, true))
-                                    <span class="text-small color-on-surface-variant" style="display: block;" data-env-held-files-note>{{ __('larena-env::admin.storages.held.files_note') }}</span>
-                                @endif
                             </span>
                             @foreach ($ops as $op)
                                 <form method="post" action="{{ route('larena.env.admin.storages.plan', [], false) }}" class="m-0" data-env-held-op="{{ $op }}">

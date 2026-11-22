@@ -30,9 +30,9 @@ final readonly class JobSecret
 
     /**
      * The values the server gives once (its ONCE_RESULT): WordPress's administrator password (1.56.0), a database
-     * browser's address (1.58.0), a database password (1.59.0).
+     * browser's address (1.58.0), a database password (1.59.0), a site's temporary link with its key (1.65.0).
      */
-    public const array ONCE = ['admin_password', 'browser_url', 'db_password'];
+    public const array ONCE = ['admin_password', 'browser_url', 'db_password', 'preview_url'];
 
     /** Whether a gateway's answer carries a value shown once: such an answer is never written anywhere. */
     public static function in(mixed $data): bool

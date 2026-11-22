@@ -77,6 +77,10 @@ enum SiteOperation: string
     // «Передать сайт…» (roles study, second wave): the site handed to another server account, the whole server's action
     // (simai-env 1.57.0 site:transfer). The same action hands it back; a site never goes back to no account.
     case SiteTransfer = 'site-transfer';
+    // «Временная ссылка» (simai-env 1.65.0): the site on the server's own IP and a port, with a key, before its domain
+    // points here; it closes by itself, asked again it lives longer, and it can be closed early.
+    case PreviewLink = 'preview-link';
+    case PreviewLinkClose = 'preview-link-close';
 
     public function command(): string
     {
@@ -126,6 +130,8 @@ enum SiteOperation: string
             self::CertificateRemove => 'ssl:remove',
             self::PhpRestore => 'site:restore-ready',
             self::SiteTransfer => 'site:transfer',
+            self::PreviewLink => 'site:preview-link',
+            self::PreviewLinkClose => 'site:preview-link-close',
         };
     }
 
@@ -133,7 +139,8 @@ enum SiteOperation: string
     public function tab(): string
     {
         return match ($this) {
-            self::CertificateIssue, self::CertificateRenew, self::CertificateRemove, self::NameAdd, self::NameRemove, self::RedirectAdd, self::RedirectRemove => 'domains',
+            self::CertificateIssue, self::CertificateRenew, self::CertificateRemove, self::NameAdd, self::NameRemove, self::RedirectAdd, self::RedirectRemove,
+            self::PreviewLink, self::PreviewLinkClose => 'domains',
             self::PhpVersion, self::PhpSetting, self::PhpSettingRemove, self::ServiceRestart, self::QueueRestart, self::ApacheOn, self::ApacheOff => 'php',
             self::DatabaseCreate, self::DatabasePassword, self::DatabaseExport, self::DatabaseDrop, self::DatabaseBrowse, self::DatabaseBrowseClose,
             self::DatabaseCredentials => 'database',
@@ -187,6 +194,8 @@ enum SiteOperation: string
             self::RedirectRemove => ['from'],
             // How long the browser stays open, in minutes: 15, 60 or 240 (the server takes 5 to 480).
             self::DatabaseBrowse => ['minutes'],
+            // How long the temporary link stays open: an hour, a day, or a number of minutes from 10 to 1440.
+            self::PreviewLink => ['minutes'],
             // The files archive and the dump are files of the site (uploaded in «Файлы»); `overwrite` replaces what is there,
             // after the server backs it up.
             self::PhpRestore => ['files', 'dump', 'overwrite'],
@@ -250,6 +259,10 @@ enum SiteOperation: string
     public function plansAsChosen(?PanelCapabilities $capabilities = null): bool
     {
         $fields = $capabilities === null ? $this->fields() : $this->fieldsOn($capabilities);
+        // The temporary link's term may be typed («Своё»): its plan waits for «Показать, что будет».
+        if ($this === self::PreviewLink) {
+            return false;
+        }
         foreach ($fields as $field) {
             $listed = $field === 'login' && !$this->namesSite();
             if (!$listed && !in_array($field, self::SWITCHES, true) && !in_array($field, self::CHOSEN, true)) {
@@ -294,6 +307,15 @@ enum SiteOperation: string
     public const array BROWSER = [self::DatabaseBrowse, self::DatabaseBrowseClose];
 
     /**
+     * The temporary link's actions: the «Временная ссылка» block of «Домены и HTTPS» offers them by its state (open: until
+     * when, «Продлить» and «Закрыть»), so the tab's row of action buttons leaves them out.
+     */
+    public const array PREVIEW = [self::PreviewLink, self::PreviewLinkClose];
+
+    /** The temporary link's terms offered at once, in minutes (the server takes 10 to 1440): an hour first, a day. */
+    public const array PREVIEW_TERMS = ['60', '1440'];
+
+    /**
      * The actions of the «База данных» block itself (simai-env 1.59.0): «Данные для подключения», «Создать базу» for a
      * site without one, «Сменить пароль»; the tab's row of buttons leaves them out with the browser's.
      */
@@ -327,7 +349,7 @@ enum SiteOperation: string
     public static function inRow(array $operations, array $accountChoices = []): array
     {
         $row = array_values(array_filter($operations, static fn (self $operation): bool => ($operation->namesSite() || ($accountChoices[$operation->value] ?? []) !== [])
-            && !in_array($operation, self::PER_ACCESS, true) && !in_array($operation, self::BROWSER, true) && !in_array($operation, self::DATABASE, true) && !in_array($operation, self::CERTIFICATE, true)
+            && !in_array($operation, self::PER_ACCESS, true) && !in_array($operation, self::BROWSER, true) && !in_array($operation, self::PREVIEW, true) && !in_array($operation, self::DATABASE, true) && !in_array($operation, self::CERTIFICATE, true)
             && !in_array($operation, self::RUNTIME, true)));
 
         return [...array_values(array_filter($row, static fn (self $operation): bool => !$operation->destroys())),
@@ -432,6 +454,8 @@ enum SiteOperation: string
             self::PhpRestore => $site->profile === 'generic',
             // An alias runs as the site it points to: that site is handed over instead.
             self::SiteTransfer => $site->profile !== 'alias',
+            // Closing only an open link; opening (or renewing) is offered to every site, what stops it said in words.
+            self::PreviewLinkClose => $site->previewLink !== null,
             default => true,
         };
     }
@@ -466,6 +490,20 @@ enum SiteOperation: string
         }
 
         return $args;
+    }
+
+    /**
+     * The temporary link's term as the form sends it: one of the terms offered, or «Своё» with a number of minutes typed
+     * beside it (`minutes-custom`); left as typed, the command table refuses what the server would.
+     */
+    public static function previewMinutes(mixed $choice, mixed $custom): ?string
+    {
+        if ($choice === 'custom') {
+            // «Своё» without a number is sent as chosen, so it is refused in words rather than opened for an hour.
+            return is_string($custom) && trim($custom) !== '' ? trim($custom) : 'custom';
+        }
+
+        return is_string($choice) && $choice !== '' ? $choice : null;
     }
 
     /**

@@ -61,6 +61,9 @@ final readonly class PanelPlan
         // file:trash-empty (simai-env 1.64.0): how many entries and bytes go for good, all of them or the one asked.
         /** @var array{items: int, bytes: int}|null */
         public ?array $purge = null,
+        // site:preview-link (simai-env 1.65.0): the address without the key, the minutes, and whether it renews an open link.
+        /** @var array{address: ?string, minutes: ?int, renew: bool}|null */
+        public ?array $preview = null,
     ) {
     }
 
@@ -136,6 +139,11 @@ final readonly class PanelPlan
             restore: $command === 'site:restore-ready' ? \Larena\Env\Admin\RestoreWords::found($data['restore'] ?? null) : null,
             purge: $command === 'file:trash-empty' && is_array($data['trash'] ?? null) && is_int($data['trash']['items'] ?? null) && is_int($data['trash']['bytes'] ?? null)
                 ? ['items' => max(0, $data['trash']['items']), 'bytes' => max(0, $data['trash']['bytes'])] : null,
+            preview: $command === 'site:preview-link' && is_array($data['preview'] ?? null) ? [
+                'address' => is_string($data['preview']['address'] ?? null) && \Larena\Env\Server\PreviewLinkState::isAddress($data['preview']['address']) ? $data['preview']['address'] : null,
+                'minutes' => is_int($data['preview']['minutes'] ?? null) ? $data['preview']['minutes'] : null,
+                'renew' => ($data['preview']['renew'] ?? false) === true,
+            ] : null,
         );
     }
 
