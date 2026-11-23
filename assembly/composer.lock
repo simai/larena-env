@@ -2360,6 +2360,7 @@
                 "illuminate/http": "^13.0",
                 "illuminate/support": "^13.0",
                 "larena/access": "dev-main",
+                "larena/audit": "dev-main",
                 "larena/core": "dev-main",
                 "php": "^8.3"
             },
@@ -2421,13 +2422,17 @@
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/HistoryTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/ServerActionsTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/DbBrowserTest.php",
+                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PreviewLinkTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PanelRunsTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/SecretFilesTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PanelPeopleTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/AccountMovesTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PanelMailTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PanelTranslationsTest.php",
-                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PlanReceiptsTest.php"
+                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PlanReceiptsTest.php",
+                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PanelRecipientsTest.php",
+                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/AuditChainTest.php",
+                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/DeclarationsTest.php"
                 ],
                 "test:unit": [
                     "@test"
@@ -2450,12 +2455,16 @@
                 "scope:check": [
                     "php tools/larena-scope-check.php"
                 ],
+                "declarations:check": [
+                    "php scripts/check-declarations.php"
+                ],
                 "quality:gate": [
                     "@validate:larena",
                     "@lint",
                     "@analyse",
                     "@test",
                     "@larena:metadata:check",
+                    "@declarations:check",
                     "@evidence:check",
                     "@scope:check"
                 ],
