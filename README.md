@@ -49,6 +49,17 @@ the panel: it is planned, confirmed by a person, and run by the server as a job 
   `env.sites.read` on each run, each drop in the audit log (`env.person.owner_released`, reason `removed` or
   `right_revoked`). A blocked person keeps the link and is not told.
 
+## Rights and audit events: one source
+
+`Providers\EnvDeclarations` is the one source of the package's rights (`RIGHTS`: six, with label, target, grant, risk
+and audit) and audit events (`AUDIT_EVENTS`, the 22 the panel writes; `VIEW_EVENTS`, the 17 its menu rows name). The
+provider registers the rights from it and `PanelAudit` refuses to write a type it does not name. `access.yaml`,
+`audit.yaml` and `module.yaml` are written by hand to match it, and `composer run declarations:check` (part of
+`quality:gate`) fails on any difference: a file's list or field, the rights the provider registers, the menu's rights and
+view events, the `access:` rights of routes and config, the rights the code authorizes, and the events it writes — an
+undeclared one, or a declared one nothing writes. A new right or event goes into `EnvDeclarations` first, then into the
+three files.
+
 ## Settings
 
 `LARENA_ENV_GATEWAY` is `sudo` (default; `LARENA_ENV_SUDO_BINARY`, `_GATE`, `_TIMEOUT`), `recorded` or `ssh`; for ssh also `LARENA_ENV_SSH_HOST`, `_USER` (`simai-panel`),

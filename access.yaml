@@ -1,18 +1,45 @@
 schema: larena.access.descriptor
 schema_version: 1
 package: larena/env
+# One source: src/Providers/EnvDeclarations.php RIGHTS. The provider registers these; `composer run declarations:check`
+# (quality:gate) fails on any difference between this file, module.yaml and what the code registers or asks.
 operations:
   - code: env.server.read
+    label: larena-env::operations.server_read
+    target: 'env.server:all'
+    grant: read
     risk: normal
     audit: denial
   # Certificates, backups, releases and services: a plan is shown and confirmed before anything is asked of the server.
   - code: env.server.operate
+    label: larena-env::operations.server_operate
+    target: 'env.server:all'
+    grant: write
+    risk: high
+    audit: denial
+  # The sites a person reaches at either level (owner decision 2026-10-31): the whole server's, or an owner's.
+  - code: env.sites.read
+    label: larena-env::operations.sites_read
+    target: 'env.sites:own'
+    grant: read
+    risk: normal
+    audit: denial
+  - code: env.sites.operate
+    label: larena-env::operations.sites_operate
+    target: 'env.sites:own'
+    grant: write
     risk: high
     audit: denial
   # DNS through the provider's API (Panel plan, stage 7): the zones and the token are the whole server's.
   - code: env.dns.read
+    label: larena-env::operations.dns_read
+    target: 'env.dns:all'
+    grant: read
     risk: normal
     audit: denial
   - code: env.dns.operate
+    label: larena-env::operations.dns_operate
+    target: 'env.dns:all'
+    grant: write
     risk: high
     audit: denial

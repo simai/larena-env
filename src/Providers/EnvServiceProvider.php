@@ -9,7 +9,6 @@ use Illuminate\Contracts\Config\Repository as Config;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
 use Larena\Access\Runtime\AccessOperationRegistry;
-use Larena\Access\ValueObjects\AccessOperationDescriptor;
 use Larena\Admin\Navigation\AdminNavigationRegistry;
 use Larena\Core\Process\ProcessExecutor;
 use Larena\Env\Console\PanelCheckCommand;
@@ -275,70 +274,17 @@ final class EnvServiceProvider extends ServiceProvider
         return class_exists(AdminNavigationRegistry::class);
     }
 
-    /** Reading the server is one right; changing it is another, and the screens ask for them apart. */
-    private static function registerAccessOperations(AccessOperationRegistry $registry): bool
+    /**
+     * The package's rights, from its one source (EnvDeclarations, auditor msg-3d61bd36 point 3): reading the server is one
+     * right, changing it another, a person's own sites and the DNS zones two each.
+     */
+    public static function registerAccessOperations(AccessOperationRegistry $registry): bool
     {
-        $read = $registry->register(new AccessOperationDescriptor(
-            code: 'env.server.read',
-            ownerPackage: 'larena/env',
-            labelKey: 'larena-env::operations.server_read',
-            target: 'env.server:all',
-            requiredGrant: 'read',
-            risk: 'normal',
-            auditDenials: true,
-        ));
-        $operate = $registry->register(new AccessOperationDescriptor(
-            code: 'env.server.operate',
-            ownerPackage: 'larena/env',
-            labelKey: 'larena-env::operations.server_operate',
-            target: 'env.server:all',
-            requiredGrant: 'write',
-            risk: 'high',
-            auditDenials: true,
-        ));
+        $registered = true;
+        foreach (EnvDeclarations::descriptors() as $descriptor) {
+            $registered = $registry->register($descriptor) && $registered;
+        }
 
-        // The sites a person reaches at either level (owner decision 2026-10-31): the whole server's, or an owner's,
-        // which the gateway narrows to.
-        $sitesRead = $registry->register(new AccessOperationDescriptor(
-            code: 'env.sites.read',
-            ownerPackage: 'larena/env',
-            labelKey: 'larena-env::operations.sites_read',
-            target: 'env.sites:own',
-            requiredGrant: 'read',
-            risk: 'normal',
-            auditDenials: true,
-        ));
-        $sitesOperate = $registry->register(new AccessOperationDescriptor(
-            code: 'env.sites.operate',
-            ownerPackage: 'larena/env',
-            labelKey: 'larena-env::operations.sites_operate',
-            target: 'env.sites:own',
-            requiredGrant: 'write',
-            risk: 'high',
-            auditDenials: true,
-        ));
-
-        // DNS through the provider's API (Panel plan, stage 7): the zones and the token are the whole server's; a
-        // person of the user level points their own site's domain through env.sites.operate.
-        $dnsRead = $registry->register(new AccessOperationDescriptor(
-            code: 'env.dns.read',
-            ownerPackage: 'larena/env',
-            labelKey: 'larena-env::operations.dns_read',
-            target: 'env.dns:all',
-            requiredGrant: 'read',
-            risk: 'normal',
-            auditDenials: true,
-        ));
-        $dnsOperate = $registry->register(new AccessOperationDescriptor(
-            code: 'env.dns.operate',
-            ownerPackage: 'larena/env',
-            labelKey: 'larena-env::operations.dns_operate',
-            target: 'env.dns:all',
-            requiredGrant: 'write',
-            risk: 'high',
-            auditDenials: true,
-        ));
-
-        return $read && $operate && $sitesRead && $sitesOperate && $dnsRead && $dnsOperate;
+        return $registered;
     }
 }

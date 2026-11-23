@@ -22,10 +22,54 @@ runtime:
 dependencies:
   - larena/access
   - larena/core
+# The rights and audit events, as src/Providers/EnvDeclarations.php declares them (checked by declarations:check).
 access_operations:
   - env.server.read
   - env.server.operate
-audit_events: []
+  - env.sites.read
+  - env.sites.operate
+  - env.dns.read
+  - env.dns.operate
+audit_events:
+  - env.person.owner_assigned
+  - env.person.owner_released
+  - env.person.invited
+  - env.person.blocked
+  - env.person.unblocked
+  - env.person.removed
+  - env.acting_as.started
+  - env.acting_as.stopped
+  - env.person.secret_files_allowed
+  - env.person.secret_files_disallowed
+  - env.secret_file.opened
+  - env.secret_file.downloaded
+  - env.secret_file.saved
+  - env.dns.connected
+  - env.dns.disconnected
+  - env.dns.record_changed
+  - env.mail.changed
+  - env.mail.checked
+  - env.mail.switched_off
+  - env.mail.password_lost
+  - env.person.password_reset_console
+  - env.server.change_started
+  - env.people.viewed
+  - env.server.overview_viewed
+  - env.settings.viewed
+  - env.dns.viewed
+  - env.dns.connection_viewed
+  - env.alerts.channel_viewed
+  - env.mail.viewed
+  - env.services.viewed
+  - env.software.viewed
+  - env.software_php.viewed
+  - env.firewall.viewed
+  - env.security.viewed
+  - env.storages.viewed
+  - env.panel_access.viewed
+  - env.update.viewed
+  - env.databases.viewed
+  - env.server.viewed
 evidence:
   path: docs/project-management/evidence/env-panel-actions/
 nonclaims:

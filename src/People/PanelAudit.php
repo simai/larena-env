@@ -9,6 +9,8 @@ use Larena\Audit\Contracts\AuditEvent;
 use Larena\Audit\Contracts\AuditSink;
 use Larena\Audit\Enums\AuditRetentionClass;
 use Larena\Audit\Enums\AuditSeverity;
+use Larena\Env\Providers\EnvDeclarations;
+use InvalidArgumentException;
 
 /**
  * The panel's own events in the audit log (audit.yaml): who gave a person a space, who looked at the panel as someone
@@ -32,6 +34,10 @@ final readonly class PanelAudit
     /** @param array<string, string> $payload */
     public function record(string $type, string $actor, string $subject, array $payload = [], ?string $correlationId = null): void
     {
+        // Only what audit.yaml declares is written (EnvDeclarations): a new event is declared first.
+        if (!EnvDeclarations::writes($type)) {
+            throw new InvalidArgumentException('env_audit_event_undeclared: '.$type);
+        }
         if (!$this->available()) {
             return;
         }

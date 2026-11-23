@@ -17,6 +17,12 @@
   the audit log: without a bound audit sink a start is refused `audit_unavailable` before the server is asked, while
   plans and reads go on. `larena/audit` moved from the dev requirements to `require` (the panel profile always ships
   it); the assembly's lock follows at the next relock.
+- Declarations match the runtime (auditor msg-3d61bd36, point 3): `EnvDeclarations` is the one source of the six rights
+  and the audit events; the provider registers the rights from it and `PanelAudit` refuses an undeclared event.
+  `module.yaml` now lists the six rights and every event (it listed two rights and no events), `access.yaml` the six
+  rights with their labels, targets and grants (it listed four), and `audit.yaml` the menu's 17 view events beside the
+  22 written ones. The new `declarations:check` in `quality:gate` fails on any difference between the three files, the
+  rights the provider registers and the code asks for, and the events the code writes or the menu names.
 
 ## 0.4.8 — built 2026-11-22, on the local stand, not released (waits for the owner's acceptance)
 
