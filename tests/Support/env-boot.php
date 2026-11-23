@@ -72,7 +72,9 @@ $config = new class implements ConfigContract {
 };
 $app->instance('config', $config);
 $app->instance(ConfigContract::class, $config);
-$app->instance('router', new Router(new Dispatcher($app), $app));
+$events = new Dispatcher($app);
+$app->instance('events', $events);
+$app->instance('router', new Router($events, $app));
 $features = $argv[3] ?? '';
 if ($features !== '') {
     $config->set(\Larena\Core\Features\FeatureSet::CONFIG_KEY, json_decode($features, true, 512, JSON_THROW_ON_ERROR));
@@ -156,6 +158,9 @@ echo json_encode([
     'rights' => $rights,
     'migrations' => $migrations,
     'features' => $config->get(\Larena\Core\Features\FeatureSet::CONFIG_KEY),
+    // Which of Auth's and Access's signals about people the panel listens to.
+    'listening' => array_values(array_filter([\Larena\Auth\Events\PersonDeleted::class, \Larena\Access\Events\RoleRevoked::class,
+        \Larena\Access\Events\RoleRightsRevoked::class], static fn (string $event): bool => $events->hasListeners($event))),
     // Whether the panel named its warnings for the bell (larena/notification is a development requirement).
     'notification_sources' => class_exists(\Larena\Notification\Runtime\NotificationSources::class)
         && isset((new ReflectionProperty(\Larena\Notification\Runtime\NotificationSources::class, 'labels'))->getValue($app->make(\Larena\Notification\Runtime\NotificationSources::class))['env:warning:backup_none']),

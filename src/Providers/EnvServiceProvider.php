@@ -160,6 +160,7 @@ final class EnvServiceProvider extends ServiceProvider
                 }
             });
         }
+        $this->listenToPeople($on('env.admin') || $on('env.notifications'));
         // Every panel screen says when a person of the whole server is looking at it as someone else.
         if ($this->app->bound('view')) {
             $app = $this->app;
@@ -299,6 +300,42 @@ final class EnvServiceProvider extends ServiceProvider
     }
 
     /** The screen and its menu entry are composed only where larena/admin is installed; the rest works without it. */
+    /**
+     * Auth's and Access's signals about people, sent once after their change commits. A removed person's link «person —
+     * server account» is dropped at once (audited `env.person.owner_released`, reason `removed`); a role taken away
+     * re-checks that person's link, and a custom role that no longer gives `env.sites.read` or `env.server.read` sweeps
+     * every link. Blocking keeps the link by the panel's own rule, so it needs nothing here; node grants never give
+     * `env.*`. Only where the people of the panel are a feature that is on (`env.admin`, `env.notifications`), and only
+     * where the packages that send the signals are installed. Each listener reads one row or the links; nothing is asked
+     * of the server.
+     */
+    private function listenToPeople(bool $on): void
+    {
+        if (!$on || !$this->app->bound('events')) {
+            return;
+        }
+        $app = $this->app;
+        $events = $this->app->make('events');
+        $recipients = static fn (): \Larena\Env\People\PanelRecipients => $app->make(\Larena\Env\People\PanelRecipients::class);
+        if (class_exists(\Larena\Auth\Events\PersonDeleted::class)) {
+            $events->listen(\Larena\Auth\Events\PersonDeleted::class, static function (\Larena\Auth\Events\PersonDeleted $event) use ($recipients): void {
+                $recipients()->releaseNow($event->subjectRef, 'removed');
+            });
+        }
+        if (class_exists(\Larena\Access\Events\RoleRevoked::class)) {
+            $events->listen(\Larena\Access\Events\RoleRevoked::class, static function (\Larena\Access\Events\RoleRevoked $event) use ($recipients): void {
+                $recipients()->sweep($event->subjectRef);
+            });
+        }
+        if (class_exists(\Larena\Access\Events\RoleRightsRevoked::class)) {
+            $events->listen(\Larena\Access\Events\RoleRightsRevoked::class, static function (\Larena\Access\Events\RoleRightsRevoked $event) use ($recipients): void {
+                if (array_intersect($event->rights, [\Larena\Env\People\PanelRecipients::OWN_SITES, \Larena\Env\People\PanelRecipients::WHOLE_SERVER]) !== []) {
+                    $recipients()->sweep();
+                }
+            });
+        }
+    }
+
     private function composesAdmin(): bool
     {
         return class_exists(AdminNavigationRegistry::class);

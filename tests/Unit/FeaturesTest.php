@@ -95,10 +95,16 @@ env_assert($admin['rights'] === ['env.server.operate', 'env.server.read', 'env.s
     'The rights and tables of the screens alone: '.json_encode([$admin['rights'], $admin['migrations']]));
 env_assert($admin['scheduled'] === [] && $admin['notification_sources'] === false, 'No check without env.monitoring, even with the scheduler\'s flag on.');
 
+// Auth's and Access's signals about people are heard only where the panel's people are a feature that is on.
+$signals = [\Larena\Auth\Events\PersonDeleted::class, \Larena\Access\Events\RoleRevoked::class, \Larena\Access\Events\RoleRightsRevoked::class];
+env_assert($whole['listening'] === $signals && $admin['listening'] === $signals, 'With env.admin on, the panel hears a person removed and a role or right taken away.');
+env_assert($none['listening'] === [], 'Without env\'s features nothing is heard: '.json_encode($none['listening']));
+
 // The check alone: measured every 5 minutes, no screen, no warm-up of pages that do not exist, nobody told.
 $monitoring = env_features_boot('["env.monitoring"]', 'env');
 env_assert($monitoring['routes'] === [] && $monitoring['navigation'] === [] && $monitoring['rights'] === [] && $monitoring['migrations'] === ['migrations']
     && $monitoring['scheduled'] === ['larena:env-check'] && $monitoring['notification_sources'] === false, 'The check alone: '.json_encode($monitoring['scheduled']));
+env_assert($monitoring['listening'] === [], 'The check alone hears nothing about people: nobody is told and no screen ties people to sites.');
 
 // Local flags only narrow: the scheduler's flag off keeps every job off, the screens' flag off keeps every route off.
 $narrowed = env_features_boot('null', '', 'admin-off');

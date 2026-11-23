@@ -22,6 +22,15 @@
   (`env.dns.record_changed`) now also keeps who, for whom and the plan it was confirmed with, correlated by that plan;
   connecting and disconnecting DNS are refused without the audit log too.
 
+- The panel hears Auth's and Access's signals about people (sent once, after their change commits), where `env.admin` or
+  `env.notifications` is on and the package that sends them is installed. A removed person (`PersonDeleted`) loses the
+  link to a server account at once, written as `env.person.owner_released` with reason `removed`. A role taken away
+  (`RoleRevoked`) re-checks that person's link; a custom role that no longer gives `env.sites.read` or `env.server.read`
+  (`RoleRightsRevoked`) sweeps every link. The whole server's people told by the bell and the mail are now everyone who
+  holds `env.server.read` (Access's `holders()`), custom roles included, people only. An answer Access could not give
+  tells nobody of the whole server; one cut at 1000 is used and logged. An Access without `holders()` keeps the
+  administrator role's people, as before.
+
 ## 0.4.8 — released 2026-11-23 on GitHub (archive sha256 d277937a…3dff, built from 89a127b)
 
 - Who hears about the server (auditor msg-3d61bd36, point 1): the bell and the mail go through one list,
