@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "323d95d0f5cc3d4035333f230fcc6460",
+    "content-hash": "71b06ab03015e00492ae9e2958d2974e",
     "packages": [
         {
             "name": "brick/math",
@@ -1415,12 +1415,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:simai/larena-access.git",
-                "reference": "5cce157c3f34888f4f13db928ce216200821a3cc"
+                "reference": "7af4a71d78ef524a50592cfd7ceae8a9b28c81e3"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-access/zipball/5cce157c3f34888f4f13db928ce216200821a3cc",
-                "reference": "5cce157c3f34888f4f13db928ce216200821a3cc",
+                "url": "https://api.github.com/repos/simai/larena-access/zipball/7af4a71d78ef524a50592cfd7ceae8a9b28c81e3",
+                "reference": "7af4a71d78ef524a50592cfd7ceae8a9b28c81e3",
                 "shasum": ""
             },
             "require": {
@@ -1475,6 +1475,9 @@
                     "@php tests/Unit/AccessDecisionContractTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/AdminApiContractTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/NodeGrantOperationExecutionTest.php",
+                    "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/NodeGrantEnvRightRefusalTest.php",
+                    "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/RoleEventsAndHoldersTest.php",
+                    "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/RightSplitGrantTest.php",
                     "@php tests/Unit/AccessFailsClosedTest.php",
                     "@php tests/Unit/AccessGrantDecisionRuntimeTest.php",
                     "@php tests/Unit/AccessGrantDecisionFailsClosedTest.php",
@@ -1566,7 +1569,7 @@
                 }
             ],
             "description": "Larena Access: Operation permissions, target providers, query scopes and explainable access decisions.",
-            "time": "2026-11-19T16:28:49+00:00"
+            "time": "2026-11-23T17:08:05+00:00"
         },
         {
             "name": "larena/admin",
@@ -1574,12 +1577,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:simai/larena-admin.git",
-                "reference": "57cfc81d6dd4e7de66f3fd05770c62c38582a0f7"
+                "reference": "0ada831faaf5ba472027eda4f4b4c00c3182bb5f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-admin/zipball/57cfc81d6dd4e7de66f3fd05770c62c38582a0f7",
-                "reference": "57cfc81d6dd4e7de66f3fd05770c62c38582a0f7",
+                "url": "https://api.github.com/repos/simai/larena-admin/zipball/0ada831faaf5ba472027eda4f4b4c00c3182bb5f",
+                "reference": "0ada831faaf5ba472027eda4f4b4c00c3182bb5f",
                 "shasum": ""
             },
             "require": {
@@ -1633,6 +1636,13 @@
                             "release_repository": "simai/ui-pro",
                             "source_repositories": [
                                 "simai/ui-pro"
+                            ]
+                        },
+                        "admin": {
+                            "releases": "*",
+                            "release_repository": "simai/ui-admin",
+                            "source_repositories": [
+                                "simai/ui-admin"
                             ]
                         }
                     }
@@ -1809,7 +1819,7 @@
                 }
             ],
             "description": "Larena Admin: Object-based, permission-aware administration platform for package contributions, screens, actions and diagnostics.",
-            "time": "2026-11-22T23:20:15+00:00"
+            "time": "2026-11-23T16:23:30+00:00"
         },
         {
             "name": "larena/audit",
@@ -1927,12 +1937,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:simai/larena-auth.git",
-                "reference": "e302e23df39f9fec47e180365c3ac59b81fa59d6"
+                "reference": "3fca3b0b943b8670c53ccbc727af0c811275d016"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-auth/zipball/e302e23df39f9fec47e180365c3ac59b81fa59d6",
-                "reference": "e302e23df39f9fec47e180365c3ac59b81fa59d6",
+                "url": "https://api.github.com/repos/simai/larena-auth/zipball/3fca3b0b943b8670c53ccbc727af0c811275d016",
+                "reference": "3fca3b0b943b8670c53ccbc727af0c811275d016",
                 "shasum": ""
             },
             "require": {
@@ -2040,7 +2050,7 @@
                 }
             ],
             "description": "Larena Auth package: entry subject resolution, authentication methods, sessions, MFA and token channel boundaries.",
-            "time": "2026-11-19T16:30:20+00:00"
+            "time": "2026-11-23T16:24:03+00:00"
         },
         {
             "name": "larena/core",
@@ -2432,7 +2442,11 @@
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PlanReceiptsTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PanelRecipientsTest.php",
                     "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/AuditChainTest.php",
-                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/DeclarationsTest.php"
+                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/DeclarationsTest.php",
+                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/FeaturesTest.php",
+                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PersonEventsTest.php",
+                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/CoreOperationsTest.php",
+                    "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/RightSplitTest.php"
                 ],
                 "test:unit": [
                     "@test"
@@ -2457,6 +2471,9 @@
                 ],
                 "declarations:check": [
                     "php scripts/check-declarations.php"
+                ],
+                "operations:write": [
+                    "php scripts/write-operations.php"
                 ],
                 "quality:gate": [
                     "@validate:larena",
@@ -2954,12 +2971,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/simai/larena-ui.git",
-                "reference": "8d92afc8a6251d38c12dccedb9ca9c031182bad5"
+                "reference": "058614fe5720c06103f7dc3cb39b86ec85b62098"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-ui/zipball/8d92afc8a6251d38c12dccedb9ca9c031182bad5",
-                "reference": "8d92afc8a6251d38c12dccedb9ca9c031182bad5",
+                "url": "https://api.github.com/repos/simai/larena-ui/zipball/058614fe5720c06103f7dc3cb39b86ec85b62098",
+                "reference": "058614fe5720c06103f7dc3cb39b86ec85b62098",
                 "shasum": ""
             },
             "require": {
@@ -3102,7 +3119,7 @@
                 "source": "https://github.com/simai/larena-ui/tree/main",
                 "issues": "https://github.com/simai/larena-ui/issues"
             },
-            "time": "2026-11-22T13:29:18+00:00"
+            "time": "2026-11-23T16:19:16+00:00"
         },
         {
             "name": "league/commonmark",
