@@ -275,7 +275,7 @@ $certificatesGateway = new class (new Larena\Env\Gateway\RecordedAnswersGateway(
     public function source(): string { return 'recorded'; }
 };
 $certificates = new Larena\Env\Http\Controllers\DnsCertificatesController(
-    env_operations($certificatesGateway), $connection, $views, $translator, env_plan_receipts($clock));
+    env_facade($certificatesGateway), $connection, $views, $translator, env_plan_receipts($clock));
 $certificatesSession = new Illuminate\Session\Store('panel', new Illuminate\Session\ArraySessionHandler(10));
 $asked = static function (string $op, string $as = 'admin@stand.test', ?string $receipt = null) use ($certificatesSession): Illuminate\Http\Request {
     $request = Illuminate\Http\Request::create('/admin/server/dns/certificates/plan', 'POST', ['op' => $op] + ($receipt !== null ? ['receipt' => $receipt] : []));
@@ -317,7 +317,7 @@ env_assert($wrong instanceof Illuminate\Http\RedirectResponse && str_ends_with($
 // within 15 minutes; the form sends only the receipt's id.
 $dnsClock = time();
 $dnsScreen = new Larena\Env\Http\Controllers\DnsController($dns, new Larena\Env\Server\SiteDetailsReader(new Larena\Env\Gateway\RecordedAnswersGateway(env_recorded_path())),
-    $views, $translator, receipts: env_plan_receipts($dnsClock));
+    $views, $translator, receipts: env_plan_receipts($dnsClock), operations: env_facade(new Larena\Env\Gateway\RecordedAnswersGateway(env_recorded_path()), dns: $dns));
 $dnsSession = new Illuminate\Session\Store('panel', new Illuminate\Session\ArraySessionHandler(10));
 $dnsAsked = static function (array $input, string $as = 'admin@stand.test') use ($dnsSession): Illuminate\Http\Request {
     $request = Illuminate\Http\Request::create('/admin/server/dns', 'POST', $input);
@@ -357,7 +357,7 @@ env_assert(str_ends_with($certificates->plan($asked('store'))->getTargetUrl(), '
 // The alert bar's «Отметить, что видели» is one click (owner 2026-11-06): a JSON post acknowledges at once and answers
 // when the server has recorded it; the plain post and the link still show the plan.
 $recorded = new Larena\Env\Gateway\RecordedAnswersGateway(env_recorded_path());
-$alertsController = new Larena\Env\Http\Controllers\AlertsController(env_operations($recorded),
+$alertsController = new Larena\Env\Http\Controllers\AlertsController(env_facade($recorded),
     new Larena\Env\Server\ServerOverviewReader($recorded), new Larena\Env\Server\SiteExtrasReader($recorded), $views, $translator, $encrypter,
     $ackCache = new Illuminate\Cache\Repository(new Illuminate\Cache\ArrayStore()));
 $ack = static function (string $method, bool $json): Illuminate\Http\Request {
@@ -406,7 +406,7 @@ $newer = new class ($recorded) implements Larena\Env\Contracts\PanelGateway {
         return count(array_filter($this->asked, static fn (Larena\Env\Gateway\PanelRequest $request): bool => $request->command === $command && $request->confirm));
     }
 };
-$levelsController = new Larena\Env\Http\Controllers\AlertsController(env_operations($newer),
+$levelsController = new Larena\Env\Http\Controllers\AlertsController(env_facade($newer),
     new Larena\Env\Server\ServerOverviewReader($newer), new Larena\Env\Server\SiteExtrasReader($newer), $views, $translator, $encrypter);
 $channelAsked = static function (array $input): Illuminate\Http\Request {
     $request = Illuminate\Http\Request::create('/admin/server/alerts/channel/plan', 'POST', $input);
@@ -434,7 +434,7 @@ env_assert($olderAsked !== null && !array_key_exists('levels', $olderAsked->args
 // The alerts' changes go by their plan's receipt too: the channel, the test message and a single acknowledgement.
 $newer->version = '1.63.0';
 $alertsClock = 1_800_000_000;
-$receiptAlerts = new Larena\Env\Http\Controllers\AlertsController(env_operations($newer),
+$receiptAlerts = new Larena\Env\Http\Controllers\AlertsController(env_facade($newer),
     new Larena\Env\Server\ServerOverviewReader($newer), new Larena\Env\Server\SiteExtrasReader($newer), $views, $translator, $encrypter, null, env_plan_receipts($alertsClock));
 $alertsSession = new Illuminate\Session\Store('panel', new Illuminate\Session\ArraySessionHandler(10));
 $alertsAsked = static function (array $input) use ($alertsSession): Illuminate\Http\Request {

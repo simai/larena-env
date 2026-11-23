@@ -166,7 +166,10 @@
     "src/Operations/PreviewLink.php",
     "src/Server/PreviewLinkState.php",
     "resources/views/admin/partials/preview-link.blade.php",
-    "tests/Unit/PreviewLinkTest.php"
+    "tests/Unit/PreviewLinkTest.php",
+    "operations.yaml",
+    "tests/Unit/CoreOperationsTest.php",
+    "tests/Unit/RightSplitTest.php"
   ],
   "forbidden_files": [
     "../*"

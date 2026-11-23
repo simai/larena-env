@@ -38,7 +38,7 @@ APP="${WORK}/app"; ENV_SOURCE="${WORK}/env-source"; TOOLS="${WORK}/tools"
 mkdir -p "$APP" "$ENV_SOURCE" "$TOOLS" "$OUTPUT"
 
 # The application, and larena/env as composer's path repository (the assembly names it ../env-source).
-ENV_PATHS=(src config database resources routes composer.json module.yaml access.yaml audit.yaml LICENSE NOTICE)
+ENV_PATHS=(src config database resources routes composer.json module.yaml access.yaml audit.yaml operations.yaml LICENSE NOTICE)
 # The assembly's top-level entries but vendor/ and .env, named one by one: a tar --exclude=./vendor also drops
 # lang/vendor, the panel's own words over the packages'.
 # Through files, not pipes (here and below): the reading tar stops at the end marker and the writer's padding then fails with

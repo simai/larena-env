@@ -203,7 +203,9 @@
             "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/AuditChainTest.php",
             "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/DeclarationsTest.php",
             "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/FeaturesTest.php",
-            "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PersonEventsTest.php"
+            "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PersonEventsTest.php",
+            "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/CoreOperationsTest.php",
+            "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/RightSplitTest.php"
         ],
         "test:unit": [
             "@test"
@@ -215,6 +217,7 @@
         "evidence:check": "php scripts/check-evidence.php",
         "scope:check": "php tools/larena-scope-check.php",
         "declarations:check": "php scripts/check-declarations.php",
+        "operations:write": "php scripts/write-operations.php",
         "quality:gate": [
             "@validate:larena",
             "@lint",

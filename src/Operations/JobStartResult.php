@@ -23,6 +23,10 @@ final readonly class JobStartResult
         public ?string $who = null,
         public ?string $onBehalfOf = null,
         public ?string $command = null,
+        // The Core operation the change was started as (EnvOperationCatalog), and whether it can be undone: true, false or
+        // timed (auditor msg-3ee29ace, answer 3), so «История» can filter what cannot be undone without new event types.
+        public ?string $operation = null,
+        public ?string $reversible = null,
     ) {
     }
 
@@ -36,6 +40,8 @@ final readonly class JobStartResult
         return array_filter([
             'who' => $this->who,
             'on_behalf_of' => $this->onBehalfOf,
+            'operation' => $this->operation,
+            'reversible' => $this->reversible,
             'command' => $this->command,
             'request_id' => $this->requestId,
             'plan_id' => $this->planId,

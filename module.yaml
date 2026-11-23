@@ -26,8 +26,18 @@ dependencies:
 access_operations:
   - env.server.read
   - env.server.operate
+  - env.server.software
+  - env.server.security
+  - env.server.access
+  - env.server.backup_storage
+  - env.server.update
   - env.sites.read
   - env.sites.operate
+  - env.sites.files
+  - env.sites.database
+  - env.sites.backup
+  - env.sites.deploy
+  - env.sites.remove
   - env.dns.read
   - env.dns.operate
 audit_events:

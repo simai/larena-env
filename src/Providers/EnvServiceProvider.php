@@ -26,6 +26,7 @@ use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\PanelActorResolver;
 use Larena\Env\Navigation\ListedCommands;
 use Larena\Env\Navigation\ServerAdminNavigationContributor;
+use Larena\Env\Operations\EnvOperationCatalog;
 use Larena\Env\Operations\PanelOperations;
 use Larena\Env\People\PanelAudit;
 use Larena\Env\People\PersonOwners;
@@ -82,6 +83,39 @@ final class EnvServiceProvider extends ServiceProvider
             $app->make(PanelAudit::class),
             $app->make(\Larena\Env\Operations\PlanTrail::class),
         ));
+        // The panel's changes as Core operations (auditor msg-3d61bd36, point 4): the screens plan and start them by their
+        // Larena name through Core's registry runtime, which checks the operation's right and audits its decision; the
+        // handlers carry them out through the gateway or DNS's provider. Storage's way in: extend the registry and the
+        // handler catalog, so they land in the one catalogue REST and MCP read. Only the features that are on give theirs.
+        $this->app->scoped(\Larena\Env\Operations\EnvOperationCall::class, static fn (): \Larena\Env\Operations\EnvOperationCall => new \Larena\Env\Operations\EnvOperationCall());
+        $this->app->bind(\Larena\Env\Operations\EnvOperations::class, static fn (Application $app): \Larena\Env\Operations\EnvOperations => new \Larena\Env\Operations\EnvOperations(
+            $app->make(PanelOperations::class),
+            $app->bound(\Larena\Core\Runtime\RegistryOperationRuntime::class) ? $app->make(\Larena\Core\Runtime\RegistryOperationRuntime::class) : null,
+            $app->make(\Larena\Env\Operations\EnvOperationCall::class),
+        ));
+        $this->app->extend(\Larena\Core\Registry\DeclaredOperationRegistry::class, function (\Larena\Core\Registry\DeclaredOperationRegistry $registry): \Larena\Core\Registry\DeclaredOperationRegistry {
+            foreach ((new \Larena\Env\Operations\EnvOperationProvider(EnvFeatures::of($this->app)))->operations() as $operation) {
+                if (!$registry->has($operation['declaration']->name)) {
+                    $registry->register($operation['declaration'], $operation['descriptor'], $operation['handler_ref']);
+                }
+            }
+
+            return $registry;
+        });
+        $this->app->extend(\Larena\Core\Runtime\OperationHandlerCatalog::class, static function (\Larena\Core\Runtime\OperationHandlerCatalog $catalog, Application $app): \Larena\Core\Runtime\OperationHandlerCatalog {
+            $call = static fn (): \Larena\Env\Operations\EnvOperationCall => $app->make(\Larena\Env\Operations\EnvOperationCall::class);
+            if (!$catalog->has(\Larena\Env\Operations\EnvOperationCatalog::GATEWAY_HANDLER)) {
+                $catalog->register(\Larena\Env\Operations\EnvOperationCatalog::GATEWAY_HANDLER, static fn (): \Larena\Env\Operations\GatewayOperationHandler => new \Larena\Env\Operations\GatewayOperationHandler($call));
+            }
+            if (!$catalog->has(\Larena\Env\Operations\EnvOperationCatalog::DNS_HANDLER)) {
+                $catalog->register(\Larena\Env\Operations\EnvOperationCatalog::DNS_HANDLER, static fn (): \Larena\Env\Operations\DnsOperationHandler => new \Larena\Env\Operations\DnsOperationHandler(
+                    static fn (): DnsService => $app->make(DnsService::class),
+                    $call,
+                ));
+            }
+
+            return $catalog;
+        });
         // Which owner of the server a person at the user level works as (Panel plan 2.4).
         $this->app->bind(PersonOwners::class, static fn (Application $app): PersonOwners => new PersonOwners($app->make('db')->connection()));
         // Who hears about the server, by the bell and by mail: active people who still hold the right (auditor msg-3d61bd36, 1).
@@ -351,6 +385,13 @@ final class EnvServiceProvider extends ServiceProvider
         $registered = true;
         foreach (EnvDeclarations::descriptors($featureOn) as $descriptor) {
             $registered = $registry->register($descriptor) && $registered;
+        }
+        // The split of the two broad rights (auditor msg-3ee29ace): a custom role that held env.sites.operate or
+        // env.server.operate receives the rights split out of it, once, when they first appear. Nobody loses access.
+        foreach (EnvOperationCatalog::SPLIT_FROM as $newRight => $heldRight) {
+            if ($registry->get($newRight) !== null) {
+                $registry->grantWith($newRight, $heldRight);
+            }
         }
 
         return $registered;

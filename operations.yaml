@@ -1,0 +1,4776 @@
+# The panel's changes as Core operations (larena/env). Do not edit: written by `composer run operations:write`
+# from src/Operations/EnvOperationCatalog.php and src/Gateway/PanelCommands.php; declarations:check fails on any
+# difference. Patterns are the gateway's own, as PanelCommands writes them.
+schema: larena.operations.contract
+schema_version: 1
+package: larena/env
+operations:
+  -
+    name: env.site.add
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.operate
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        profile: { type: string, pattern: '/\A(?:static|generic|laravel|wordpress|node|redirect|bitrix|proxy)\z/D' }
+        php: { type: string, pattern: '/\A[5-9]\.[0-9]\z/D' }
+        owner: { type: string, pattern: '/\A[a-z][a-z0-9_-]{0,31}\z/D' }
+        create-db: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+        db-engine: { type: string, pattern: '/\A(?:mysql|pgsql)\z/D' }
+        redirect-to: { type: string, pattern: '/\Ahttps?:\/\/[A-Za-z0-9.-]{1,253}(?::[0-9]{1,5})?\z/D' }
+        redirect-code: { type: string, pattern: '/\A30[1278]\z/D' }
+        redirect-path: { type: string, pattern: '/\A(?:keep|drop)\z/D' }
+        backup: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+        upstream-port: { type: string, pattern: '/\A(?!(?:80|443)\z)(?:[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])\z/D' }
+        upstream-path: { type: string, pattern: '/\A\/[A-Za-z0-9._~\/-]{0,200}\z/D' }
+        websockets: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+        bitrix-files: { type: string, pattern: '/\A(?:none|setup|restore)\z/D' }
+        ssl: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+        ssl-email: { type: string, pattern: '/\A[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,253}\.[A-Za-z]{2,63}\z/D' }
+        ssl-redirect: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+      required:
+        - domain
+        - profile
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.site.suspend
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.operate
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+      required:
+        - domain
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.site.resume
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.operate
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+      required:
+        - domain
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.site.set_php
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.operate
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        php: { type: string, pattern: '/\A[5-9]\.[0-9]\z/D' }
+      required:
+        - domain
+        - php
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.site.apache
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.operate
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        enable: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+      required:
+        - domain
+        - enable
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.site.cache_clear
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.operate
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+      required:
+        - domain
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.site.service_restart
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.operate
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+      required:
+        - domain
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.site.check_fix
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.operate
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        id: { type: string, pattern: '/\A[a-z0-9][a-z0-9._-]{0,63}\z/D' }
+      required:
+        - domain
+        - id
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.site.transfer
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.operate
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        owner: { type: string, pattern: '/\A[a-z][a-z0-9_-]{0,31}\z/D' }
+      required:
+        - domain
+        - owner
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.site.name_add
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.operate
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        name: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        mode: { type: string, pattern: '/\A(?:serve|redirect)\z/D' }
+        check-dns: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+      required:
+        - domain
+        - name
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.site.name_remove
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.operate
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        name: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+      required:
+        - domain
+        - name
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.site.redirect_add
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.operate
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        from: { type: string, pattern: '/\A\/[A-Za-z0-9._~\/%-]{0,500}\z/D' }
+        to: { type: string, pattern: '/\A(?:\/|https?:\/\/[A-Za-z0-9.-]{1,253}(?::[0-9]{1,5})?\/?)[A-Za-z0-9._~\/%?&=+-]{0,500}\z/D' }
+        code: { type: string, pattern: '/\A30[1278]\z/D' }
+      required:
+        - domain
+        - from
+        - to
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.site.redirect_remove
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.operate
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        from: { type: string, pattern: '/\A\/[A-Za-z0-9._~\/%-]{0,500}\z/D' }
+      required:
+        - domain
+        - from
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.site.php_ini_set
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.operate
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        name: { type: string, pattern: '/\A[a-z][a-z0-9_.]{0,63}\z/D' }
+        value: { type: string, pattern: '/\A[A-Za-z0-9 ._:\/+-]{0,128}\z/D' }
+      required:
+        - domain
+        - name
+        - value
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.site.php_ini_unset
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.operate
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        name: { type: string, pattern: '/\A[a-z][a-z0-9_.]{0,63}\z/D' }
+      required:
+        - domain
+        - name
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.site.preview_link
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.operate
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        minutes: { type: string, pattern: '/\A(?:[1-9][0-9]|[1-9][0-9]{2}|1[0-3][0-9]{2}|14[0-3][0-9]|1440)\z/D' }
+      required:
+        - domain
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.site.preview_link_close
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.operate
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+      required:
+        - domain
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.queue.restart
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.operate
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+      required:
+        - domain
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.certificate.issue
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.operate
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        email: { type: string, pattern: '/\A[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,253}\.[A-Za-z]{2,63}\z/D' }
+        redirect: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+        hsts: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+        staging: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+        challenge: { type: string, pattern: '/\A(?:http|dns)\z/D' }
+        wildcard: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+      required:
+        - domain
+        - email
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.certificate.renew
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.operate
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+      required:
+        - domain
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.certificate.remove
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.operate
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        delete-cert: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+      required:
+        - domain
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.cron.job_add
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.operate
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        schedule: { type: string, pattern: '/\A[0-9*\/,-]{1,40}(?: [0-9*\/,-]{1,40}){4}\z/D' }
+        command: { type: string, pattern: '/\A(?![-\s])[^\x00-\x1f\x7f]{1,1000}(?<!\s)\z/Du' }
+      required:
+        - domain
+        - schedule
+        - command
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.cron.job_remove
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.operate
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        id: { type: string, pattern: '/\A[a-f0-9]{8}\z/D' }
+      required:
+        - id
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.cron.job_enable
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.operate
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        id: { type: string, pattern: '/\A[a-f0-9]{8}\z/D' }
+      required:
+        - id
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.cron.job_disable
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.operate
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        id: { type: string, pattern: '/\A[a-f0-9]{8}\z/D' }
+      required:
+        - id
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.alerts.ack
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.operate
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        id: { type: string, pattern: '/\A[A-Za-z0-9][A-Za-z0-9._-]{0,63}\z/D' }
+      required:
+        - id
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.profile.enable
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.operate
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        id: { type: string, pattern: '/\A(?:static|generic|laravel|wordpress|node|redirect|bitrix|proxy)\z/D' }
+      required:
+        - id
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.job.cancel
+    execution_mode: sync
+    risk: external
+    reversible: false
+    access_scope: env.sites.operate
+    audit_event: env.server.job_cancelled
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        job_id: { type: string, pattern: '/\A[a-f0-9]{24}\z/D' }
+      required:
+        - job_id
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        job_id: { type: string }
+        state: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.file.write
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.files
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        path: { type: string, pattern: '/\A(?!\/)(?!(?:.*\/)?\.\.(?:\/|\z))[^\x00-\x1f\x7f]{1,1024}\z/D' }
+        content: { type: string, pattern: '/\A[^\x00]{0,61440}\z/D' }
+        expect-sha256: { type: string, pattern: '/\A(?:[a-f0-9]{64}|new|any)\z/D' }
+      required:
+        - domain
+        - path
+        - content
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.file.upload
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.files
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        path: { type: string, pattern: '/\A(?!\/)(?!(?:.*\/)?\.\.(?:\/|\z))[^\x00-\x1f\x7f]{1,1024}\z/D' }
+        expect-sha256: { type: string, pattern: '/\A(?:[a-f0-9]{64}|new|any)\z/D' }
+        attachment: { type: object, additionalProperties: false, properties: { sha256: { type: string, pattern: '^[a-f0-9]{64}$' }, size: { type: integer, minimum: 0, maximum: 1073741824 } } }
+      required:
+        - domain
+        - path
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.file.extract
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.files
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        path: { type: string, pattern: '/\A(?!\/)(?!(?:.*\/)?\.\.(?:\/|\z))[^\x00-\x1f\x7f]{1,1024}\z/D' }
+        to: { type: string, pattern: '/\A(?!\/)(?!(?:.*\/)?\.\.(?:\/|\z))[^\x00-\x1f\x7f]{1,1024}\z/D' }
+        overwrite: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+        without-secrets: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+      required:
+        - domain
+        - path
+        - to
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.file.remove
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.files
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        path: { type: string, pattern: '/\A(?!\/)(?!(?:.*\/)?\.\.(?:\/|\z))[^\x00-\x1f\x7f]{1,1024}\z/D' }
+      required:
+        - domain
+        - path
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.file.trash_restore
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.files
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        id: { type: string, pattern: '/\A[0-9]{8}T[0-9]{6}Z-[a-f0-9]{6}\z/D' }
+        to: { type: string, pattern: '/\A(?!\/)(?!(?:.*\/)?\.\.(?:\/|\z))[^\x00-\x1f\x7f]{1,1024}\z/D' }
+      required:
+        - domain
+        - id
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.file.mkdir
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.files
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        path: { type: string, pattern: '/\A(?!\/)(?!(?:.*\/)?\.\.(?:\/|\z))[^\x00-\x1f\x7f]{1,1024}\z/D' }
+      required:
+        - domain
+        - path
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.file.rename
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.files
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        path: { type: string, pattern: '/\A(?!\/)(?!(?:.*\/)?\.\.(?:\/|\z))[^\x00-\x1f\x7f]{1,1024}\z/D' }
+        to: { type: string, pattern: '/\A(?!\/)(?!(?:.*\/)?\.\.(?:\/|\z))[^\x00-\x1f\x7f]{1,1024}\z/D' }
+      required:
+        - domain
+        - path
+        - to
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.file.copy
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.files
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        path: { type: string, pattern: '/\A(?!\/)(?!(?:.*\/)?\.\.(?:\/|\z))[^\x00-\x1f\x7f]{1,1024}\z/D' }
+        to: { type: string, pattern: '/\A(?!\/)(?!(?:.*\/)?\.\.(?:\/|\z))[^\x00-\x1f\x7f]{1,1024}\z/D' }
+      required:
+        - domain
+        - path
+        - to
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.file.archive
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.files
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        path: { type: string, pattern: '/\A(?!\/)(?!(?:.*\/)?\.\.(?:\/|\z))[^\x00-\x1f\x7f]{1,1024}\z/D' }
+        to: { type: string, pattern: '/\A(?!\/)(?!(?:.*\/)?\.\.(?:\/|\z))[^\x00-\x1f\x7f]{1,1024}\.(?:zip|tar\.gz|tgz|tar)\z/D' }
+        without-secrets: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+      required:
+        - domain
+        - path
+        - to
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.ssh_access.create_project
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.files
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        login: { type: string, pattern: '/\A[a-z][a-z0-9_-]{0,31}\z/D' }
+        pubkey: { type: string, pattern: '/\A(?:ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp(?:256|384|521)|sk-ssh-ed25519@openssh\.com) [A-Za-z0-9+\/]{20,8192}={0,3}(?: [ -~]{0,200})?\z/D' }
+      required:
+        - domain
+        - login
+        - pubkey
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.ssh_access.add_key
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.files
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        login: { type: string, pattern: '/\A[a-z][a-z0-9_-]{0,31}\z/D' }
+        pubkey: { type: string, pattern: '/\A(?:ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp(?:256|384|521)|sk-ssh-ed25519@openssh\.com) [A-Za-z0-9+\/]{20,8192}={0,3}(?: [ -~]{0,200})?\z/D' }
+      required:
+        - login
+        - pubkey
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.ssh_access.disable
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.files
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        login: { type: string, pattern: '/\A[a-z][a-z0-9_-]{0,31}\z/D' }
+      required:
+        - login
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.ssh_access.enable
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.files
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        login: { type: string, pattern: '/\A[a-z][a-z0-9_-]{0,31}\z/D' }
+      required:
+        - login
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.ssh_access.remove
+    execution_mode: sync
+    risk: external
+    reversible: false
+    access_scope: env.sites.files
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        login: { type: string, pattern: '/\A[a-z][a-z0-9_-]{0,31}\z/D' }
+      required:
+        - login
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.site.db_create
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.database
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+      required:
+        - domain
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.site.db_rotate
+    execution_mode: sync
+    risk: external
+    reversible: false
+    access_scope: env.sites.database
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+      required:
+        - domain
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.site.db_credentials
+    execution_mode: sync
+    risk: external
+    reversible: false
+    access_scope: env.sites.database
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+      required:
+        - domain
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.site.db_browser
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.database
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        minutes: { type: string, pattern: '/\A(?:[5-9]|[1-9][0-9]|[1-3][0-9]{2}|4[0-7][0-9]|480)\z/D' }
+      required:
+        - domain
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.site.db_browser_close
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.database
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+      required:
+        - domain
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.backup.make
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.backup
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        db: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+        files: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+      required:
+        - domain
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.backup.schedule
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.backup
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        enabled: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+        time: { type: string, pattern: '/\A(?:[01][0-9]|2[0-3]):[0-5][0-9]\z/D' }
+        keep: { type: string, pattern: '/\A(?:[1-9]|[1-8][0-9]|90)\z/D' }
+        verify: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+      required:
+        - domain
+        - enabled
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.backup.verify
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.backup
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        backup: { type: string, pattern: '/\A[A-Za-z0-9][A-Za-z0-9._-]{0,63}\z/D' }
+      required:
+        - domain
+        - backup
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.backup.restore
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.backup
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        backup: { type: string, pattern: '/\A[A-Za-z0-9][A-Za-z0-9._-]{0,63}\z/D' }
+        db: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+        files: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+        files-live: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+      required:
+        - domain
+        - backup
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.site.restore
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.backup
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        files: { type: string, pattern: '/\A(?!\/)(?!(?:.*\/)?\.{1,2}(?:\/|\z))[A-Za-z0-9._\/-]{1,255}\z/D' }
+        dump: { type: string, pattern: '/\A(?!\/)(?!(?:.*\/)?\.{1,2}(?:\/|\z))[A-Za-z0-9._\/-]{1,255}\z/D' }
+        overwrite: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+      required:
+        - domain
+        - files
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.site.wp_restore
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.backup
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        files: { type: string, pattern: '/\A(?!\/)(?!(?:.*\/)?\.{1,2}(?:\/|\z))[A-Za-z0-9._\/-]{1,255}\z/D' }
+        dump: { type: string, pattern: '/\A(?!\/)(?!(?:.*\/)?\.{1,2}(?:\/|\z))[A-Za-z0-9._\/-]{1,255}\z/D' }
+        overwrite: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+      required:
+        - domain
+        - files
+        - dump
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.site.bitrix_restore
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.backup
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        archive: { type: string, pattern: '/\A[A-Za-z0-9][A-Za-z0-9._-]{0,200}\.(?:tar\.gz|tgz|tar|enc\.gz)\z/D' }
+        source: { type: string, pattern: '/\A(?!\/)(?!(?:.*\/)?\.{1,2}(?:\/|\z))[A-Za-z0-9._\/-]{1,255}\z/D' }
+        url: { type: string, pattern: '/\Ahttps:\/\/[A-Za-z0-9.-]{1,253}(?::[0-9]{1,5})?\/[!-~]{0,1500}\.(?:tar\.gz|tgz|tar|enc\.gz)(?:\?[!-~]{0,500})?\z/D' }
+      required:
+        - domain
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.site.deploy
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.deploy
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        git: { type: string, pattern: '/\A(?:https:\/\/[A-Za-z0-9.-]{1,253}(?::[0-9]{1,5})?\/[A-Za-z0-9._~\/-]{1,300}|git@[A-Za-z0-9.-]{1,253}:[A-Za-z0-9._~\/-]{1,300})\z/D' }
+        ref: { type: string, pattern: '/\A[A-Za-z0-9_][A-Za-z0-9._\/-]{0,199}\z/D' }
+      required:
+        - domain
+        - git
+        - ref
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.site.deploy_rollback
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.deploy
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+      required:
+        - domain
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.app.wp_install
+    execution_mode: sync
+    risk: external
+    reversible: false
+    access_scope: env.sites.deploy
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        title: { type: string, pattern: '/\A(?![-\s])[^\x00-\x1f\x7f]{1,200}\z/Du' }
+        admin-user: { type: string, pattern: '/\A[A-Za-z0-9][A-Za-z0-9._@-]{0,59}\z/D' }
+        admin-email: { type: string, pattern: '/\A[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,253}\.[A-Za-z]{2,63}\z/D' }
+        locale: { type: string, pattern: '/\A[a-z]{2,3}(?:_[A-Z]{2})?\z/D' }
+      required:
+        - domain
+        - title
+        - admin-user
+        - admin-email
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.app.wp_finalize
+    execution_mode: sync
+    risk: external
+    reversible: false
+    access_scope: env.sites.deploy
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+      required:
+        - domain
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.app.laravel_finalize
+    execution_mode: sync
+    risk: external
+    reversible: false
+    access_scope: env.sites.deploy
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        migrate: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+      required:
+        - domain
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.app.bitrix_finalize
+    execution_mode: sync
+    risk: external
+    reversible: false
+    access_scope: env.sites.deploy
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+      required:
+        - domain
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.site.remove
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.remove
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        remove-files: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+        drop-db: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+        drop-db-user: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+      required:
+        - domain
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.site.db_drop
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.remove
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+      required:
+        - domain
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.file.trash_empty
+    execution_mode: sync
+    risk: external
+    reversible: false
+    access_scope: env.sites.remove
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        id: { type: string, pattern: '/\A[0-9]{8}T[0-9]{6}Z-[a-f0-9]{6}\z/D' }
+      required:
+        - domain
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.site.nginx_custom
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.operate
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        content: { type: string, pattern: '/\A[^\x00]{0,61440}\z/D' }
+      required:
+        - domain
+        - content
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.service.restart
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.operate
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        name: { type: string, pattern: '/\A(?:nginx|php[5-9]\.[0-9]-fpm|mysql|mariadb|postgresql|redis-server|cron)\z/D' }
+      required:
+        - name
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.service.reload
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.operate
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        name: { type: string, pattern: '/\A(?:nginx|php[5-9]\.[0-9]-fpm|mysql|mariadb|postgresql|redis-server|cron)\z/D' }
+      required:
+        - name
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.service.stop
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.operate
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        name: { type: string, pattern: '/\A(?:nginx|php[5-9]\.[0-9]-fpm|mysql|mariadb|postgresql|redis-server|cron)\z/D' }
+      required:
+        - name
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.service.start
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.operate
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        name: { type: string, pattern: '/\A(?:nginx|php[5-9]\.[0-9]-fpm|mysql|mariadb|postgresql|redis-server|cron)\z/D' }
+      required:
+        - name
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.alerts.channel
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.operate
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        kind: { type: string, pattern: '/\A(?:webhook|telegram|off)\z/D' }
+        target: { type: string, pattern: '/\A(?:https:\/\/[!-~]{1,500}|-?[0-9]{1,20}|@[A-Za-z0-9_]{5,32})\z/D' }
+        token: { type: string, pattern: '/\A[0-9]{5,12}:[A-Za-z0-9_-]{30,64}\z/D' }
+        levels: { type: string, pattern: '/\A(?:urgent|all)\z/D' }
+      required:
+        - kind
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.alerts.test
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.operate
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.server.firewall_ensure
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.operate
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.software.refresh
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.software
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.software.update
+    execution_mode: sync
+    risk: external
+    reversible: false
+    access_scope: env.server.software
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        security-only: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.software.install
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.software
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        name: { type: string, pattern: '/\A(?:node|redis|postgresql|apache|certbot|fail2ban|memcached|imagemagick|jpegoptim|optipng|ffmpeg|supervisor)\z/D' }
+        version: { type: string, pattern: '/\A[0-9]{2}\z/D' }
+      required:
+        - name
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.software.remove
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.software
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        name: { type: string, pattern: '/\A(?:node|redis|postgresql|apache|certbot|fail2ban|memcached|imagemagick|jpegoptim|optipng|ffmpeg|supervisor)\z/D' }
+      required:
+        - name
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.php.install
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.software
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        php: { type: string, pattern: '/\A[5-9]\.[0-9]\z/D' }
+        include-common: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+      required:
+        - php
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.php.remove
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.software
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        php: { type: string, pattern: '/\A[5-9]\.[0-9]\z/D' }
+      required:
+        - php
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.php.extension
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.software
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        php: { type: string, pattern: '/\A[5-9]\.[0-9]\z/D' }
+        name: { type: string, pattern: '/\A[a-z0-9_]{2,32}\z/D' }
+        enabled: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+      required:
+        - php
+        - name
+        - enabled
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.php.update
+    execution_mode: sync
+    risk: external
+    reversible: false
+    access_scope: env.server.software
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        php: { type: string, pattern: '/\A[5-9]\.[0-9]\z/D' }
+      required:
+        - php
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.profile.disable
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.software
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        id: { type: string, pattern: '/\A(?:static|generic|laravel|wordpress|node|redirect|bitrix|proxy)\z/D' }
+      required:
+        - id
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.security.scan
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.security
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.security.fix
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.security
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        check: { type: string, pattern: '/\A(?:auto_updates|fail2ban|ssh_password|antivirus)\z/D' }
+      required:
+        - check
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.security.files_scan
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.security
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.security.quarantine
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.security
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        path: { type: string, pattern: '/\A(?!\/)(?!(?:.*\/)?\.\.(?:\/|\z))[^\x00-\x1f\x7f]{1,1024}\z/D' }
+      required:
+        - domain
+        - path
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.security.quarantine_restore
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.security
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        id: { type: string, pattern: '/\A[A-Za-z0-9][A-Za-z0-9._-]{0,63}\z/D' }
+      required:
+        - id
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.security.level
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.security
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        set: { type: string, pattern: '/\A(?:basic|enhanced|strict)\z/D' }
+      required:
+        - set
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.security.geo
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.security
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        mode: { type: string, pattern: '/\A(?:off|deny|allow)\z/D' }
+        countries: { type: string, pattern: '/\A[A-Z]{2}(?:,[A-Z]{2}){0,99}\z/D' }
+        ports: { type: string, pattern: '/\A(?:web|all)\z/D' }
+        keep: { type: string, pattern: '/\A[0-9A-Fa-f:.\/]{2,49}(?:,[0-9A-Fa-f:.\/]{2,49}){0,19}\z/D' }
+      required:
+        - mode
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.security.geo_update
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.security
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.security.web_protect
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.security
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        enabled: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+        rate: { type: string, pattern: '/\A(?:[2-9]|[1-9][0-9]{1,2}|1000)\z/D' }
+        burst: { type: string, pattern: '/\A(?:[1-9][0-9]{1,3}|10000)\z/D' }
+      required:
+        - enabled
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.security.certificate_renew
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.security
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+      required:
+        - domain
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.security.backup_schedule
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.security
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        enabled: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+        time: { type: string, pattern: '/\A(?:[01][0-9]|2[0-3]):[0-5][0-9]\z/D' }
+        keep: { type: string, pattern: '/\A(?:[1-9]|[1-8][0-9]|90)\z/D' }
+        verify: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+      required:
+        - domain
+        - enabled
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.firewall.rule_add
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.security
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        port: { type: string, pattern: '/\A[1-9][0-9]{0,4}\z/D' }
+        proto: { type: string, pattern: '/\A(?:tcp|udp)\z/D' }
+        from: { type: string, pattern: '/\A(?:any|[0-9]{1,3}(?:\.[0-9]{1,3}){3}(?:\/(?:[0-9]|[12][0-9]|3[0-2]))?|[0-9A-Fa-f]{0,4}(?::[0-9A-Fa-f]{0,4}){2,7}(?:\/[0-9]{1,3})?)\z/D' }
+        action: { type: string, pattern: '/\A(?:allow|deny)\z/D' }
+      required:
+        - port
+        - proto
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.firewall.rule_remove
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.security
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        id: { type: string, pattern: '/\A[a-f0-9]{8}\z/D' }
+      required:
+        - id
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.firewall.block
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.security
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        address: { type: string, pattern: '/\A(?:[0-9]{1,3}(?:\.[0-9]{1,3}){3}(?:\/(?:[0-9]|[12][0-9]|3[0-2]))?|[0-9A-Fa-f]{0,4}(?::[0-9A-Fa-f]{0,4}){2,7}(?:\/[0-9]{1,3})?)\z/D' }
+        ttl: { type: string, pattern: '/\A(?:0|[1-9][0-9]{1,7})\z/D' }
+      required:
+        - address
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.firewall.unblock
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.security
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        address: { type: string, pattern: '/\A(?:[0-9]{1,3}(?:\.[0-9]{1,3}){3}(?:\/(?:[0-9]|[12][0-9]|3[0-2]))?|[0-9A-Fa-f]{0,4}(?::[0-9A-Fa-f]{0,4}){2,7}(?:\/[0-9]{1,3})?)\z/D' }
+      required:
+        - address
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.mcp.enable
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.security
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.mcp.disable
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.security
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.mcp.key_add
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.security
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        pubkey: { type: string, pattern: '/\A(?:ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp(?:256|384|521)|sk-ssh-ed25519@openssh\.com) [A-Za-z0-9+\/]{20,8192}={0,3}(?: [ -~]{0,200})?\z/D' }
+        owner: { type: string, pattern: '/\A[a-z][a-z0-9_-]{0,31}\z/D' }
+        admin: { type: string, pattern: '/\A(?:yes)\z/D' }
+      required:
+        - pubkey
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.mcp.key_remove
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.security
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        fingerprint: { type: string, pattern: '/\A(?:SHA256:[A-Za-z0-9+\/]{8,64})\z/D' }
+        owner: { type: string, pattern: '/\A[a-z][a-z0-9_-]{0,31}\z/D' }
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.owner.create
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.access
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        name: { type: string, pattern: '/\A[a-z][a-z0-9_-]{0,31}\z/D' }
+        pubkey: { type: string, pattern: '/\A(?:ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp(?:256|384|521)|sk-ssh-ed25519@openssh\.com) [A-Za-z0-9+\/]{20,8192}={0,3}(?: [ -~]{0,200})?\z/D' }
+        sites: { type: string, pattern: '/\A(?=.{1,4000}\z)[A-Za-z0-9.-]{3,253}(?:,[A-Za-z0-9.-]{3,253}){0,49}\z/D' }
+      required:
+        - name
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.owner.block
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.access
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        name: { type: string, pattern: '/\A[a-z][a-z0-9_-]{0,31}\z/D' }
+      required:
+        - name
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.owner.unblock
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.access
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        name: { type: string, pattern: '/\A[a-z][a-z0-9_-]{0,31}\z/D' }
+      required:
+        - name
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.owner.remove
+    execution_mode: sync
+    risk: external
+    reversible: false
+    access_scope: env.server.access
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        name: { type: string, pattern: '/\A[a-z][a-z0-9_-]{0,31}\z/D' }
+      required:
+        - name
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.owner.add_key
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.access
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        name: { type: string, pattern: '/\A[a-z][a-z0-9_-]{0,31}\z/D' }
+        pubkey: { type: string, pattern: '/\A(?:ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp(?:256|384|521)|sk-ssh-ed25519@openssh\.com) [A-Za-z0-9+\/]{20,8192}={0,3}(?: [ -~]{0,200})?\z/D' }
+      required:
+        - name
+        - pubkey
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.panel_access.allow
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.access
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        allow: { type: array, items: { type: string, pattern: '/\A(?:any|[0-9]{1,3}(?:\.[0-9]{1,3}){3}(?:\/(?:[0-9]|[12][0-9]|3[0-2]))?|[0-9A-Fa-f]{0,4}(?::[0-9A-Fa-f]{0,4}){2,7}(?:\/[0-9]{1,3})?)\z/D' } }
+      required:
+        - allow
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.panel_access.port
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.access
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        port: { type: string, pattern: '/\A(?!(?:80|443)\z)(?:[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])\z/D' }
+      required:
+        - port
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.panel_access.ip_access
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.access
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        enabled: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+      required:
+        - enabled
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.panel_access.domain
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.access
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        email: { type: string, pattern: '/\A[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,253}\.[A-Za-z]{2,63}\z/D' }
+        remove: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.change.confirm
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.access
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        change_id: { type: string, pattern: '/\A[A-Za-z0-9][A-Za-z0-9._-]{0,63}\z/D' }
+      required:
+        - change_id
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.backup_storage.add
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.backup_storage
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        name: { type: string, pattern: '/\A[a-z0-9][a-z0-9-]{0,31}\z/D' }
+        bucket: { type: string, pattern: '/\A[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]\z/D' }
+        endpoint: { type: string, pattern: '/\Ahttps?:\/\/[A-Za-z0-9.-]{1,253}(?::[0-9]{1,5})?\z/D' }
+        region: { type: string, pattern: '/\A[a-z0-9-]{1,32}\z/D' }
+        prefix: { type: string, pattern: '/\A(?!.*\.\.)[A-Za-z0-9._-][A-Za-z0-9._\/-]{0,127}\z/D' }
+        keep: { type: string, pattern: '/\A(?:[1-9]|[1-8][0-9]|90)\z/D' }
+        default: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+        access-key: { type: string, pattern: '/\A[A-Za-z0-9\/+=._-]{8,256}\z/D' }
+        secret-key: { type: string, pattern: '/\A[A-Za-z0-9\/+=._-]{8,256}\z/D' }
+      required:
+        - name
+        - bucket
+        - access-key
+        - secret-key
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.backup_storage.test
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.backup_storage
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        name: { type: string, pattern: '/\A[a-z0-9][a-z0-9-]{0,31}\z/D' }
+      required:
+        - name
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.backup_storage.remove
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.backup_storage
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        name: { type: string, pattern: '/\A[a-z0-9][a-z0-9-]{0,31}\z/D' }
+      required:
+        - name
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.backup_storage.fetch
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.backup_storage
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        name: { type: string, pattern: '/\A[a-z0-9][a-z0-9-]{0,31}\z/D' }
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        backup: { type: string, pattern: '/\A[0-9]{8}-[0-9]{6}\z/D' }
+      required:
+        - name
+        - domain
+        - backup
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.backup_storage.return_site
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.backup_storage
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        profile: { type: string, pattern: '/\A(?:static|generic|laravel|wordpress|node|redirect|bitrix|proxy)\z/D' }
+        php: { type: string, pattern: '/\A[5-9]\.[0-9]\z/D' }
+        owner: { type: string, pattern: '/\A[a-z][a-z0-9_-]{0,31}\z/D' }
+        create-db: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+        db-engine: { type: string, pattern: '/\A(?:mysql|pgsql)\z/D' }
+        redirect-to: { type: string, pattern: '/\Ahttps?:\/\/[A-Za-z0-9.-]{1,253}(?::[0-9]{1,5})?\z/D' }
+        redirect-code: { type: string, pattern: '/\A30[1278]\z/D' }
+        redirect-path: { type: string, pattern: '/\A(?:keep|drop)\z/D' }
+        backup: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+        upstream-port: { type: string, pattern: '/\A(?!(?:80|443)\z)(?:[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])\z/D' }
+        upstream-path: { type: string, pattern: '/\A\/[A-Za-z0-9._~\/-]{0,200}\z/D' }
+        websockets: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+        bitrix-files: { type: string, pattern: '/\A(?:none|setup|restore)\z/D' }
+        ssl: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+        ssl-email: { type: string, pattern: '/\A[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,253}\.[A-Za-z]{2,63}\z/D' }
+        ssl-redirect: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+      required:
+        - domain
+        - profile
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.backup_storage.return_database
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.backup_storage
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+      required:
+        - domain
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.backup_storage.restore
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.server.backup_storage
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, pattern: '/\A(?=.{1,253}\z)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)+\z/D' }
+        backup: { type: string, pattern: '/\A[A-Za-z0-9][A-Za-z0-9._-]{0,63}\z/D' }
+        db: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+        files: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+        files-live: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+      required:
+        - domain
+        - backup
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.server.update
+    execution_mode: sync
+    risk: external
+    reversible: false
+    access_scope: env.server.update
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        target: { type: string, pattern: '/\A(?:env|panel)\z/D' }
+      required:
+        - target
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.dns.certificates_credentials
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.dns.operate
+    audit_event: env.server.change_started
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        provider: { type: string, pattern: '/\A(?:cloudflare)\z/D' }
+        token: { type: string, pattern: '/\A[A-Za-z0-9_-]{30,64}\z/D' }
+        remove: { type: string, pattern: '/\A(?:yes|no)\z/D' }
+      required:
+        - provider
+    output:
+      type: object
+      properties:
+        who: { type: string }
+        on_behalf_of: { type: string }
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        request_id: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        job_id: { type: string }
+        operation_id: { type: string }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        command: { type: string }
+        plan_id: { type: string }
+        plan_operation_id: { type: string }
+        expires_at: { type: string }
+  -
+    name: env.dns.connect
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.dns.operate
+    audit_event: env.dns.connected
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        token: { type: string, minLength: 1, maxLength: 200 }
+      required:
+        - token
+    output:
+      type: object
+      properties:
+        zones: { type: integer, minimum: 0 }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        changes: { type: integer, minimum: 0 }
+  -
+    name: env.dns.disconnect
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.dns.operate
+    audit_event: env.dns.disconnected
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+    output:
+      type: object
+      properties:
+        disconnected: { type: boolean }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        changes: { type: integer, minimum: 0 }
+  -
+    name: env.dns.records_apply
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.dns.operate
+    audit_event: env.dns.record_changed
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        changes: { type: array, items: { type: object } }
+        undo_of: { type: string }
+        plan_id: { type: string }
+      required:
+        - changes
+    output:
+      type: object
+      properties:
+        batch: { type: string }
+        changes: { type: integer, minimum: 0 }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        changes: { type: integer, minimum: 0 }
+  -
+    name: env.site.dns_point
+    execution_mode: sync
+    risk: external
+    reversible: true
+    access_scope: env.sites.operate
+    audit_event: env.dns.record_changed
+    transports:
+      - local
+    input:
+      type: object
+      additionalProperties: false
+      properties:
+        domain: { type: string, maxLength: 253 }
+        changes: { type: array, items: { type: object } }
+        plan_id: { type: string }
+      required:
+        - domain
+        - changes
+    output:
+      type: object
+      properties:
+        batch: { type: string }
+        changes: { type: integer, minimum: 0 }
+    receipt:
+      type: object
+      properties:
+        operation: { type: string }
+        reversible: { type: string }
+        changes: { type: integer, minimum: 0 }

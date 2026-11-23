@@ -21,13 +21,28 @@ final class EnvDeclarations
      * DNS through the provider's API (Panel plan, stage 7): the zones and the token are the whole server's; a person of the
      * user level points their own site's domain through env.sites.operate.
      *
+     * The rights to change are split by group (auditor msg-3ee29ace, answer 1, variant B): the sites' files, databases,
+     * backups, releases and removals, and the server's software, security, access, storages and update, each its own,
+     * so an API or MCP client is given only what it needs and an irreversible action names its right. Each Core
+     * operation names one (EnvOperationCatalog); the grants moved one to one (EnvOperationCatalog::SPLIT_FROM).
+     *
      * @var array<string, array{label: string, target: string, grant: string, risk: string, audit: string}>
      */
     public const array RIGHTS = [
         'env.server.read' => ['label' => 'larena-env::operations.server_read', 'target' => 'env.server:all', 'grant' => 'read', 'risk' => 'normal', 'audit' => 'denial'],
         'env.server.operate' => ['label' => 'larena-env::operations.server_operate', 'target' => 'env.server:all', 'grant' => 'write', 'risk' => 'high', 'audit' => 'denial'],
+        'env.server.software' => ['label' => 'larena-env::operations.server_software', 'target' => 'env.server:all', 'grant' => 'write', 'risk' => 'high', 'audit' => 'denial'],
+        'env.server.security' => ['label' => 'larena-env::operations.server_security', 'target' => 'env.server:all', 'grant' => 'write', 'risk' => 'high', 'audit' => 'denial'],
+        'env.server.access' => ['label' => 'larena-env::operations.server_access', 'target' => 'env.server:all', 'grant' => 'write', 'risk' => 'high', 'audit' => 'denial'],
+        'env.server.backup_storage' => ['label' => 'larena-env::operations.server_backup_storage', 'target' => 'env.server:all', 'grant' => 'write', 'risk' => 'high', 'audit' => 'denial'],
+        'env.server.update' => ['label' => 'larena-env::operations.server_update', 'target' => 'env.server:all', 'grant' => 'write', 'risk' => 'high', 'audit' => 'denial'],
         'env.sites.read' => ['label' => 'larena-env::operations.sites_read', 'target' => 'env.sites:own', 'grant' => 'read', 'risk' => 'normal', 'audit' => 'denial'],
         'env.sites.operate' => ['label' => 'larena-env::operations.sites_operate', 'target' => 'env.sites:own', 'grant' => 'write', 'risk' => 'high', 'audit' => 'denial'],
+        'env.sites.files' => ['label' => 'larena-env::operations.sites_files', 'target' => 'env.sites:own', 'grant' => 'write', 'risk' => 'high', 'audit' => 'denial'],
+        'env.sites.database' => ['label' => 'larena-env::operations.sites_database', 'target' => 'env.sites:own', 'grant' => 'write', 'risk' => 'high', 'audit' => 'denial'],
+        'env.sites.backup' => ['label' => 'larena-env::operations.sites_backup', 'target' => 'env.sites:own', 'grant' => 'write', 'risk' => 'high', 'audit' => 'denial'],
+        'env.sites.deploy' => ['label' => 'larena-env::operations.sites_deploy', 'target' => 'env.sites:own', 'grant' => 'write', 'risk' => 'high', 'audit' => 'denial'],
+        'env.sites.remove' => ['label' => 'larena-env::operations.sites_remove', 'target' => 'env.sites:own', 'grant' => 'write', 'risk' => 'high', 'audit' => 'denial'],
         'env.dns.read' => ['label' => 'larena-env::operations.dns_read', 'target' => 'env.dns:all', 'grant' => 'read', 'risk' => 'normal', 'audit' => 'denial'],
         'env.dns.operate' => ['label' => 'larena-env::operations.dns_operate', 'target' => 'env.dns:all', 'grant' => 'write', 'risk' => 'high', 'audit' => 'denial'],
     ];
@@ -104,7 +119,9 @@ final class EnvDeclarations
      * @var array<string, array{requires: list<string>, operations: list<string>}>
      */
     public const array FEATURES = [
-        'env.admin' => ['requires' => [], 'operations' => ['env.server.read', 'env.server.operate', 'env.sites.read', 'env.sites.operate']],
+        'env.admin' => ['requires' => [], 'operations' => ['env.server.read', 'env.server.operate', 'env.server.software', 'env.server.security',
+            'env.server.access', 'env.server.backup_storage', 'env.server.update', 'env.sites.read', 'env.sites.operate', 'env.sites.files',
+            'env.sites.database', 'env.sites.backup', 'env.sites.deploy', 'env.sites.remove']],
         'env.monitoring' => ['requires' => [], 'operations' => []],
         'env.notifications' => ['requires' => ['env.monitoring', 'env.admin'], 'operations' => []],
         'env.dns' => ['requires' => ['env.admin'], 'operations' => ['env.dns.read', 'env.dns.operate']],

@@ -12,6 +12,7 @@ use Larena\Access\Runtime\AccessOperationAuthorizer;
 use Larena\Env\Dns\DnsChange;
 use Larena\Env\Dns\DnsFailed;
 use Larena\Env\Dns\DnsService;
+use Larena\Env\Operations\EnvOperations;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\NoticeRedirect;
 use Larena\Env\Http\Support\PlanReceipts;
@@ -36,6 +37,9 @@ final readonly class DnsController
         private ?SiteExtrasReader $extras = null,
         private ?AccessOperationAuthorizer $authorizer = null,
         private PlanReceipts $receipts = new PlanReceipts(),
+        // Every change of DNS is a Core operation (env.dns.connect, env.dns.disconnect, env.dns.records_apply,
+        // env.site.dns_point): its right checked and its decision audited before DnsService touches anything.
+        private ?EnvOperations $operations = null,
     ) {
     }
 
@@ -74,13 +78,13 @@ final readonly class DnsController
     {
         $token = (string) $request->input('token');
         try {
-            $zones = $this->dns->connect($token, $this->person($request));
+            $zones = $this->change($request, 'env.dns.connect', ['token' => $token])['zones'] ?? 0;
         } catch (DnsFailed $failed) {
             return $this->back($request, route('larena.env.admin.dns.connection', [], false), $failed->reason);
         }
 
         return NoticeRedirect::to($request, route('larena.env.admin.dns.connection', [], false),
-            (string) $this->translator->get('larena-env::admin.dns.connected', ['count' => (string) count($zones)]));
+            (string) $this->translator->get('larena-env::admin.dns.connected', ['count' => (string) (is_int($zones) ? $zones : 0)]));
     }
 
     public function addresses(Request $request): RedirectResponse
@@ -97,7 +101,11 @@ final readonly class DnsController
 
     public function disconnect(Request $request): RedirectResponse
     {
-        $this->dns->disconnect($this->person($request));
+        try {
+            $this->change($request, 'env.dns.disconnect', []);
+        } catch (DnsFailed $failed) {
+            return $this->back($request, route('larena.env.admin.dns.connection', [], false), $failed->reason);
+        }
 
         return NoticeRedirect::to($request, route('larena.env.admin.dns.connection', [], false), (string) $this->translator->get('larena-env::admin.dns.disconnected'));
     }
@@ -223,10 +231,14 @@ final readonly class DnsController
     private function applied(Request $request, array $plan, string $back): RedirectResponse
     {
         try {
-            // The chain of the change (wave A's addition c): who, for whom, and the plan it was confirmed with.
-            $actor = ResolvePanelActor::of($request);
-            $this->dns->apply($plan['changes'], $this->person($request), $plan['undo_of'], $plan['plan_id'] ?? null,
-                $actor->impersonatedBy !== null ? $actor->user : null);
+            // The chain of the change (wave A's addition c): who, for whom, and the plan it was confirmed with; a site's own
+            // domain is its own operation, at either level.
+            $this->change($request, $plan['site'] !== null ? 'env.site.dns_point' : 'env.dns.records_apply', array_filter([
+                'domain' => $plan['site'],
+                'changes' => array_map(static fn (DnsChange $change): array => $change->toArray(), $plan['changes']),
+                'undo_of' => $plan['site'] === null ? $plan['undo_of'] : null,
+                'plan_id' => $plan['plan_id'] ?? null,
+            ], static fn (mixed $value): bool => $value !== null));
         } catch (DnsFailed $failed) {
             return $this->back($request, $back, $failed->reason);
         }
@@ -267,12 +279,22 @@ final readonly class DnsController
         ];
     }
 
-    /** The person who did it, also when they look at the panel as someone else. */
-    private function person(Request $request): string
+    /**
+     * A change of DNS as the panel's Core operation; refused `audit_unavailable` where the operations are not composed.
+     *
+     * @param array<string, mixed> $input
+     *
+     * @return array<string, mixed>
+     *
+     * @throws DnsFailed
+     */
+    private function change(Request $request, string $operation, array $input): array
     {
-        $actor = ResolvePanelActor::of($request);
+        if ($this->operations === null) {
+            throw new DnsFailed('audit_unavailable');
+        }
 
-        return $actor->impersonatedBy ?? $actor->user;
+        return $this->operations->dns(ResolvePanelActor::of($request), $operation, $input);
     }
 
     private function back(Request $request, string $url, string $reason): RedirectResponse

@@ -14,7 +14,7 @@ use Larena\Env\Gateway\PanelCapabilities;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\NoticeRedirect;
 use Larena\Env\Http\Support\PlanReceipts;
-use Larena\Env\Operations\PanelOperations;
+use Larena\Env\Operations\EnvOperations;
 use Larena\Env\Server\ServerOverviewReader;
 use Larena\Env\Server\SiteExtrasReader;
 
@@ -28,9 +28,11 @@ final readonly class SiteCronController
 {
     /** The changes and the gateway command of each. */
     public const array OPERATIONS = ['add' => 'cron:job-add', 'remove' => 'cron:job-remove', 'enable' => 'cron:job-enable', 'disable' => 'cron:job-disable'];
+    /** The same actions as the panel's Core operations (EnvOperationCatalog): what the screen plans and starts. */
+    private const array CORE_OPERATIONS = ['add' => 'env.cron.job_add', 'remove' => 'env.cron.job_remove', 'enable' => 'env.cron.job_enable', 'disable' => 'env.cron.job_disable'];
 
     public function __construct(
-        private PanelOperations $operations,
+        private EnvOperations $operations,
         private ServerOverviewReader $overviews,
         private SiteExtrasReader $extras,
         private Factory $views,
@@ -47,7 +49,7 @@ final readonly class SiteCronController
         if (is_string($args)) {
             return $this->back($request, $domain, $args);
         }
-        $result = $this->operations->planCommand($actor, self::OPERATIONS[$op], $args);
+        $result = $this->operations->plan($actor, self::CORE_OPERATIONS[$op], $args);
         if ($result->plan === null) {
             return $this->back($request, $domain, $result->reason ?? 'answer_shape_invalid');
         }
@@ -81,7 +83,7 @@ final readonly class SiteCronController
         if (!$this->receipts->confirms($request, self::OPERATIONS[$op], ['op' => $op, 'args' => $args])) {
             return $this->back($request, $domain, PlanReceipts::REFUSED);
         }
-        $started = $this->operations->startCommand($actor, self::OPERATIONS[$op], $args);
+        $started = $this->operations->start($actor, self::CORE_OPERATIONS[$op], $args);
         if ($started->jobId === null) {
             return $this->back($request, $domain, $started->reason ?? 'answer_shape_invalid');
         }

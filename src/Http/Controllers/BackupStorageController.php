@@ -17,7 +17,8 @@ use Larena\Env\Gateway\PanelRefused;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\NoticeRedirect;
 use Larena\Env\Http\Support\PlanReceipts;
-use Larena\Env\Operations\PanelOperations;
+use Larena\Env\Operations\EnvOperationCatalog;
+use Larena\Env\Operations\EnvOperations;
 use Larena\Env\Server\ServerOverviewReader;
 use Larena\Env\Server\SiteExtrasReader;
 use Throwable;
@@ -53,7 +54,7 @@ final readonly class BackupStorageController
     private const int KEYS_SECONDS = 900;
 
     public function __construct(
-        private PanelOperations $operations,
+        private EnvOperations $operations,
         private ServerOverviewReader $overviews,
         private SiteExtrasReader $extras,
         private Factory $views,
@@ -123,6 +124,20 @@ final readonly class BackupStorageController
         return $held === null ? null : array_values(array_filter($held, static fn (\Larena\Env\Backup\HeldBackup $one): bool => strcasecmp($one->domain, $host) !== 0));
     }
 
+    /**
+     * The Core operation a command of this screen is: the way back from a storage's copy (a site made again, its database,
+     * the backup put back) is the storages' own operation (env.server.backup_storage, as this screen's routes).
+     */
+    private static function operationOf(string $command): string
+    {
+        return match ($command) {
+            'site:add' => 'env.backup_storage.return_site',
+            'site:db-create' => 'env.backup_storage.return_database',
+            'backup:data-restore' => 'env.backup_storage.restore',
+            default => EnvOperationCatalog::primaryFor($command) ?? '',
+        };
+    }
+
     public function plan(Request $request): mixed
     {
         $actor = ResolvePanelActor::of($request);
@@ -138,7 +153,7 @@ final readonly class BackupStorageController
         }
         [$command, $args, $hidden] = $asked;
         $op = (string) $request->input('op');
-        $result = $this->operations->planCommand($actor, $command, $args);
+        $result = $this->operations->plan($actor, self::operationOf($command), $args);
         if ($result->plan === null) {
             return $this->back($request, $result->reason ?? 'answer_shape_invalid', $this->wayContext($request, $hidden));
         }
@@ -182,7 +197,7 @@ final readonly class BackupStorageController
             return $this->back($request, $asked, $this->wayContext($request));
         }
         [$command, $args, $hidden] = $asked;
-        $started = $this->operations->startCommand($actor, $command, $args);
+        $started = $this->operations->start($actor, self::operationOf($command), $args);
 
         return $started->jobId === null
             ? $this->back($request, $started->reason ?? 'answer_shape_invalid', $this->wayContext($request, $hidden))

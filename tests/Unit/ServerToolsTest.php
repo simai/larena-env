@@ -160,6 +160,7 @@ $ownListed = (new ServerOverviewReader($gateway))->read($owner)->overview?->capa
 env_assert($ownListed === null || (!$ownListed->allows('service:restart') && !$ownListed->allows('firewall:status')), 'An owner is never offered the services or the firewall.');
 
 $operations = env_operations($gateway);
+$operationsFacade = env_facade($gateway, panel: $operations);
 $extras = new SiteExtrasReader($gateway);
 
 // The services (5.1, recorded set 9): only those the server has, each with whether it rereads its settings; planned,
@@ -645,7 +646,7 @@ $translator = new class ($lines) implements \Illuminate\Contracts\Translation\Tr
     public function getLocale(): string { return 'en'; }
     public function setLocale($locale): void {}
 };
-$securityController = new \Larena\Env\Http\Controllers\SecurityController($operations, new ServerOverviewReader($gateway), $extras, $factory, $translator);
+$securityController = new \Larena\Env\Http\Controllers\SecurityController($operationsFacade, new ServerOverviewReader($gateway), $extras, $factory, $translator);
 $words = $securityController->words($security);
 env_assert($words['security_updates']['title'] === 'Security updates' && $words['fail2ban']['line'] === 'Nobody blocks password guessing.'
     && $words['file_scan']['line'] === 'The sites\' files were not checked yet.' && $words['https:demo-php.test']['how'] !== '', 'Each check in the panel\'s words.');

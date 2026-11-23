@@ -14,7 +14,7 @@ use Larena\Env\Http\Support\PlanReceipts;
 use Larena\Env\Gateway\PanelActor;
 use Larena\Env\Operations\JobState;
 use Larena\Env\Operations\PanelJobStatus;
-use Larena\Env\Operations\PanelOperations;
+use Larena\Env\Operations\EnvOperations;
 
 /**
  * A started action: where it stands and what it has printed. The screen reads again when it is opened again, so a
@@ -28,7 +28,7 @@ final readonly class ServerJobController
     public const string HISTORY_ROUTE = 'larena.admin.history.index';
 
     public function __construct(
-        private PanelOperations $operations,
+        private EnvOperations $operations,
         private Factory $views,
         private Translator $translator,
         private ?\Larena\Env\Server\ServerOverviewReader $overviews = null,
@@ -130,7 +130,7 @@ final readonly class ServerJobController
         if ($status === null || !\Larena\Env\Admin\JobOutcome::canAgain($status) || !$this->mayAgain($request, $status)) {
             return NoticeRedirect::to($request, $address, (string) $this->translator->get('larena-env::admin.job.again_refused'));
         }
-        $result = $this->operations->planCommand($actor, $status->command, $status->args);
+        $result = $this->operations->planAgain($actor, $status->command, $status->args);
         if ($result->plan === null) {
             return NoticeRedirect::to($request, $address, $this->reasonText($result->reason ?? 'answer_shape_invalid'));
         }
@@ -161,7 +161,7 @@ final readonly class ServerJobController
         if (!$this->receipts->confirms($request, 'job:again', ['job' => $job, 'command' => $status->command, 'args' => $status->args])) {
             return NoticeRedirect::to($request, $address, $this->reasonText(PlanReceipts::REFUSED));
         }
-        $started = $this->operations->startCommand($actor, $status->command, $status->args);
+        $started = $this->operations->startAgain($actor, $status->command, $status->args);
         if ($started->jobId === null) {
             return NoticeRedirect::to($request, $address, $this->reasonText($started->reason ?? 'answer_shape_invalid'));
         }
@@ -212,7 +212,7 @@ final readonly class ServerJobController
         if ($status->state !== JobState::Succeeded) {
             return null;
         }
-        $started = $this->operations->startCommand($actor, 'backup:data-schedule', ['domain' => $domain, 'enabled' => 'yes']);
+        $started = $this->operations->start($actor, 'env.backup.schedule', ['domain' => $domain, 'enabled' => 'yes']);
         if ($started->jobId === null) {
             return NoticeRedirect::to($request, route('larena.env.admin.site', ['domain' => $domain], false).'?tab=backups',
                 (string) $this->translator->get('larena-env::admin.new_site.daily_backup_failed', ['reason' => $this->reasonText($started->reason ?? 'answer_shape_invalid')]));

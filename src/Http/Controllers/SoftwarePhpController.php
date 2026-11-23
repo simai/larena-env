@@ -13,7 +13,7 @@ use Larena\Env\Gateway\PanelActor;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\NoticeRedirect;
 use Larena\Env\Http\Support\PlanReceipts;
-use Larena\Env\Operations\PanelOperations;
+use Larena\Env\Operations\EnvOperations;
 use Larena\Env\Server\ServerOverviewReader;
 use Larena\Env\Server\SiteExtrasReader;
 use Larena\Env\Software\PhpVersions;
@@ -29,9 +29,11 @@ final readonly class SoftwarePhpController
 {
     /** What the screen offers, and the gateway command of each. */
     public const array OPERATIONS = ['install' => 'php:install', 'update' => 'php:update', 'remove' => 'php:remove', 'extension' => 'php:extension'];
+    /** The same actions as the panel's Core operations (EnvOperationCatalog): what the screen plans and starts. */
+    private const array CORE_OPERATIONS = ['install' => 'env.php.install', 'update' => 'env.php.update', 'remove' => 'env.php.remove', 'extension' => 'env.php.extension'];
 
     public function __construct(
-        private PanelOperations $operations,
+        private EnvOperations $operations,
         private ServerOverviewReader $overviews,
         private SiteExtrasReader $extras,
         private Factory $views,
@@ -72,7 +74,7 @@ final readonly class SoftwarePhpController
         if ($op === null) {
             return $this->back($request, 'not_allowed');
         }
-        $result = $this->operations->planCommand($actor, self::OPERATIONS[$op], $args);
+        $result = $this->operations->plan($actor, self::CORE_OPERATIONS[$op], $args);
         if ($result->plan === null) {
             return $this->back($request, $result->reason ?? 'answer_shape_invalid');
         }
@@ -101,7 +103,7 @@ final readonly class SoftwarePhpController
         if (!$this->receipts->confirms($request, self::OPERATIONS[$op], ['op' => $op, 'args' => $args])) {
             return $this->back($request, PlanReceipts::REFUSED);
         }
-        $started = $this->operations->startCommand($actor, self::OPERATIONS[$op], $args);
+        $started = $this->operations->start($actor, self::CORE_OPERATIONS[$op], $args);
         if ($started->jobId === null) {
             return $this->back($request, $started->reason ?? 'answer_shape_invalid');
         }

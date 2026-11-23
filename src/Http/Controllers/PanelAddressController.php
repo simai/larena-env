@@ -15,7 +15,8 @@ use Larena\Env\Gateway\PanelRefused;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\NoticeRedirect;
 use Larena\Env\Http\Support\PlanReceipts;
-use Larena\Env\Operations\PanelOperations;
+use Larena\Env\Operations\EnvOperationCatalog;
+use Larena\Env\Operations\EnvOperations;
 use Larena\Env\Server\ServerOverviewReader;
 use Larena\Env\Server\SiteExtrasReader;
 
@@ -31,7 +32,7 @@ final readonly class PanelAddressController
     public const array OPERATIONS = ['domain' => 'panel:domain', 'domain-remove' => 'panel:domain', 'port' => 'panel:port', 'ip-access' => 'panel:ip-access'];
 
     public function __construct(
-        private PanelOperations $operations,
+        private EnvOperations $operations,
         private ServerOverviewReader $overviews,
         private SiteExtrasReader $extras,
         private Factory $views,
@@ -49,7 +50,7 @@ final readonly class PanelAddressController
             return $this->back($request, $asked);
         }
         [$op, $command, $args] = $asked;
-        $result = $this->operations->planCommand($actor, $command, $args);
+        $result = $this->operations->plan($actor, EnvOperationCatalog::primaryFor($command) ?? '', $args);
         if ($result->plan === null) {
             return $this->back($request, $result->reason ?? 'answer_shape_invalid');
         }
@@ -80,7 +81,7 @@ final readonly class PanelAddressController
             return $this->back($request, PlanReceipts::REFUSED);
         }
         $address = in_array($op, ['port', 'ip-access'], true) ? $this->extras->panelAddress($actor) : null;
-        $started = $this->operations->startCommand($actor, $command, $args);
+        $started = $this->operations->start($actor, EnvOperationCatalog::primaryFor($command) ?? '', $args);
         if ($started->jobId === null) {
             return $this->back($request, $started->reason ?? 'answer_shape_invalid');
         }

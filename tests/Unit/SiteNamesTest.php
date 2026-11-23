@@ -356,7 +356,7 @@ $translator = new class ($lines) implements \Illuminate\Contracts\Translation\Tr
     }
 };
 $controller = static fn (PanelGateway $gateway): SiteAdminController => new SiteAdminController(new SiteDetailsReader($gateway), new ServerOverviewReader($gateway),
-    new SiteExtrasReader($gateway), env_operations($gateway), $factory, $translator, names: new SiteNamesReader($gateway));
+    new SiteExtrasReader($gateway), env_facade($gateway), $factory, $translator, names: new SiteNamesReader($gateway));
 $asking = static function (string $uri, string $method = 'GET', array $input = [], ?PanelActor $as = null): Request {
     $request = Request::create($uri, $method, $input);
     $request->attributes->set(ResolvePanelActor::ATTRIBUTE, $as ?? new PanelActor('admin@stand.test'));

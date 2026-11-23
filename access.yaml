@@ -17,6 +17,37 @@ operations:
     grant: write
     risk: high
     audit: denial
+  # The server's rights to change by group (variant B, auditor msg-3ee29ace): whoever held env.server.operate holds them.
+  - code: env.server.software
+    label: larena-env::operations.server_software
+    target: 'env.server:all'
+    grant: write
+    risk: high
+    audit: denial
+  - code: env.server.security
+    label: larena-env::operations.server_security
+    target: 'env.server:all'
+    grant: write
+    risk: high
+    audit: denial
+  - code: env.server.access
+    label: larena-env::operations.server_access
+    target: 'env.server:all'
+    grant: write
+    risk: high
+    audit: denial
+  - code: env.server.backup_storage
+    label: larena-env::operations.server_backup_storage
+    target: 'env.server:all'
+    grant: write
+    risk: high
+    audit: denial
+  - code: env.server.update
+    label: larena-env::operations.server_update
+    target: 'env.server:all'
+    grant: write
+    risk: high
+    audit: denial
   # The sites a person reaches at either level (owner decision 2026-10-31): the whole server's, or an owner's.
   - code: env.sites.read
     label: larena-env::operations.sites_read
@@ -26,6 +57,37 @@ operations:
     audit: denial
   - code: env.sites.operate
     label: larena-env::operations.sites_operate
+    target: 'env.sites:own'
+    grant: write
+    risk: high
+    audit: denial
+  # The sites' rights to change by group: whoever held env.sites.operate holds them.
+  - code: env.sites.files
+    label: larena-env::operations.sites_files
+    target: 'env.sites:own'
+    grant: write
+    risk: high
+    audit: denial
+  - code: env.sites.database
+    label: larena-env::operations.sites_database
+    target: 'env.sites:own'
+    grant: write
+    risk: high
+    audit: denial
+  - code: env.sites.backup
+    label: larena-env::operations.sites_backup
+    target: 'env.sites:own'
+    grant: write
+    risk: high
+    audit: denial
+  - code: env.sites.deploy
+    label: larena-env::operations.sites_deploy
+    target: 'env.sites:own'
+    grant: write
+    risk: high
+    audit: denial
+  - code: env.sites.remove
+    label: larena-env::operations.sites_remove
     target: 'env.sites:own'
     grant: write
     risk: high

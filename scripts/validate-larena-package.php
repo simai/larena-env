@@ -5,7 +5,7 @@ declare(strict_types=1);
 $errors = [];
 foreach ([
     '.gitignore', '.env.example', '.github/workflows/larena-package-ci.yml', '.githooks/pre-commit', '.githooks/pre-push',
-    'composer.json', 'composer.lock', 'module.yaml', 'access.yaml', 'audit.yaml', 'README.md', 'CHANGELOG.md', 'phpstan.neon.dist',
+    'composer.json', 'composer.lock', 'module.yaml', 'access.yaml', 'audit.yaml', 'operations.yaml', 'README.md', 'CHANGELOG.md', 'phpstan.neon.dist',
     '.larena/spec-ref.json', '.larena/launch-context.json', 'tools/larena-scope-check.php',
     'src/Contracts/PanelGateway.php', 'src/Gateway/RecordedAnswersGateway.php', 'src/Gateway/SshGateway.php',
     'src/Server/ServerOverviewReader.php', 'src/Area/ServerArea.php', 'src/Providers/EnvServiceProvider.php',

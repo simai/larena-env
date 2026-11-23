@@ -21,7 +21,8 @@ use Larena\Env\Gateway\PanelRefused;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\NoticeRedirect;
 use Larena\Env\Http\Support\PlanReceipts;
-use Larena\Env\Operations\PanelOperations;
+use Larena\Env\Operations\EnvOperationCatalog;
+use Larena\Env\Operations\EnvOperations;
 use Larena\Env\People\SecretFileAccess;
 use Larena\Env\Server\ServerOverviewReader;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -60,7 +61,7 @@ final readonly class SiteFilesController
     private const int STAGED_SECONDS = 3600;
 
     public function __construct(
-        private PanelOperations $operations,
+        private EnvOperations $operations,
         private ServerOverviewReader $overviews,
         private SiteFiles $files,
         private Factory $views,
@@ -103,7 +104,7 @@ final readonly class SiteFilesController
                 return $this->back($request, $domain, $tab, $staged);
             }
         }
-        $result = $this->operations->planCommand($actor, $command, $args, $staged['attachment'] ?? null);
+        $result = $this->operations->plan($actor, EnvOperationCatalog::primaryFor($command) ?? '', $args, $staged['attachment'] ?? null);
         if ($result->plan === null) {
             if ($staged !== null) {
                 $this->unstage($request, $staged['id']);
@@ -164,7 +165,7 @@ final readonly class SiteFilesController
 
                 return $this->back($request, $domain, 'files', $staged, FilePath::join($folder, (string) $name));
             }
-            $result = $this->operations->planCommand($actor, 'file:upload', $args, $staged['attachment']);
+            $result = $this->operations->plan($actor, 'env.file.upload', $args, $staged['attachment']);
             if ($result->plan === null) {
                 $this->unstageAll($request, [...array_column($planned, 'id'), $staged['id']]);
 
@@ -241,7 +242,7 @@ final readonly class SiteFilesController
             }
         }
         try {
-            $started = $this->operations->startCommand($actor, $command, $args, $attachment);
+            $started = $this->operations->start($actor, EnvOperationCatalog::primaryFor($command) ?? '', $args, $attachment);
         } finally {
             if ($attachment !== null) {
                 $this->unstage($request, $stagedId);
@@ -279,7 +280,7 @@ final readonly class SiteFilesController
                 return $this->back($request, $domain, 'files', SecretFileAccess::REFUSED, (string) $args['path']);
             }
             try {
-                $started = $this->operations->startCommand($actor, 'file:upload', $args, $attachment);
+                $started = $this->operations->start($actor, 'env.file.upload', $args, $attachment);
             } finally {
                 $this->unstage($request, $id);
             }

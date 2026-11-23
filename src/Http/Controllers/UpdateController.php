@@ -14,7 +14,7 @@ use Larena\Env\Gateway\PanelCapabilities;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\NoticeRedirect;
 use Larena\Env\Http\Support\PlanReceipts;
-use Larena\Env\Operations\PanelOperations;
+use Larena\Env\Operations\EnvOperations;
 use Larena\Env\Server\SiteExtrasReader;
 use Larena\Env\Update\UpdatePlan;
 
@@ -29,7 +29,7 @@ final readonly class UpdateController
     public const string JOB = 'larena_env_update_job';
 
     public function __construct(
-        private PanelOperations $operations,
+        private EnvOperations $operations,
         private SiteExtrasReader $extras,
         private Factory $views,
         private Translator $translator,
@@ -135,7 +135,7 @@ final readonly class UpdateController
         if ($target === null) {
             return $this->notice($request, 'invalid_argument');
         }
-        $result = $this->operations->planCommand(ResolvePanelActor::of($request), 'self:update', ['target' => $target]);
+        $result = $this->operations->plan(ResolvePanelActor::of($request), 'env.server.update', ['target' => $target]);
         if ($result->plan === null) {
             return $this->notice($request, $result->reason ?? 'answer_shape_invalid');
         }
@@ -168,7 +168,7 @@ final readonly class UpdateController
         if (!$this->receipts->confirms($request, 'self:update', ['target' => $target])) {
             return $this->notice($request, PlanReceipts::REFUSED);
         }
-        $started = $this->operations->startCommand(ResolvePanelActor::of($request), 'self:update', ['target' => $target]);
+        $started = $this->operations->start(ResolvePanelActor::of($request), 'env.server.update', ['target' => $target]);
         if ($started->jobId === null) {
             return $this->notice($request, $started->reason ?? 'answer_shape_invalid');
         }

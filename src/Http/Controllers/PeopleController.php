@@ -29,7 +29,8 @@ use Larena\Env\Http\Support\PanelActorResolver;
 use Larena\Env\Mail\InvitationLetter;
 use Larena\Env\Mail\MailLetters;
 use Larena\Env\Mail\PanelMail;
-use Larena\Env\Operations\PanelOperations;
+use Larena\Env\Operations\EnvOperationCatalog;
+use Larena\Env\Operations\EnvOperations;
 use Larena\Env\People\PanelAudit;
 use Larena\Env\People\PanelPeople;
 use Larena\Env\People\PersonOwners;
@@ -63,7 +64,7 @@ final readonly class PeopleController
         private PersistentAccessStore $access,
         private AdministratorGovernanceService $people,
         private ServerOverviewReader $overviews,
-        private PanelOperations $operations,
+        private EnvOperations $operations,
         private PanelAudit $audit,
         private Factory $views,
         private Translator $translator,
@@ -261,7 +262,7 @@ final readonly class PeopleController
         // sites, the server checks every one of them now; one it would refuse stops the whole invitation, nothing is made.
         $moves = null;
         if ($newAccount !== null) {
-            $plan = $this->operations->planCommand(ResolvePanelActor::of($request), 'owner:create', self::createArgs($newAccount, $input['sites']));
+            $plan = $this->operations->plan(ResolvePanelActor::of($request), 'env.owner.create', self::createArgs($newAccount, $input['sites']));
             if ($plan->plan === null) {
                 $reason = $plan->reason ?? 'answer_shape_invalid';
 
@@ -349,7 +350,7 @@ final readonly class PeopleController
         if (($invite['new'] ?? false) === true && $owner !== null) {
             // The account and its sites in one job of the server (simai-env 1.63.1): no move of the panel's own per site.
             $sites = array_values(array_filter(is_array($invite['sites'] ?? null) ? $invite['sites'] : [], 'is_string'));
-            $started = $this->operations->startCommand(ResolvePanelActor::of($request), 'owner:create', self::createArgs($owner, $sites));
+            $started = $this->operations->start(ResolvePanelActor::of($request), 'env.owner.create', self::createArgs($owner, $sites));
             if ($started->jobId !== null) {
                 return NoticeRedirect::to($request, route('larena.env.admin.job', ['job' => $started->jobId], false),
                     (string) $this->translator->get('larena-env::admin.people.invite.'.($byMail ? 'done_mail_account' : ($sites === [] ? 'done_account' : 'done_sites')),
@@ -457,7 +458,7 @@ final readonly class PeopleController
         $command = $block ? 'owner:block' : 'owner:unblock';
         $accountBlocked = $found['owner'] !== null && in_array($found['owner'], $overview->blockedOwners ?? [], true);
         if ($found['owner'] !== null && $accountBlocked !== $block && $overview?->capabilities?->allows($command) === true) {
-            $started = $this->operations->startCommand(ResolvePanelActor::of($request), $command, ['name' => $found['owner']]);
+            $started = $this->operations->start(ResolvePanelActor::of($request), EnvOperationCatalog::primaryFor($command) ?? '', ['name' => $found['owner']]);
             if ($started->jobId !== null) {
                 return NoticeRedirect::to($request, route('larena.env.admin.job', ['job' => $started->jobId], false), $done);
             }
@@ -610,6 +611,8 @@ final readonly class PeopleController
     /** The owner actions of this screen: a new server account, blocking one and unblocking it, removing an empty one, a key for one. */
     private const array OWNER_ACTIONS = ['create' => 'owner:create', 'block' => 'owner:block', 'unblock' => 'owner:unblock',
         'remove' => 'owner:remove', 'add-key' => 'owner:add-key'];
+    /** The same actions as the panel's Core operations (EnvOperationCatalog): what the screen plans and starts. */
+    private const array OWNER_OPERATIONS = ['create' => 'env.owner.create', 'block' => 'env.owner.block', 'unblock' => 'env.owner.unblock', 'remove' => 'env.owner.remove', 'add-key' => 'env.owner.add_key'];
     private const array OWNER_HEADINGS = ['create' => 'new_owner', 'block' => 'owner_block', 'unblock' => 'unblock', 'remove' => 'remove', 'add-key' => 'add_key'];
 
     /**
@@ -637,7 +640,7 @@ final readonly class PeopleController
         $actor = ResolvePanelActor::of($request);
         $action = self::ownerAction($request);
         $input = self::ownerInput($request, $action);
-        $result = $this->operations->planCommand($actor, self::OWNER_ACTIONS[$action], $input);
+        $result = $this->operations->plan($actor, self::OWNER_OPERATIONS[$action], $input);
         if ($result->plan === null) {
             return $this->back($request, $result->reason ?? 'answer_shape_invalid');
         }
@@ -662,7 +665,7 @@ final readonly class PeopleController
         if (!$this->receipts->confirms($request, self::OWNER_ACTIONS[$action], ['action' => $action, 'args' => $input])) {
             return $this->back($request, PlanReceipts::REFUSED);
         }
-        $started = $this->operations->startCommand(ResolvePanelActor::of($request), self::OWNER_ACTIONS[$action], $input);
+        $started = $this->operations->start(ResolvePanelActor::of($request), self::OWNER_OPERATIONS[$action], $input);
         if ($started->jobId === null) {
             return $this->back($request, $started->reason ?? 'answer_shape_invalid');
         }

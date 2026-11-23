@@ -16,7 +16,8 @@ use Larena\Env\Gateway\PanelRefused;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\NoticeRedirect;
 use Larena\Env\Http\Support\PlanReceipts;
-use Larena\Env\Operations\PanelOperations;
+use Larena\Env\Operations\EnvOperationCatalog;
+use Larena\Env\Operations\EnvOperations;
 use Larena\Env\Security\GeoStatus;
 use Larena\Env\Security\SecurityFindings;
 use Larena\Env\Security\SecurityStatus;
@@ -46,7 +47,7 @@ final readonly class SecurityController
     public const array WEB_PROTECT = ['enabled' => 'yes'];
 
     public function __construct(
-        private PanelOperations $operations,
+        private EnvOperations $operations,
         private ServerOverviewReader $overviews,
         private SiteExtrasReader $extras,
         private Factory $views,
@@ -161,7 +162,7 @@ final readonly class SecurityController
             return $this->back($request, $asked);
         }
         [$command, $args, $hidden] = $asked;
-        $result = $this->operations->planCommand($actor, $command, $args);
+        $result = $this->operations->plan($actor, self::operationOf($command), $args);
         if ($result->plan === null) {
             return $this->back($request, $result->reason ?? 'answer_shape_invalid');
         }
@@ -189,11 +190,24 @@ final readonly class SecurityController
         if (!$this->receipts->confirms($request, $command, $args)) {
             return $this->back($request, PlanReceipts::REFUSED);
         }
-        $started = $this->operations->startCommand($actor, $command, $args);
+        $started = $this->operations->start($actor, self::operationOf($command), $args);
 
         return $started->jobId === null
             ? $this->back($request, $started->reason ?? 'answer_shape_invalid')
             : new RedirectResponse(route('larena.env.admin.job', ['job' => $started->jobId], false));
+    }
+
+    /**
+     * The Core operation a command of this screen is: a site's certificate renewed or its backups scheduled as a fix of the
+     * security list is the security's own operation (env.server.security, as this screen's routes), not the site screen's.
+     */
+    private static function operationOf(string $command): string
+    {
+        return match ($command) {
+            'ssl:renew' => 'env.security.certificate_renew',
+            'backup:data-schedule' => 'env.security.backup_schedule',
+            default => EnvOperationCatalog::primaryFor($command) ?? '',
+        };
     }
 
     /**

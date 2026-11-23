@@ -298,7 +298,7 @@ $translating = static fn (array $lines): \Illuminate\Contracts\Translation\Trans
     }
 };
 $controller = static fn (PanelGateway $gateway, ?array $words = null): SiteAdminController => new SiteAdminController(new SiteDetailsReader($gateway), new ServerOverviewReader($gateway),
-    new SiteExtrasReader($gateway), env_operations($gateway), $factory, $translating($words ?? $lines));
+    new SiteExtrasReader($gateway), env_facade($gateway), $factory, $translating($words ?? $lines));
 $asking = static function (string $uri, string $method = 'GET', array $input = [], ?PanelActor $as = null): Request {
     $request = Request::create($uri, $method, $input);
     $request->attributes->set(ResolvePanelActor::ATTRIBUTE, $as ?? new PanelActor('admin@stand.test'));
@@ -389,7 +389,7 @@ $fixes = new class ($serving(['site:check-state', 'site:check-fix'])) implements
     public function source(): string { return 'recorded'; }
 };
 $siteClock = 1_800_000_000;
-$timedCard = new SiteAdminController(new SiteDetailsReader($fixes), new ServerOverviewReader($fixes), new SiteExtrasReader($fixes), env_operations($fixes), $factory,
+$timedCard = new SiteAdminController(new SiteDetailsReader($fixes), new ServerOverviewReader($fixes), new SiteExtrasReader($fixes), env_facade($fixes), $factory,
     $translating($lines), receipts: env_plan_receipts($siteClock));
 $siteSession = new Store('panel', new ArraySessionHandler(10));
 $siteAsk = static function (string $step, array $input) use ($asking, $bitrix, $siteSession): Request {

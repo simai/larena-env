@@ -216,6 +216,7 @@ $factory->addExtension('blade.php', 'blade');
 $factory->addNamespace('larena-admin', [dirname(__DIR__).'/Support/admin-views', dirname(__DIR__, 2).'/vendor/larena/admin/resources/views']);
 $factory->addNamespace('larena-env', dirname(__DIR__, 2).'/resources/views');
 $operations = env_operations($gateway);
+$operationsFacade = env_facade($gateway, panel: $operations);
 $overviews = new ServerOverviewReader($gateway);
 $extras = new SiteExtrasReader($gateway);
 
@@ -235,7 +236,7 @@ env_assert(substr_count($page, 'data-env-service-op="stop"') === 1 && str_contai
 env_assert(!str_contains($servicesPage($services, ['stop' => false, 'start' => false]), 'data-env-service-op="stop"'), 'Without the server\'s command or the right: no stop.');
 
 $servicesClock = 1_800_000_000;
-$servicesController = new ServicesController($operations, $overviews, $extras, $planViews, $translator, receipts: env_plan_receipts($servicesClock));
+$servicesController = new ServicesController($operationsFacade, $overviews, $extras, $planViews, $translator, receipts: env_plan_receipts($servicesClock));
 $planned = $servicesController->plan($asking('/services/plan', ['op' => 'stop', 'name' => 'cron']));
 $cronReceipt = (string) ($planViews->data['hidden']['receipt'] ?? '');
 env_assert(!$planned instanceof RedirectResponse && $planViews->data['plan'] instanceof PanelPlan

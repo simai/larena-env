@@ -13,7 +13,7 @@ use Larena\Env\Gateway\PanelActor;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\NoticeRedirect;
 use Larena\Env\Http\Support\PlanReceipts;
-use Larena\Env\Operations\PanelOperations;
+use Larena\Env\Operations\EnvOperations;
 use Larena\Env\Server\ServerOverviewReader;
 use Larena\Env\Server\SiteExtrasReader;
 use Larena\Env\Software\SoftwareComponent;
@@ -33,9 +33,11 @@ final readonly class SoftwareController
         // One program updated alone, and one taken away (simai-env 1.43.0's catalogue).
         'upgrade' => 'software:install', 'remove' => 'software:remove',
     ];
+    /** The same actions as the panel's Core operations (EnvOperationCatalog): what the screen plans and starts. */
+    private const array CORE_OPERATIONS = ['refresh' => 'env.software.refresh', 'update' => 'env.software.update', 'install' => 'env.software.install', 'upgrade' => 'env.software.install', 'remove' => 'env.software.remove'];
 
     public function __construct(
-        private PanelOperations $operations,
+        private EnvOperations $operations,
         private ServerOverviewReader $overviews,
         private SiteExtrasReader $extras,
         private Factory $views,
@@ -82,7 +84,7 @@ final readonly class SoftwareController
         if ($op === null) {
             return $this->back($request, 'not_allowed');
         }
-        $result = $this->operations->planCommand($actor, self::OPERATIONS[$op], $args);
+        $result = $this->operations->plan($actor, self::CORE_OPERATIONS[$op], $args);
         if ($result->plan === null) {
             return $this->back($request, $result->reason ?? 'answer_shape_invalid');
         }
@@ -112,7 +114,7 @@ final readonly class SoftwareController
         if (!$this->receipts->confirms($request, self::OPERATIONS[$op], ['op' => $op, 'args' => $args])) {
             return $this->back($request, PlanReceipts::REFUSED);
         }
-        $started = $this->operations->startCommand($actor, self::OPERATIONS[$op], $args);
+        $started = $this->operations->start($actor, self::CORE_OPERATIONS[$op], $args);
         if ($started->jobId === null) {
             return $this->back($request, $started->reason ?? 'answer_shape_invalid');
         }

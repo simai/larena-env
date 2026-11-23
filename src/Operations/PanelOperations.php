@@ -45,6 +45,12 @@ final readonly class PanelOperations
         $this->trail = $trail ?? new PlanTrail();
     }
 
+    /** Where the answers come from (the gateway's driver), as every result names it. */
+    public function source(): string
+    {
+        return $this->gateway->source();
+    }
+
     /**
      * What the site's action would do. Nothing runs.
      *
@@ -108,29 +114,32 @@ final readonly class PanelOperations
      * @param array<string, string|list<string>> $args
      * @param ?PanelAttachment $attachment the file the confirmed action sends after its request
      */
-    public function startCommand(PanelActor $actor, string $command, array $args, ?PanelAttachment $attachment = null): JobStartResult
+    public function startCommand(PanelActor $actor, string $command, array $args, ?PanelAttachment $attachment = null,
+        ?string $operation = null, ?string $reversible = null): JobStartResult
     {
         $source = $this->gateway->source();
         $who = $actor->impersonatedBy ?? $actor->user;
         $onBehalf = $actor->impersonatedBy !== null ? $actor->user : null;
         // No change without the audit log: refused before the server is asked anything.
         if ($this->audit === null || !$this->audit->available()) {
-            return new JobStartResult($source, null, PanelReason::AUDIT_UNAVAILABLE, true, who: $who, onBehalfOf: $onBehalf, command: $command);
+            return new JobStartResult($source, null, PanelReason::AUDIT_UNAVAILABLE, true, who: $who, onBehalfOf: $onBehalf, command: $command,
+                operation: $operation, reversible: $reversible);
         }
         $plan = $this->trail->takeFor($command);
         try {
             $request = PanelRequest::confirmed($actor, $command, $args, $attachment);
         } catch (PanelRefused $refused) {
             return new JobStartResult($source, null, $refused->reasonCode, true, null, null, $plan['plan_id'] ?? null,
-                $plan['plan_operation_id'] ?? null, $who, $onBehalf, $command);
+                $plan['plan_operation_id'] ?? null, $who, $onBehalf, $command, $operation, $reversible);
         }
         try {
             $answer = $this->gateway->ask($request);
         } catch (PanelRefused $refused) {
             return new JobStartResult($source, null, $refused->reasonCode, true, $request->requestId, null, $plan['plan_id'] ?? null,
-                $plan['plan_operation_id'] ?? null, $who, $onBehalf, $command);
+                $plan['plan_operation_id'] ?? null, $who, $onBehalf, $command, $operation, $reversible);
         }
-        $chain = [$answer->requestId, $answer->operationId, $plan['plan_id'] ?? null, $plan['plan_operation_id'] ?? null, $who, $onBehalf, $command];
+        $chain = [$answer->requestId, $answer->operationId, $plan['plan_id'] ?? null, $plan['plan_operation_id'] ?? null, $who, $onBehalf, $command,
+            $operation, $reversible];
         if ($answer->status !== PanelAnswerStatus::Ok) {
             return new JobStartResult($source, null, $answer->reason ?? PanelReason::ANSWER_INVALID, $answer->status === PanelAnswerStatus::Refused, ...$chain);
         }
@@ -268,7 +277,7 @@ final readonly class PanelOperations
      * `env.server.job_cancelled` with who, for whom, the stop's request and operation, and the job with the request and
      * operation that started it — the job id links it to that job's `env.server.change_started`, and correlates it.
      */
-    public function cancel(PanelActor $actor, string $jobId): JobViewResult
+    public function cancel(PanelActor $actor, string $jobId, ?string $operation = null): JobViewResult
     {
         $source = $this->gateway->source();
         if ($this->audit === null || !$this->audit->available()) {
@@ -289,6 +298,8 @@ final readonly class PanelOperations
             $this->audit->record(self::JOB_CANCELLED, $who, 'env.job:'.$jobId, array_filter([
                 'who' => $who,
                 'on_behalf_of' => $actor->impersonatedBy !== null ? $actor->user : null,
+                'operation' => $operation,
+                'reversible' => $operation !== null ? 'false' : null,
                 'command' => 'job:cancel',
                 'request_id' => $answer->requestId,
                 'operation_id' => $answer->operationId,

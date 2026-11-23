@@ -18,7 +18,8 @@ use Larena\Env\Gateway\PanelCommands;
 use Larena\Env\Gateway\PanelRefused;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Operations\JobState;
-use Larena\Env\Operations\PanelOperations;
+use Larena\Env\Operations\EnvOperationCatalog;
+use Larena\Env\Operations\EnvOperations;
 use Larena\Env\Security\SecurityStatus;
 use Larena\Env\Server\ServerOverviewReader;
 use Larena\Env\Server\SiteExtrasReader;
@@ -67,7 +68,7 @@ final readonly class ServerSetupController
         private ServerSetup $setup,
         private ServerOverviewReader $overviews,
         private SiteExtrasReader $extras,
-        private PanelOperations $operations,
+        private EnvOperations $operations,
         private StringEncrypter $encrypter,
         private Translator $translator,
         private Factory $views,
@@ -125,7 +126,7 @@ final readonly class ServerSetupController
             }
         } elseif ($phase === 'review') {
             $pending = $this->pending($request, $step);
-            $result = $pending === null ? null : $this->operations->planCommand($actor, $pending[0], $pending[1]);
+            $result = $pending === null ? null : $this->operations->plan($actor, EnvOperationCatalog::primaryFor($pending[0]) ?? '', $pending[1]);
             $plan = $result?->plan;
             if ($plan === null) {
                 $this->forget($request, $step);
@@ -400,7 +401,7 @@ final readonly class ServerSetupController
     /** Starts the change and waits a few seconds for a quick one, so its outcome shows at once. */
     private function start(Request $request, PanelActor $actor, string $step, string $command, array $args): RedirectResponse
     {
-        $started = $this->operations->startCommand($actor, $command, $args);
+        $started = $this->operations->start($actor, EnvOperationCatalog::primaryFor($command) ?? '', $args);
         if ($started->jobId === null) {
             return $this->here($request, $step, [], $started->reason ?? 'answer_shape_invalid');
         }

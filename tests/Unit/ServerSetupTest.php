@@ -102,7 +102,7 @@ $config = new class implements Illuminate\Contracts\Config\Repository {
 
 $gateway = new RecordedAnswersGateway(env_recorded_path());
 $setup = new ServerSetup($capsule->getConnection());
-$controller = new ServerSetupController($setup, new ServerOverviewReader($gateway), new SiteExtrasReader($gateway), env_operations($gateway),
+$controller = new ServerSetupController($setup, new ServerOverviewReader($gateway), new SiteExtrasReader($gateway), env_facade($gateway),
     $encrypter, $translator, $views, new Illuminate\Routing\Router(new Illuminate\Events\Dispatcher()),
     new Larena\Access\Runtime\AccessOperationAuthorizer($config, 'testing'));
 $session = new Store('panel', new ArraySessionHandler(10));

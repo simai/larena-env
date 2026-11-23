@@ -13,7 +13,7 @@ use Larena\Env\Dns\DnsConnection;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\NoticeRedirect;
 use Larena\Env\Http\Support\PlanReceipts;
-use Larena\Env\Operations\PanelOperations;
+use Larena\Env\Operations\EnvOperations;
 
 /**
  * Certificates through DNS (simai-env 1.36.0), on «DNS › Подключение»: the Cloudflare token the panel is connected with
@@ -24,11 +24,13 @@ use Larena\Env\Operations\PanelOperations;
 final readonly class DnsCertificatesController
 {
     private const string COMMAND = 'ssl:dns-credentials';
+    /** The same change as the panel's Core operation. */
+    private const string OPERATION = 'env.dns.certificates_credentials';
     /** The tokens the server takes: a Cloudflare API token, letters, digits, dash and underscore. */
     private const string TOKEN = '/\A[A-Za-z0-9_-]{30,64}\z/D';
 
     public function __construct(
-        private PanelOperations $operations,
+        private EnvOperations $operations,
         private DnsConnection $connection,
         private Factory $views,
         private Translator $translator,
@@ -43,7 +45,7 @@ final readonly class DnsCertificatesController
         if (!is_array($args)) {
             return $this->notice($request, $args ?? 'invalid_argument');
         }
-        $result = $this->operations->planCommand(ResolvePanelActor::of($request), self::COMMAND, $args);
+        $result = $this->operations->plan(ResolvePanelActor::of($request), self::OPERATION, $args);
         if ($result->plan === null) {
             return $this->notice($request, $result->reason ?? 'answer_shape_invalid');
         }
@@ -70,7 +72,7 @@ final readonly class DnsCertificatesController
         if (!$this->receipts->confirms($request, self::COMMAND, ['op' => $op, 'args' => $args])) {
             return $this->notice($request, PlanReceipts::REFUSED);
         }
-        $started = $this->operations->startCommand(ResolvePanelActor::of($request), self::COMMAND, $args);
+        $started = $this->operations->start(ResolvePanelActor::of($request), self::OPERATION, $args);
 
         return $started->jobId === null
             ? $this->notice($request, $started->reason ?? 'answer_shape_invalid')

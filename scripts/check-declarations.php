@@ -9,12 +9,17 @@ declare(strict_types=1);
 //   php scripts/check-declarations.php [root]
 
 use Larena\Access\Runtime\AccessOperationRegistry;
+use Larena\Core\Registry\DeclaredOperationRegistry;
+use Larena\Env\Gateway\PanelCommands;
+use Larena\Env\Operations\EnvOperationCatalog;
+use Larena\Env\Operations\EnvOperationProvider;
 use Larena\Env\Navigation\ServerAdminNavigationContributor;
 use Larena\Env\Providers\EnvDeclarations;
 use Larena\Env\Providers\EnvServiceProvider;
 use Symfony\Component\Yaml\Yaml;
 
 require_once dirname(__DIR__).'/vendor/autoload.php';
+require_once __DIR__.'/write-operations.php';
 
 /**
  * Every difference, in words; an empty list when everything agrees.
@@ -126,7 +131,9 @@ function env_declaration_differences(string $root): array
     if ($undeclared !== []) {
         $errors[] = 'rights the code asks for, not declared: '.implode(', ', $undeclared);
     }
-    $unused = array_values(array_diff(array_keys($rights), $asked, $scopes));
+    // A right Core asks for an operation (its access scope) is asked by the code too.
+    $operationRights = array_values(array_unique(array_map(static fn (array $row): string => $row['right'], EnvOperationCatalog::OPERATIONS)));
+    $unused = array_values(array_diff(array_keys($rights), $asked, $scopes, $operationRights));
     if ($unused !== []) {
         $errors[] = 'declared rights the code never asks for: '.implode(', ', $unused);
     }
@@ -134,6 +141,107 @@ function env_declaration_differences(string $root): array
     $undeclared = array_values(array_diff($written, array_keys(EnvDeclarations::AUDIT_EVENTS)));
     if ($undeclared !== []) {
         $errors[] = 'events the code writes, not declared: '.implode(', ', $undeclared);
+    }
+
+    return [...$errors, ...env_operation_differences($root, $rights)];
+}
+
+/**
+ * The panel's changes as Core operations (point 4) against the gateway's commands, operations.yaml, Core's registry and
+ * the code. The command count is PanelCommands::names(), the table's keys, never the file's lines: the file also names
+ * commands as keys of ARGUMENTS_SINCE (9 lines) and ATTACHMENTS (1 line), which is where a count of 172 key lines comes
+ * from against 162 commands.
+ *
+ * @param array<string, array<string, string>> $rights
+ *
+ * @return list<string>
+ */
+function env_operation_differences(string $root, array $rights): array
+{
+    $errors = [];
+    $names = PanelCommands::names();
+    if (count($names) !== count(array_unique($names))) {
+        $errors[] = 'PanelCommands names a command twice';
+    }
+    $carried = [];
+    foreach (EnvOperationCatalog::OPERATIONS as $operation => $row) {
+        if (!isset($rights[$row['right']])) {
+            $errors[] = 'operation '.$operation.': right '.$row['right'].' is not declared';
+        }
+        $command = $row['command'];
+        if ($command === null) {
+            continue;
+        }
+        // Every operation names a change the gateway allows: an action, or the stop of a job.
+        if (PanelCommands::kind($command) !== PanelCommands::ACTION && $command !== 'job:cancel') {
+            $errors[] = 'operation '.$operation.' names '.$command.', which is not an action PanelCommands allows';
+        }
+        $carried[$command] = true;
+    }
+    // Every action (and the stop of a job) is carried by an operation: none is left outside Core.
+    foreach (EnvOperationCatalog::mutatingCommands() as $command) {
+        if (!isset($carried[$command])) {
+            $errors[] = 'action '.$command.' is carried by no operation';
+        }
+    }
+    foreach (EnvOperationCatalog::SPLIT_FROM as $new => $held) {
+        if (!isset($rights[$new], $rights[$held])) {
+            $errors[] = 'right split '.$new.' from '.$held.': not both declared';
+        }
+    }
+    // operations.yaml is what the catalog and the command table write.
+    $file = (string) @file_get_contents($root.'/operations.yaml');
+    if ($file !== env_operations_yaml()) {
+        $errors[] = 'operations.yaml differs from EnvOperationCatalog and PanelCommands: run `composer run operations:write`';
+    }
+    // Core's registry takes every operation: the declaration and the descriptor agree (DescriptorPolicy).
+    try {
+        $registry = DeclaredOperationRegistry::fromProviders([new EnvOperationProvider(null, $root.'/operations.yaml')]);
+        $registered = array_map(static fn ($declaration): string => $declaration->name, $registry->list('larena/env'));
+        sort($registered);
+        $declared = EnvOperationCatalog::names();
+        sort($declared);
+        if ($registered !== $declared) {
+            $errors[] = 'Core registered other operations than the catalog names';
+        }
+    } catch (Throwable $refused) {
+        $errors[] = 'Core refuses the operations: '.$refused->getMessage();
+    }
+    // No screen sends a command string to the gateway's operations: only the handler plans and starts commands, and the
+    // screens name the operation they plan and start, one the catalog has.
+    foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root.'/src', FilesystemIterator::SKIP_DOTS)) as $path) {
+        if (!$path instanceof SplFileInfo || $path->getExtension() !== 'php') {
+            continue;
+        }
+        $relative = substr($path->getPathname(), strlen($root) + 1);
+        $errors = [...$errors, ...env_operation_code_differences($relative, (string) file_get_contents($path->getPathname()))];
+    }
+
+    return $errors;
+}
+
+/**
+ * One source file against the rule that the screens name operations: only PanelOperations and the gateway handler plan
+ * or start a command string, nothing under src/Http reaches PanelOperations, and an operation named in a plan or a start
+ * is one the catalog has.
+ *
+ * @return list<string>
+ */
+function env_operation_code_differences(string $relative, string $code): array
+{
+    $errors = [];
+    if (!in_array($relative, ['src/Operations/PanelOperations.php', 'src/Operations/GatewayOperationHandler.php'], true)
+        && preg_match('/->\s*(?:planCommand|startCommand)\s*\(/', $code) === 1) {
+        $errors[] = $relative.' plans or starts a command string: name the operation through EnvOperations';
+    }
+    if (str_starts_with($relative, 'src/Http/') && preg_match('/\bPanelOperations\b/', $code) === 1) {
+        $errors[] = $relative.' reaches PanelOperations: the screens change the server through EnvOperations';
+    }
+    preg_match_all('/->\s*(?:plan|start)\s*\([^,;]+,\s*\'([a-z0-9_.]+)\'/', $code, $literal);
+    foreach ($literal[1] as $operation) {
+        if (str_starts_with($operation, 'env.') && !EnvOperationCatalog::has($operation)) {
+            $errors[] = $relative.' names '.$operation.', an operation the catalog does not have';
+        }
     }
 
     return $errors;
@@ -315,5 +423,7 @@ if (realpath((string) ($_SERVER['SCRIPT_FILENAME'] ?? '')) === __FILE__) {
         fwrite(STDERR, "The declarations do not match the code (one source: src/Providers/EnvDeclarations.php):\n- ".implode("\n- ", $errors)."\n");
         exit(1);
     }
-    echo 'Declarations match the code: '.count(EnvDeclarations::FEATURES).' features, '.count(EnvDeclarations::RIGHTS).' rights, '.count(EnvDeclarations::events())." audit events.\n";
+    echo 'Declarations match the code: '.count(EnvDeclarations::FEATURES).' features, '.count(EnvDeclarations::RIGHTS).' rights, '.count(EnvDeclarations::events())
+        .' audit events, '.count(EnvOperationCatalog::OPERATIONS).' Core operations carrying '.count(EnvOperationCatalog::mutatingCommands())
+        .' of the '.count(PanelCommands::names())." commands PanelCommands::names() allows.\n";
 }

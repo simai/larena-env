@@ -13,7 +13,7 @@ use Larena\Env\Gateway\PanelActor;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\NoticeRedirect;
 use Larena\Env\Http\Support\PlanReceipts;
-use Larena\Env\Operations\PanelOperations;
+use Larena\Env\Operations\EnvOperations;
 use Larena\Env\Server\HostService;
 use Larena\Env\Server\ServerOverview;
 use Larena\Env\Server\ServerOverviewReader;
@@ -36,11 +36,13 @@ final readonly class ServicesController
 {
     /** What a service's row offers, and the gateway command of each. */
     public const array OPERATIONS = ['restart' => 'service:restart', 'reload' => 'service:reload', 'stop' => 'service:stop', 'start' => 'service:start'];
+    /** The same actions as the panel's Core operations (EnvOperationCatalog): what the screen plans and starts. */
+    private const array CORE_OPERATIONS = ['restart' => 'env.service.restart', 'reload' => 'env.service.reload', 'stop' => 'env.service.stop', 'start' => 'env.service.start'];
     /** How many of the journal's last lines are read. */
     private const int LOG_LINES = 500;
 
     public function __construct(
-        private PanelOperations $operations,
+        private EnvOperations $operations,
         private ServerOverviewReader $overviews,
         private SiteExtrasReader $extras,
         private Factory $views,
@@ -129,7 +131,7 @@ final readonly class ServicesController
         if ($op === null || $name === null) {
             return $this->back($request, 'not_allowed');
         }
-        $result = $this->operations->planCommand($actor, self::OPERATIONS[$op], ['name' => $name]);
+        $result = $this->operations->plan($actor, self::CORE_OPERATIONS[$op], ['name' => $name]);
         if ($result->plan === null) {
             // A stop the server will not plan (a critical service, simai-env 1.62.0) is said in words in the same window,
             // its button off, rather than as a line on the list.
@@ -180,7 +182,7 @@ final readonly class ServicesController
         if (!$this->receipts->confirms($request, self::OPERATIONS[$op], ['name' => $name])) {
             return $this->back($request, PlanReceipts::REFUSED);
         }
-        $started = $this->operations->startCommand($actor, self::OPERATIONS[$op], ['name' => $name]);
+        $started = $this->operations->start($actor, self::CORE_OPERATIONS[$op], ['name' => $name]);
         if ($started->jobId === null) {
             return $this->back($request, $started->reason ?? 'answer_shape_invalid');
         }

@@ -78,7 +78,7 @@ $whole = env_features_boot('null', 'env');
 $bare = env_features_boot('', 'env');
 env_assert(env_features_routes($whole) === env_features_routes($bare) && count($whole['routes']) > 80 && $dnsRoutes(env_features_routes($whole)) !== [],
     'With every feature on, the screens are those of a host without a feature set.');
-env_assert($whole['rights'] === $bare['rights'] && count($whole['rights']) === 6 && $whole['migrations'] === ['migrations', 'dns']
+env_assert($whole['rights'] === $bare['rights'] && count($whole['rights']) === 16 && $whole['migrations'] === ['migrations', 'dns']
     && $whole['scheduled'] === ['larena:env-check', 'larena:env-warm'] && $whole['notification_sources'] === true, 'Rights, tables, jobs and the bell\'s names, all of them.');
 
 // A product that chose its features and none of env's: env is installed and absent.
@@ -91,7 +91,8 @@ $admin = env_features_boot('["env.admin"]', 'env');
 env_assert($dnsRoutes(env_features_routes($admin)) === [] && count(env_features_routes($admin)) === count(env_features_routes($whole)) - count($dnsRoutes(env_features_routes($whole))),
     'The screens without DNS: '.implode(', ', $dnsRoutes(env_features_routes($admin))));
 env_assert($dnsRows($admin['navigation']) === [] && $dnsRows($whole['navigation']) === ['env.dns', 'env.dns.connection'], 'No DNS rows in the menu.');
-env_assert($admin['rights'] === ['env.server.operate', 'env.server.read', 'env.sites.operate', 'env.sites.read'] && $admin['migrations'] === ['migrations'],
+env_assert($admin['rights'] === ['env.server.access', 'env.server.backup_storage', 'env.server.operate', 'env.server.read', 'env.server.security', 'env.server.software', 'env.server.update',
+    'env.sites.backup', 'env.sites.database', 'env.sites.deploy', 'env.sites.files', 'env.sites.operate', 'env.sites.read', 'env.sites.remove'] && $admin['migrations'] === ['migrations'],
     'The rights and tables of the screens alone: '.json_encode([$admin['rights'], $admin['migrations']]));
 env_assert($admin['scheduled'] === [] && $admin['notification_sources'] === false, 'No check without env.monitoring, even with the scheduler\'s flag on.');
 
@@ -108,12 +109,12 @@ env_assert($monitoring['listening'] === [], 'The check alone hears nothing about
 
 // Local flags only narrow: the scheduler's flag off keeps every job off, the screens' flag off keeps every route off.
 $narrowed = env_features_boot('null', '', 'admin-off');
-env_assert($narrowed['scheduled'] === [] && $narrowed['routes'] === [] && count($narrowed['rights']) === 6, 'The flags narrow a feature that is on.');
+env_assert($narrowed['scheduled'] === [] && $narrowed['routes'] === [] && count($narrowed['rights']) === 16, 'The flags narrow a feature that is on.');
 
 // The panel's edition: a product file that names none of env's features gets them all; one that names its own keeps them.
 $panel = env_features_boot('[]', 'panel');
 env_assert($panel['features'] === ['env.admin', 'env.monitoring', 'env.notifications', 'env.dns'] && env_features_routes($panel) === env_features_routes($whole)
-    && $panel['scheduled'] === ['larena:env-check', 'larena:env-warm'] && $panel['migrations'] === ['migrations', 'dns'] && count($panel['rights']) === 6,
+    && $panel['scheduled'] === ['larena:env-check', 'larena:env-warm'] && $panel['migrations'] === ['migrations', 'dns'] && count($panel['rights']) === 16,
     'The panel behaves as before: '.json_encode($panel['features']));
 $own = env_features_boot('["env.admin"]', 'panel');
 env_assert($own['features'] === ['env.admin'] && $dnsRoutes(env_features_routes($own)) === [] && $own['scheduled'] === [], 'A product\'s own choice of env\'s features stays exact.');

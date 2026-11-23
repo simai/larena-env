@@ -30,14 +30,14 @@ $copy = static function (string $file, callable $change) use ($package): string 
                 unlink($root.'/'.$folder);
             }
         }
-        foreach (['access.yaml', 'audit.yaml', 'module.yaml'] as $name) {
+        foreach (['access.yaml', 'audit.yaml', 'module.yaml', 'operations.yaml'] as $name) {
             if (is_file($root.'/'.$name)) {
                 unlink($root.'/'.$name);
             }
         }
         rmdir($root);
     });
-    foreach (['access.yaml', 'audit.yaml', 'module.yaml'] as $name) {
+    foreach (['access.yaml', 'audit.yaml', 'module.yaml', 'operations.yaml'] as $name) {
         file_put_contents($root.'/'.$name, $name === $file ? $change((string) file_get_contents($package.'/'.$name)) : (string) file_get_contents($package.'/'.$name));
     }
     foreach (['src', 'routes', 'config'] as $folder) {
@@ -58,7 +58,7 @@ $finds = static function (string $root, string $text): bool {
 
 // module.yaml as it was before (two rights, no events): both lists are caught.
 $old = $copy('module.yaml', static fn (string $yaml): string => (string) preg_replace('/access_operations:.*?(?=evidence:)/s', "access_operations:\n  - env.server.read\n  - env.server.operate\naudit_events: []\n", $yaml));
-env_assert($finds($old, 'module.yaml access_operations: missing env.sites.read') && $finds($old, 'module.yaml audit_events: missing'), 'module.yaml behind the source fails.');
+env_assert($finds($old, 'module.yaml access_operations: missing env.server.software') && $finds($old, 'module.yaml audit_events: missing'), 'module.yaml behind the source fails.');
 // access.yaml without the sites' rights, as it was (four): caught; a changed risk too.
 $fewer = $copy('access.yaml', static fn (string $yaml): string => (string) preg_replace('/  # The sites a person.*?(?=  # DNS)/s', '', $yaml));
 env_assert($finds($fewer, 'access.yaml operations: missing env.sites.read, env.sites.operate'), 'access.yaml with four rights fails.');
@@ -99,6 +99,24 @@ try {
     env_assert(str_contains($refused->getMessage(), 'env_audit_event_undeclared'), 'Refused by name.');
 }
 env_assert(count($sink->events()) === 1, 'Only the declared event was written.');
+
+// The panel's changes as Core operations (point 4): operations.yaml edited by hand is caught, as is a right taken from it.
+$edited = $copy('operations.yaml', static fn (string $yaml): string => str_replace("name: env.site.remove\n    execution_mode: sync\n    risk: external\n    reversible: true\n    access_scope: env.sites.remove",
+    "name: env.site.remove\n    execution_mode: sync\n    risk: external\n    reversible: true\n    access_scope: env.sites.operate", $yaml));
+env_assert($finds($edited, 'operations.yaml differs') && $finds($edited, 'Core refuses the operations'), 'operations.yaml edited by hand fails, and Core refuses the pair that disagrees.');
+// A screen that sends a command string, reaches PanelOperations, or names an operation the catalog lacks: each caught.
+$said = static fn (string $relative, string $code): string => implode(' | ', env_operation_code_differences($relative, $code));
+env_assert(str_contains($said('src/Http/Controllers/X.php', '$this->operations->planCommand($actor, \'site:add\', $args);'), 'plans or starts a command string')
+    && str_contains($said('src/Http/Controllers/X.php', 'use Larena\\Env\\Operations\\PanelOperations;'), 'reaches PanelOperations')
+    && str_contains($said('src/Http/Controllers/X.php', '$this->operations->start($actor, \'env.site.explode\', $args);'), 'env.site.explode')
+    && $said('src/Http/Controllers/X.php', '$this->operations->start($actor, \'env.site.add\', $args);') === ''
+    && $said('src/Operations/GatewayOperationHandler.php', '$panel->startCommand($actor, $command, $args);') === '',
+    'Only the handler starts a command string; the screens name known operations.');
+// The count is PanelCommands::names(), never the file's key lines: 162 commands, 112 actions, 4 job commands, while the
+// file also names commands in ARGUMENTS_SINCE (9) and ATTACHMENTS (1), 172 key lines in all.
+$keyLines = preg_match_all("/^\\s*'[a-z]+:[a-z-]+' *=>/m", (string) file_get_contents($package.'/src/Gateway/PanelCommands.php'));
+env_assert(count(Larena\Env\Gateway\PanelCommands::names()) === 162 && count(Larena\Env\Gateway\PanelCommands::actions()) === 112 && $keyLines === 172,
+    'Commands are counted by name: '.count(Larena\Env\Gateway\PanelCommands::names()).' names, '.$keyLines.' key lines.');
 
 // The features (point 5): every right in exactly one feature, requirements and rights declared, no cycle.
 $features = Larena\Env\Providers\EnvDeclarations::FEATURES;

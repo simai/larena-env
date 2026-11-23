@@ -13,7 +13,8 @@ use Larena\Env\Gateway\PanelActor;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\NoticeRedirect;
 use Larena\Env\Http\Support\PlanReceipts;
-use Larena\Env\Operations\PanelOperations;
+use Larena\Env\Operations\EnvOperationCatalog;
+use Larena\Env\Operations\EnvOperations;
 use Larena\Env\Server\ServerOverviewReader;
 
 /**
@@ -50,7 +51,7 @@ final readonly class NewSiteController
 
     public function __construct(
         private ServerOverviewReader $overviews,
-        private PanelOperations $operations,
+        private EnvOperations $operations,
         private Factory $views,
         private Translator $translator,
         private ?\Larena\Env\Server\SiteExtrasReader $extras = null,
@@ -224,7 +225,7 @@ final readonly class NewSiteController
                 if (!$this->receipts->confirms($request, 'site:add', self::chainValues($chain))) {
                     return NoticeRedirect::to($request, route('larena.env.admin.sites.new.step', ['step' => 'review'], false), $this->reasonText(PlanReceipts::REFUSED));
                 }
-                $started = $this->operations->startCommand($actor, 'site:add', $input);
+                $started = $this->operations->start($actor, 'env.site.add', $input);
                 if ($started->jobId === null) {
                     return $this->toStep($request, 'address', ['domain' => $this->reasonText($started->reason ?? 'answer_shape_invalid')]);
                 }
@@ -244,7 +245,7 @@ final readonly class NewSiteController
                 if ($action === 'retry') {
                     foreach ($run['steps'] as $index => $one) {
                         if (($one['state'] ?? '') === 'failed') {
-                            $started = $this->operations->startCommand($actor, $one['command'], $one['args']);
+                            $started = $this->operations->start($actor, EnvOperationCatalog::primaryFor($one['command']) ?? '', $one['args']);
                             $run['steps'][$index] = ['job' => $started->jobId, 'state' => $started->jobId === null ? 'failed' : 'running'] + $one;
                             break;
                         }
@@ -276,7 +277,7 @@ final readonly class NewSiteController
         if ($actor->owner !== null || $name === null) {
             return NoticeRedirect::to($request, route('larena.env.admin.sites.new', [], false), $this->reasonText('not_allowed'));
         }
-        $result = $this->operations->planCommand($actor, 'profile:enable', ['id' => $id]);
+        $result = $this->operations->plan($actor, 'env.profile.enable', ['id' => $id]);
         if ($result->plan === null) {
             return NoticeRedirect::to($request, route('larena.env.admin.sites.new', [], false), $this->reasonText($result->reason ?? 'answer_shape_invalid'));
         }
@@ -304,7 +305,7 @@ final readonly class NewSiteController
         if (!$this->receipts->confirms($request, 'profile:enable', ['id' => $id])) {
             return NoticeRedirect::to($request, route('larena.env.admin.sites.new', [], false), $this->reasonText(PlanReceipts::REFUSED));
         }
-        $started = $this->operations->startCommand($actor, 'profile:enable', ['id' => $id]);
+        $started = $this->operations->start($actor, 'env.profile.enable', ['id' => $id]);
         if ($started->jobId === null) {
             return NoticeRedirect::to($request, route('larena.env.admin.sites.new', [], false), $this->reasonText($started->reason ?? 'answer_shape_invalid'));
         }
@@ -485,7 +486,7 @@ final readonly class NewSiteController
             $chain[] = ['id' => 'backup', 'command' => 'backup:data-schedule', 'args' => ['domain' => $domain, 'enabled' => 'yes'], 'job' => null, 'state' => 'waiting'];
         }
 
-        return [$this->operations->planCommand($actor, 'site:add', $input), $input, $chain];
+        return [$this->operations->plan($actor, 'env.site.add', $input), $input, $chain];
     }
 
     /**
@@ -595,7 +596,7 @@ final readonly class NewSiteController
                 continue;
             }
             if ($one['job'] === null) {
-                $started = $this->operations->startCommand($actor, $one['command'], $one['args']);
+                $started = $this->operations->start($actor, EnvOperationCatalog::primaryFor($one['command']) ?? '', $one['args']);
                 $run['steps'][$index]['job'] = $started->jobId;
                 $run['steps'][$index]['state'] = $started->jobId === null ? 'failed' : 'running';
                 $run['steps'][$index]['reason'] = $started->jobId === null ? ($started->reason ?? 'answer_shape_invalid') : null;
@@ -616,7 +617,7 @@ final readonly class NewSiteController
             // The next step starts in this same answer, so the run does not wait a refresh between them.
             $next = $run['steps'][$index + 1] ?? null;
             if ($next !== null && $next['job'] === null) {
-                $started = $this->operations->startCommand($actor, $next['command'], $next['args']);
+                $started = $this->operations->start($actor, EnvOperationCatalog::primaryFor($next['command']) ?? '', $next['args']);
                 $run['steps'][$index + 1]['job'] = $started->jobId;
                 $run['steps'][$index + 1]['state'] = $started->jobId === null ? 'failed' : 'running';
                 $run['steps'][$index + 1]['reason'] = $started->jobId === null ? ($started->reason ?? 'answer_shape_invalid') : null;
@@ -894,7 +895,7 @@ final readonly class NewSiteController
         $offer = $this->offer($actor);
         $input = self::withBackup(self::input($raw, $actor, $offer['server']), $raw, $offer['overview'], $offer['server']);
 
-        return [$this->operations->planCommand($actor, 'site:add', $input), $input];
+        return [$this->operations->plan($actor, 'env.site.add', $input), $input];
     }
 
     /** @param array<string, string> $raw */
@@ -910,7 +911,7 @@ final readonly class NewSiteController
         if ($wrong !== null) {
             return $this->backWith($request, $this->text('routes.invalid', ['field' => $this->inputLabel($wrong, null)]), $input + ['route' => $route->id]);
         }
-        $result = $this->operations->planCommand($actor, 'site:add', $input);
+        $result = $this->operations->plan($actor, 'env.site.add', $input);
         if ($result->plan === null) {
             return $this->back($request, $result->reason ?? 'answer_shape_invalid', $input + ($route === null ? [] : ['route' => $route->id]));
         }
@@ -955,7 +956,7 @@ final readonly class NewSiteController
         if (!$this->receipts->confirms($request, 'site:add', $confirmed)) {
             return $this->back($request, PlanReceipts::REFUSED, $input + ($route === null ? [] : ['route' => $route->id]));
         }
-        $started = $this->operations->startCommand($actor, 'site:add', $input);
+        $started = $this->operations->start($actor, 'env.site.add', $input);
         if ($started->jobId === null) {
             return $this->back($request, $started->reason ?? 'answer_shape_invalid', $input + ($route === null ? [] : ['route' => $route->id]));
         }

@@ -16,7 +16,7 @@ use Larena\Env\Gateway\PanelCapabilities;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\NoticeRedirect;
 use Larena\Env\Http\Support\PlanReceipts;
-use Larena\Env\Operations\PanelOperations;
+use Larena\Env\Operations\EnvOperations;
 use Larena\Env\Server\ServerOverviewReader;
 use Larena\Env\Server\SiteExtrasReader;
 
@@ -31,6 +31,8 @@ final readonly class FirewallController
     /** The changes and the gateway command of each. */
     public const array OPERATIONS = ['rule-add' => 'firewall:rule-add', 'rule-remove' => 'firewall:rule-remove', 'block' => 'firewall:block',
         'unblock' => 'firewall:unblock', 'access' => 'panel:access'];
+    /** The same actions as the panel's Core operations (EnvOperationCatalog): what the screen plans and starts. */
+    private const array CORE_OPERATIONS = ['rule-add' => 'env.firewall.rule_add', 'rule-remove' => 'env.firewall.rule_remove', 'block' => 'env.firewall.block', 'unblock' => 'env.firewall.unblock', 'access' => 'env.panel_access.allow'];
     /** The ports the server never closes for everyone: SSH, the sites' and the panel's. */
     public const array PROTECTED_PORTS = ['22', '80', '443'];
     /** How long an address stays blocked: an hour, a day, a week, or until it is unblocked. */
@@ -40,7 +42,7 @@ final readonly class FirewallController
         'panel_address' => 'larena.env.admin.panel.access'];
 
     public function __construct(
-        private PanelOperations $operations,
+        private EnvOperations $operations,
         private ServerOverviewReader $overviews,
         private SiteExtrasReader $extras,
         private Factory $views,
@@ -112,7 +114,7 @@ final readonly class FirewallController
         if ($this->extras->firewall($actor)?->pendingOf($back) !== null) {
             return $this->back($request, $back, 'change_pending');
         }
-        $result = $this->operations->planCommand($actor, self::OPERATIONS[$op], $args);
+        $result = $this->operations->plan($actor, self::CORE_OPERATIONS[$op], $args);
         if ($result->plan === null) {
             return $this->back($request, $back, $result->reason ?? 'answer_shape_invalid');
         }
@@ -152,7 +154,7 @@ final readonly class FirewallController
         if (!$this->receipts->confirms($request, self::OPERATIONS[$op], ['op' => $op, 'args' => $args])) {
             return $this->back($request, $back, PlanReceipts::REFUSED);
         }
-        $started = $this->operations->startCommand($actor, self::OPERATIONS[$op], $args);
+        $started = $this->operations->start($actor, self::CORE_OPERATIONS[$op], $args);
         if ($started->jobId === null) {
             return $this->back($request, $back, $started->reason ?? 'answer_shape_invalid');
         }
@@ -179,7 +181,7 @@ final readonly class FirewallController
         if (!is_string($change) || preg_match('/\A[A-Za-z0-9][A-Za-z0-9._-]{0,63}\z/D', $change) !== 1 || !$capabilities->allows('change:confirm')) {
             return NoticeRedirect::to($request, $page, $this->reasonText('not_allowed'));
         }
-        $kept = $this->operations->startCommand($actor, 'change:confirm', ['change_id' => $change]);
+        $kept = $this->operations->start($actor, 'env.change.confirm', ['change_id' => $change]);
 
         return NoticeRedirect::to($request, $page, $kept->jobId !== null
             ? (string) $this->translator->get('larena-env::admin.timed.kept')

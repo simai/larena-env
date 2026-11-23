@@ -509,6 +509,19 @@ final class PanelCommands
         return array_keys(self::COMMANDS);
     }
 
+    /**
+     * A command's arguments as the gateway takes them, for the Core operation that carries it (EnvOperationCatalog): each
+     * argument's pattern, the required ones, and the most items of an argument that takes a list. Null for an unknown one.
+     *
+     * @return array{args: array<string, string>, required: list<string>, lists: array<string, int>}|null
+     */
+    public static function rules(string $command): ?array
+    {
+        $rules = self::COMMANDS[$command] ?? null;
+
+        return $rules === null ? null : ['args' => $rules['args'], 'required' => $rules['required'], 'lists' => self::LIST_ARGUMENTS[$command] ?? []];
+    }
+
     /** Whether the text is a profile rule's id as the gateway takes it: a fix is offered only for one that would leave. */
     public static function isCheckId(string $id): bool
     {

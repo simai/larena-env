@@ -222,6 +222,7 @@ $encrypter = new class implements \Illuminate\Contracts\Encryption\StringEncrypt
 };
 $authorizer = new \Larena\Access\Runtime\AccessOperationAuthorizer($rights, 'testing');
 $operations = env_operations($server);
+$operationsFacade = env_facade($server, panel: $operations);
 $overviews = new ServerOverviewReader($server);
 $extras = new SiteExtrasReader($server);
 $clock = time();
@@ -229,38 +230,38 @@ $timed = env_plan_receipts($clock);
 
 $people = (new ReflectionClass(PeopleController::class))->newInstanceWithoutConstructor();
 // The owner actions read only the gateway, the views and the words: the rest of the people's screen is not built here.
-foreach (['operations' => $operations, 'views' => $views, 'translator' => $translator, 'receipts' => $timed] as $property => $value) {
+foreach (['operations' => $operationsFacade, 'views' => $views, 'translator' => $translator, 'receipts' => $timed] as $property => $value) {
     (new ReflectionProperty(PeopleController::class, $property))->setValue($people, $value);
 }
 
-$cron = new SiteCronController($operations, $overviews, $extras, $views, $translator, $timed);
-$update = new UpdateController($operations, $extras, $views, $translator, $authorizer, $overviews, $timed);
+$cron = new SiteCronController($operationsFacade, $overviews, $extras, $views, $translator, $timed);
+$update = new UpdateController($operationsFacade, $extras, $views, $translator, $authorizer, $overviews, $timed);
 $cases = [
     'update' => [$update->plan(...), $update->run(...), ['target' => 'env'], ['target' => 'panel'], 'self:update'],
-    'firewall' => [($firewall = new FirewallController($operations, $overviews, $extras, $views, $translator, $authorizer, $timed))->plan(...), $firewall->run(...),
+    'firewall' => [($firewall = new FirewallController($operationsFacade, $overviews, $extras, $views, $translator, $authorizer, $timed))->plan(...), $firewall->run(...),
         ['op' => 'block', 'address' => '203.0.113.7', 'ttl' => '3600'], ['args' => ['address' => '203.0.113.8', 'ttl' => '3600']], 'firewall:block'],
-    'software' => [($software = new SoftwareController($operations, $overviews, $extras, $views, $translator, $update, $authorizer, $timed))->plan(...), $software->run(...),
+    'software' => [($software = new SoftwareController($operationsFacade, $overviews, $extras, $views, $translator, $update, $authorizer, $timed))->plan(...), $software->run(...),
         ['op' => 'update', 'security_only' => 'yes'], ['security-only' => 'no', 'security_only' => 'no'], 'software:update'],
-    'php' => [($php = new SoftwarePhpController($operations, $overviews, $extras, $views, $translator, $authorizer, $timed))->plan(...), $php->run(...),
+    'php' => [($php = new SoftwarePhpController($operationsFacade, $overviews, $extras, $views, $translator, $authorizer, $timed))->plan(...), $php->run(...),
         ['op' => 'update', 'php' => '8.3'], ['php' => '8.2'], 'php:update'],
-    'panel address' => [($address = new PanelAddressController($operations, $overviews, $extras, $views, $translator, $authorizer, $timed))->plan(...), $address->run(...),
+    'panel address' => [($address = new PanelAddressController($operationsFacade, $overviews, $extras, $views, $translator, $authorizer, $timed))->plan(...), $address->run(...),
         ['op' => 'ip-access', 'enabled' => 'yes'], ['enabled' => 'no'], 'panel:ip-access'],
     'cron' => [static fn (Request $request) => $cron->plan($request, 'demo-owned.test'), static fn (Request $request) => $cron->run($request, 'demo-owned.test'),
         ['op' => 'add', 'preset' => 'custom', 'custom' => '*/5 * * * *', 'command' => 'php artisan schedule:run'],
         ['args' => ['domain' => 'demo-owned.test', 'schedule' => '*/5 * * * *', 'command' => 'php artisan queue:work']], 'cron:job-add'],
-    'storage' => [($storage = new BackupStorageController($operations, $overviews, $extras, $views, $translator, $encrypter, $authorizer, $timed))->plan(...), $storage->run(...),
+    'storage' => [($storage = new BackupStorageController($operationsFacade, $overviews, $extras, $views, $translator, $encrypter, $authorizer, $timed))->plan(...), $storage->run(...),
         ['op' => 'add', 'name' => 'offsite', 'provider' => 'other', 'bucket' => 'backups', 'endpoint' => 'https://s3.example.org', 'region' => 'eu-1',
             'access_key' => 'AKIAEXAMPLE', 'secret_key' => 'very-secret-key'], ['bucket' => 'elsewhere'], 'backup:storage-add'],
     // The way back of a held backup (simai-env 1.64.0): a removed site is made again first; a database the site has
     // again comes back from the backup, its files left as they are.
-    'return site' => [($held = new BackupStorageController($operations, $overviews, $extras, $views, $translator, $encrypter, $authorizer, $timed,
+    'return site' => [($held = new BackupStorageController($operationsFacade, $overviews, $extras, $views, $translator, $encrypter, $authorizer, $timed,
         new \Larena\Env\Server\SiteDetailsReader($server)))->plan(...), $held->run(...),
         ['op' => 'return-site', 'domain' => 'gone.test', 'backup' => '20261120-010000', 'profile' => 'wordpress', 'create-db' => 'yes'], ['profile' => 'static'], 'site:add'],
     'return database' => [$held->plan(...), $held->run(...),
         ['op' => 'return-db', 'domain' => 'demo-php.test', 'backup' => '20261120-020000'], ['db' => 'no'], 'backup:data-restore'],
-    'security' => [($security = new SecurityController($operations, $overviews, $extras, $views, $translator, $authorizer, null, $timed))->plan(...), $security->run(...),
+    'security' => [($security = new SecurityController($operationsFacade, $overviews, $extras, $views, $translator, $authorizer, null, $timed))->plan(...), $security->run(...),
         ['op' => 'level', 'set' => 'enhanced'], ['set' => 'strict'], 'security:level'],
-    'kind of site' => [($newSite = new NewSiteController($overviews, $operations, $views, $translator, $extras, $timed))->enablePlan(...), $newSite->enableRun(...),
+    'kind of site' => [($newSite = new NewSiteController($overviews, $operationsFacade, $views, $translator, $extras, $timed))->enablePlan(...), $newSite->enableRun(...),
         ['id' => 'bitrix'], ['id' => 'node'], 'profile:enable'],
     'server account' => [$people->planOwner(...), $people->runOwner(...), ['action' => 'block', 'name' => 'demo'], ['name' => 'other'], 'owner:block'],
 ];

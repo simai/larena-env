@@ -263,7 +263,8 @@ final readonly class DnsService
      *
      * @return string the batch
      */
-    public function apply(array $changes, string $actor, ?string $undoOf = null, ?string $planId = null, ?string $onBehalfOf = null): string
+    public function apply(array $changes, string $actor, ?string $undoOf = null, ?string $planId = null, ?string $onBehalfOf = null,
+        ?string $operation = null): string
     {
         if ($changes === []) {
             throw new DnsFailed('nothing_to_change');
@@ -305,6 +306,8 @@ final readonly class DnsService
                 'on_behalf_of' => $onBehalfOf,
                 'plan_id' => $planId,
                 'undo_of' => $undoOf,
+                // The Core operation it was made as (EnvOperationCatalog): the zone's records or a site's own domain.
+                'operation' => $operation,
             ], static fn (?string $value): bool => $value !== null), $planId ?? $batch);
         }
         if ($undoOf !== null) {

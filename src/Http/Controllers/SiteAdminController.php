@@ -15,7 +15,7 @@ use Larena\Env\Files\SiteFiles;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\NoticeRedirect;
 use Larena\Env\Http\Support\PlanReceipts;
-use Larena\Env\Operations\PanelOperations;
+use Larena\Env\Operations\EnvOperations;
 use Larena\Env\Gateway\PanelActor;
 use Larena\Env\Gateway\PanelCapabilities;
 use Larena\Env\Gateway\PanelCommands;
@@ -67,7 +67,7 @@ final readonly class SiteAdminController
         private SiteDetailsReader $sites,
         private ServerOverviewReader $overviews,
         private SiteExtrasReader $extras,
-        private PanelOperations $operations,
+        private EnvOperations $operations,
         private Factory $views,
         private Translator $translator,
         private ?\Larena\Env\Dns\DnsService $dns = null,
@@ -914,7 +914,7 @@ final readonly class SiteAdminController
         if ($operation === SiteOperation::PreviewLink && isset($input['minutes']) && !PanelCommands::valid('site:preview-link', 'minutes', $input['minutes'])) {
             return $this->back($request, $domain, 'preview_minutes', $operation->tab(), $operation);
         }
-        $result = $this->operations->plan($actor, $operation, $domain, $input);
+        $result = $this->operations->planSite($actor, $operation, $domain, $input);
         if ($result->plan === null) {
             $refused = $this->refusedPlan($operation, $domain, $result, $input);
 
@@ -1098,7 +1098,7 @@ final readonly class SiteAdminController
         if (!$this->receipts->confirms($request, 'site:'.$operation->value, ['domain' => $domain, 'args' => $input])) {
             return $this->back($request, $domain, PlanReceipts::REFUSED, $operation->tab(), $operation);
         }
-        $started = $this->operations->start($actor, $operation, $domain, $input);
+        $started = $this->operations->startSite($actor, $operation, $domain, $input);
         if ($started->jobId === null) {
             return $this->back($request, $domain, $started->reason ?? 'answer_shape_invalid', $operation->tab(), $operation);
         }

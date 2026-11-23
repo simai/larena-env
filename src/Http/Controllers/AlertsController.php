@@ -15,7 +15,7 @@ use Larena\Env\Http\Middleware\ResolvePanelActor;
 use Larena\Env\Http\Support\NoticeRedirect;
 use Larena\Env\Http\Support\PlanReceipts;
 use Larena\Env\Operations\JobState;
-use Larena\Env\Operations\PanelOperations;
+use Larena\Env\Operations\EnvOperations;
 use Larena\Env\Server\ServerOverviewReader;
 use Larena\Env\Server\SiteExtrasReader;
 use Larena\Env\Warnings\EnvAdminAlertSource;
@@ -36,7 +36,7 @@ final readonly class AlertsController
     private const int ACK_WAIT_TRIES = 20;
 
     public function __construct(
-        private PanelOperations $operations,
+        private EnvOperations $operations,
         private ServerOverviewReader $overviews,
         private SiteExtrasReader $extras,
         private Factory $views,
@@ -58,7 +58,7 @@ final readonly class AlertsController
         if ($request->isMethod('POST') && $request->expectsJson()) {
             return $this->ackNow($request, $id);
         }
-        $result = $this->operations->planCommand(ResolvePanelActor::of($request), 'self:alerts-ack', ['id' => $id]);
+        $result = $this->operations->plan(ResolvePanelActor::of($request), 'env.alerts.ack', ['id' => $id]);
         if ($result->plan === null) {
             return $this->notice($request, $back, $result->reason ?? 'answer_shape_invalid');
         }
@@ -85,7 +85,7 @@ final readonly class AlertsController
         if (!$this->receipts->confirms($request, 'self:alerts-ack', ['id' => $id])) {
             return $this->notice($request, $back, PlanReceipts::REFUSED);
         }
-        $started = $this->operations->startCommand(ResolvePanelActor::of($request), 'self:alerts-ack', ['id' => $id]);
+        $started = $this->operations->start(ResolvePanelActor::of($request), 'env.alerts.ack', ['id' => $id]);
         EnvAdminAlertSource::forgetKept($this->cache);
 
         return $started->jobId === null
@@ -100,7 +100,7 @@ final readonly class AlertsController
     private function ackNow(Request $request, string $id): JsonResponse
     {
         $actor = ResolvePanelActor::of($request);
-        $started = $this->operations->startCommand($actor, 'self:alerts-ack', ['id' => $id]);
+        $started = $this->operations->start($actor, 'env.alerts.ack', ['id' => $id]);
         if ($started->jobId === null) {
             return new JsonResponse(['acknowledged' => false, 'reason' => $started->reason]);
         }
@@ -150,7 +150,7 @@ final readonly class AlertsController
             $args['levels'] = $levels;
             $hidden['levels'] = $levels;
         }
-        $result = $this->operations->planCommand(ResolvePanelActor::of($request), 'self:alerts-channel', $args);
+        $result = $this->operations->plan(ResolvePanelActor::of($request), 'env.alerts.channel', $args);
         if ($result->plan === null) {
             $this->dropToken($request, $hidden['token_ref'] ?? null);
 
@@ -196,7 +196,7 @@ final readonly class AlertsController
         if ($levels !== null && $args['kind'] !== 'off') {
             $args['levels'] = $levels;
         }
-        $started = $this->operations->startCommand(ResolvePanelActor::of($request), 'self:alerts-channel', $args);
+        $started = $this->operations->start(ResolvePanelActor::of($request), 'env.alerts.channel', $args);
 
         return $started->jobId === null
             ? $this->notice($request, route('larena.env.admin.alerts.channel', [], false), $started->reason ?? 'answer_shape_invalid')
@@ -205,7 +205,7 @@ final readonly class AlertsController
 
     public function testPlan(Request $request): mixed
     {
-        $result = $this->operations->planCommand(ResolvePanelActor::of($request), 'self:alerts-test', []);
+        $result = $this->operations->plan(ResolvePanelActor::of($request), 'env.alerts.test', []);
         if ($result->plan === null) {
             return $this->notice($request, route('larena.env.admin.alerts.channel', [], false), $result->reason ?? 'answer_shape_invalid');
         }
@@ -227,7 +227,7 @@ final readonly class AlertsController
         if (!$this->receipts->confirms($request, 'self:alerts-test')) {
             return $this->notice($request, route('larena.env.admin.alerts.channel', [], false), PlanReceipts::REFUSED);
         }
-        $started = $this->operations->startCommand(ResolvePanelActor::of($request), 'self:alerts-test', []);
+        $started = $this->operations->start(ResolvePanelActor::of($request), 'env.alerts.test', []);
 
         return $started->jobId === null
             ? $this->notice($request, route('larena.env.admin.alerts.channel', [], false), $started->reason ?? 'answer_shape_invalid')
