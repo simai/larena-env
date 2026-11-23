@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- Who hears about the server (auditor msg-3d61bd36, point 1): the bell and the mail go through one list,
+  PanelRecipients. Only an active person who still holds the right is told: `env.server.read` for the whole server's
+  administrators, `env.sites.read` for the people of a site's server account. A blocked person, a blocked administrator
+  and a person whose role was taken away get nothing. Access and Auth give no signal of these changes, so the list is
+  worked out when it is used; the panel's check also goes through every link «person — server account» on each run and
+  drops the link of a removed person or of one who lost `env.sites.read`, each drop in the audit log
+  (`env.person.owner_released`, reason `removed` or `right_revoked`). A blocked person keeps the link. Without Access's
+  rights or Auth's people nobody is told.
+
 ## 0.4.8 — built 2026-11-22, on the local stand, not released (waits for the owner's acceptance)
 
 Needs simai-env 1.65.0 for everything below; with an older server these screens are not offered.

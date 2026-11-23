@@ -66,6 +66,8 @@ final class EnvServiceProvider extends ServiceProvider
         $this->app->bind(PanelOperations::class, static fn (Application $app): PanelOperations => new PanelOperations($app->make(PanelGateway::class)));
         // Which owner of the server a person at the user level works as (Panel plan 2.4).
         $this->app->bind(PersonOwners::class, static fn (Application $app): PersonOwners => new PersonOwners($app->make('db')->connection()));
+        // Who hears about the server, by the bell and by mail: active people who still hold the right (auditor msg-3d61bd36, 1).
+        $this->app->bind(\Larena\Env\People\PanelRecipients::class, static fn (Application $app): \Larena\Env\People\PanelRecipients => \Larena\Env\People\PanelRecipients::from($app));
         // Who of the user level may open a site's files with passwords; every open and save goes to «История» (q-4997ae4e93).
         $this->app->bind(\Larena\Env\People\SecretFileAccess::class, static fn (Application $app): \Larena\Env\People\SecretFileAccess => new \Larena\Env\People\SecretFileAccess(
             $app->bound('db') ? $app->make('db')->connection() : null,

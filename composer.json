@@ -197,7 +197,8 @@
             "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/AccountMovesTest.php",
             "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PanelMailTest.php",
             "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PanelTranslationsTest.php",
-            "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PlanReceiptsTest.php"
+            "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PlanReceiptsTest.php",
+            "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PanelRecipientsTest.php"
         ],
         "test:unit": [
             "@test"

@@ -186,13 +186,16 @@ $gateway = new class(new RecordedAnswersGateway(env_recorded_path())) implements
     }
     public function source(): string { return 'recorded'; }
 };
-$run = static function (?\Larena\Env\Contracts\PanelGateway $server = null) use ($gateway, $connection, $owners, $config, $translator, $container): string {
+// Both spaces' people are active and hold their sites' right; nobody holds the administrator role here.
+$recipients = new \Larena\Env\People\PanelRecipients(static fn (): array => [], static fn (string $subject, string $right): bool => $right === 'env.sites.read',
+    static fn (string $subject): string => \Larena\Env\People\PanelRecipients::ACTIVE, $owners, null);
+$run = static function (?\Larena\Env\Contracts\PanelGateway $server = null) use ($gateway, $connection, $recipients, $config, $translator, $container): string {
     $gateway = $server ?? $gateway;
     $command = new PanelCheckCommand();
     $output = new \Symfony\Component\Console\Output\BufferedOutput();
     $command->setOutput(new \Illuminate\Console\OutputStyle(new \Symfony\Component\Console\Input\ArrayInput([]), $output));
     $status = $command->handle(new ServerOverviewReader($gateway), new \Larena\Env\Server\SiteExtrasReader($gateway), new MetricSamples($connection),
-        new WarningLedger($connection), $owners, $config, $translator, $container);
+        new WarningLedger($connection), $recipients, $config, $translator, $container);
     env_assert($status === 0, 'The check succeeds.');
 
     return $output->fetch();

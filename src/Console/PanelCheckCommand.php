@@ -8,13 +8,11 @@ use Illuminate\Console\Command;
 use Illuminate\Contracts\Config\Repository as Config;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Translation\Translator;
-use Larena\Access\Persistence\PersistentAccessStore;
-use Larena\Access\Runtime\SystemRolePresetSynchronizer;
 use Larena\Env\Alerts\ServerAlert;
 use Larena\Env\Gateway\PanelActor;
 use Larena\Env\History\MetricSamples;
 use Larena\Env\Mail\WarningLetters;
-use Larena\Env\People\PersonOwners;
+use Larena\Env\People\PanelRecipients;
 use Larena\Env\Server\ServerOverviewReader;
 use Larena\Env\Server\SiteExtrasReader;
 use Larena\Env\Warnings\PanelWarning;
@@ -30,7 +28,9 @@ use Throwable;
  * told when it appears and once a day while it lasts (WarningLedger), in the same notification; when it ends, that
  * notification says so itself — «… → снова работает», read on its own — and no second one is added (study 2026-11-17,
  * PX-40). Each names what it is about (the site, or «Сервер») for the bell's groups. Without larena/notification it
- * only measures.
+ * only measures. Who is told — by the bell and by mail alike — is PanelRecipients': only active people who still hold
+ * the right to see the server or the site; a link of a removed person, or of one who lost the right, is dropped on
+ * every run and written to the audit log.
  */
 final class PanelCheckCommand extends Command
 {
@@ -46,7 +46,7 @@ final class PanelCheckCommand extends Command
         SiteExtrasReader $extras,
         MetricSamples $samples,
         WarningLedger $ledger,
-        PersonOwners $owners,
+        PanelRecipients $recipients,
         Config $config,
         Translator $translator,
         Container $container,
@@ -107,6 +107,8 @@ final class PanelCheckCommand extends Command
             }
             $due = $ledger->due($warnings, $now);
         }
+        // Links of people who were removed or lost the right go first, told or not (auditor msg-3d61bd36, point 1).
+        $recipients->sweep();
         $inbox = class_exists(NotificationInbox::class) && $container->bound(NotificationInbox::class)
             ? $container->make(NotificationInbox::class) : null;
         $told = 0;
@@ -115,27 +117,20 @@ final class PanelCheckCommand extends Command
         $letters = $container->bound(WarningLetters::class) ? $container->make(WarningLetters::class) : null;
         $byMail = $letters instanceof WarningLetters && ($letters->takes(true) || $letters->takes(false));
         if (($inbox instanceof NotificationInbox || $byMail) && $due !== []) {
-            $whole = $container->bound(PersistentAccessStore::class)
-                ? $container->make(PersistentAccessStore::class)->subjectsWithRole(SystemRolePresetSynchronizer::ADMINISTRATOR) : [];
-            $spaces = $owners->all();
             $siteOwners = [];
             foreach ($overview->sites as $site) {
                 $siteOwners[$site->domain] = $site->owner;
             }
             $prefix = (string) $config->get('larena-env.admin.prefix', 'admin/server');
             foreach ($due as $warning) {
-                $recipients = $whole;
-                $owner = $warning->domain === null ? null : ($siteOwners[$warning->domain] ?? null);
-                if ($owner !== null) {
-                    $recipients = array_merge($recipients, array_keys(array_filter($spaces, static fn (string $space): bool => $space === $owner)));
-                }
+                $people = $recipients->of($warning->domain === null ? null : ($siteOwners[$warning->domain] ?? null));
                 // The server's own Russian title and line where it gave them (simai-env 1.63.0), else the panel's words.
                 $title = PanelWarnings::said($warning, static fn (string $key, array $replace): string => (string) $translator->get('larena-env::admin.'.$key, $replace),
                     $translator->getLocale());
                 $line = PanelWarnings::line($warning, $translator->getLocale());
                 // What it is about: the site, or the server for the bell's group «Сервер».
                 $object = $warning->domain ?? (string) $translator->get('larena-env::admin.warnings.bar_server');
-                foreach ($inbox instanceof NotificationInbox ? array_unique($recipients) : [] as $recipient) {
+                foreach ($inbox instanceof NotificationInbox ? $people : [] as $recipient) {
                     try {
                         $inbox->record($recipient, $warning->severity, $title, $line, 'env:warning:'.$warning->kind,
                             self::href($warning, $prefix), 'env:'.$warning->key(), false, $object);
@@ -146,7 +141,7 @@ final class PanelCheckCommand extends Command
                 }
                 $urgent = $warning->severity === PanelWarning::ERROR;
                 if ($byMail && $letters->takes($urgent)) {
-                    $mailed += $letters->queue(array_values(array_unique($recipients)),
+                    $mailed += $letters->queue($people,
                         (string) $translator->get('larena-env::mail.letters.warning.subject_'.($urgent ? 'urgent' : 'warning'), ['title' => $title]),
                         (string) $translator->get('larena-env::mail.letters.warning.body', [
                             'title' => $title,
