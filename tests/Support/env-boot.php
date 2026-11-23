@@ -5,6 +5,9 @@ declare(strict_types=1);
 // Boots the provider in a process of its own and prints what it composed. argv[1] is "without" (the admin's classes
 // cannot be loaded) or "with" (the admin is there, with its registry bound). argv[2] turns the scheduler on:
 // "env" by LARENA_ENV_SCHEDULER_ENABLED, "panel" by the panel's edition; nothing leaves it as a foreign app has it.
+// argv[3], when given, is the product's `features` as JSON (a list, or null for every feature), read by core's FeatureSet;
+// without it no feature set is bound, as in a host without larena/core's provider. argv[4] "admin-off" sets
+// larena-env.admin.enabled false.
 
 use Composer\Autoload\ClassLoader;
 use Illuminate\Console\Application as Artisan;
@@ -70,6 +73,22 @@ $config = new class implements ConfigContract {
 $app->instance('config', $config);
 $app->instance(ConfigContract::class, $config);
 $app->instance('router', new Router(new Dispatcher($app), $app));
+$features = $argv[3] ?? '';
+if ($features !== '') {
+    $config->set(\Larena\Core\Features\FeatureSet::CONFIG_KEY, json_decode($features, true, 512, JSON_THROW_ON_ERROR));
+    $app->singleton(\Larena\Core\Features\FeatureSet::class, static fn (): \Larena\Core\Features\FeatureSet => \Larena\Core\Features\FeatureSet::fromConfig(
+        $config->get(\Larena\Core\Features\FeatureSet::CONFIG_KEY)));
+}
+// The migrations the provider loads, as the migrator would take them.
+$app->singleton('migrator', static fn (): object => new class {
+    /** @var list<string> */
+    public array $paths = [];
+
+    public function path(string $path): void
+    {
+        $this->paths[] = $path;
+    }
+});
 $navigation = null;
 if ($mode === 'with') {
     $navigation = new AdminNavigationRegistry();
@@ -80,7 +99,13 @@ $provider->register();
 if ($scheduler === 'panel') {
     (new \Larena\Env\Providers\PanelEditionServiceProvider($app))->register();
 }
+if (($argv[4] ?? '') === 'admin-off') {
+    $config->set('larena-env.admin.enabled', false);
+}
 $app->call([$provider, 'boot']);
+if ($app->bound(\Larena\Core\Features\FeatureSet::class)) {
+    $app->make(\Larena\Core\Features\FeatureSet::class)->validate();
+}
 // The scheduler's locks are the application's cache; here nothing runs, so they are never asked.
 $app->instance(\Illuminate\Console\Scheduling\EventMutex::class, new class implements \Illuminate\Console\Scheduling\EventMutex {
     public function create($event): bool { return true; }
@@ -112,6 +137,9 @@ foreach ((new ReflectionProperty(Artisan::class, 'bootstrappers'))->getValue() a
     $bootstrapper($artisan);
 }
 $operation = $app->make(AccessOperationRegistry::class)->get('env.server.read');
+$rights = array_values(array_map(static fn ($descriptor): string => $descriptor->code, array_filter($app->make(AccessOperationRegistry::class)->all(),
+    static fn ($descriptor): bool => $descriptor->ownerPackage === 'larena/env')));
+$migrations = array_map(static fn (string $path): string => basename((string) realpath($path)), $app->make('migrator')->paths);
 $overview = $app->make(ServerOverviewReader::class)->read(new \Larena\Env\Gateway\PanelActor('boot@example.com'));
 
 echo json_encode([
@@ -125,4 +153,10 @@ echo json_encode([
     'operation_owner' => $operation?->ownerPackage,
     'scheduled' => $scheduled,
     'notification_scheduler' => $config->get('larena-notification.scheduler.enabled'),
+    'rights' => $rights,
+    'migrations' => $migrations,
+    'features' => $config->get(\Larena\Core\Features\FeatureSet::CONFIG_KEY),
+    // Whether the panel named its warnings for the bell (larena/notification is a development requirement).
+    'notification_sources' => class_exists(\Larena\Notification\Runtime\NotificationSources::class)
+        && isset((new ReflectionProperty(\Larena\Notification\Runtime\NotificationSources::class, 'labels'))->getValue($app->make(\Larena\Notification\Runtime\NotificationSources::class))['env:warning:backup_none']),
 ], JSON_THROW_ON_ERROR);

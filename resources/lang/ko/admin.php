@@ -1408,6 +1408,7 @@ return [
             'env_person_owner_assigned' => '사용자에게 서버 계정 지정됨',
             'env_person_owner_released' => '사용자의 서버 계정 회수됨',
             'env_server_change_started' => '서버에서 변경을 시작함',
+            'env_server_job_cancelled' => '서버에서 작업을 중지함',
         ],
         'new_owner' => '새 서버 계정',
         'owner_name' => '계정 이름(영문자, 숫자, -, _)',

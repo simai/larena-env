@@ -3,8 +3,6 @@
 declare(strict_types=1);
 
 use Larena\Env\Http\Controllers\AlertsController;
-use Larena\Env\Http\Controllers\DnsCertificatesController;
-use Larena\Env\Http\Controllers\DnsController;
 use Larena\Env\Http\Controllers\FirewallController;
 use Larena\Env\Http\Controllers\BackupStorageController;
 use Larena\Env\Http\Controllers\PanelAddressController;
@@ -52,20 +50,6 @@ $router->middleware(['access:env.server.operate'])->group(static function ($rout
     // «Удалить человека»: planned in words, then confirmed.
     $router->get('/people/{person}/remove', [PeopleController::class, 'removePlan'])->where('person', '[1-9][0-9]{0,17}')->name('larena.env.admin.people.remove');
     $router->post('/people/{person}/remove', [PeopleController::class, 'removeRun'])->where('person', '[1-9][0-9]{0,17}')->name('larena.env.admin.people.remove.run');
-});
-// DNS through the provider's API (Panel plan, stage 7): the zones and the connection are the system level's.
-$router->middleware(['access:env.dns.read'])->group(static function ($router): void {
-    $router->get('/dns', [DnsController::class, 'index'])->name('larena.env.admin.dns');
-    $router->get('/dns/connection', [DnsController::class, 'connection'])->name('larena.env.admin.dns.connection');
-    $router->get('/dns/zones/{zone}', [DnsController::class, 'zone'])->where('zone', '[a-f0-9]{32}')->name('larena.env.admin.dns.zone');
-});
-$router->middleware(['access:env.dns.operate'])->group(static function ($router): void {
-    $router->post('/dns/connection', [DnsController::class, 'connect'])->name('larena.env.admin.dns.connection.save');
-    $router->post('/dns/connection/addresses', [DnsController::class, 'addresses'])->name('larena.env.admin.dns.connection.addresses');
-    $router->post('/dns/connection/disconnect', [DnsController::class, 'disconnect'])->name('larena.env.admin.dns.connection.disconnect');
-    $router->post('/dns/zones/{zone}/plan', [DnsController::class, 'plan'])->where('zone', '[a-f0-9]{32}')->name('larena.env.admin.dns.zone.plan');
-    $router->post('/dns/zones/{zone}/undo', [DnsController::class, 'undo'])->where('zone', '[a-f0-9]{32}')->name('larena.env.admin.dns.zone.undo');
-    $router->post('/dns/run', [DnsController::class, 'run'])->name('larena.env.admin.dns.run');
 });
 // The server's own alerts (simai-env 1.31.0): where it sends them is the system level's; acknowledging one is either
 // level's, an owner's only for their own sites, which the server checks.
@@ -132,10 +116,6 @@ $router->middleware(['access:env.server.operate'])->group(static function ($rout
     $router->post('/firewall/run', [FirewallController::class, 'run'])->name('larena.env.admin.firewall.run');
     // Keeping a timed change in time, from the panel over the new rules (change:confirm).
     $router->post('/changes/keep', [FirewallController::class, 'keep'])->name('larena.env.admin.change.keep');
-    // The panel's Cloudflare token given to the server for certificates through DNS, or taken back (simai-env 1.36.0):
-    // the server's change made with the DNS connection, so both rights.
-    $router->post('/dns/certificates/plan', [DnsCertificatesController::class, 'plan'])->middleware('access:env.dns.operate')->name('larena.env.admin.dns.certificates.plan');
-    $router->post('/dns/certificates/run', [DnsCertificatesController::class, 'run'])->middleware('access:env.dns.operate')->name('larena.env.admin.dns.certificates.run');
 });
 $router->middleware(['access:env.sites.operate'])->group(static function ($router): void {
     $router->post('/alerts/ack/plan', [AlertsController::class, 'ackPlan'])->name('larena.env.admin.alerts.ack.plan');
@@ -173,9 +153,6 @@ $router->middleware(['access:env.sites.operate'])->group(static function ($route
     $router->post('/sites/new/enable/run', [NewSiteController::class, 'enableRun'])->name('larena.env.admin.sites.enable.run');
     $router->post('/sites/{domain}/plan', [SiteAdminController::class, 'plan'])->where('domain', $domain)->name('larena.env.admin.site.plan');
     $router->post('/sites/{domain}/run', [SiteAdminController::class, 'run'])->where('domain', $domain)->name('larena.env.admin.site.run');
-    // A site's own domain pointed at this server, at either level (Panel plan, stage 7).
-    $router->post('/sites/{domain}/dns/plan', [DnsController::class, 'sitePlan'])->where('domain', $domain)->name('larena.env.admin.site.dns.plan');
-    $router->post('/sites/{domain}/dns/run', [DnsController::class, 'siteRun'])->where('domain', $domain)->name('larena.env.admin.site.dns.run');
     // A site's own scheduled jobs, at either level (Panel plan 5.4).
     $router->post('/sites/{domain}/cron/plan', [SiteCronController::class, 'plan'])->where('domain', $domain)->name('larena.env.admin.site.cron.plan');
     $router->post('/sites/{domain}/cron/run', [SiteCronController::class, 'run'])->where('domain', $domain)->name('larena.env.admin.site.cron.run');

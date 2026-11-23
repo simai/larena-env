@@ -115,6 +115,11 @@ function env_declaration_differences(string $root): array
     $viewed = array_values(array_unique(array_map(static fn ($row): string => $row->auditEvent, $navigation)));
     $same('navigation view events', array_keys(EnvDeclarations::VIEW_EVENTS), $viewed);
 
+    // The features (point 5): every right in exactly one feature, each feature's rights and requirements declared, core's
+    // FeatureSet takes them (no cycle), the menu's feature rows name declared features, and the panel's edition turns on
+    // exactly the declared ones.
+    $errors = [...$errors, ...env_feature_differences(EnvDeclarations::FEATURES, $rights)];
+
     // What the code asks and writes: the rights it authorizes and routes behind `access:`, the events it records.
     [$asked, $written] = env_declaration_uses($root);
     $undeclared = array_values(array_diff($asked, array_keys($rights)));
@@ -129,6 +134,62 @@ function env_declaration_differences(string $root): array
     $undeclared = array_values(array_diff($written, array_keys(EnvDeclarations::AUDIT_EVENTS)));
     if ($undeclared !== []) {
         $errors[] = 'events the code writes, not declared: '.implode(', ', $undeclared);
+    }
+
+    return $errors;
+}
+
+/**
+ * The features against the rights, the menu and the panel's edition (point 5).
+ *
+ * @param array<string, array{requires: list<string>, operations: list<string>}> $features
+ * @param array<string, array<string, string>> $rights
+ *
+ * @return list<string>
+ */
+function env_feature_differences(array $features, array $rights): array
+{
+    $errors = [];
+    $owned = [];
+    foreach ($features as $name => $feature) {
+        if (!str_starts_with($name, 'env.')) {
+            $errors[] = 'feature '.$name.': not of env';
+        }
+        foreach ($feature['requires'] as $required) {
+            if (!isset($features[$required])) {
+                $errors[] = 'feature '.$name.': requires an undeclared feature '.$required;
+            }
+        }
+        foreach ($feature['operations'] as $right) {
+            if (!isset($rights[$right])) {
+                $errors[] = 'feature '.$name.': names an undeclared right '.$right;
+            }
+            $owned[$right][] = $name;
+        }
+    }
+    foreach (array_keys($rights) as $right) {
+        if (count($owned[$right] ?? []) !== 1) {
+            $errors[] = 'right '.$right.': in '.count($owned[$right] ?? []).' features, not exactly one';
+        }
+    }
+    try {
+        $set = new \Larena\Core\Features\FeatureSet();
+        $set->declare('larena/env', $features);
+        $set->validate();
+    } catch (Throwable $failure) {
+        $errors[] = 'features: core\'s FeatureSet refuses them ('.$failure->getMessage().')';
+    }
+    foreach (ServerAdminNavigationContributor::FEATURES as $row => $feature) {
+        if (!isset($features[$feature])) {
+            $errors[] = 'navigation row '.$row.': names an undeclared feature '.$feature;
+        }
+    }
+    $edition = \Larena\Env\Providers\PanelEditionServiceProvider::FEATURES;
+    sort($edition);
+    $declaredFeatures = array_keys($features);
+    sort($declaredFeatures);
+    if ($edition !== $declaredFeatures) {
+        $errors[] = 'the panel\'s edition turns on '.implode(', ', $edition).', not every declared feature';
     }
 
     return $errors;
@@ -254,5 +315,5 @@ if (realpath((string) ($_SERVER['SCRIPT_FILENAME'] ?? '')) === __FILE__) {
         fwrite(STDERR, "The declarations do not match the code (one source: src/Providers/EnvDeclarations.php):\n- ".implode("\n- ", $errors)."\n");
         exit(1);
     }
-    echo 'Declarations match the code: '.count(EnvDeclarations::RIGHTS).' rights, '.count(EnvDeclarations::events())." audit events.\n";
+    echo 'Declarations match the code: '.count(EnvDeclarations::FEATURES).' features, '.count(EnvDeclarations::RIGHTS).' rights, '.count(EnvDeclarations::events())." audit events.\n";
 }

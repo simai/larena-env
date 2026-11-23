@@ -1408,6 +1408,7 @@ return [
             'env_person_owner_assigned' => 'Person given a server account',
             'env_person_owner_released' => 'Person\'s server account taken away',
             'env_server_change_started' => 'Change started on the server',
+            'env_server_job_cancelled' => 'Job stopped on the server',
         ],
         'new_owner' => 'New server account',
         'owner_name' => 'Account name (latin letters, digits, - and _)',

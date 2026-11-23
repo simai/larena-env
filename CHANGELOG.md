@@ -2,6 +2,28 @@
 
 ## Unreleased
 
+- Features chosen by the product (auditor msg-3d61bd36, point 5): env declares `env.admin` (the server's screens and
+  their menu rows), `env.monitoring` (the check every 5 minutes and the load it keeps), `env.notifications` (the check
+  tells people; needs `env.monitoring` and `env.admin`) and `env.dns` (DNS through the provider's API; needs `env.admin`)
+  through core's FeatureSet. Routes, menu rows, rights, tables and the background jobs come only from the features the
+  product chose; `larena-env.admin.enabled` and `larena-env.scheduler.enabled` can only narrow that. The DNS routes moved
+  to `routes/dns.php` and their tables' migration to `database/migrations/dns/` (same migration name, so an installed
+  panel does not run it again). A product without a choice (`features` null, as the CMS) and a host without core's
+  provider keep everything. The panel's edition adds all four where its product file names none of env's, so the panel
+  and its stands behave as before. `declarations:check` now also fails when a right is in no feature or in two, a feature
+  names an unknown requirement or right, or the edition and the declarations differ.
+- The background jobs end with no request and no write while the gateway cannot be asked (`GatewayReadiness`, from the
+  configuration alone: recorded answers where allowed, the sudo gate's program on the server, an SSH key and known hosts
+  that can be read). Before, a check on a server without the gate still ran the gateway and could note the server as silent.
+- Stopping a job (`job:cancel`) and every DNS change now go the way of a change of the server (wave A's addition c): they
+  are refused `audit_unavailable` before the server or the provider is asked where the audit log cannot be written. A
+  stop the server took is the new audit event `env.server.job_cancelled` (who, for whom, the stop's request and
+  operation, the job with the request and operation that started it, correlated by the job). A DNS change
+  (`env.dns.record_changed`) now also keeps who, for whom and the plan it was confirmed with, correlated by that plan;
+  connecting and disconnecting DNS are refused without the audit log too.
+
+## 0.4.8 — released 2026-11-23 on GitHub (archive sha256 d277937a…3dff, built from 89a127b)
+
 - Who hears about the server (auditor msg-3d61bd36, point 1): the bell and the mail go through one list,
   PanelRecipients. Only an active person who still holds the right is told: `env.server.read` for the whole server's
   administrators, `env.sites.read` for the people of a site's server account. A blocked person, a blocked administrator
@@ -23,8 +45,6 @@
   rights with their labels, targets and grants (it listed four), and `audit.yaml` the menu's 17 view events beside the
   22 written ones. The new `declarations:check` in `quality:gate` fails on any difference between the three files, the
   rights the provider registers and the code asks for, and the events the code writes or the menu names.
-
-## 0.4.8 — built 2026-11-22, on the local stand, not released (waits for the owner's acceptance)
 
 Needs simai-env 1.65.0 for everything below; with an older server these screens are not offered.
 

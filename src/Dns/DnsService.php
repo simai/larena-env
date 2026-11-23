@@ -10,6 +10,11 @@ use Larena\Env\People\PanelAudit;
  * The panel's DNS (Panel plan, stage 7): connecting a provider, reading zones and records, and changing records the
  * way the panel changes the server — a plan in words, a confirmation, the record as it was kept to be put back, and
  * an entry in the audit log. The token is read only to call the provider.
+ *
+ * No change without the audit log (wave A's addition c): connecting, disconnecting and changing records are refused
+ * `audit_unavailable` before the provider or the stored connection is touched where the log cannot be written. A
+ * confirmed change of records is written with the chain of a change of the server: who, for whom, the plan (the plan
+ * receipt's id) and the batch of changes the provider made, correlated by the plan.
  */
 final readonly class DnsService
 {
@@ -29,6 +34,7 @@ final readonly class DnsService
     /** @return list<DnsZone> the zones the new token sees, after it is checked and kept */
     public function connect(string $token, string $actor): array
     {
+        $this->audited();
         $token = trim($token);
         $status = $this->provider->verify($token);
         if (!$status->active) {
@@ -44,6 +50,7 @@ final readonly class DnsService
 
     public function disconnect(string $actor): void
     {
+        $this->audited();
         $connected = $this->connection->current();
         $this->connection->disconnect();
         if ($connected !== null) {
@@ -251,14 +258,17 @@ final readonly class DnsService
      * Does what a plan showed, after checking nothing changed since: a record removed or changed meanwhile stops it.
      *
      * @param list<DnsChange> $changes
+     * @param ?string $planId the plan receipt's id the change was confirmed with: the chain's plan and correlation
+     * @param ?string $onBehalfOf the person the actor looked at the panel as
      *
      * @return string the batch
      */
-    public function apply(array $changes, string $actor, ?string $undoOf = null): string
+    public function apply(array $changes, string $actor, ?string $undoOf = null, ?string $planId = null, ?string $onBehalfOf = null): string
     {
         if ($changes === []) {
             throw new DnsFailed('nothing_to_change');
         }
+        $this->audited();
         $token = $this->token();
         $zoneId = $changes[0]->zoneId;
         $now = [];
@@ -286,18 +296,30 @@ final readonly class DnsService
                 default => throw new DnsFailed('not_allowed'),
             };
             $this->log->record($batch, $change, $result, $actor, $undoOf);
-            $this->audit?->record('env.dns.record_changed', $actor, 'env.dns.zone:'.$change->zoneName, [
+            $this->audit?->record('env.dns.record_changed', $actor, 'env.dns.zone:'.$change->zoneName, array_filter([
                 'action' => $change->action,
                 'before' => $change->before?->line() ?? '',
                 'after' => $result?->line() ?? '',
                 'batch' => $batch,
-            ]);
+                'who' => $actor,
+                'on_behalf_of' => $onBehalfOf,
+                'plan_id' => $planId,
+                'undo_of' => $undoOf,
+            ], static fn (?string $value): bool => $value !== null), $planId ?? $batch);
         }
         if ($undoOf !== null) {
             $this->log->markUndone($undoOf);
         }
 
         return $batch;
+    }
+
+    /** A change of DNS is not made without the audit log: refused before anything is touched. */
+    private function audited(): void
+    {
+        if ($this->audit === null || !$this->audit->available()) {
+            throw new DnsFailed('audit_unavailable');
+        }
     }
 
     /** The site card's DNS: the zone that holds the domain, its records, and whether it points here. */

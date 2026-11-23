@@ -1408,6 +1408,7 @@ return [
             'env_person_owner_assigned' => 'Cuenta del servidor asignada a la persona',
             'env_person_owner_released' => 'Cuenta del servidor retirada a la persona',
             'env_server_change_started' => 'Cambio iniciado en el servidor',
+            'env_server_job_cancelled' => 'Tarea detenida en el servidor',
         ],
         'new_owner' => 'Nueva cuenta del servidor',
         'owner_name' => 'Nombre de la cuenta (letras latinas, cifras, - y _)',

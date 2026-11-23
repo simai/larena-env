@@ -136,7 +136,7 @@ $capsule->setAsGlobal();
 $container = new AdminPresenceHost();
 $container->instance('db.schema', $capsule->getConnection()->getSchemaBuilder());
 Facade::setFacadeApplication($container);
-foreach (glob(dirname(__DIR__, 2).'/database/migrations/*.php') ?: [] as $migration) {
+foreach ([...(glob(dirname(__DIR__, 2).'/database/migrations/*.php') ?: []), ...(glob(dirname(__DIR__, 2).'/database/migrations/dns/*.php') ?: [])] as $migration) {
     (require $migration)->up();
 }
 $db = $capsule->getConnection();
@@ -156,7 +156,16 @@ $encrypter = new class implements Illuminate\Contracts\Encryption\StringEncrypte
     }
 };
 $connection = new DnsConnection($db, $encrypter);
-$dns = new DnsService($provider, $connection, new DnsChangeLog($db));
+// No change of DNS without the audit log (wave A's addition c): refused before the provider or the connection is touched.
+$unaudited = new DnsService($provider, $connection, new DnsChangeLog($db));
+$sentBefore = count($sent);
+env_assert($refuses(static fn () => $unaudited->connect($token, 'user:admin_identity:1'), 'audit_unavailable')
+    && $refuses(static fn () => $unaudited->disconnect('user:admin_identity:1'), 'audit_unavailable')
+    && count($sent) === $sentBefore && $db->table(DnsConnection::TABLE)->count() === 0, 'Without the audit log nothing is connected and the provider is not asked.');
+$dnsAudit = new Larena\Audit\Runtime\InMemoryAuditSink();
+$dnsHost = new Illuminate\Container\Container();
+$dnsHost->instance(Larena\Audit\Contracts\AuditSink::class, $dnsAudit);
+$dns = new DnsService($provider, $connection, new DnsChangeLog($db), new Larena\Env\People\PanelAudit($dnsHost));
 env_assert($dns->forSite('example.com')->state === 'not_connected', 'Before a connection the card says so.');
 env_assert($refuses(static fn () => $dns->zones(), 'not_connected'), 'No zones without a connection.');
 env_assert(count($dns->connect($token, 'user:admin_identity:1')) === 2, 'Connecting checks the token and reads its zones.');
@@ -180,7 +189,15 @@ $lines = array_map(static fn (DnsChange $change): string => $change->action.':'.
 env_assert($lines === ['update:A example.com → 203.0.113.5', 'delete:A www.example.com → 198.51.100.7', 'create:CNAME www.example.com → example.com'], implode(' | ', $lines));
 env_assert($provider->records($token, $zoneId)[0]->content === '198.51.100.7', 'A plan changes nothing.');
 $sentBefore = count($sent);
-$batch = $dns->apply($plan, 'user:admin_identity:1');
+env_assert($refuses(static fn () => $unaudited->apply($plan, 'user:admin_identity:1'), 'audit_unavailable') && count($sent) === $sentBefore,
+    'Without the audit log a confirmed change is refused before the provider is asked.');
+$batch = $dns->apply($plan, 'user:admin_identity:1', null, 'plan-receipt-1', 'user:admin_identity:5');
+// The chain of the change: who, for whom, the plan it was confirmed with and the batch, correlated by the plan.
+$changed = array_values(array_filter($dnsAudit->events(), static fn ($event): bool => $event->type === 'env.dns.record_changed'));
+env_assert(count($changed) === 3 && $changed[0]->correlationId === 'plan-receipt-1' && $changed[0]->actor === 'user:admin_identity:1'
+    && $changed[0]->payload['who'] === 'user:admin_identity:1' && $changed[0]->payload['on_behalf_of'] === 'user:admin_identity:5'
+    && $changed[0]->payload['plan_id'] === 'plan-receipt-1' && $changed[0]->payload['batch'] === $batch && !isset($changed[0]->payload['undo_of']),
+    'Each change is in the audit log with its chain: '.json_encode($changed[0]->payload ?? null));
 env_assert($dns->forSite('example.com')->points === SiteDns::HERE, 'Now it points here.');
 env_assert(!in_array(true, array_map(static fn (string $line): bool => str_contains($line, $token), $sent), true), 'The token never goes in a path.');
 env_assert(count($sent) > $sentBefore, 'The provider was asked.');

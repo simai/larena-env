@@ -304,7 +304,9 @@ final readonly class SiteAdminController
             'nginxSupported' => $capabilities->allows('site:nginx-custom-show'),
             'nginxAllows' => ['save' => $capabilities->allows('site:nginx-custom'),
                 'keep' => $capabilities->allows('change:confirm')],
-            'siteDns' => $site !== null && $tab === 'domains' ? $this->dns?->forSite($domain) : null,
+            // A site's own DNS only where the product chose env.dns (auditor msg-3d61bd36, point 5).
+            'dnsOn' => \Larena\Env\Providers\EnvFeatures::on('env.dns'),
+            'siteDns' => $site !== null && $tab === 'domains' && \Larena\Env\Providers\EnvFeatures::on('env.dns') ? $this->dns?->forSite($domain) : null,
             // Where the domain must lead, said with the server's real address beside a missing certificate (block 4).
             'serverIp' => $site !== null && $tab === 'domains' && $site->certificate === null ? $this->extras->serverIp($actor, $capabilities) : null,
             // The site's own scheduled jobs (Panel plan 5.4), and the runs of one of them when it is opened.

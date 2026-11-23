@@ -53,6 +53,7 @@ audit_events:
   - env.mail.password_lost
   - env.person.password_reset_console
   - env.server.change_started
+  - env.server.job_cancelled
   - env.people.viewed
   - env.server.overview_viewed
   - env.settings.viewed

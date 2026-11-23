@@ -7,6 +7,7 @@ namespace Larena\Env\Console;
 use Illuminate\Console\Command;
 use Larena\Env\Contracts\PanelGateway;
 use Larena\Env\Gateway\CachingPanelGateway;
+use Larena\Env\Gateway\GatewayReadiness;
 
 /**
  * Every minute, asks the server again what the panel's pages asked lately, so a page opens from the kept answers
@@ -19,9 +20,10 @@ final class PanelWarmCommand extends Command
 
     protected $description = 'Refresh the server answers the panel pages asked lately';
 
-    public function handle(PanelGateway $gateway): int
+    public function handle(PanelGateway $gateway, ?GatewayReadiness $readiness = null): int
     {
-        if (!$gateway instanceof CachingPanelGateway) {
+        // A gateway that cannot be asked yet: nothing is asked and nothing kept (auditor msg-3d61bd36, point 5).
+        if (!$gateway instanceof CachingPanelGateway || ($readiness !== null && !$readiness->ready())) {
             return self::SUCCESS;
         }
         $asked = $gateway->warm();

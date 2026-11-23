@@ -1408,6 +1408,7 @@ return [
             'env_person_owner_assigned' => 'ユーザーにサーバーアカウントを割り当て',
             'env_person_owner_released' => 'ユーザーからサーバーアカウントを解除',
             'env_server_change_started' => 'サーバーで変更を開始しました',
+            'env_server_job_cancelled' => 'サーバーでジョブを停止しました',
         ],
         'new_owner' => '新しいサーバーアカウント',
         'owner_name' => 'アカウント名（半角英字、数字、- と _）',

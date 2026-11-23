@@ -100,4 +100,21 @@ try {
 }
 env_assert(count($sink->events()) === 1, 'Only the declared event was written.');
 
+// The features (point 5): every right in exactly one feature, requirements and rights declared, no cycle.
+$features = Larena\Env\Providers\EnvDeclarations::FEATURES;
+$rights = Larena\Env\Providers\EnvDeclarations::RIGHTS;
+env_assert(env_feature_differences($features, $rights) === [], 'The features agree: '.json_encode(env_feature_differences($features, $rights)));
+$orphan = $features;
+$orphan['env.dns']['operations'] = ['env.dns.read'];
+$twice = $features;
+$twice['env.admin']['operations'][] = 'env.dns.read';
+$unknown = $features;
+$unknown['env.dns']['requires'] = ['env.panel'];
+$cycle = $features;
+$cycle['env.admin']['requires'] = ['env.dns'];
+$said = static fn (array $changed): string => implode(' | ', env_feature_differences($changed, $rights));
+env_assert(str_contains($said($orphan), 'right env.dns.operate: in 0 features') && str_contains($said($twice), 'right env.dns.read: in 2 features')
+    && str_contains($said($unknown), 'requires an undeclared feature env.panel') && str_contains($said($cycle), 'larena_feature_cycle'),
+    'A right in no feature or in two, an unknown requirement and a cycle fail: '.$said($orphan).' / '.$said($cycle));
+
 echo "DeclarationsTest passed.\n";

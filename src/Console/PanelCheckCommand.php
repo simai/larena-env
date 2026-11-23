@@ -9,6 +9,7 @@ use Illuminate\Contracts\Config\Repository as Config;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Translation\Translator;
 use Larena\Env\Alerts\ServerAlert;
+use Larena\Env\Gateway\GatewayReadiness;
 use Larena\Env\Gateway\PanelActor;
 use Larena\Env\History\MetricSamples;
 use Larena\Env\Mail\WarningLetters;
@@ -50,7 +51,15 @@ final class PanelCheckCommand extends Command
         Config $config,
         Translator $translator,
         Container $container,
+        ?GatewayReadiness $readiness = null,
     ): int {
+        // A gateway that cannot be asked yet (not configured, its program or key not there): nothing is asked, kept or
+        // written, not even the cache's note that the server is silent (auditor msg-3d61bd36, point 5).
+        if ($readiness !== null && !$readiness->ready()) {
+            $this->line('server not asked: the gateway is not ready ('.$readiness->reason.')');
+
+            return self::SUCCESS;
+        }
         $actor = new PanelActor(self::ACTOR);
         $now = PanelWarnings::now();
         $result = $overviews->read($actor);
@@ -109,12 +118,14 @@ final class PanelCheckCommand extends Command
         }
         // Links of people who were removed or lost the right go first, told or not (auditor msg-3d61bd36, point 1).
         $recipients->sweep();
-        $inbox = class_exists(NotificationInbox::class) && $container->bound(NotificationInbox::class)
+        // People are told only where the product chose env.notifications (point 5); the check measures either way.
+        $notify = \Larena\Env\Providers\EnvFeatures::on('env.notifications', $container);
+        $inbox = $notify && class_exists(NotificationInbox::class) && $container->bound(NotificationInbox::class)
             ? $container->make(NotificationInbox::class) : null;
         $told = 0;
         $mailed = 0;
         // The server's warnings by mail too, as «Что слать на почту» says (owner decision C335): urgent by default.
-        $letters = $container->bound(WarningLetters::class) ? $container->make(WarningLetters::class) : null;
+        $letters = $notify && $container->bound(WarningLetters::class) ? $container->make(WarningLetters::class) : null;
         $byMail = $letters instanceof WarningLetters && ($letters->takes(true) || $letters->takes(false));
         if (($inbox instanceof NotificationInbox || $byMail) && $due !== []) {
             $siteOwners = [];

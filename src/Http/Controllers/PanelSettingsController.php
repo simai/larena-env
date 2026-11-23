@@ -69,7 +69,7 @@ final readonly class PanelSettingsController
                 });
         }
         $rows[] = $this->row('sign_in', $this->text('panel_settings.rows.sign_in_value'), '/admin/settings/general');
-        if ($this->dns !== null) {
+        if ($this->dns !== null && \Larena\Env\Providers\EnvFeatures::on('env.dns')) {
             $connected = $this->dns->connection();
             $rows[] = $this->row('dns', $connected === null ? $this->text('panel_settings.rows.dns_none')
                 : $this->text('panel_settings.rows.dns_on').' · '.ucfirst($connected->provider), route('larena.env.admin.dns.connection', [], false));

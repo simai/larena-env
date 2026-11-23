@@ -1412,6 +1412,7 @@ return [
             'env_person_owner_assigned' => 'Человеку дан аккаунт на сервере',
             'env_person_owner_released' => 'У человека снят аккаунт на сервере',
             'env_server_change_started' => 'Запущено изменение на сервере',
+            'env_server_job_cancelled' => 'Остановлена задача на сервере',
         ],
         'new_owner' => 'Новый аккаунт на сервере',
         'owner_name' => 'Имя аккаунта (латинские буквы, цифры, - и _)',

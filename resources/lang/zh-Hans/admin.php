@@ -1408,6 +1408,7 @@ return [
             'env_person_owner_assigned' => '已为人员分配服务器账户',
             'env_person_owner_released' => '已收回人员的服务器账户',
             'env_server_change_started' => '已在服务器上开始更改',
+            'env_server_job_cancelled' => '已在服务器上停止任务',
         ],
         'new_owner' => '新服务器账户',
         'owner_name' => '账户名称（拉丁字母、数字、- 和 _）',

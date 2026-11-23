@@ -62,6 +62,10 @@ events:
   # server's operation id; a change is not asked without the audit log.
   - type: env.server.change_started
     severity: notice
+  # A job the server was asked to stop and stopped (wave A's addition c): who, the stop's request and operation, and the
+  # job with the request that started it; the job id links it to that job's env.server.change_started.
+  - type: env.server.job_cancelled
+    severity: notice
   # The view events the panel's menu rows name (ServerAdminNavigationContributor `auditEvent`), declared as Auth does.
   - type: env.people.viewed
     severity: info

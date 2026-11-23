@@ -11,12 +11,13 @@ use Larena\Env\Console\RegisterServerAreaCommand;
 require_once dirname(__DIR__).'/Support/env-test.php';
 
 /** @return array<string, mixed> */
-function env_boot(string $mode, string $scheduler = ''): array
+function env_boot(string $mode, string $scheduler = '', string $features = '', string $flags = ''): array
 {
     $script = dirname(__DIR__).'/Support/env-boot.php';
     $output = [];
     $exitCode = 0;
-    exec(escapeshellarg(PHP_BINARY).' '.escapeshellarg($script).' '.escapeshellarg($mode).' '.escapeshellarg($scheduler).' 2>&1', $output, $exitCode);
+    exec(escapeshellarg(PHP_BINARY).' '.escapeshellarg($script).' '.escapeshellarg($mode).' '.escapeshellarg($scheduler).' '.escapeshellarg($features)
+        .' '.escapeshellarg($flags).' 2>&1', $output, $exitCode);
     env_assert($exitCode === 0, "The provider did not boot ({$mode}): ".implode("\n", $output));
 
     return json_decode(implode("\n", $output), true, 512, JSON_THROW_ON_ERROR);

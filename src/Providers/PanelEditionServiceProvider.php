@@ -53,6 +53,12 @@ final class PanelEditionServiceProvider extends ServiceProvider
         // its scheduler; the packages keep them off in any other application.
         $config->set('larena-env.scheduler.enabled', true);
         $config->set('larena-notification.scheduler.enabled', true);
+        // The panel is made of env's features (auditor msg-3d61bd36, point 5): where the product file chose its features and
+        // named none of env's, the edition adds them; a product file that names env's own keeps its exact choice.
+        $chosen = $config->get(\Larena\Core\Features\FeatureSet::CONFIG_KEY);
+        if (is_array($chosen) && array_is_list($chosen) && array_filter($chosen, static fn (mixed $name): bool => is_string($name) && str_starts_with($name, 'env.')) === []) {
+            $config->set(\Larena\Core\Features\FeatureSet::CONFIG_KEY, [...$chosen, ...self::FEATURES]);
+        }
         $this->app->singleton(SetupLink::class, static fn (Application $app): SetupLink => new SetupLink(new EnvFile($app->basePath('.env'))));
         // An invitation by mail waits 72 hours for its answer (plan «Приглашение»): 30 minutes is too short for one.
         $config->set('larena-auth.user_invitation.activation_expiry_minutes', self::INVITATION_HOURS * 60);
@@ -81,6 +87,9 @@ final class PanelEditionServiceProvider extends ServiceProvider
                 $sink instanceof PanelSecurityLetters ? $sink : new PanelSecurityLetters($sink, static fn (): PasswordChangedLetter => $app->make(PasswordChangedLetter::class)));
         }
     }
+
+    /** The features of larena/env the panel runs (EnvDeclarations::FEATURES): all of them. */
+    public const array FEATURES = ['env.admin', 'env.monitoring', 'env.notifications', 'env.dns'];
 
     /** How long an invitation's link works, in hours. */
     public const int INVITATION_HOURS = 72;

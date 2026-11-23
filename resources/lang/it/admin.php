@@ -1408,6 +1408,7 @@ return [
             'env_person_owner_assigned' => 'Alla persona è stato assegnato un account del server',
             'env_person_owner_released' => 'Alla persona è stato tolto l’account del server',
             'env_server_change_started' => 'Modifica avviata sul server',
+            'env_server_job_cancelled' => 'Attività interrotta sul server',
         ],
         'new_owner' => 'Nuovo account del server',
         'owner_name' => 'Nome dell’account (lettere latine, cifre, - e _)',

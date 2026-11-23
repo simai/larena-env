@@ -12,13 +12,17 @@ final class ServerAdminNavigationContributor implements AdminNavigationContribut
     /** Each row of a screen a newer simai-env brings, by the command it needs; ListedCommands reads each of them. */
     public const array NEEDS = ['env.services' => 'service:list', 'env.software' => 'software:list', 'env.software.php' => 'php:list', 'env.firewall' => 'firewall:status', 'env.security' => 'security:status', 'env.storages' => 'backup:storage-list', 'env.panel.access' => 'panel:access', 'env.update' => 'self:update-plan'];
 
+    /** The rows of a feature the product may leave off (auditor msg-3d61bd36, point 5), by the feature. */
+    public const array FEATURES = ['env.dns' => 'env.dns', 'env.dns.connection' => 'env.dns'];
+
     /**
      * The rows of screens that only a newer simai-env can use show only where the server lists their commands; without
-     * a way to ask, they do not show.
+     * a way to ask, they do not show. A row of a feature that is off does not show either.
      *
      * @param (\Closure(string): bool)|null $listed
+     * @param (\Closure(string): bool)|null $featureOn null: every feature is on
      */
-    public function __construct(private ?\Closure $listed = null)
+    public function __construct(private ?\Closure $listed = null, private ?\Closure $featureOn = null)
     {
     }
 
@@ -358,8 +362,10 @@ final class ServerAdminNavigationContributor implements AdminNavigationContribut
         )];
         // Each row of a screen a newer simai-env brings, by the command it needs (Panel plan stage 5).
         $needs = self::NEEDS;
+        $features = self::FEATURES;
 
-        return array_values(array_filter($rows, fn (AdminNavigationDescriptor $row): bool => !isset($needs[$row->id])
-            || ($this->listed !== null && ($this->listed)($needs[$row->id]))));
+        return array_values(array_filter($rows, fn (AdminNavigationDescriptor $row): bool => (!isset($needs[$row->id])
+            || ($this->listed !== null && ($this->listed)($needs[$row->id])))
+            && (!isset($features[$row->id]) || $this->featureOn === null || ($this->featureOn)($features[$row->id]))));
     }
 }

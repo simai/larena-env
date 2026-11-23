@@ -32,6 +32,9 @@ final readonly class PanelOperations
     /** The audit event of every change started on the server. */
     public const string CHANGE_STARTED = 'env.server.change_started';
 
+    /** The audit event of a job the server was asked to stop and stopped. */
+    public const string JOB_CANCELLED = 'env.server.job_cancelled';
+
     private PlanTrail $trail;
 
     public function __construct(
@@ -258,20 +261,49 @@ final readonly class PanelOperations
             is_string($operation) && $operation !== '' ? $operation : $statusAnswer->operationId);
     }
 
-    /** Stops a job that is still running; a finished one is refused with `not_running`, which the screen says. */
+    /**
+     * Stops a job that is still running; a finished one is refused with `not_running`, which the screen says. Stopping a
+     * job changes the server, so it goes the way of a change (wave A's addition c): refused `audit_unavailable` before the
+     * server is asked where the audit log cannot be written, and a stop the server took is written as
+     * `env.server.job_cancelled` with who, for whom, the stop's request and operation, and the job with the request and
+     * operation that started it — the job id links it to that job's `env.server.change_started`, and correlates it.
+     */
     public function cancel(PanelActor $actor, string $jobId): JobViewResult
     {
         $source = $this->gateway->source();
+        if ($this->audit === null || !$this->audit->available()) {
+            return new JobViewResult($source, null, null, PanelReason::AUDIT_UNAVAILABLE, true);
+        }
         try {
             $answer = $this->gateway->ask(PanelRequest::read($actor, 'job:cancel', ['job_id' => $jobId]));
         } catch (PanelRefused $refused) {
             return new JobViewResult($source, null, null, $refused->reasonCode, true);
         }
         $failure = self::cancelFailure($answer);
+        if ($failure !== null) {
+            return new JobViewResult($source, null, null, $failure[0], $failure[1]);
+        }
+        $view = $this->view($actor, $jobId);
+        $who = $actor->impersonatedBy ?? $actor->user;
+        try {
+            $this->audit->record(self::JOB_CANCELLED, $who, 'env.job:'.$jobId, array_filter([
+                'who' => $who,
+                'on_behalf_of' => $actor->impersonatedBy !== null ? $actor->user : null,
+                'command' => 'job:cancel',
+                'request_id' => $answer->requestId,
+                'operation_id' => $answer->operationId,
+                'job_id' => $jobId,
+                'job_request_id' => $view->requestId,
+                'job_operation_id' => $view->operationId,
+            ], static fn (?string $value): bool => $value !== null && $value !== ''), $jobId);
+        } catch (Throwable $failure) {
+            // The server stopped the job already; the lost record goes to the application's error log.
+            if (function_exists('report')) {
+                report($failure);
+            }
+        }
 
-        return $failure === null
-            ? $this->view($actor, $jobId)
-            : new JobViewResult($source, null, null, $failure[0], $failure[1]);
+        return $view;
     }
 
     /** @return array{0: string, 1: bool}|null */

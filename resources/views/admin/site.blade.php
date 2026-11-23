@@ -187,7 +187,9 @@
                     @endif
                 @endif
             </section>
-            @include('larena-env::admin.partials.site-dns', ['siteDns' => $siteDns ?? null])
+            @if ($dnsOn ?? true)
+                @include('larena-env::admin.partials.site-dns', ['siteDns' => $siteDns ?? null])
+            @endif
         @elseif ($tab === 'php')
             <section class="larena-panel larena-panel-padded" data-env-runtime aria-labelledby="env-site-runtime">
                 <h2 id="env-site-runtime" class="text-2">{{ __('larena-env::admin.runtime.title') }}</h2>

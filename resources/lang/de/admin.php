@@ -1408,6 +1408,7 @@ return [
             'env_person_owner_assigned' => 'Person ein Serverkonto zugewiesen',
             'env_person_owner_released' => 'Serverkonto der Person entzogen',
             'env_server_change_started' => 'Änderung auf dem Server gestartet',
+            'env_server_job_cancelled' => 'Auftrag auf dem Server gestoppt',
         ],
         'new_owner' => 'Neues Serverkonto',
         'owner_name' => 'Kontoname (lateinische Buchstaben, Ziffern, - und _)',

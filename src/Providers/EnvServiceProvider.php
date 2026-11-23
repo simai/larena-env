@@ -56,6 +56,14 @@ final class EnvServiceProvider extends ServiceProvider
                 ? new \Larena\Env\Gateway\CachingPanelGateway($gateway, $app->make('cache')->store(), $ttl, (int) $config->get('larena-env.gateway.slow_cache_seconds', 600))
                 : $gateway;
         });
+        // Whether the gateway can be asked at all (point 5): the background jobs end with no request and no write while not.
+        $this->app->bind(\Larena\Env\Gateway\GatewayReadiness::class, static function (Application $app): \Larena\Env\Gateway\GatewayReadiness {
+            /** @var Config $config */
+            $config = $app->make(Config::class);
+
+            return \Larena\Env\Gateway\GatewayReadiness::of((array) $config->get('larena-env.gateway', []),
+                $app->environment((array) $config->get('larena-env.gateway.recorded.allowed_environments', [])));
+        });
         $this->app->bind(ServerOverviewReader::class, static fn (Application $app): ServerOverviewReader => new ServerOverviewReader($app->make(PanelGateway::class)));
         $this->app->bind(SiteDetailsReader::class, static fn (Application $app): SiteDetailsReader => new SiteDetailsReader($app->make(PanelGateway::class)));
         $this->app->bind(\Larena\Env\Server\SiteExtrasReader::class, static fn (Application $app): \Larena\Env\Server\SiteExtrasReader => new \Larena\Env\Server\SiteExtrasReader($app->make(PanelGateway::class)));
@@ -118,7 +126,7 @@ final class EnvServiceProvider extends ServiceProvider
         ));
         $this->app->afterResolving(
             AccessOperationRegistry::class,
-            static fn (AccessOperationRegistry $registry): bool => self::registerAccessOperations($registry),
+            fn (AccessOperationRegistry $registry): bool => self::registerAccessOperations($registry, EnvFeatures::of($this->app)),
         );
     }
 
@@ -126,7 +134,18 @@ final class EnvServiceProvider extends ServiceProvider
     {
         $this->loadTranslationsFrom(__DIR__.'/../../resources/lang', 'larena-env');
         $this->loadViewsFrom(__DIR__.'/../../resources/views', 'larena-env');
-        $this->loadMigrationsFrom(__DIR__.'/../../database/migrations');
+        // The package's features (auditor msg-3d61bd36, point 5): the product chooses them (core's FeatureSet), and what is
+        // off is absent — its routes, menu rows, rights, tables and background jobs. Local flags only narrow the choice.
+        if ($this->app->bound(\Larena\Core\Features\FeatureSet::class)) {
+            $this->app->make(\Larena\Core\Features\FeatureSet::class)->declare('larena/env', EnvDeclarations::FEATURES);
+        }
+        $on = EnvFeatures::of($this->app);
+        if (EnvFeatures::any($this->app)) {
+            $this->loadMigrationsFrom(__DIR__.'/../../database/migrations');
+        }
+        if ($on('env.dns')) {
+            $this->loadMigrationsFrom(__DIR__.'/../../database/migrations/dns');
+        }
         // The panel's own events (spaces, acting as someone) in the change history, where larena/audit shows it.
         $config->push('larena-audit.history_sources', ['prefix' => 'env.', 'label' => 'larena-env::admin.audit_activity', 'words' => 'larena-env::admin.people.history']);
         // A site's file with passwords in «История» by its name and site.
@@ -134,7 +153,7 @@ final class EnvServiceProvider extends ServiceProvider
             $config->push('larena-audit.reference_names', \Larena\Env\People\SecretFileAuditNames::class);
         }
         // Its warnings in people's notifications read by what they are about, where larena/notification is installed.
-        if (class_exists(NotificationSources::class)) {
+        if (class_exists(NotificationSources::class) && $on('env.notifications')) {
             $this->callAfterResolving(NotificationSources::class, static function (NotificationSources $sources): void {
                 foreach (PanelWarnings::KINDS as $kind) {
                     $sources->declare('env:warning:'.$kind, 'larena-env::admin.notification_sources.'.$kind);
@@ -155,7 +174,7 @@ final class EnvServiceProvider extends ServiceProvider
                         'owner' => (string) $actor->owner] : null);
             });
         }
-        if ($this->composesAdmin()) {
+        if ($this->composesAdmin() && $on('env.admin')) {
             if ($this->app->bound(AdminNavigationRegistry::class)) {
                 // A row of a screen a newer simai-env brings shows once the server lists its commands; asked on a page only.
                 $app = $this->app;
@@ -169,6 +188,7 @@ final class EnvServiceProvider extends ServiceProvider
 
                         return $listed->allows($command);
                     },
+                    $on,
                 ));
             }
             // The panel's warnings in the admin's alert bar on every admin page (owner decision 2026-11-05), where the admin has one.
@@ -244,27 +264,37 @@ final class EnvServiceProvider extends ServiceProvider
                 });
             }
             if ((bool) $config->get('larena-env.admin.enabled', true)) {
-                $this->app->make('router')
+                $routes = $this->app->make('router')
                     ->middleware((array) $config->get('larena-env.admin.middleware', []))
-                    ->prefix((string) $config->get('larena-env.admin.prefix', 'admin/server'))
-                    ->group(__DIR__.'/../../routes/admin.php');
+                    ->prefix((string) $config->get('larena-env.admin.prefix', 'admin/server'));
+                $routes->group(__DIR__.'/../../routes/admin.php');
+                // DNS through the provider's API only where the product chose it (env.dns).
+                if ($on('env.dns')) {
+                    $this->app->make('router')
+                        ->middleware((array) $config->get('larena-env.admin.middleware', []))
+                        ->prefix((string) $config->get('larena-env.admin.prefix', 'admin/server'))
+                        ->group(__DIR__.'/../../routes/dns.php');
+                }
             }
         }
         if ($this->app->bound(AccessOperationRegistry::class)) {
-            self::registerAccessOperations($this->app->make(AccessOperationRegistry::class));
+            self::registerAccessOperations($this->app->make(AccessOperationRegistry::class), $on);
         }
         if ($this->app->runningInConsole()) {
             $this->commands([RegisterServerAreaCommand::class, PanelCheckCommand::class, \Larena\Env\Console\PanelWarmCommand::class]);
         }
         // The panel looks at the server every 5 minutes, open or not (the application's scheduler, `schedule:run`). Only
-        // where larena-env.scheduler.enabled is on: the panel's edition turns it on, another application keeps it off.
+        // where larena-env.scheduler.enabled is on: the panel's edition turns it on, another application keeps it off. And
+        // only with env.monitoring chosen; the warm-up serves the pages, so it needs env.admin too.
         $this->callAfterResolving(Schedule::class, static function (Schedule $schedule, \Illuminate\Contracts\Container\Container $app): void {
-            if (!(bool) $app->make(Config::class)->get('larena-env.scheduler.enabled', false)) {
+            if (!(bool) $app->make(Config::class)->get('larena-env.scheduler.enabled', false) || !EnvFeatures::on('env.monitoring', $app)) {
                 return;
             }
             $schedule->command('larena:env-check')->everyFiveMinutes()->withoutOverlapping();
             // What the pages asked lately is asked again every minute, so a page opens from kept answers (ENV 2026-11-07).
-            $schedule->command('larena:env-warm')->everyMinute()->withoutOverlapping(5);
+            if (EnvFeatures::on('env.admin', $app)) {
+                $schedule->command('larena:env-warm')->everyMinute()->withoutOverlapping(5);
+            }
         });
     }
 
@@ -276,12 +306,13 @@ final class EnvServiceProvider extends ServiceProvider
 
     /**
      * The package's rights, from its one source (EnvDeclarations, auditor msg-3d61bd36 point 3): reading the server is one
-     * right, changing it another, a person's own sites and the DNS zones two each.
+     * right, changing it another, a person's own sites and the DNS zones two each. Only the rights of the features that are on
+     * (point 5): with $featureOn null, every one.
      */
-    public static function registerAccessOperations(AccessOperationRegistry $registry): bool
+    public static function registerAccessOperations(AccessOperationRegistry $registry, ?\Closure $featureOn = null): bool
     {
         $registered = true;
-        foreach (EnvDeclarations::descriptors() as $descriptor) {
+        foreach (EnvDeclarations::descriptors($featureOn) as $descriptor) {
             $registered = $registry->register($descriptor) && $registered;
         }
 

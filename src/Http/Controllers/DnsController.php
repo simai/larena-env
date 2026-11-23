@@ -218,12 +218,15 @@ final readonly class DnsController
     }
 
     /**
-     * @param array{changes: list<DnsChange>, site: ?string, undo_of: ?string} $plan
+     * @param array{changes: list<DnsChange>, site: ?string, undo_of: ?string, plan_id: ?string} $plan
      */
     private function applied(Request $request, array $plan, string $back): RedirectResponse
     {
         try {
-            $this->dns->apply($plan['changes'], $this->person($request), $plan['undo_of']);
+            // The chain of the change (wave A's addition c): who, for whom, and the plan it was confirmed with.
+            $actor = ResolvePanelActor::of($request);
+            $this->dns->apply($plan['changes'], $this->person($request), $plan['undo_of'], $plan['plan_id'] ?? null,
+                $actor->impersonatedBy !== null ? $actor->user : null);
         } catch (DnsFailed $failed) {
             return $this->back($request, $back, $failed->reason);
         }
@@ -248,7 +251,7 @@ final readonly class DnsController
         ]);
     }
 
-    /** @return array{changes: list<DnsChange>, site: ?string, undo_of: ?string}|null the plan confirmed, once */
+    /** @return array{changes: list<DnsChange>, site: ?string, undo_of: ?string, plan_id: ?string}|null the plan confirmed, once */
     private function takePlan(Request $request): ?array
     {
         $plan = $this->receipts->take($request, 'dns:change', 'plan');
@@ -260,6 +263,7 @@ final readonly class DnsController
             'changes' => array_map(static fn (array $change): DnsChange => DnsChange::fromArray($change), array_values($plan['changes'])),
             'site' => isset($plan['site']) ? (string) $plan['site'] : null,
             'undo_of' => isset($plan['undo_of']) ? (string) $plan['undo_of'] : null,
+            'plan_id' => is_string($request->input('plan')) && $request->input('plan') !== '' ? (string) $request->input('plan') : null,
         ];
     }
 
@@ -281,6 +285,13 @@ final readonly class DnsController
         $key = 'larena-env::admin.dns.reasons.'.$reason;
         $line = (string) $this->translator->get($key);
 
-        return $line !== $key ? $line : (string) $this->translator->get('larena-env::admin.dns.reasons.unknown', ['reason' => $reason]);
+        if ($line !== $key) {
+            return $line;
+        }
+        // A reason the whole panel names (audit_unavailable) in the panel's words.
+        $panel = 'larena-env::admin.reasons.'.$reason;
+        $line = (string) $this->translator->get($panel);
+
+        return $line !== $panel ? $line : (string) $this->translator->get('larena-env::admin.dns.reasons.unknown', ['reason' => $reason]);
     }
 }

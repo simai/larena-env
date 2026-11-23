@@ -1408,6 +1408,7 @@ return [
             'env_person_owner_assigned' => 'مُنح الشخص حسابًا على الخادم',
             'env_person_owner_released' => 'سُحب حساب الخادم من الشخص',
             'env_server_change_started' => 'بدأ تغيير على الخادم',
+            'env_server_job_cancelled' => 'أُوقفت مهمة على الخادم',
         ],
         'new_owner' => 'حساب خادم جديد',
         'owner_name' => 'اسم الحساب (حروف لاتينية وأرقام و- و_)',

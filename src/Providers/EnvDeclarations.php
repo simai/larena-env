@@ -60,6 +60,7 @@ final class EnvDeclarations
         'env.mail.password_lost' => 'notice',
         'env.person.password_reset_console' => 'notice',
         'env.server.change_started' => 'notice',
+        'env.server.job_cancelled' => 'notice',
     ];
 
     /**
@@ -88,15 +89,45 @@ final class EnvDeclarations
         'env.server.viewed' => 'info',
     ];
 
+    /**
+     * The package's features (auditor msg-3d61bd36, point 5; core's FeatureSet, owner decision 2026-10-31): the product
+     * chooses them in config/larena-product.php, and what is off is absent — its routes, menu rows, rights, tables and
+     * background jobs. Local flags (larena-env.admin.enabled, larena-env.scheduler.enabled) can only narrow the choice.
+     * Every right belongs to exactly one feature (declarations:check).
+     *
+     * - env.admin: the server's screens, their menu rows and the admin's alert bar, history, first steps and object menu.
+     * - env.monitoring: the server's check every 5 minutes (larena:env-check) and the load it keeps; with env.admin also
+     *   the pages' warm-up every minute (larena:env-warm).
+     * - env.notifications: the check tells people by the bell and by mail; who is told is decided by env.admin's rights.
+     * - env.dns: the DNS zones through the provider's API, their screens, rights and tables, a site's own DNS section.
+     *
+     * @var array<string, array{requires: list<string>, operations: list<string>}>
+     */
+    public const array FEATURES = [
+        'env.admin' => ['requires' => [], 'operations' => ['env.server.read', 'env.server.operate', 'env.sites.read', 'env.sites.operate']],
+        'env.monitoring' => ['requires' => [], 'operations' => []],
+        'env.notifications' => ['requires' => ['env.monitoring', 'env.admin'], 'operations' => []],
+        'env.dns' => ['requires' => ['env.admin'], 'operations' => ['env.dns.read', 'env.dns.operate']],
+    ];
+
     private function __construct()
     {
     }
 
-    /** @return list<AccessOperationDescriptor> the rights as Access registers them */
-    public static function descriptors(): array
+    /**
+     * The rights as Access registers them: every one, or only those of the features that are on.
+     *
+     * @param (\Closure(string): bool)|null $featureOn
+     *
+     * @return list<AccessOperationDescriptor>
+     */
+    public static function descriptors(?\Closure $featureOn = null): array
     {
         $descriptors = [];
         foreach (self::RIGHTS as $code => $right) {
+            if ($featureOn !== null && !$featureOn(self::featureOf($code))) {
+                continue;
+            }
             $descriptors[] = new AccessOperationDescriptor(
                 code: $code,
                 ownerPackage: 'larena/env',
@@ -109,6 +140,18 @@ final class EnvDeclarations
         }
 
         return $descriptors;
+    }
+
+    /** The feature a right belongs to; a right no feature names belongs to env.admin (declarations:check refuses one). */
+    public static function featureOf(string $right): string
+    {
+        foreach (self::FEATURES as $feature => $declared) {
+            if (in_array($right, $declared['operations'], true)) {
+                return $feature;
+            }
+        }
+
+        return 'env.admin';
     }
 
     /** Whether Access audits a refusal of a right declared with this audit mode (access.yaml `audit`). */

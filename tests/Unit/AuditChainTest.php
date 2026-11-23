@@ -123,4 +123,33 @@ env_assert($reads === ['backup:data', 'job:status', 'job:log'], 'Only reads went
 $noSink = new PanelOperations($server, new \Larena\Env\People\PanelAudit(new \Illuminate\Container\Container()));
 env_assert($noSink->startCommand($admin, 'backup:data', $args)->reason === PanelReason::AUDIT_UNAVAILABLE, 'An unbound sink refuses the start too.');
 
+// Stopping a job changes the server too (wave A's addition c): refused without the audit log before the server is asked,
+// and a stop the server took is written with who, for whom, the stop's request and operation, and the job with the request
+// that started it, correlated by the job — its env.server.change_started names the same job.
+$server->asked();
+env_assert($unaudited->cancel($admin, 'aaaaaaaaaaaaaaaaaaaaaaaa')->reason === PanelReason::AUDIT_UNAVAILABLE && $server->asked() === [],
+    'No audit log: stopping a job is refused before the server is asked.');
+$stopSink = new InMemoryAuditSink();
+$stopped = env_operations($server, $stopSink)->cancel($acting, 'aaaaaaaaaaaaaaaaaaaaaaaa');
+env_assert($stopped->status !== null && $stopped->reason === null && $server->asked() === ['job:cancel', 'job:status', 'job:log'], 'The job is stopped and shown.');
+$stops = $stopSink->events();
+$stop = $stops[0]->payload ?? [];
+env_assert(count($stops) === 1 && $stops[0]->type === PanelOperations::JOB_CANCELLED && $stops[0]->actor === 'user:admin_identity:1'
+    && $stops[0]->subject === 'env.job:aaaaaaaaaaaaaaaaaaaaaaaa' && $stops[0]->correlationId === 'aaaaaaaaaaaaaaaaaaaaaaaa'
+    && $stop['who'] === 'user:admin_identity:1' && $stop['on_behalf_of'] === 'user:admin_identity:5' && $stop['command'] === 'job:cancel'
+    && $stop['job_id'] === 'aaaaaaaaaaaaaaaaaaaaaaaa' && $stop['job_request_id'] === 'start-request-id' && $stop['job_operation_id'] === '20261123100000000009'
+    && is_string($stop['request_id'] ?? null) && is_string($stop['operation_id'] ?? null), 'The stop is in the audit log with its chain: '.json_encode($stop));
+env_assert($stop['job_id'] === $chain['job_id'], 'The same job as the start\'s event names.');
+// A stop the server refused (a finished job) writes nothing.
+$finished = new class implements PanelGateway {
+    public function ask(PanelRequest $request): PanelAnswer
+    {
+        return PanelAnswer::fromDocument($request->requestId, ['schema' => 'simai-panel-answer/1', 'request_id' => $request->requestId, 'status' => 'refused',
+            'reason' => 'not_running']);
+    }
+    public function source(): string { return 'test'; }
+};
+$quiet = new InMemoryAuditSink();
+env_assert(env_operations($finished, $quiet)->cancel($admin, 'aaaaaaaaaaaaaaaaaaaaaaaa')->reason === 'not_running' && $quiet->events() === [], 'A refused stop is not a change.');
+
 echo "AuditChainTest passed.\n";
