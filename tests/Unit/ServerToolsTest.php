@@ -159,7 +159,7 @@ env_assert($listed->allows('service:restart') && $listed->allows('firewall:statu
 $ownListed = (new ServerOverviewReader($gateway))->read($owner)->overview?->capabilities;
 env_assert($ownListed === null || (!$ownListed->allows('service:restart') && !$ownListed->allows('firewall:status')), 'An owner is never offered the services or the firewall.');
 
-$operations = new PanelOperations($gateway);
+$operations = env_operations($gateway);
 $extras = new SiteExtrasReader($gateway);
 
 // The services (5.1, recorded set 9): only those the server has, each with whether it rereads its settings; planned,

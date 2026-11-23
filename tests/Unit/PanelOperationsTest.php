@@ -20,7 +20,7 @@ use Larena\Env\Server\SiteDetailsReader;
 require_once dirname(__DIR__).'/Support/env-test.php';
 
 $gateway = new RecordedAnswersGateway(env_recorded_path());
-$operations = new PanelOperations($gateway);
+$operations = env_operations($gateway);
 $user = 'admin@stand.test';
 
 // The table knows each command's kind, and nothing else is allowed at all.

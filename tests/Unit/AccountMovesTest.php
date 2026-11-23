@@ -79,7 +79,7 @@ env_assert(AccountMoves::chosen(['demo-owned.test', 'demo-php.test', 'demo-php.t
     'The chosen sites in the server\'s order, once each; one the server did not list sends the person back to choose.');
 
 // 3. The plan of a new account with sites, as simai-env 1.63.1 answers it (recorded on the stand).
-$recorded = new PanelOperations(new RecordedAnswersGateway(env_recorded_path()));
+$recorded = env_operations(new RecordedAnswersGateway(env_recorded_path()));
 $planned = $recorded->planCommand($admin, 'owner:create', PeopleController::createArgs('staff', ['demo-php.test', 'demo-owned.test']));
 env_assert($planned->plan?->account === ['owner' => 'staff', 'new' => true, 'sites' => [['domain' => 'demo-php.test', 'from' => null], ['domain' => 'demo-owned.test', 'from' => 'demo']]],
     'Each site with the account it leaves: '.json_encode($planned->plan?->account));
@@ -119,7 +119,7 @@ $refusing = new class () implements PanelGateway {
         return 'stand-in';
     }
 };
-$standIn = new PanelOperations($refusing);
+$standIn = env_operations($refusing);
 foreach (AccountMoves::CREATE_REFUSALS as $reason) {
     $refusing->reason = $reason;
     $result = $standIn->planCommand($admin, 'owner:create', ['name' => 'staff', 'sites' => 'demo-php.test']);

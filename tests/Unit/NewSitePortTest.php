@@ -67,7 +67,7 @@ $connection = $capsule->getConnection();
 register_shutdown_function(static fn () => @unlink((string) $database));
 
 $gateway = new RecordedAnswersGateway(env_recorded_path());
-$sites = new NewSiteController(new ServerOverviewReader($gateway), new PanelOperations($gateway),
+$sites = new NewSiteController(new ServerOverviewReader($gateway), env_operations($gateway),
     new \Illuminate\View\Factory(new \Illuminate\View\Engines\EngineResolver(), new \Illuminate\View\FileViewFinder(new \Illuminate\Filesystem\Filesystem(), []), new \Illuminate\Events\Dispatcher()),
     $translator, new SiteExtrasReader($gateway));
 $port = new NewSitePropertyViewPort($sites, $translator, new AdminRecordLayoutStore(\Larena\Setting\Runtime\ViewSettings::on($connection)));

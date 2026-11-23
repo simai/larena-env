@@ -29,6 +29,26 @@ the panel: it is planned, confirmed by a person, and run by the server as a job 
 - `/admin/server`, `/admin/server/sites/<domain>` and `/admin/server/jobs/<id>`: the screens, composed only where
   larena/admin is installed. Reading them is `env.server.read`; planning, confirming and stopping is `env.server.operate`.
 
+## Audit and who is told
+
+- **larena/audit is required** (composer `require`, auditor msg-3d61bd36 point 2). The panel profile ships it in every
+  case: Root's `composer.distribution.json` and the panel's `assembly/composer.json` both require it, so making it a
+  hard dependency costs nothing and says what the code needs. A change of the server is still refused explicitly where
+  the audit sink is not bound (an application that installed the package without registering larena/audit's provider):
+  `PanelOperations::startCommand()` answers `audit_unavailable` before the server is asked, while plans and reads go on.
+- **The chain of a change.** `PlanResult` carries the plan's request id (the plan id) and the server's `operation_id`;
+  `PlanReceipts` keeps them in the plan's receipt (`Operations\PlanTrail`, one per request). The confirmed receipt hands
+  them to the start: `JobStartResult` is the job's receipt — who (and for whom, while acting as someone), the start's
+  `request_id`, `plan_id`, `job_id` and `operation_id` — and the same set is written as `env.server.change_started`,
+  correlated by the plan id. `JobViewResult` carries the job's starting request and its operation id; the job's screen
+  shows the operation id.
+- **Who hears about the server.** `People\PanelRecipients` is the one list for the bell and the mail: active
+  administrators who hold `env.server.read`, and for a site the active people of its server account who hold
+  `env.sites.read`. Access and Auth do not signal blocking, a revoked role or a removal, so the list is worked out when
+  it is used; `larena:env-check` drops the link «person — server account» of a removed person or of one who lost
+  `env.sites.read` on each run, each drop in the audit log (`env.person.owner_released`, reason `removed` or
+  `right_revoked`). A blocked person keeps the link and is not told.
+
 ## Settings
 
 `LARENA_ENV_GATEWAY` is `sudo` (default; `LARENA_ENV_SUDO_BINARY`, `_GATE`, `_TIMEOUT`), `recorded` or `ssh`; for ssh also `LARENA_ENV_SSH_HOST`, `_USER` (`simai-panel`),

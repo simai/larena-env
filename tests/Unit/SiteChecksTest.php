@@ -172,7 +172,7 @@ env_assert($state->status === PanelAnswerStatus::Ok && ($state->data['schema'] ?
 env_assert($recorded->ask(PanelRequest::read($admin, 'site:check-state', ['domain' => $bitrix, 'id' => 'bitrix.no-such']))->reason === 'unknown_check'
     && $recorded->ask(PanelRequest::read($admin, 'site:check-state', ['domain' => $bitrix, 'id' => 'bitrix.timezone']))->reason === PanelReason::RECORDING_MISSING,
     'An unknown rule is refused; a state the set does not hold is missing, never another\'s.');
-$operations = new PanelOperations($recorded);
+$operations = env_operations($recorded);
 env_assert(SiteOperation::CheckFix->command() === 'site:check-fix' && SiteOperation::CheckFix->tab() === 'overview' && SiteOperation::CheckFix->fields() === ['id']
     && SiteOperation::CheckFix->arguments($bitrix, ['id' => 'bitrix.db-session-modes', 'name' => 'x']) === ['domain' => $bitrix, 'id' => 'bitrix.db-session-modes'], 'The fix is a site\'s action.');
 $planned = $operations->plan($admin, SiteOperation::CheckFix, $bitrix, ['id' => 'bitrix.db-session-modes']);
@@ -217,13 +217,13 @@ $caching = new CachingPanelGateway($counting, new \Illuminate\Cache\Repository(n
 (new SiteDetailsReader($caching))->doctor($admin, $bitrix);
 (new SiteDetailsReader($caching))->doctor($admin, $bitrix);
 env_assert($counting->asked === 1, 'Read twice, asked once.');
-env_assert((new PanelOperations($caching))->plan($admin, SiteOperation::CheckFix, $bitrix, ['id' => 'bitrix.db-session-modes'])->plan !== null, 'A plan runs nothing.');
+env_assert((env_operations($caching))->plan($admin, SiteOperation::CheckFix, $bitrix, ['id' => 'bitrix.db-session-modes'])->plan !== null, 'A plan runs nothing.');
 (new SiteDetailsReader($caching))->doctor($admin, $bitrix);
 env_assert($counting->asked === 1, 'A plan leaves the kept check.');
-env_assert((new PanelOperations($caching))->plan($admin, SiteOperation::CheckFix, $bitrix, ['id' => 'bitrix.timezone'])->reason === 'check_ok', 'Already fixed.');
+env_assert((env_operations($caching))->plan($admin, SiteOperation::CheckFix, $bitrix, ['id' => 'bitrix.timezone'])->reason === 'check_ok', 'Already fixed.');
 (new SiteDetailsReader($caching))->doctor($admin, $bitrix);
 env_assert($counting->asked === 2, 'After «already fixed» the check is read anew.');
-env_assert((new PanelOperations($caching))->start($admin, SiteOperation::CheckFix, $bitrix, ['id' => 'bitrix.db-session-modes'])->jobId !== null, 'The fix starts.');
+env_assert((env_operations($caching))->start($admin, SiteOperation::CheckFix, $bitrix, ['id' => 'bitrix.db-session-modes'])->jobId !== null, 'The fix starts.');
 (new SiteDetailsReader($caching))->doctor($admin, $bitrix);
 env_assert($counting->asked === 3, 'After the job too.');
 
@@ -298,7 +298,7 @@ $translating = static fn (array $lines): \Illuminate\Contracts\Translation\Trans
     }
 };
 $controller = static fn (PanelGateway $gateway, ?array $words = null): SiteAdminController => new SiteAdminController(new SiteDetailsReader($gateway), new ServerOverviewReader($gateway),
-    new SiteExtrasReader($gateway), new PanelOperations($gateway), $factory, $translating($words ?? $lines));
+    new SiteExtrasReader($gateway), env_operations($gateway), $factory, $translating($words ?? $lines));
 $asking = static function (string $uri, string $method = 'GET', array $input = [], ?PanelActor $as = null): Request {
     $request = Request::create($uri, $method, $input);
     $request->attributes->set(ResolvePanelActor::ATTRIBUTE, $as ?? new PanelActor('admin@stand.test'));
@@ -389,7 +389,7 @@ $fixes = new class ($serving(['site:check-state', 'site:check-fix'])) implements
     public function source(): string { return 'recorded'; }
 };
 $siteClock = 1_800_000_000;
-$timedCard = new SiteAdminController(new SiteDetailsReader($fixes), new ServerOverviewReader($fixes), new SiteExtrasReader($fixes), new PanelOperations($fixes), $factory,
+$timedCard = new SiteAdminController(new SiteDetailsReader($fixes), new ServerOverviewReader($fixes), new SiteExtrasReader($fixes), env_operations($fixes), $factory,
     $translating($lines), receipts: env_plan_receipts($siteClock));
 $siteSession = new Store('panel', new ArraySessionHandler(10));
 $siteAsk = static function (string $step, array $input) use ($asking, $bitrix, $siteSession): Request {

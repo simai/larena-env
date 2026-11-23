@@ -498,6 +498,8 @@ return [
         ],
     ],
     'job' => [
+        // The server's operation id of the run (auditor msg-3d61bd36, point 2): it links the run to the server's own log.
+        'operation' => 'Operação do servidor: :id',
         'secret_skipped_title' => 'Arquivos com senhas deixados de fora: :count',
         'secret_skipped_archive' => 'Estes arquivos não estão no arquivo compactado: você não tem direito a arquivos com senhas. Todo o resto foi compactado.',
         'secret_skipped_extract' => 'Estes arquivos do arquivo compactado não foram criados nem substituíram os existentes: você não tem direito a arquivos com senhas. Todo o resto foi descompactado.',
@@ -588,6 +590,7 @@ return [
         'profile_unsupported' => 'Um site deste tipo não tem cache próprio: não há nada para limpar.',
         'setup_plan_expired' => 'O plano está desatualizado (ele é mantido por 15 minutos). Preencha a etapa de novo.',
         'plan_receipt' => 'Esta confirmação não corresponde ao plano mostrado ou está desatualizada. Nada foi alterado: abra o plano de novo e confirme-o.',
+        'audit_unavailable' => 'O registro de auditoria não pode ser gravado agora e, sem ele, o painel não altera nada no servidor. Nada foi alterado: verifique se larena/audit está instalado e se o banco de dados dele está pronto e tente novamente.',
         'setup_login_needed' => 'O acesso com código ainda não está ativado. Abra as configurações de acesso, ative-o e volte.',
         'setup_alerts_needed' => 'Escolha para onde enviar e informe o endereço ou o chat.',
         'geo_countries_needed' => 'Escolha pelo menos um país.',
@@ -1404,6 +1407,7 @@ return [
             'env_person_removed' => 'Pessoa removida',
             'env_person_owner_assigned' => 'Conta do servidor atribuída à pessoa',
             'env_person_owner_released' => 'Conta do servidor retirada da pessoa',
+            'env_server_change_started' => 'Alteração iniciada no servidor',
         ],
         'new_owner' => 'Nova conta do servidor',
         'owner_name' => 'Nome da conta (letras latinas, dígitos, - e _)',

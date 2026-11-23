@@ -8,6 +8,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Larena\Env\Gateway\PanelActor;
 use Larena\Env\Http\Middleware\ResolvePanelActor;
+use Larena\Env\Operations\PlanTrail;
 
 /**
  * The receipt of a plan the person saw (the server side of «Действие с планом»): the plan's screen is given one, the
@@ -18,6 +19,9 @@ use Larena\Env\Http\Middleware\ResolvePanelActor;
  * Two ways to use it. The values the confirmation sends again are checked against the hash (`confirms`): a changed value,
  * a reused or an old receipt stops the run before the server is asked anything. Or what the confirmation makes waits in
  * the receipt itself (`take`, a DNS change, the panel's mail settings, an invitation) and the form sends only the id.
+ *
+ * The receipt is also the plan's link of the audit chain (auditor msg-3d61bd36, point 2): it keeps the plan the server
+ * answered for the screen (its request id and operation id, PlanTrail), and a confirmed receipt hands it to the start.
  */
 final readonly class PlanReceipts
 {
@@ -36,6 +40,7 @@ final readonly class PlanReceipts
     public function __construct(
         private int $seconds = 900,
         private ?Closure $now = null,
+        private ?PlanTrail $trail = null,
     ) {
     }
 
@@ -61,6 +66,8 @@ final readonly class PlanReceipts
             'actor' => self::actor($request),
             'until' => $now + ($seconds ?? $this->seconds),
             'kept' => $kept,
+            // Who saw which plan: the server's request and operation ids of the plan just answered, for the start.
+            'plan' => $this->trail?->last(),
         ];
         $request->session()->put(self::SESSION, array_slice($receipts, -self::KEEP, null, true));
 
@@ -109,6 +116,7 @@ final readonly class PlanReceipts
             || ($values !== null && (!is_string($receipt['hash'] ?? null) || !hash_equals($receipt['hash'], self::hash($id, $action, $values))))) {
             return null;
         }
+        $this->trail?->confirm(is_array($receipt['plan'] ?? null) ? $receipt['plan'] : null);
 
         return is_array($receipt['kept'] ?? null) ? $receipt['kept'] : [];
     }

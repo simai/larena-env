@@ -56,6 +56,10 @@ events:
     severity: notice
   - type: env.person.password_reset_console
     severity: notice
+  # Every change asked of the server (auditor msg-3d61bd36, point 2): who, the request, the plan, the job and the
+  # server's operation id; a change is not asked without the audit log.
+  - type: env.server.change_started
+    severity: notice
 forbidden_payload_fields:
   - password
   - password_hash

@@ -21,6 +21,10 @@ final readonly class PlanResult
         // What a restore's check found before it refused (simai-env 1.63.4 `data.restore`): the tables, the engine.
         /** @var array<string, mixed>|null */
         public ?array $restore = null,
+        // The audit chain (auditor msg-3d61bd36, point 2): the plan's own request id — the plan id the start and the audit
+        // event name — and the server's operation id of that answer, which links it to the server's own log.
+        public ?string $requestId = null,
+        public ?string $operationId = null,
     ) {
     }
 

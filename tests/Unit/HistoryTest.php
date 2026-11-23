@@ -111,7 +111,7 @@ $labels = new class () implements \Larena\Admin\Contracts\AdminIdentityLabelReso
         return $subjectRef === 'user:7' ? 'Анна' : null;
     }
 };
-$source = new EnvHistorySource($resolver, new PanelOperations($gateway), $translator, $labels);
+$source = new EnvHistorySource($resolver, env_operations($gateway), $translator, $labels);
 $request = Request::create('/admin/history');
 $request->attributes->set(ResolvePanelActor::ATTRIBUTE, new PanelActor('admin@stand.test'));
 $entries = $source->entries($request, 200);
@@ -131,7 +131,7 @@ env_assert($update->actor === 'Сервер' && $update->object === 'Серве�
 env_assert($locked->outcome === 'failed' && $locked->title === 'Действие на сервере' && $locked->note !== '' && $locked->actor === '', 'A command without words, locked by another run.');
 env_assert($source->entry($request, 'job-aaaaaaaaaaaaaaaaaaaaaaaa') === null, 'A run opens its own page, not a card.');
 $stranger = Request::create('/admin/history');
-$refusing = new EnvHistorySource($resolver, new PanelOperations($gateway), $translator);
+$refusing = new EnvHistorySource($resolver, env_operations($gateway), $translator);
 $stranger->attributes->set(ResolvePanelActor::ATTRIBUTE, new PanelActor('owner@stand.test', 'demo'));
 env_assert(count($refusing->entries($stranger, 2)) === 2, 'The limit is kept.');
 foreach (['ru', 'en'] as $language) {
@@ -162,7 +162,7 @@ $counting = new class () implements PanelGateway {
     }
 };
 $views = new \Illuminate\View\Factory(new \Illuminate\View\Engines\EngineResolver(), new \Illuminate\View\FileViewFinder(new \Illuminate\Filesystem\Filesystem(), []), new Dispatcher());
-$jobs = new ServerJobController(new PanelOperations($counting), $views, $translator, router: $router);
+$jobs = new ServerJobController(env_operations($counting), $views, $translator, router: $router);
 $asking = static function (string $uri, array $headers = [], array $session = []): Request {
     $request = Request::create($uri);
     foreach ($headers as $name => $value) {
@@ -196,7 +196,7 @@ env_assert($stays($asking('/admin/server/jobs/'.$job, ['X-Larena-Fragment' => 'a
 env_assert($stays($asking('/admin/server/jobs/'.$job, [], ['larena_env_notice' => 'Начато.'])), 'A page with a notice just left for it stays.');
 env_assert($stays($asking('/admin/server/jobs/'.$job.'?after=20')), 'A later page of its output stays.');
 env_assert($stays($asking('/admin/server/jobs/'.$job, [], ['larena_env_update_job.'.$job => 'env'])), 'An update of the panel stays on its own page.');
-$without = new ServerJobController(new PanelOperations($counting), $views, $translator);
+$without = new ServerJobController(env_operations($counting), $views, $translator);
 $before = $counting->asked;
 try {
     $without->show($asking('/admin/server/jobs/'.$job), $job);
@@ -278,7 +278,7 @@ $planViews = new class implements \Illuminate\Contracts\View\Factory {
     public function replaceNamespace($namespace, $hints): static { return $this; }
 };
 $clock = 1_800_000_000;
-$againJobs = new ServerJobController(new PanelOperations($again), $planViews, $translator, null, new \Larena\Access\Runtime\AccessOperationAuthorizer($rights, 'testing'),
+$againJobs = new ServerJobController(env_operations($again), $planViews, $translator, null, new \Larena\Access\Runtime\AccessOperationAuthorizer($rights, 'testing'),
     receipts: env_plan_receipts($clock));
 // One person's session through the plan and its confirmation: the receipt the plan gives comes back with it.
 $againSession = new Store('panel', new ArraySessionHandler(10));

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "a913cdb90afb00bd1738cccea756f53f",
+    "content-hash": "0ca1d77e2230a1963369bb22dade38e7",
     "packages": [
         {
             "name": "brick/math",
@@ -2338,6 +2338,108 @@
                 }
             ],
             "description": "Larena Access: Operation permissions, target providers, query scopes and explainable access decisions.",
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
+        },
+        {
+            "name": "larena/audit",
+            "version": "dev-main",
+            "dist": {
+                "type": "path",
+                "url": "../audit",
+                "reference": "b862b325e0cfca098010d5b428dadc900266e17a"
+            },
+            "require": {
+                "illuminate/database": "^13.0",
+                "illuminate/routing": "^13.0",
+                "illuminate/support": "^13.0",
+                "illuminate/view": "^13.0",
+                "php": "^8.3"
+            },
+            "require-dev": {
+                "laravel/framework": "^13.0",
+                "larena/core": "dev-main",
+                "larena/ui": "dev-main",
+                "orchestra/testbench": "^11.0",
+                "phpstan/phpstan": "^2.0"
+            },
+            "suggest": {
+                "larena/access": "Makes the history read an access operation (audit.history.read).",
+                "larena/admin": "Hosts the history screen in its shell; with larena/ui, the screen appears.",
+                "larena/ui": "Renders the administrator audit history screen. Audit records, reads and pipelines events without it."
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Larena\\Audit\\Providers\\AuditServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Larena\\Audit\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "Larena\\Audit\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "php tests/Unit/AuditEventContractTest.php && php tests/Unit/AuditFailsClosedTest.php && php tests/Unit/AuditRedactorRuntimeTest.php && php tests/Unit/AuditEventPipelineTest.php && php tests/Unit/AuditEventPipelineFailsClosedTest.php && php tests/Unit/InstallAuditTrailTest.php && php tests/Unit/DatabaseAuditSinkTest.php && php tests/Unit/DatabaseAuditEventPipelineTest.php && php vendor/bin/phpunit tests/Feature/AuditHistoryAdminTest.php tests/Feature/DatabaseAuditEventPipelineBindingTest.php && php tests/Integration/DatabaseAuditEventPipelineMySqlTest.php"
+                ],
+                "test:unit": [
+                    "php tests/Unit/AuditEventContractTest.php && php tests/Unit/AuditFailsClosedTest.php && php tests/Unit/AuditRedactorRuntimeTest.php && php tests/Unit/AuditEventPipelineTest.php && php tests/Unit/AuditEventPipelineFailsClosedTest.php && php tests/Unit/InstallAuditTrailTest.php && php tests/Unit/DatabaseAuditSinkTest.php && php tests/Unit/DatabaseAuditEventPipelineTest.php"
+                ],
+                "test:connection-bound": [
+                    "php tests/Unit/DatabaseAuditEventPipelineTest.php && php vendor/bin/phpunit tests/Feature/DatabaseAuditEventPipelineBindingTest.php --colors=never"
+                ],
+                "test:mysql-connection-bound": [
+                    "LARENA_AUDIT_CONNECTION_BOUND_MYSQL_TEST=1 php tests/Integration/DatabaseAuditEventPipelineMySqlTest.php"
+                ],
+                "lint": [
+                    "php scripts/lint.php"
+                ],
+                "analyse": [
+                    "php vendor/bin/phpstan analyse --configuration=phpstan.neon.dist --no-progress --memory-limit=512M"
+                ],
+                "validate:larena": [
+                    "php scripts/validate-larena-package.php"
+                ],
+                "evidence:check": [
+                    "php scripts/check-evidence.php"
+                ],
+                "scope:check": [
+                    "php tools/larena-scope-check.php"
+                ],
+                "quality:gate": [
+                    "@validate:larena",
+                    "@lint",
+                    "@analyse",
+                    "@test",
+                    "@larena:metadata:check",
+                    "@evidence:check",
+                    "@scope:check"
+                ],
+                "larena:metadata:check": [
+                    "php scripts/check-metadata-sync.php"
+                ]
+            },
+            "license": [
+                "Apache-2.0"
+            ],
+            "authors": [
+                {
+                    "name": "Rim Zabarov",
+                    "homepage": "https://github.com/zabarov",
+                    "role": "Author"
+                }
+            ],
+            "description": "Larena Audit: Unified structured audit layer that receives package AuditEvent objects, validates taxonomy, redacts sensitive payloads, correlates runtime activity, routes events to sinks and provides operator search/export/diagnostics.",
             "transport-options": {
                 "symlink": true,
                 "relative": true
@@ -6615,108 +6717,6 @@
                 }
             ],
             "description": "Larena Admin: Object-based, permission-aware administration platform for package contributions, screens, actions and diagnostics.",
-            "transport-options": {
-                "symlink": true,
-                "relative": true
-            }
-        },
-        {
-            "name": "larena/audit",
-            "version": "dev-main",
-            "dist": {
-                "type": "path",
-                "url": "../audit",
-                "reference": "b862b325e0cfca098010d5b428dadc900266e17a"
-            },
-            "require": {
-                "illuminate/database": "^13.0",
-                "illuminate/routing": "^13.0",
-                "illuminate/support": "^13.0",
-                "illuminate/view": "^13.0",
-                "php": "^8.3"
-            },
-            "require-dev": {
-                "laravel/framework": "^13.0",
-                "larena/core": "dev-main",
-                "larena/ui": "dev-main",
-                "orchestra/testbench": "^11.0",
-                "phpstan/phpstan": "^2.0"
-            },
-            "suggest": {
-                "larena/access": "Makes the history read an access operation (audit.history.read).",
-                "larena/admin": "Hosts the history screen in its shell; with larena/ui, the screen appears.",
-                "larena/ui": "Renders the administrator audit history screen. Audit records, reads and pipelines events without it."
-            },
-            "type": "library",
-            "extra": {
-                "laravel": {
-                    "providers": [
-                        "Larena\\Audit\\Providers\\AuditServiceProvider"
-                    ]
-                }
-            },
-            "autoload": {
-                "psr-4": {
-                    "Larena\\Audit\\": "src/"
-                }
-            },
-            "autoload-dev": {
-                "psr-4": {
-                    "Larena\\Audit\\Tests\\": "tests/"
-                }
-            },
-            "scripts": {
-                "test": [
-                    "php tests/Unit/AuditEventContractTest.php && php tests/Unit/AuditFailsClosedTest.php && php tests/Unit/AuditRedactorRuntimeTest.php && php tests/Unit/AuditEventPipelineTest.php && php tests/Unit/AuditEventPipelineFailsClosedTest.php && php tests/Unit/InstallAuditTrailTest.php && php tests/Unit/DatabaseAuditSinkTest.php && php tests/Unit/DatabaseAuditEventPipelineTest.php && php vendor/bin/phpunit tests/Feature/AuditHistoryAdminTest.php tests/Feature/DatabaseAuditEventPipelineBindingTest.php && php tests/Integration/DatabaseAuditEventPipelineMySqlTest.php"
-                ],
-                "test:unit": [
-                    "php tests/Unit/AuditEventContractTest.php && php tests/Unit/AuditFailsClosedTest.php && php tests/Unit/AuditRedactorRuntimeTest.php && php tests/Unit/AuditEventPipelineTest.php && php tests/Unit/AuditEventPipelineFailsClosedTest.php && php tests/Unit/InstallAuditTrailTest.php && php tests/Unit/DatabaseAuditSinkTest.php && php tests/Unit/DatabaseAuditEventPipelineTest.php"
-                ],
-                "test:connection-bound": [
-                    "php tests/Unit/DatabaseAuditEventPipelineTest.php && php vendor/bin/phpunit tests/Feature/DatabaseAuditEventPipelineBindingTest.php --colors=never"
-                ],
-                "test:mysql-connection-bound": [
-                    "LARENA_AUDIT_CONNECTION_BOUND_MYSQL_TEST=1 php tests/Integration/DatabaseAuditEventPipelineMySqlTest.php"
-                ],
-                "lint": [
-                    "php scripts/lint.php"
-                ],
-                "analyse": [
-                    "php vendor/bin/phpstan analyse --configuration=phpstan.neon.dist --no-progress --memory-limit=512M"
-                ],
-                "validate:larena": [
-                    "php scripts/validate-larena-package.php"
-                ],
-                "evidence:check": [
-                    "php scripts/check-evidence.php"
-                ],
-                "scope:check": [
-                    "php tools/larena-scope-check.php"
-                ],
-                "quality:gate": [
-                    "@validate:larena",
-                    "@lint",
-                    "@analyse",
-                    "@test",
-                    "@larena:metadata:check",
-                    "@evidence:check",
-                    "@scope:check"
-                ],
-                "larena:metadata:check": [
-                    "php scripts/check-metadata-sync.php"
-                ]
-            },
-            "license": [
-                "Apache-2.0"
-            ],
-            "authors": [
-                {
-                    "name": "Rim Zabarov",
-                    "homepage": "https://github.com/zabarov",
-                    "role": "Author"
-                }
-            ],
-            "description": "Larena Audit: Unified structured audit layer that receives package AuditEvent objects, validates taxonomy, redacts sensitive payloads, correlates runtime activity, routes events to sinks and provides operator search/export/diagnostics.",
             "transport-options": {
                 "symlink": true,
                 "relative": true

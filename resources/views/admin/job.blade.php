@@ -42,6 +42,10 @@
             {{-- The run on the Framework's sf-progress-run (PX-7, PX-11): no steps from the server yet, so a bar without a per
                  cent while it runs, what became once over; «Свернуть» leaves it to the corner. --}}
             {{ \Larena\Env\Admin\JobOutcome::progress($status) }}
+            @if (($operationId ?? null) !== null)
+                {{-- The audit chain (auditor msg-3d61bd36, point 2): the server's operation id, as «История» keeps it. --}}
+                <p class="m-0 m-top-1 color-on-surface-variant" data-env-job-operation><span class="mono">{{ __('larena-env::admin.job.operation', ['id' => $operationId]) }}</span></p>
+            @endif
             @if (! $status->state->isOver())
                 {{-- Where it stands in the server's words (simai-env 1.60.0): «2 из 5: Создаётся база». --}}
                 <p class="m-top-1" data-env-job-running>@if (\Larena\Env\Admin\JobOutcome::where($status) !== '')<span data-env-job-where>{{ \Larena\Env\Admin\JobOutcome::where($status) }}</span>. @endif{{ __('larena-env::admin.job.running') }}</p>

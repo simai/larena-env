@@ -58,3 +58,15 @@ function env_site_view(array $data): array
     return $data + \Larena\Env\Admin\SiteCard::forView($data, static fn (string $key, array $replace = []): string => (string) __('larena-env::admin.'.$key, $replace),
         route('larena.env.admin.site', ['domain' => (string) ($data['domain'] ?? '')], false));
 }
+
+/**
+ * The panel's operations with an audit log in memory, as the application gives them: a change of the server is refused
+ * without one (auditor msg-3d61bd36, point 2). Pass a sink to read what was written, a trail to follow a plan's receipt.
+ */
+function env_operations(Larena\Env\Contracts\PanelGateway $gateway, ?Larena\Audit\Runtime\InMemoryAuditSink $sink = null, ?Larena\Env\Operations\PlanTrail $trail = null): Larena\Env\Operations\PanelOperations
+{
+    $host = new Illuminate\Container\Container();
+    $host->instance(Larena\Audit\Contracts\AuditSink::class, $sink ?? new Larena\Audit\Runtime\InMemoryAuditSink());
+
+    return new Larena\Env\Operations\PanelOperations($gateway, new Larena\Env\People\PanelAudit($host), $trail);
+}

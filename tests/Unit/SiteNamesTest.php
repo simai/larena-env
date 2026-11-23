@@ -217,7 +217,7 @@ $caching = new CachingPanelGateway($counting, new \Illuminate\Cache\Repository(n
 (new SiteNamesReader($caching))->read($admin, 'demo-names.test');
 (new SiteNamesReader($caching))->read($admin, 'demo-names.test');
 env_assert($counting->asked === 1, 'Read twice, asked once.');
-$started = (new PanelOperations($caching))->start($admin, SiteOperation::NameAdd, 'demo-names.test', ['name' => 'old.demo-names.test', 'mode' => 'redirect', 'check-dns' => 'no']);
+$started = (env_operations($caching))->start($admin, SiteOperation::NameAdd, 'demo-names.test', ['name' => 'old.demo-names.test', 'mode' => 'redirect', 'check-dns' => 'no']);
 env_assert($started->jobId !== null, 'The name\'s job starts.');
 (new SiteNamesReader($caching))->read($admin, 'demo-names.test');
 env_assert($counting->asked === 2, 'After the job the names are read anew.');
@@ -227,7 +227,7 @@ env_assert(SiteOperation::NameAdd->tab() === 'domains' && SiteOperation::NameRem
 env_assert(SiteOperation::NameAdd->arguments('demo-php.test', ['name' => 'www.demo-php.test', 'mode' => 'redirect', 'check-dns' => 'no'])
     === ['domain' => 'demo-php.test', 'name' => 'www.demo-php.test', 'mode' => 'redirect', 'check-dns' => 'no'], 'A name is sent as the gateway names it.');
 env_assert(SiteOperation::switchedOn('check-dns', null), 'The DNS check is a tick, on unless unticked.');
-$operations = new PanelOperations($recorded);
+$operations = env_operations($recorded);
 // ENV's recorded plans: adding writes (the DNS check left to the server's default), removing deletes.
 $addPlan = $operations->plan($admin, SiteOperation::NameAdd, 'demo-names.test', ['name' => 'old.demo-names.test', 'mode' => 'redirect']);
 env_assert($addPlan->plan?->command === 'site:name-add' && $addPlan->plan->args === ['domain' => 'demo-names.test', 'name' => 'old.demo-names.test', 'mode' => 'redirect']
@@ -356,7 +356,7 @@ $translator = new class ($lines) implements \Illuminate\Contracts\Translation\Tr
     }
 };
 $controller = static fn (PanelGateway $gateway): SiteAdminController => new SiteAdminController(new SiteDetailsReader($gateway), new ServerOverviewReader($gateway),
-    new SiteExtrasReader($gateway), new PanelOperations($gateway), $factory, $translator, names: new SiteNamesReader($gateway));
+    new SiteExtrasReader($gateway), env_operations($gateway), $factory, $translator, names: new SiteNamesReader($gateway));
 $asking = static function (string $uri, string $method = 'GET', array $input = [], ?PanelActor $as = null): Request {
     $request = Request::create($uri, $method, $input);
     $request->attributes->set(ResolvePanelActor::ATTRIBUTE, $as ?? new PanelActor('admin@stand.test'));

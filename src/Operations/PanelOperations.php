@@ -12,18 +12,34 @@ use Larena\Env\Gateway\PanelAttachment;
 use Larena\Env\Gateway\PanelReason;
 use Larena\Env\Gateway\PanelRefused;
 use Larena\Env\Gateway\PanelRequest;
+use Larena\Env\People\PanelAudit;
 use Larena\Env\Server\SiteDetailsReader;
+use Throwable;
 use UnexpectedValueException;
 
 /**
  * An action always goes the same way: the panel asks what it would do, a person confirms that plan, and only then the
  * gateway starts it as a job the screen follows. Nothing here runs anything itself, and nothing throws: a refusal and
  * a failure both come back as a reason code the screen can say in words.
+ *
+ * A change is never asked without the audit log (auditor msg-3d61bd36, point 2): without a writable audit sink a start is
+ * refused `audit_unavailable` before the server is asked, while plans and reads go on. A started job's receipt carries
+ * who, the start's request id, the plan it follows, the job and the server's operation id, and the same set is written
+ * as `env.server.change_started`.
  */
 final readonly class PanelOperations
 {
-    public function __construct(private PanelGateway $gateway)
-    {
+    /** The audit event of every change started on the server. */
+    public const string CHANGE_STARTED = 'env.server.change_started';
+
+    private PlanTrail $trail;
+
+    public function __construct(
+        private PanelGateway $gateway,
+        private ?PanelAudit $audit = null,
+        ?PlanTrail $trail = null,
+    ) {
+        $this->trail = $trail ?? new PlanTrail();
     }
 
     /**
@@ -66,16 +82,21 @@ final readonly class PanelOperations
 
             return new PlanResult($source, null, $answer->reason ?? PanelReason::ANSWER_INVALID, $answer->status === PanelAnswerStatus::Refused,
                 PlanChecks::fromData($answer->data['checks'] ?? null), is_string($detail) && trim($detail) !== '' ? mb_substr(trim($detail), 0, 500) : null,
-                $command === 'site:restore-ready' ? \Larena\Env\Admin\RestoreWords::found($answer->data['restore'] ?? null) : null);
+                $command === 'site:restore-ready' ? \Larena\Env\Admin\RestoreWords::found($answer->data['restore'] ?? null) : null,
+                $answer->requestId, $answer->operationId);
         }
         if ($answer->kind !== 'plan') {
-            return new PlanResult($source, null, PanelReason::ANSWER_SHAPE_INVALID);
+            return new PlanResult($source, null, PanelReason::ANSWER_SHAPE_INVALID, requestId: $answer->requestId, operationId: $answer->operationId);
         }
         try {
-            return new PlanResult($source, PanelPlan::fromData($answer->data));
+            $plan = PanelPlan::fromData($answer->data);
         } catch (UnexpectedValueException) {
-            return new PlanResult($source, null, PanelReason::ANSWER_SHAPE_INVALID);
+            return new PlanResult($source, null, PanelReason::ANSWER_SHAPE_INVALID, requestId: $answer->requestId, operationId: $answer->operationId);
         }
+        // The plan the receipt of the screen keeps, and the start names (PlanTrail).
+        $this->trail->planned($command, $answer->requestId, $answer->operationId);
+
+        return new PlanResult($source, $plan, requestId: $answer->requestId, operationId: $answer->operationId);
     }
 
     /**
@@ -87,19 +108,61 @@ final readonly class PanelOperations
     public function startCommand(PanelActor $actor, string $command, array $args, ?PanelAttachment $attachment = null): JobStartResult
     {
         $source = $this->gateway->source();
-        try {
-            $answer = $this->gateway->ask(PanelRequest::confirmed($actor, $command, $args, $attachment));
-        } catch (PanelRefused $refused) {
-            return new JobStartResult($source, null, $refused->reasonCode, true);
+        $who = $actor->impersonatedBy ?? $actor->user;
+        $onBehalf = $actor->impersonatedBy !== null ? $actor->user : null;
+        // No change without the audit log: refused before the server is asked anything.
+        if ($this->audit === null || !$this->audit->available()) {
+            return new JobStartResult($source, null, PanelReason::AUDIT_UNAVAILABLE, true, who: $who, onBehalfOf: $onBehalf, command: $command);
         }
+        $plan = $this->trail->takeFor($command);
+        try {
+            $request = PanelRequest::confirmed($actor, $command, $args, $attachment);
+        } catch (PanelRefused $refused) {
+            return new JobStartResult($source, null, $refused->reasonCode, true, null, null, $plan['plan_id'] ?? null,
+                $plan['plan_operation_id'] ?? null, $who, $onBehalf, $command);
+        }
+        try {
+            $answer = $this->gateway->ask($request);
+        } catch (PanelRefused $refused) {
+            return new JobStartResult($source, null, $refused->reasonCode, true, $request->requestId, null, $plan['plan_id'] ?? null,
+                $plan['plan_operation_id'] ?? null, $who, $onBehalf, $command);
+        }
+        $chain = [$answer->requestId, $answer->operationId, $plan['plan_id'] ?? null, $plan['plan_operation_id'] ?? null, $who, $onBehalf, $command];
         if ($answer->status !== PanelAnswerStatus::Ok) {
-            return new JobStartResult($source, null, $answer->reason ?? PanelReason::ANSWER_INVALID, $answer->status === PanelAnswerStatus::Refused);
+            return new JobStartResult($source, null, $answer->reason ?? PanelReason::ANSWER_INVALID, $answer->status === PanelAnswerStatus::Refused, ...$chain);
         }
         $jobId = $answer->jobId;
+        if ($answer->kind !== 'job' || $jobId === null) {
+            return new JobStartResult($source, null, PanelReason::ANSWER_SHAPE_INVALID, false, ...$chain);
+        }
+        $started = new JobStartResult($source, $jobId, null, false, ...$chain);
+        try {
+            $this->audit->record(self::CHANGE_STARTED, $who, self::subjectOf($command, $args), $started->chain(), $started->planId ?? $started->requestId);
+        } catch (Throwable $failure) {
+            // The job runs already and the screen follows it; the lost record goes to the application's error log.
+            if (function_exists('report')) {
+                report($failure);
+            }
+        }
 
-        return $answer->kind === 'job' && $jobId !== null
-            ? new JobStartResult($source, $jobId)
-            : new JobStartResult($source, null, PanelReason::ANSWER_SHAPE_INVALID);
+        return $started;
+    }
+
+    /**
+     * What a change is about in the audit log: the site, the account or the named thing, else the server.
+     *
+     * @param array<string, string|list<string>> $args
+     */
+    private static function subjectOf(string $command, array $args): string
+    {
+        foreach (['domain', 'name', 'target'] as $key) {
+            $value = $args[$key] ?? null;
+            if (is_string($value) && $value !== '' && mb_strlen($value) <= 191) {
+                return $value;
+            }
+        }
+
+        return 'env.server:'.$command;
     }
 
     /** Where a started action stands and what it has printed after the cursor the screen last saw. */
@@ -188,7 +251,11 @@ final readonly class PanelOperations
         }
 
         // The status is what the screen is for; a log that is not there yet is said beside it, not instead of it.
-        return new JobViewResult($source, $status, $log, $reason);
+        $started = $statusAnswer->data['request_id'] ?? null;
+        $operation = $statusAnswer->data['operation_id'] ?? null;
+
+        return new JobViewResult($source, $status, $log, $reason, false, is_string($started) && $started !== '' ? $started : null,
+            is_string($operation) && $operation !== '' ? $operation : $statusAnswer->operationId);
     }
 
     /** Stops a job that is still running; a finished one is refused with `not_running`, which the screen says. */

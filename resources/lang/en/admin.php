@@ -498,6 +498,8 @@ return [
         ],
     ],
     'job' => [
+        // The server's operation id of the run (auditor msg-3d61bd36, point 2): it links the run to the server's own log.
+        'operation' => 'Server operation: :id',
         'secret_skipped_title' => 'Files with passwords left out: :count',
         'secret_skipped_archive' => 'These files are not in the archive: you have no right to files with passwords. Everything else is packed.',
         'secret_skipped_extract' => 'These files of the archive were not made and did not replace the ones there: you have no right to files with passwords. Everything else is unpacked.',
@@ -588,6 +590,7 @@ return [
         'profile_unsupported' => 'A site of this kind has no cache of its own: there is nothing to clear.',
         'setup_plan_expired' => 'The plan is out of date (it is kept for 15 minutes). Fill the step in again.',
         'plan_receipt' => 'This confirmation does not match the plan shown, or it is out of date. Nothing was changed: open the plan again and confirm it.',
+        'audit_unavailable' => 'The audit log cannot be written right now, and the panel changes nothing on the server without it. Nothing was changed: check that larena/audit is installed and its database is ready, then try again.',
         'setup_login_needed' => 'Sign-in with a code is not on yet. Open the sign-in settings, turn it on and come back.',
         'setup_alerts_needed' => 'Choose where to send and give the address or the chat.',
         'geo_countries_needed' => 'Choose at least one country.',
@@ -1404,6 +1407,7 @@ return [
             'env_person_removed' => 'Person removed',
             'env_person_owner_assigned' => 'Person given a server account',
             'env_person_owner_released' => 'Person\'s server account taken away',
+            'env_server_change_started' => 'Change started on the server',
         ],
         'new_owner' => 'New server account',
         'owner_name' => 'Account name (latin letters, digits, - and _)',

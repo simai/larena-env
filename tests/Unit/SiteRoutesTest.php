@@ -274,10 +274,10 @@ $asking = static function (string $uri, string $method = 'GET', array $input = [
 
     return $request;
 };
-$newSite = static fn (PanelGateway $gateway, ?array $words = null): NewSiteController => new NewSiteController(new ServerOverviewReader($gateway), new PanelOperations($gateway),
+$newSite = static fn (PanelGateway $gateway, ?array $words = null): NewSiteController => new NewSiteController(new ServerOverviewReader($gateway), env_operations($gateway),
     $factory, $translating($words ?? $lines), new SiteExtrasReader($gateway));
 $siteCard = static fn (PanelGateway $gateway, ?array $words = null): SiteAdminController => new SiteAdminController(new SiteDetailsReader($gateway), new ServerOverviewReader($gateway),
-    new SiteExtrasReader($gateway), new PanelOperations($gateway), $factory, $translating($words ?? $lines), routes: new SiteRouteReader($gateway), profiles: new SiteExtrasReader($gateway));
+    new SiteExtrasReader($gateway), env_operations($gateway), $factory, $translating($words ?? $lines), routes: new SiteRouteReader($gateway), profiles: new SiteExtrasReader($gateway));
 $current = new ServingGateway($recorded, $listed);
 $notice = static fn (Request $request): string => (string) $request->session()->get('larena_env_notice');
 
@@ -405,7 +405,7 @@ $otherHidden = $newSite($current)->plan($asking('/admin/server/sites/new/plan', 
 env_assert(!$madeJob($newSite($current)->run($asking('/admin/server/sites/new/run', 'POST', ['title' => 'Another title'] + $otherHidden, $session))),
     'A value changed after the plan is refused.');
 $newSiteClock = time();
-$timedNewSite = new NewSiteController(new ServerOverviewReader($current), new PanelOperations($current), $factory, $translating($lines), new SiteExtrasReader($current),
+$timedNewSite = new NewSiteController(new ServerOverviewReader($current), env_operations($current), $factory, $translating($lines), new SiteExtrasReader($current),
     env_plan_receipts($newSiteClock));
 $lateHidden = $timedNewSite->plan($asking('/admin/server/sites/new/plan', 'POST', $wpForm, $session))->getData()['hidden'];
 $newSiteClock += 901;
@@ -441,7 +441,7 @@ foreach (['refused.not-enough-ram.json' => 'not_enough_ram', 'refused.profile-di
         env_assert($refused instanceof RedirectResponse && $notice($request) === $words['reasons'][$code] && !str_contains($notice($request), $code), "{$code} in {$language}: ".$notice($request));
     }
 }
-$recordedNode = (new PanelOperations($recorded))->planCommand($admin, 'site:add', ['domain' => 'node.test', 'profile' => 'node']);
+$recordedNode = (env_operations($recorded))->planCommand($admin, 'site:add', ['domain' => 'node.test', 'profile' => 'node']);
 env_assert($recordedNode->reason === 'profile_disabled' && $recordedNode->refused, 'A kind the server switched off is refused before a plan.');
 
 // The site's card: where it stands on its route and the next step.
@@ -613,7 +613,7 @@ final class PanelCapabilitiesAll
 }
 $store = new ArrayStore();
 $caching = new CachingPanelGateway(new RecordedAnswersGateway(env_recorded_path()), new Repository($store));
-$operations = new PanelOperations($caching);
+$operations = env_operations($caching);
 $job = $operations->start($admin, SiteOperation::WordpressInstall, 'demo-wp.test', ['title' => 'Demo WordPress', 'admin-user' => 'admin', 'admin-email' => 'admin@stand.test', 'locale' => 'en_US']);
 env_assert($job->jobId === '000000000000000000000000', 'The install starts a job.');
 $jobs = new ServerJobController($operations, $factory, $translating($lines));
@@ -734,7 +734,7 @@ env_assert(str_contains($archiveWay, 'data-env-new-way="restore"') && str_contai
 env_assert($russian['routes']['names_of']['generic_restore'] === 'Из архива' && $russian['routes']['steps']['site_restore_ready'] === 'Восстановить сайт из архива',
     'In Russian: «Из архива», «Восстановить сайт из архива».');
 $restoreCard = static fn (PanelGateway $gateway, array $words): SiteAdminController => new SiteAdminController(new SiteDetailsReader($gateway), new ServerOverviewReader($gateway),
-    new SiteExtrasReader($gateway), new PanelOperations($gateway), $factory, $translating($words), files: new \Larena\Env\Files\SiteFiles($gateway),
+    new SiteExtrasReader($gateway), env_operations($gateway), $factory, $translating($words), files: new \Larena\Env\Files\SiteFiles($gateway),
     routes: new SiteRouteReader($gateway), profiles: new SiteExtrasReader($gateway));
 $folder = static fn (array $names): array => ['schema' => 'simai-panel-answer/1', 'request_id' => 'r', 'status' => 'ok', 'kind' => 'result', 'command_status' => 'success',
     'data' => ['schema' => 'simai-files/1', 'path' => '', 'truncated' => false, 'entries' => array_map(static fn (string $name): array => ['name' => $name,
@@ -858,7 +858,7 @@ env_assert(in_array(['Что есть', $russian['restore']['fact']['replaces_no
     && \Larena\Env\Admin\RestoreWords::consequence(['overwrite' => 'yes'], $emptyFound, $ruText) === $russian['restore']['consequence_empty'],
     'An empty site: nothing to replace and no copy, as the server found it: '.json_encode($empty, JSON_UNESCAPED_UNICODE));
 // The recorded gateway answers the restore as the stand did; the job's steps as the server says them.
-$restoreOps = new PanelOperations($recorded);
+$restoreOps = env_operations($recorded);
 $recordedRefusal = $restoreOps->plan($admin, SiteOperation::PhpRestore, 'demo-owned.test', ['files' => 'site.zip', 'dump' => 'db.sql.gz']);
 env_assert($recordedRefusal->plan === null && $recordedRefusal->reason === 'no_database' && ($recordedRefusal->restore['database']['exists'] ?? null) === false,
     'A dump into a site without a database is refused as recorded: '.var_export($recordedRefusal->reason, true));

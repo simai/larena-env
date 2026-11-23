@@ -221,7 +221,7 @@ $encrypter = new class implements \Illuminate\Contracts\Encryption\StringEncrypt
     public function decryptString($payload): string { return (string) base64_decode(substr((string) $payload, 7)); }
 };
 $authorizer = new \Larena\Access\Runtime\AccessOperationAuthorizer($rights, 'testing');
-$operations = new PanelOperations($server);
+$operations = env_operations($server);
 $overviews = new ServerOverviewReader($server);
 $extras = new SiteExtrasReader($server);
 $clock = time();

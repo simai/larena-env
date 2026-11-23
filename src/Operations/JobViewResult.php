@@ -16,6 +16,10 @@ final readonly class JobViewResult
         public ?PanelJobLog $log,
         public ?string $reason = null,
         public bool $refused = false,
+        // The audit chain (auditor msg-3d61bd36, point 2): the request that started the job, as the server keeps it, and
+        // the server's operation id — the job's own where the server keeps one, else that of the answer read.
+        public ?string $requestId = null,
+        public ?string $operationId = null,
     ) {
     }
 }

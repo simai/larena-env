@@ -29,6 +29,8 @@ final class PanelReason
     public const string RECORDING_MISSING = 'recording_missing';
     public const string RECORDING_TAMPERED = 'recording_tampered';
     public const string ANSWER_SHAPE_INVALID = 'answer_shape_invalid';
+    /** No change of the server without the audit log (auditor msg-3d61bd36, point 2): no writable audit sink, nothing asked. */
+    public const string AUDIT_UNAVAILABLE = 'audit_unavailable';
 
     private function __construct()
     {

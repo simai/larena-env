@@ -498,6 +498,8 @@ return [
         ],
     ],
     'job' => [
+        // The server's operation id of the run (auditor msg-3d61bd36, point 2): it links the run to the server's own log.
+        'operation' => 'Operazione del server: :id',
         'secret_skipped_title' => 'File con password esclusi: :count',
         'secret_skipped_archive' => 'Questi file non sono nell’archivio: non hai il diritto di accedere ai file con password. Tutto il resto è stato archiviato.',
         'secret_skipped_extract' => 'Questi file dell’archivio non sono stati creati e non hanno sostituito quelli presenti: non hai il diritto di accedere ai file con password. Tutto il resto è stato estratto.',
@@ -588,6 +590,7 @@ return [
         'profile_unsupported' => 'Un sito di questo tipo non ha una cache propria: non c’è nulla da svuotare.',
         'setup_plan_expired' => 'Il piano non è più aggiornato (viene conservato per 15 minuti). Compila di nuovo il passo.',
         'plan_receipt' => 'Questa conferma non corrisponde al piano mostrato oppure non è più valida. Non è stato modificato nulla: apri di nuovo il piano e confermalo.',
+        'audit_unavailable' => 'Il registro di audit non può essere scritto in questo momento e senza di esso il pannello non modifica nulla sul server. Non è stato modificato nulla: verifica che larena/audit sia installato e che il suo database sia pronto, poi riprova.',
         'setup_login_needed' => 'L’accesso con codice non è ancora attivo. Apri le impostazioni di accesso, attivalo e torna qui.',
         'setup_alerts_needed' => 'Scegli dove inviare e indica l’indirizzo o la chat.',
         'geo_countries_needed' => 'Scegli almeno un paese.',
@@ -1404,6 +1407,7 @@ return [
             'env_person_removed' => 'Persona rimossa',
             'env_person_owner_assigned' => 'Alla persona è stato assegnato un account del server',
             'env_person_owner_released' => 'Alla persona è stato tolto l’account del server',
+            'env_server_change_started' => 'Modifica avviata sul server',
         ],
         'new_owner' => 'Nuovo account del server',
         'owner_name' => 'Nome dell’account (lettere latine, cifre, - e _)',

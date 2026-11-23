@@ -498,6 +498,8 @@ return [
         ],
     ],
     'job' => [
+        // The server's operation id of the run (auditor msg-3d61bd36, point 2): it links the run to the server's own log.
+        'operation' => 'Serveroperation: :id',
         'secret_skipped_title' => 'Ausgelassene Dateien mit Passwörtern: :count',
         'secret_skipped_archive' => 'Diese Dateien sind nicht im Archiv: Sie haben kein Recht auf Dateien mit Passwörtern. Alles andere ist gepackt.',
         'secret_skipped_extract' => 'Diese Dateien des Archivs wurden nicht angelegt und haben die vorhandenen nicht ersetzt: Sie haben kein Recht auf Dateien mit Passwörtern. Alles andere ist entpackt.',
@@ -588,6 +590,7 @@ return [
         'profile_unsupported' => 'Eine Website dieser Art hat keinen eigenen Cache: Es gibt nichts zu leeren.',
         'setup_plan_expired' => 'Der Plan ist veraltet (er wird 15 Minuten aufbewahrt). Füllen Sie den Schritt erneut aus.',
         'plan_receipt' => 'Diese Bestätigung passt nicht zum angezeigten Plan oder ist veraltet. Nichts wurde geändert: Öffnen Sie den Plan erneut und bestätigen Sie ihn.',
+        'audit_unavailable' => 'Das Prüfprotokoll kann gerade nicht geschrieben werden, und ohne es ändert das Panel nichts am Server. Nichts wurde geändert: Prüfen Sie, ob larena/audit installiert und seine Datenbank bereit ist, und versuchen Sie es erneut.',
         'setup_login_needed' => 'Die Anmeldung mit Code ist noch nicht eingeschaltet. Öffnen Sie die Anmeldeeinstellungen, schalten Sie sie ein und kommen Sie zurück.',
         'setup_alerts_needed' => 'Wählen Sie, wohin gesendet wird, und geben Sie die Adresse oder den Chat an.',
         'geo_countries_needed' => 'Wählen Sie mindestens ein Land.',
@@ -1404,6 +1407,7 @@ return [
             'env_person_removed' => 'Person entfernt',
             'env_person_owner_assigned' => 'Person ein Serverkonto zugewiesen',
             'env_person_owner_released' => 'Serverkonto der Person entzogen',
+            'env_server_change_started' => 'Änderung auf dem Server gestartet',
         ],
         'new_owner' => 'Neues Serverkonto',
         'owner_name' => 'Kontoname (lateinische Buchstaben, Ziffern, - und _)',

@@ -498,6 +498,8 @@ return [
         ],
     ],
     'job' => [
+        // The server's operation id of the run (auditor msg-3d61bd36, point 2): it links the run to the server's own log.
+        'operation' => 'Opération du serveur : :id',
         'secret_skipped_title' => 'Fichiers avec mots de passe laissés de côté : :count',
         'secret_skipped_archive' => 'Ces fichiers ne sont pas dans l’archive : vous n’avez pas de droits sur les fichiers contenant des mots de passe. Tout le reste est empaqueté.',
         'secret_skipped_extract' => 'Ces fichiers de l’archive n’ont pas été créés et n’ont pas remplacé ceux en place : vous n’avez pas de droits sur les fichiers contenant des mots de passe. Tout le reste est décompressé.',
@@ -588,6 +590,7 @@ return [
         'profile_unsupported' => 'Un site de ce type n’a pas de cache propre : il n’y a rien à vider.',
         'setup_plan_expired' => 'Le plan n’est plus à jour (il est conservé 15 minutes). Remplissez l’étape à nouveau.',
         'plan_receipt' => 'Cette confirmation ne correspond pas au plan affiché ou n’est plus à jour. Rien n’a été modifié : ouvrez à nouveau le plan et confirmez-le.',
+        'audit_unavailable' => 'Le journal d\'audit ne peut pas être écrit pour le moment, et sans lui le panneau ne modifie rien sur le serveur. Rien n\'a été modifié : vérifiez que larena/audit est installé et que sa base de données est prête, puis réessayez.',
         'setup_login_needed' => 'La connexion avec un code n’est pas encore activée. Ouvrez les paramètres de connexion, activez-la et revenez.',
         'setup_alerts_needed' => 'Choisissez où envoyer et indiquez l’adresse ou le chat.',
         'geo_countries_needed' => 'Choisissez au moins un pays.',
@@ -1404,6 +1407,7 @@ return [
             'env_person_removed' => 'Personne supprimée',
             'env_person_owner_assigned' => 'Compte serveur attribué à la personne',
             'env_person_owner_released' => 'Compte serveur retiré à la personne',
+            'env_server_change_started' => 'Modification lancée sur le serveur',
         ],
         'new_owner' => 'Nouveau compte serveur',
         'owner_name' => 'Nom du compte (lettres latines, chiffres, - et _)',

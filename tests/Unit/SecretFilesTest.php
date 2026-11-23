@@ -255,7 +255,7 @@ $translator = new class ($lines) implements \Illuminate\Contracts\Translation\Tr
 };
 $refusedLine = $lines['files']['reasons']['secret_files_not_allowed'];
 env_assert($russian['files']['reasons']['secret_files_not_allowed'] === 'Нет права смотреть файлы с паролями, попросите администратора сервера.', 'The refusal in the owner\'s words.');
-$operations = new PanelOperations($gateway);
+$operations = env_operations($gateway);
 $overviews = new ServerOverviewReader($gateway);
 $card = new SiteAdminController(new SiteDetailsReader($gateway), $overviews, new SiteExtrasReader($gateway), $operations, $factory, $translator, files: $files, secrets: $secrets);
 $filesController = new SiteFilesController($operations, $overviews, $files, $factory, $translator, $host, $secrets);
@@ -464,7 +464,7 @@ env_assert($filesController->plan($planRequest($admin, $pack), $domain) instance
 
 $newer = new NewerGateway($fake);
 $newerFiles = new SiteFiles($newer);
-$newerOperations = new PanelOperations($newer);
+$newerOperations = env_operations($newer);
 $newerController = new SiteFilesController($newerOperations, new ServerOverviewReader($newer), $newerFiles, $factory, $translator, $host, $secrets);
 $planned = $newerController->plan($planRequest($staff, $pack), $domain);
 env_assert($planned instanceof \Illuminate\Contracts\View\View && ($planned->getData()['hidden']['args[without-secrets]'] ?? null) === 'yes', 'Without the right: planned, without the files with passwords.');
@@ -575,7 +575,7 @@ $jobsListed = new class ($fake) implements PanelGateway, PanelFileGateway {
     }
 };
 $historyCard = new SiteAdminController(new SiteDetailsReader($jobsListed), new ServerOverviewReader($jobsListed), new SiteExtrasReader($jobsListed),
-    new PanelOperations($jobsListed), $factory, $translator, files: new SiteFiles($jobsListed));
+    env_operations($jobsListed), $factory, $translator, files: new SiteFiles($jobsListed));
 $cardFirst = $historyCard->show($asking($admin, $site), $domain);
 $firstData = $cardFirst->getData();
 env_assert(($firstData['siteHistory']['pending'] ?? null) === (class_exists(\Larena\Admin\Runtime\AdminLiveRegion::class)) && $jobsListed->lists === (class_exists(\Larena\Admin\Runtime\AdminLiveRegion::class) ? 0 : 1),

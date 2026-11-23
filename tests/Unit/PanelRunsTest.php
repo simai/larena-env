@@ -150,7 +150,7 @@ $server = new class($password) implements PanelGateway {
     }
 };
 $admin = new PanelActor('admin@example.com');
-$operations = new PanelOperations($server);
+$operations = env_operations($server);
 
 // The request says the panel's language (simai-env 1.60.0 `lang`): the server answers its words in it.
 PanelLanguage::use('ru');
@@ -306,7 +306,7 @@ env_assert($unpacked->replacedIntoTrash === 0 && JobOutcome::heading($unpacked) 
 env_assert(PanelJobStatus::fromData(['job_id' => 'j', 'state' => 'succeeded', 'command' => 'file:upload', 'result' => ['trashed' => 2]])->replacedIntoTrash === 2, 'Counted by trashed too.');
 
 // The password once: the first job:status hands it out, the panel keeps it nowhere, a later answer says it was shown.
-$cached = new PanelOperations(new CachingPanelGateway($server, $cache));
+$cached = env_operations(new CachingPanelGateway($server, $cache));
 $started = $cached->start($admin, SiteOperation::DatabaseCredentials, 'shop.example.com');
 $first = $cached->view($admin, (string) $started->jobId);
 env_assert($first->status?->credentials?->password === $password && $first->status->credentials->database === 'shop' && $first->status->credentials->port === '3306',

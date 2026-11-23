@@ -97,7 +97,7 @@ $root = env_temp_directory();
 $fake = new FakeFilesGateway(new RecordedAnswersGateway(env_recorded_path()), $root);
 $cache = new \Illuminate\Cache\Repository($store = new \Illuminate\Cache\ArrayStore());
 $server = new CachingPanelGateway($fake, $cache);
-$operations = new PanelOperations($server);
+$operations = env_operations($server);
 $sites = new SiteDetailsReader($server);
 $listed = $fake->ask(PanelRequest::read($admin, 'self:describe'))->data['gate']['commands'] ?? [];
 foreach (FakeFilesGateway::PREVIEW as $command) {

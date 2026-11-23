@@ -164,7 +164,7 @@ $english = require dirname(__DIR__, 2).'/resources/lang/en/admin.php';
 env_assert(is_string($english['files']['reasons']['not_previewable'] ?? null) && is_string($english['files']['truncated_text'] ?? null), 'Each said in words.');
 file_put_contents($root.'/sites/demo-php.test/logo.png', "\x89PNG\0\0");
 
-$operations = new PanelOperations($gateway);
+$operations = env_operations($gateway);
 $save = ['domain' => 'demo-php.test', 'path' => 'notes.txt', 'content' => "<h1>new</h1>\n", 'expect-sha256' => $notes['sha256']];
 $planned = $operations->planCommand($admin, 'file:write', $save);
 env_assert($planned->plan !== null && $planned->plan->command === 'file:write' && $planned->plan->args['content'] === '(13 bytes)', 'A save is planned first; the plan names the text\'s size only.');
@@ -248,7 +248,7 @@ env_assert(is_array($files->folder($owner, 'demo-owned.test', '.')), 'Their own 
 $nginx = $recorded->nginxCustom($admin, 'demo-php.test');
 env_assert(is_array($nginx) && $nginx['content'] === '' && $nginx['included'] && !$nginx['present'] && $nginx['pending'] === null, 'The recorded directives (simai-nginx-custom/1).');
 env_assert($recorded->nginxCustom($owner, 'demo-owned.test') === 'not_allowed', 'The nginx directives are the system level\'s.');
-$nginxPlan = (new PanelOperations(new RecordedAnswersGateway(env_recorded_path())))->planCommand($admin, 'site:nginx-custom', ['domain' => 'demo-php.test', 'content' => "add_header X-Test 1;\n"]);
+$nginxPlan = (env_operations(new RecordedAnswersGateway(env_recorded_path())))->planCommand($admin, 'site:nginx-custom', ['domain' => 'demo-php.test', 'content' => "add_header X-Test 1;\n"]);
 env_assert($nginxPlan->plan?->command === 'site:nginx-custom' && $nginxPlan->plan->args['content'] === '(26 bytes)', 'Directives are planned first; the plan names their size only.');
 env_assert(PanelCommands::since('site:nginx-custom') === '1.41.0' && PanelCommands::attachmentLimit('site:nginx-custom') === null, 'From 1.41.0, in the request line.');
 $waiting = \Larena\Env\Firewall\TimedChange::fromData(['change_id' => 'c0ffee12', 'expires_at' => '2026-01-01T00:02:00Z', 'kind' => 'nginx_custom']);

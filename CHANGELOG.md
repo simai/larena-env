@@ -10,6 +10,13 @@
   drops the link of a removed person or of one who lost `env.sites.read`, each drop in the audit log
   (`env.person.owner_released`, reason `removed` or `right_revoked`). A blocked person keeps the link. Without Access's
   rights or Auth's people nobody is told.
+- A linked audit chain of every change of the server (auditor msg-3d61bd36, point 2): the plan's receipt keeps the plan
+  id and the server's operation id, the job's receipt (`JobStartResult`) who, the request id, the plan id, the job id
+  and the operation id, and the same set is the new audit event `env.server.change_started`. `PlanResult`,
+  `JobStartResult` and `JobViewResult` carry the server's `operation_id`; the job's screen shows it. No change without
+  the audit log: without a bound audit sink a start is refused `audit_unavailable` before the server is asked, while
+  plans and reads go on. `larena/audit` moved from the dev requirements to `require` (the panel profile always ships
+  it); the assembly's lock follows at the next relock.
 
 ## 0.4.8 — built 2026-11-22, on the local stand, not released (waits for the owner's acceptance)
 

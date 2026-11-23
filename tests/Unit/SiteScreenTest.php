@@ -337,7 +337,7 @@ $acting = $screen(['site' => $site, 'acting' => ['label' => 'Anna', 'owner' => '
 env_assert(str_contains($acting, 'data-env-acting="demo"') && str_contains($acting, 'Anna'), 'Looking as a person is always said.');
 
 // The plan: what would happen, and one confirmation that starts it.
-$plan = (new PanelOperations($gateway))->plan(new PanelActor($user), SiteOperation::Backup, 'demo-owned.test', ['db' => 'no'])->plan;
+$plan = (env_operations($gateway))->plan(new PanelActor($user), SiteOperation::Backup, 'demo-owned.test', ['db' => 'no'])->plan;
 env_assert($plan instanceof PanelPlan, 'The plan reads.');
 $planned = $factory->make('larena-env::admin.plan', ['heading' => 'Back up now', 'eyebrow' => 'demo-owned.test', 'target' => 'demo-owned.test',
     'source' => 'recorded', 'plan' => $plan, 'runUrl' => '/admin/server/sites/demo-owned.test/run', 'cancelUrl' => '/admin/server/sites/demo-owned.test',
@@ -361,9 +361,9 @@ env_assert(str_contains($restoring, 'data-env-plan-replaces') && str_contains($r
     && str_contains($restoring, 'data-env-plan-then'), 'What is replaced and what follows, before the confirmation.');
 
 // A new site: the wizard's plan, as the gateway answers it.
-$newSite = (new PanelOperations($gateway))->planCommand(new PanelActor($user), 'site:add', ['domain' => 'new.test', 'profile' => 'static']);
+$newSite = (env_operations($gateway))->planCommand(new PanelActor($user), 'site:add', ['domain' => 'new.test', 'profile' => 'static']);
 env_assert($newSite->plan instanceof PanelPlan && $newSite->plan->command === 'site:add', 'A new site is planned like any action.');
-env_assert((new PanelOperations($gateway))->planCommand(new PanelActor($user), 'site:add', ['domain' => 'new.test', 'profile' => 'mail'])->reason
+env_assert((env_operations($gateway))->planCommand(new PanelActor($user), 'site:add', ['domain' => 'new.test', 'profile' => 'mail'])->reason
     === PanelReason::INVALID_ARGUMENT, 'A profile simai-env does not have is refused before the request leaves.');
 $wizardView = static fn (array $data): string => $factory->make('larena-env::admin.new-site', $data + ['step' => 'kind', 'kind' => 'wordpress',
     'kinds' => [['value' => 'wordpress', 'label' => 'WordPress', 'caption' => 'A blog.', 'badge' => 'often'], ['value' => 'static', 'label' => 'Static', 'caption' => 'Files.']],
@@ -389,7 +389,7 @@ env_assert(str_contains($fieldsView, 'data-env-new-field="owner"') && preg_match
     'The address: the fields the kind asks, the error under its field: '.$fieldsView);
 
 // The job: where it stands, what it printed, and a way to stop it while it runs.
-$view = (new PanelOperations($gateway))->view(new PanelActor($user), '000000000000000000000000');
+$view = (env_operations($gateway))->view(new PanelActor($user), '000000000000000000000000');
 env_assert($view->status instanceof PanelJobStatus && $view->log instanceof PanelJobLog, 'The job reads.');
 $job = static fn (array $data): string => $factory->make('larena-env::admin.job', $data + ['jobId' => '000000000000000000000000',
     'source' => 'sudo', 'status' => null, 'log' => null, 'refused' => false, 'reasonText' => null, 'notice' => null])->render();
@@ -598,11 +598,11 @@ env_assert(!str_contains($older('0.3.0'), 'data-env-update-available') && str_co
     && $installed->availableIsOlder(null) && !$panelOffer('0.4.0')->availableIsOlder(null), 'An older panel build is not shown as available.');
 env_assert(\Larena\Env\Update\UpdatePlan::fromData(['schema' => 'other', 'target' => 'env']) === null
     && \Larena\Env\Update\UpdatePlan::fromData(['schema' => 'simai-update-plan/1', 'target' => 'host']) === null, 'Only an update plan the panel knows.');
-$updating = (new PanelOperations($gateway))->planCommand(new PanelActor($user), 'self:update', ['target' => 'env']);
+$updating = (env_operations($gateway))->planCommand(new PanelActor($user), 'self:update', ['target' => 'env']);
 env_assert($updating->plan?->update?->available === '9.9.0', 'The update\'s plan carries what it changes.');
-env_assert((new PanelOperations($gateway))->planCommand(new PanelActor($user), 'self:update', ['target' => 'host'])->reason === PanelReason::INVALID_ARGUMENT,
+env_assert((env_operations($gateway))->planCommand(new PanelActor($user), 'self:update', ['target' => 'host'])->reason === PanelReason::INVALID_ARGUMENT,
     'Only simai-env or the panel is updated.');
-env_assert((new PanelOperations($gateway))->planCommand(new PanelActor($user, 'demo'), 'self:update', ['target' => 'env'])->refused, 'An owner is refused.');
+env_assert((env_operations($gateway))->planCommand(new PanelActor($user, 'demo'), 'self:update', ['target' => 'env'])->refused, 'An owner is refused.');
 
 $updateScreen = static fn (array $data): string => $factory->make('larena-env::admin.update', $data + ['supported' => true,
     'plans' => ['env' => $envUpdate, 'panel' => $panelUpdate], 'canUpdate' => true, 'notice' => null])->render();

@@ -178,7 +178,7 @@ foreach (SiteOperation::DatabaseBrowse->arguments('shop.example.com', ['minutes'
 }
 
 // The plan, its refusal, the job.
-$operations = new PanelOperations($server);
+$operations = env_operations($server);
 $plan = $operations->plan($admin, SiteOperation::DatabaseBrowse, 'shop.example.com', ['minutes' => '15']);
 env_assert($plan->plan?->command === 'site:db-browser' && $plan->plan->args['minutes'] === '15', 'Planned first, for the chosen term.');
 env_assert($operations->plan($admin, SiteOperation::DatabaseBrowse, 'plain.example.com', ['minutes' => '60'])->reason === 'plan_failed', 'A site that cannot have one: plan_failed.');
@@ -198,14 +198,14 @@ env_assert($started->jobId === 'b00000000000000000000001' && $server->open && $s
 // The address once: the first job:status hands it out, never through the panel's cache, never in the log.
 $cache = new \Illuminate\Cache\Repository(new \Illuminate\Cache\ArrayStore());
 $kept = new CachingPanelGateway($server, $cache);
-$first = (new PanelOperations($kept))->view($admin, (string) $started->jobId);
+$first = (env_operations($kept))->view($admin, (string) $started->jobId);
 env_assert($first->status?->browser instanceof DbBrowserLink && $first->status->browser->url === $url && $first->status->browser->engine === 'mysql'
     && $first->status->browser->database === 'shop' && $first->status->browser->expiresAt === '2026-11-18T13:00:00Z', 'The first answer after the job: the address, its term, its database.');
 env_assert(!str_contains(implode("\n", $first->log->lines ?? []), '.simai-db'), 'The job\'s log never carries the address.');
 env_assert(!str_contains(print_r($first->status->browser, true), 'Zx8aQ2'), 'The link is never printed by accident.');
 env_assert(JobSecret::in(['result' => ['browser_url' => $url]]) && JobSecret::in(['result' => ['db_password' => 'x']]) && !JobSecret::in(['result' => ['shown_once' => ['browser_url']]]),
     'Every value given once is kept from the panel\'s cache.');
-$again = (new PanelOperations($kept))->view($admin, (string) $started->jobId);
+$again = (env_operations($kept))->view($admin, (string) $started->jobId);
 env_assert($again->status?->browser === null && in_array('browser_url', $again->status->shownOnce, true) && $server->statusAsked === 2, 'Asked again, the server only says it was shown: nothing was kept.');
 env_assert(DbBrowserLink::fromData(['browser_url' => 'https://evil.example.com/phish']) === null && DbBrowserLink::fromData(['browser_url' => 'http://shop.example.com/.simai-db/Zx8aQ2kP9vR4tY7u/']) === null
     && DbBrowserLink::fromData(['browser_url' => 'https://shop.example.com/.simai-db/Zx8a"onclick=x/']) === null, 'Only the site\'s own HTTPS browser address is shown as one.');

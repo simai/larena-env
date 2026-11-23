@@ -498,6 +498,8 @@ return [
         ],
     ],
     'job' => [
+        // The server's operation id of the run (auditor msg-3d61bd36, point 2): it links the run to the server's own log.
+        'operation' => '服务器操作：:id',
         'secret_skipped_title' => '已跳过带密码的文件：:count 个',
         'secret_skipped_archive' => '这些文件未放入归档：您无权访问带密码的文件。其余内容均已打包。',
         'secret_skipped_extract' => '归档中的这些文件未被创建，也未替换现有文件：您无权访问带密码的文件。其余内容均已解压。',
@@ -588,6 +590,7 @@ return [
         'profile_unsupported' => '此类型的网站没有自己的缓存：无需清除。',
         'setup_plan_expired' => '计划已过时（只保留 15 分钟）。请重新填写此步骤。',
         'plan_receipt' => '此确认与显示的计划不一致或已过期。未做任何更改：请重新打开计划并确认。',
+        'audit_unavailable' => '当前无法写入审计日志，没有它面板不会对服务器做任何更改。未做任何更改：请检查 larena/audit 是否已安装且其数据库已就绪，然后重试。',
         'setup_login_needed' => '验证码登录尚未开启。请打开登录设置，开启后再返回。',
         'setup_alerts_needed' => '请选择发送位置，并填写地址或聊天。',
         'geo_countries_needed' => '请至少选择一个国家/地区。',
@@ -1404,6 +1407,7 @@ return [
             'env_person_removed' => '已删除人员',
             'env_person_owner_assigned' => '已为人员分配服务器账户',
             'env_person_owner_released' => '已收回人员的服务器账户',
+            'env_server_change_started' => '已在服务器上开始更改',
         ],
         'new_owner' => '新服务器账户',
         'owner_name' => '账户名称（拉丁字母、数字、- 和 _）',

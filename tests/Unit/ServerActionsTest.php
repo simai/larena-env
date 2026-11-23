@@ -215,7 +215,7 @@ $factory = new Factory($resolver, new FileViewFinder($files, []), new Dispatcher
 $factory->addExtension('blade.php', 'blade');
 $factory->addNamespace('larena-admin', [dirname(__DIR__).'/Support/admin-views', dirname(__DIR__, 2).'/vendor/larena/admin/resources/views']);
 $factory->addNamespace('larena-env', dirname(__DIR__, 2).'/resources/views');
-$operations = new PanelOperations($gateway);
+$operations = env_operations($gateway);
 $overviews = new ServerOverviewReader($gateway);
 $extras = new SiteExtrasReader($gateway);
 

@@ -65,6 +65,8 @@ final readonly class ServerJobController
 
         $view = $this->views->make('larena-env::admin.job', [
             'jobId' => $job,
+            // The server's operation id of the run, which links it to the server's own log (auditor msg-3d61bd36, point 2).
+            'operationId' => $result->operationId,
             'configFailed' => self::configFailed($result->status, $result->log->lines ?? []),
             'change' => $change,
             'canKeep' => $canKeep,

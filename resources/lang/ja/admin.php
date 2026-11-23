@@ -498,6 +498,8 @@ return [
         ],
     ],
     'job' => [
+        // The server's operation id of the run (auditor msg-3d61bd36, point 2): it links the run to the server's own log.
+        'operation' => 'サーバーの操作: :id',
         'secret_skipped_title' => '除外したパスワードを含むファイル：:count',
         'secret_skipped_archive' => 'これらのファイルはアーカイブに含まれていません。パスワードを含むファイルへの権限がないためです。それ以外はすべて含まれています。',
         'secret_skipped_extract' => 'アーカイブ内のこれらのファイルは作成されず、既存のファイルも置き換えられませんでした。パスワードを含むファイルへの権限がないためです。それ以外はすべて展開されました。',
@@ -588,6 +590,7 @@ return [
         'profile_unsupported' => 'この種類のサイトには独自のキャッシュがないため、クリアするものはありません。',
         'setup_plan_expired' => '計画が古くなりました（保持期間は 15 分です）。このステップをもう一度入力してください。',
         'plan_receipt' => 'この確認は表示された計画と一致しないか、期限切れです。何も変更されていません。計画をもう一度開いて確認してください。',
+        'audit_unavailable' => '現在、監査ログに書き込めません。監査ログがないと、パネルはサーバーを一切変更しません。何も変更されていません。larena/audit がインストールされ、そのデータベースが準備できているか確認してから、もう一度お試しください。',
         'setup_login_needed' => 'コードによるログインがまだ有効になっていません。ログイン設定を開いて有効にしてから戻ってください。',
         'setup_alerts_needed' => '送信先を選び、アドレスまたはチャットを入力してください。',
         'geo_countries_needed' => '国を 1 つ以上選んでください。',
@@ -1404,6 +1407,7 @@ return [
             'env_person_removed' => 'ユーザーを削除',
             'env_person_owner_assigned' => 'ユーザーにサーバーアカウントを割り当て',
             'env_person_owner_released' => 'ユーザーからサーバーアカウントを解除',
+            'env_server_change_started' => 'サーバーで変更を開始しました',
         ],
         'new_owner' => '新しいサーバーアカウント',
         'owner_name' => 'アカウント名（半角英字、数字、- と _）',

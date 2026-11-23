@@ -11,9 +11,11 @@ use Larena\Audit\Enums\AuditRetentionClass;
 use Larena\Audit\Enums\AuditSeverity;
 
 /**
- * The panel's own events in the audit log (audit.yaml): who gave a person a space, and who looked at the panel as
- * someone else. The gateway logs every request beside it, with `impersonated_by` while someone acts for a person.
- * Without larena/audit the events are not kept; nothing else changes.
+ * The panel's own events in the audit log (audit.yaml): who gave a person a space, who looked at the panel as someone
+ * else, and every change asked of the server with its chain (`env.server.change_started`: who, the request, the plan,
+ * the job and the server's operation id). The gateway logs every request beside it, with `impersonated_by` while someone
+ * acts for a person. larena/audit is required; where its sink is not bound, a change of the server is refused before it
+ * is asked (PanelOperations, `audit_unavailable`) and the rest of the panel's own events are not kept.
  */
 final readonly class PanelAudit
 {
@@ -21,10 +23,16 @@ final readonly class PanelAudit
     {
     }
 
-    /** @param array<string, string> $payload */
-    public function record(string $type, string $actor, string $subject, array $payload = []): void
+    /** Whether the audit log can be written: a change of the server is not asked without it. */
+    public function available(): bool
     {
-        if (!interface_exists(AuditSink::class) || !$this->container->bound(AuditSink::class)) {
+        return interface_exists(AuditSink::class) && $this->container->bound(AuditSink::class);
+    }
+
+    /** @param array<string, string> $payload */
+    public function record(string $type, string $actor, string $subject, array $payload = [], ?string $correlationId = null): void
+    {
+        if (!$this->available()) {
             return;
         }
         $this->container->make(AuditSink::class)->write(AuditEvent::create(
@@ -35,7 +43,7 @@ final readonly class PanelAudit
             subject: $subject,
             severity: AuditSeverity::Notice,
             retentionClass: AuditRetentionClass::Security,
-            correlationId: bin2hex(random_bytes(12)),
+            correlationId: $correlationId ?? bin2hex(random_bytes(12)),
             payload: $payload,
         ));
     }

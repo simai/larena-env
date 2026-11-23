@@ -498,6 +498,8 @@ return [
         ],
     ],
     'job' => [
+        // The server's operation id of the run (auditor msg-3d61bd36, point 2): it links the run to the server's own log.
+        'operation' => '서버 작업: :id',
         'secret_skipped_title' => '제외된 비밀번호 파일: :count',
         'secret_skipped_archive' => '이 파일은 아카이브에 포함되지 않았습니다. 비밀번호 파일에 대한 권한이 없습니다. 나머지는 모두 압축했습니다.',
         'secret_skipped_extract' => '아카이브의 이 파일은 만들어지지 않았고 기존 파일을 교체하지도 않았습니다. 비밀번호 파일에 대한 권한이 없습니다. 나머지는 모두 압축을 풀었습니다.',
@@ -588,6 +590,7 @@ return [
         'profile_unsupported' => '이 종류의 사이트에는 자체 캐시가 없어 비울 것이 없습니다.',
         'setup_plan_expired' => '계획이 오래되었습니다(15분 동안 보관됩니다). 이 단계를 다시 입력하세요.',
         'plan_receipt' => '이 확인은 표시된 계획과 일치하지 않거나 만료되었습니다. 아무것도 변경되지 않았습니다. 계획을 다시 열어 확인하세요.',
+        'audit_unavailable' => '지금은 감사 로그를 기록할 수 없으며, 감사 로그 없이는 패널이 서버를 변경하지 않습니다. 아무것도 변경되지 않았습니다. larena/audit가 설치되어 있고 데이터베이스가 준비되었는지 확인한 후 다시 시도하세요.',
         'setup_login_needed' => '코드 로그인이 아직 켜지지 않았습니다. 로그인 설정을 열어 켠 뒤 돌아오세요.',
         'setup_alerts_needed' => '보낼 곳을 선택하고 주소나 채팅을 입력하세요.',
         'geo_countries_needed' => '국가를 하나 이상 선택하세요.',
@@ -1404,6 +1407,7 @@ return [
             'env_person_removed' => '사용자 삭제됨',
             'env_person_owner_assigned' => '사용자에게 서버 계정 지정됨',
             'env_person_owner_released' => '사용자의 서버 계정 회수됨',
+            'env_server_change_started' => '서버에서 변경을 시작함',
         ],
         'new_owner' => '새 서버 계정',
         'owner_name' => '계정 이름(영문자, 숫자, -, _)',

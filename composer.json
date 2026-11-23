@@ -16,6 +16,7 @@
         "illuminate/http": "^13.0",
         "illuminate/support": "^13.0",
         "larena/access": "dev-main",
+        "larena/audit": "dev-main",
         "larena/core": "dev-main",
         "php": "^8.3"
     },
@@ -198,7 +199,8 @@
             "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PanelMailTest.php",
             "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PanelTranslationsTest.php",
             "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PlanReceiptsTest.php",
-            "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PanelRecipientsTest.php"
+            "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/PanelRecipientsTest.php",
+            "php -d zend.assertions=1 -d assert.exception=1 tests/Unit/AuditChainTest.php"
         ],
         "test:unit": [
             "@test"
