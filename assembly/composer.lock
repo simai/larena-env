@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "71b06ab03015e00492ae9e2958d2974e",
+    "content-hash": "f0b67bbac9b5b73bf551f74a76e259b6",
     "packages": [
         {
             "name": "brick/math",
@@ -2053,6 +2053,134 @@
             "time": "2026-11-23T16:24:03+00:00"
         },
         {
+            "name": "larena/backup",
+            "version": "dev-main",
+            "source": {
+                "type": "git",
+                "url": "git@github.com:simai/larena-backup.git",
+                "reference": "5739fce4c4c4574f6f76213785924a90824815ed"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/simai/larena-backup/zipball/5739fce4c4c4574f6f76213785924a90824815ed",
+                "reference": "5739fce4c4c4574f6f76213785924a90824815ed",
+                "shasum": ""
+            },
+            "require": {
+                "ext-json": "*",
+                "ext-sqlite3": "*",
+                "illuminate/database": "^13.0",
+                "illuminate/http": "^13.0",
+                "illuminate/routing": "^13.0",
+                "illuminate/support": "^13.0",
+                "larena/access": "dev-main",
+                "larena/audit": "dev-main",
+                "larena/core": "dev-main",
+                "larena/filesystem": "dev-main",
+                "larena/queue": "dev-main",
+                "larena/scheduler": "dev-main",
+                "php": "^8.3"
+            },
+            "require-dev": {
+                "ext-pcntl": "*",
+                "ext-posix": "*",
+                "laravel/framework": "^13.0",
+                "larena/admin": "dev-main",
+                "phpstan/phpstan": "^2.0"
+            },
+            "suggest": {
+                "larena/admin": "The admin's backup screen and menu entry (/admin/backups). Backup contributes them only where the admin is installed; without it the larena:backup:* console commands serve the node."
+            },
+            "default-branch": true,
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Larena\\Backup\\Providers\\BackupServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Larena\\Backup\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "Larena\\Backup\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/BackupContractTest.php",
+                    "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/BackupFailsClosedTest.php",
+                    "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/BackupSafetyCenterPresentationTest.php",
+                    "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/BackupWithoutAdminTest.php",
+                    "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/BackupConsoleCommandsTest.php",
+                    "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/BackupReversibilityTest.php",
+                    "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/CompleteBackupQueueConsumerTest.php",
+                    "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/CompleteBackupRestoreRecordsTest.php",
+                    "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/DatabaseRecoveryManifestTest.php",
+                    "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/DatabaseRecoveryAccessAuditTest.php",
+                    "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/DatabaseRecoveryRehearsalTest.php",
+                    "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/DatabaseFingerprintTest.php",
+                    "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/InMemoryBackupRuntimeFailsClosedTest.php",
+                    "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/InMemoryBackupRuntimeTest.php",
+                    "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/MySqlDatabaseFingerprintCalculatorTest.php",
+                    "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/MySqlNativeContractTest.php",
+                    "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/MySqlPrivateArtifactTest.php",
+                    "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/RecoveryPointRepositoryIntegrityTest.php",
+                    "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/Sqlite3RecoveryEngineTest.php"
+                ],
+                "test:unit": [
+                    "@test"
+                ],
+                "lint": [
+                    "@php scripts/lint.php"
+                ],
+                "analyse": [
+                    "@php scripts/analyse.php"
+                ],
+                "validate:larena": [
+                    "@php scripts/validate-larena-package.php"
+                ],
+                "evidence:check": [
+                    "@php scripts/check-evidence.php"
+                ],
+                "scope:check": [
+                    "@php tools/larena-scope-check.php"
+                ],
+                "quality:gate": [
+                    "@validate:larena",
+                    "@lint",
+                    "@analyse",
+                    "@test",
+                    "@larena:metadata:check",
+                    "@evidence:check",
+                    "@scope:check"
+                ],
+                "larena:metadata:check": [
+                    "@php scripts/check-metadata-sync.php"
+                ]
+            },
+            "license": [
+                "proprietary"
+            ],
+            "authors": [
+                {
+                    "name": "Rim Zabarov",
+                    "homepage": "https://github.com/zabarov",
+                    "role": "Author"
+                }
+            ],
+            "description": "Larena Backup: Shared system package for Larena backup plans, recovery points, integrity checks, restore workflows, retention and pre-update/pre-migration safety.",
+            "support": {
+                "source": "https://github.com/simai/larena-backup/tree/main",
+                "issues": "https://github.com/simai/larena-backup/issues"
+            },
+            "time": "2026-11-20T18:25:11+00:00"
+        },
+        {
             "name": "larena/core",
             "version": "dev-main",
             "source": {
@@ -2624,6 +2752,95 @@
             "time": "2026-11-19T14:33:57+00:00"
         },
         {
+            "name": "larena/licensing",
+            "version": "dev-main",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/simai/larena-licensing.git",
+                "reference": "7b8e0e3529f24f58beecf52987480e22d52bc7ac"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/simai/larena-licensing/zipball/7b8e0e3529f24f58beecf52987480e22d52bc7ac",
+                "reference": "7b8e0e3529f24f58beecf52987480e22d52bc7ac",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^8.3"
+            },
+            "require-dev": {
+                "phpstan/phpstan": "^2.0"
+            },
+            "default-branch": true,
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Larena\\Licensing\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "Larena\\Licensing\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "php tests/Unit/CapabilityContractTest.php && php tests/Unit/LicensingFailsClosedTest.php && php tests/Unit/LicensingCapabilityDecisionRuntimeTest.php && php tests/Unit/LicensingCapabilityDecisionFailsClosedTest.php",
+                    "php tests/Unit/ScopeEntitlementResolverTest.php",
+                    "php tests/Unit/OperatorOverlayNarrowingTest.php",
+                    "php tests/Unit/NodeAdmissionTest.php",
+                    "php tests/Unit/DistributedCapabilityDeclarationTest.php",
+                    "php tests/Unit/ScopeEntitlementFailsClosedTest.php"
+                ],
+                "test:unit": [
+                    "php tests/Unit/CapabilityContractTest.php && php tests/Unit/LicensingFailsClosedTest.php && php tests/Unit/LicensingCapabilityDecisionRuntimeTest.php && php tests/Unit/LicensingCapabilityDecisionFailsClosedTest.php"
+                ],
+                "lint": [
+                    "php scripts/lint.php"
+                ],
+                "analyse": [
+                    "php scripts/analyse.php"
+                ],
+                "validate:larena": [
+                    "php scripts/validate-larena-package.php"
+                ],
+                "evidence:check": [
+                    "php scripts/check-evidence.php"
+                ],
+                "scope:check": [
+                    "php tools/larena-scope-check.php"
+                ],
+                "quality:gate": [
+                    "@validate:larena",
+                    "@lint",
+                    "@analyse",
+                    "@test",
+                    "@larena:metadata:check",
+                    "@evidence:check",
+                    "@scope:check"
+                ],
+                "larena:metadata:check": [
+                    "php scripts/check-metadata-sync.php"
+                ]
+            },
+            "license": [
+                "Apache-2.0"
+            ],
+            "authors": [
+                {
+                    "name": "Rim Zabarov",
+                    "homepage": "https://github.com/zabarov",
+                    "role": "Author"
+                }
+            ],
+            "description": "Larena Licensing: Runtime licensing layer that decides which package, bundle and capability features are available to a site, with signed entitlement snapshots, trial restrictions, subscription/expiration policies, environment-aware licenses, limits and explainable locks.",
+            "support": {
+                "source": "https://github.com/simai/larena-licensing/tree/main",
+                "issues": "https://github.com/simai/larena-licensing/issues"
+            },
+            "time": "2026-10-23T12:40:12+00:00"
+        },
+        {
             "name": "larena/notification",
             "version": "dev-main",
             "source": {
@@ -2830,6 +3047,199 @@
             ],
             "description": "Larena Property: Universal property layer for field type registry, field definitions, structured render models, validation, templates and typed value interaction across settings, admin, storage and future content models.",
             "time": "2026-11-20T18:10:47+00:00"
+        },
+        {
+            "name": "larena/queue",
+            "version": "dev-main",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/simai/larena-queue.git",
+                "reference": "6662134ce24beaefb3d809a611955facd7ada7d5"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/simai/larena-queue/zipball/6662134ce24beaefb3d809a611955facd7ada7d5",
+                "reference": "6662134ce24beaefb3d809a611955facd7ada7d5",
+                "shasum": ""
+            },
+            "require": {
+                "ext-json": "*",
+                "illuminate/database": "^13.0",
+                "illuminate/support": "^13.0",
+                "php": "^8.3"
+            },
+            "require-dev": {
+                "ext-pdo": "*",
+                "ext-pdo_sqlite": "*",
+                "laravel/framework": "^13.0",
+                "phpstan/phpstan": "^2.0"
+            },
+            "default-branch": true,
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Larena\\Queue\\Providers\\QueueServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Larena\\Queue\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "Larena\\Queue\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "php scripts/test-placeholder.php"
+                ],
+                "test:unit": [
+                    "php scripts/test-placeholder.php"
+                ],
+                "lint": [
+                    "php scripts/lint.php"
+                ],
+                "analyse": [
+                    "php scripts/analyse.php"
+                ],
+                "validate:larena": [
+                    "php scripts/validate-larena-package.php"
+                ],
+                "evidence:check": [
+                    "php scripts/check-evidence.php"
+                ],
+                "scope:check": [
+                    "php tools/larena-scope-check.php"
+                ],
+                "quality:gate": [
+                    "@validate:larena",
+                    "@lint",
+                    "@analyse",
+                    "@test",
+                    "@evidence:check",
+                    "@scope:check"
+                ]
+            },
+            "license": [
+                "Apache-2.0"
+            ],
+            "authors": [
+                {
+                    "name": "Rim Zabarov",
+                    "homepage": "https://github.com/zabarov",
+                    "role": "Author"
+                }
+            ],
+            "description": "Larena Queue: Mandatory system package for governed background execution, load smoothing, retry, timeout, worker supervision and hosting-safe operation scheduling across Larena packages.",
+            "support": {
+                "source": "https://github.com/simai/larena-queue/tree/main",
+                "issues": "https://github.com/simai/larena-queue/issues"
+            },
+            "time": "2026-10-23T12:41:05+00:00"
+        },
+        {
+            "name": "larena/scheduler",
+            "version": "dev-main",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/simai/larena-scheduler.git",
+                "reference": "e76db56e21397e4da6000c430c1c835aa0f36fa6"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/simai/larena-scheduler/zipball/e76db56e21397e4da6000c430c1c835aa0f36fa6",
+                "reference": "e76db56e21397e4da6000c430c1c835aa0f36fa6",
+                "shasum": ""
+            },
+            "require": {
+                "ext-json": "*",
+                "illuminate/console": "^13.0",
+                "illuminate/database": "^13.0",
+                "illuminate/http": "^13.0",
+                "illuminate/routing": "^13.0",
+                "illuminate/support": "^13.0",
+                "larena/access": "dev-main",
+                "larena/audit": "dev-main",
+                "larena/queue": "dev-main",
+                "php": "^8.3"
+            },
+            "require-dev": {
+                "laravel/framework": "^13.0",
+                "phpstan/phpstan": "^2.0"
+            },
+            "default-branch": true,
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Larena\\Scheduler\\Providers\\SchedulerServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Larena\\Scheduler\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "Larena\\Scheduler\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/SchedulerContractTest.php",
+                    "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/SchedulerFailsClosedTest.php",
+                    "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/ScheduleRecurrenceCalculatorTest.php",
+                    "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/SchedulerRuntimeTest.php"
+                ],
+                "test:unit": [
+                    "@test"
+                ],
+                "lint": [
+                    "php scripts/lint.php"
+                ],
+                "analyse": [
+                    "php scripts/analyse.php"
+                ],
+                "validate:larena": [
+                    "php scripts/validate-larena-package.php"
+                ],
+                "evidence:check": [
+                    "php scripts/check-evidence.php"
+                ],
+                "scope:check": [
+                    "php tools/larena-scope-check.php"
+                ],
+                "quality:gate": [
+                    "@validate:larena",
+                    "@lint",
+                    "@analyse",
+                    "@test",
+                    "@evidence:check",
+                    "@scope:check"
+                ]
+            },
+            "license": [
+                "Apache-2.0"
+            ],
+            "authors": [
+                {
+                    "name": "Rim Zabarov",
+                    "homepage": "https://github.com/zabarov",
+                    "role": "Author"
+                }
+            ],
+            "description": "Larena Scheduler: Shared system package for declarative schedules, triggers, missed-run policy, locks, queue dispatch and schedule observability across Larena.",
+            "support": {
+                "source": "https://github.com/simai/larena-scheduler/tree/main",
+                "issues": "https://github.com/simai/larena-scheduler/issues"
+            },
+            "time": "2026-11-18T23:30:50+00:00"
         },
         {
             "name": "larena/setting",
@@ -3120,6 +3530,107 @@
                 "issues": "https://github.com/simai/larena-ui/issues"
             },
             "time": "2026-11-23T16:19:16+00:00"
+        },
+        {
+            "name": "larena/update",
+            "version": "dev-main",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/simai/larena-update.git",
+                "reference": "4c9504bf5953d8b213f60782e193ce526329efda"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/simai/larena-update/zipball/4c9504bf5953d8b213f60782e193ce526329efda",
+                "reference": "4c9504bf5953d8b213f60782e193ce526329efda",
+                "shasum": ""
+            },
+            "require": {
+                "ext-curl": "*",
+                "ext-sodium": "*",
+                "illuminate/console": "^13.0",
+                "illuminate/contracts": "^13.0",
+                "illuminate/database": "^13.0",
+                "illuminate/http": "^13.0",
+                "illuminate/routing": "^13.0",
+                "illuminate/support": "^13.0",
+                "larena/access": "dev-main",
+                "larena/core": "dev-main",
+                "larena/filesystem": "dev-main",
+                "larena/licensing": "dev-main",
+                "php": "^8.3",
+                "psr/log": "^3.0",
+                "symfony/process": "^7.4|^8.0"
+            },
+            "require-dev": {
+                "phpstan/phpstan": "^2.0"
+            },
+            "default-branch": true,
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Larena\\UpdateClient\\Laravel\\UpdateClientServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Larena\\UpdateClient\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "Larena\\UpdateClient\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "php scripts/test-placeholder.php"
+                ],
+                "test:unit": [
+                    "php scripts/test-placeholder.php"
+                ],
+                "lint": [
+                    "php scripts/lint.php"
+                ],
+                "analyse": [
+                    "php scripts/analyse.php"
+                ],
+                "validate:larena": [
+                    "php scripts/validate-larena-package.php"
+                ],
+                "evidence:check": [
+                    "php scripts/check-evidence.php"
+                ],
+                "scope:check": [
+                    "php tools/larena-scope-check.php"
+                ],
+                "quality:gate": [
+                    "@validate:larena",
+                    "@lint",
+                    "@analyse",
+                    "@test",
+                    "@evidence:check",
+                    "@scope:check"
+                ]
+            },
+            "license": [
+                "Apache-2.0"
+            ],
+            "authors": [
+                {
+                    "name": "Rim Zabarov",
+                    "homepage": "https://github.com/zabarov",
+                    "role": "Author"
+                }
+            ],
+            "description": "Larena Update: installed-site trust, planning, preflight, execution, rollback and retry boundary for Larena updates.",
+            "support": {
+                "source": "https://github.com/simai/larena-update/tree/main",
+                "issues": "https://github.com/simai/larena-update/issues"
+            },
+            "time": "2026-11-24T02:51:47+00:00"
         },
         {
             "name": "league/commonmark",
@@ -7828,20 +8339,26 @@
         "larena/admin": 20,
         "larena/audit": 20,
         "larena/auth": 20,
+        "larena/backup": 20,
         "larena/core": 20,
         "larena/dataview": 20,
         "larena/env": 20,
         "larena/filesystem": 20,
+        "larena/licensing": 20,
         "larena/notification": 20,
         "larena/property": 20,
+        "larena/queue": 20,
+        "larena/scheduler": 20,
         "larena/setting": 20,
-        "larena/ui": 20
+        "larena/ui": 20,
+        "larena/update": 20
     },
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
         "php": "^8.3",
         "ext-ctype": "*",
+        "ext-curl": "*",
         "ext-dom": "*",
         "ext-fileinfo": "*",
         "ext-filter": "*",
@@ -7855,6 +8372,8 @@
         "ext-pdo": "*",
         "ext-pdo_mysql": "*",
         "ext-session": "*",
+        "ext-sodium": "*",
+        "ext-sqlite3": "*",
         "ext-tokenizer": "*"
     },
     "platform-dev": [],

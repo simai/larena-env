@@ -52,6 +52,9 @@ return [
             'env.panel.access' => 'settings',
             // simai-env's and the panel's updates among the panel's settings (owner 2026-11-18).
             'env.update' => 'settings',
+            // «Целостность файлов» (larena/update's /admin/integrity) beside the panel's updates: the files it checks are the
+            // ones an update replaces.
+            'admin.integrity' => 'settings',
             'admin.settings_general' => 'settings',
             'admin.site_backgrounds' => 'settings',
         ],
@@ -63,7 +66,9 @@ return [
         'headings' => false,
         // The users' screen of the CMS is not the panel's (PX-69): «Люди» invites, blocks and changes people; its address
         // still opens, for a password reset.
-        'hidden_rows' => ['auth.diagnostics', 'auth.users'],
+        // larena/backup's own screen (/admin/backups) is the CMS's: the panel's backups are the server's, under «Сервер»; the
+        // package serves the update's site copy through its larena:backup:* commands, and its address still opens.
+        'hidden_rows' => ['auth.diagnostics', 'auth.users', 'backup.safety_center'],
         'folded_rows' => ['admin.site_backgrounds' => 'admin.settings_general'],
         // The bell's panel links to where the server's alerts are sent («Куда слать оповещения», C384).
         'notifications_settings' => 'larena.env.admin.alerts.channel',

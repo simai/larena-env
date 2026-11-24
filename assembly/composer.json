@@ -6,6 +6,7 @@
     "require": {
         "php": "^8.3",
         "ext-ctype": "*",
+        "ext-curl": "*",
         "ext-dom": "*",
         "ext-fileinfo": "*",
         "ext-filter": "*",
@@ -19,20 +20,27 @@
         "ext-pdo": "*",
         "ext-pdo_mysql": "*",
         "ext-session": "*",
+        "ext-sodium": "*",
+        "ext-sqlite3": "*",
         "ext-tokenizer": "*",
         "laravel/framework": "^13.8",
         "larena/access": "dev-main#7af4a71d78ef524a50592cfd7ceae8a9b28c81e3",
         "larena/admin": "dev-main#0ada831faaf5ba472027eda4f4b4c00c3182bb5f",
         "larena/audit": "dev-main#dd1aff00e7b5c5b4df862507458033221f04faab",
         "larena/auth": "dev-main#3fca3b0b943b8670c53ccbc727af0c811275d016",
+        "larena/backup": "dev-main#5739fce4c4c4574f6f76213785924a90824815ed",
         "larena/core": "dev-main#bac9b420e3d63de78b235886ef97e3d86d98eed7",
         "larena/dataview": "dev-main#f81e8078c710033b2fd0bc596b94687cd9991ec6",
         "larena/env": "dev-main",
         "larena/filesystem": "dev-main#de6158f374561dd7fa6a29b98bf7ea6fb2e197b1",
+        "larena/licensing": "dev-main#7b8e0e3529f24f58beecf52987480e22d52bc7ac",
         "larena/notification": "dev-main#2fedbb26e3ba6f887cb2e3b96a10bbdd88cd4fee",
         "larena/property": "dev-main#92e41c046420ff82b775daf6cf3ab28e234e27fd",
+        "larena/queue": "dev-main#6662134ce24beaefb3d809a611955facd7ada7d5",
+        "larena/scheduler": "dev-main#e76db56e21397e4da6000c430c1c835aa0f36fa6",
         "larena/setting": "dev-main#7c91380813dddd23f4171a0c8e6e566c922fd84b",
-        "larena/ui": "dev-main#058614fe5720c06103f7dc3cb39b86ec85b62098"
+        "larena/ui": "dev-main#058614fe5720c06103f7dc3cb39b86ec85b62098",
+        "larena/update": "dev-main#4c9504bf5953d8b213f60782e193ce526329efda"
     },
     "repositories": [
         {"type": "path", "url": "../env-source", "options": {"symlink": false, "reference": "none", "versions": {"larena/env": "dev-main"}}},
@@ -40,13 +48,18 @@
         {"type": "vcs", "url": "https://github.com/simai/larena-admin.git"},
         {"type": "vcs", "url": "https://github.com/simai/larena-audit.git"},
         {"type": "vcs", "url": "https://github.com/simai/larena-auth.git"},
+        {"type": "vcs", "url": "https://github.com/simai/larena-backup.git"},
         {"type": "vcs", "url": "https://github.com/simai/larena-core.git"},
         {"type": "vcs", "url": "https://github.com/simai/larena-dataview.git"},
         {"type": "vcs", "url": "https://github.com/simai/larena-filesystem.git"},
+        {"type": "vcs", "url": "https://github.com/simai/larena-licensing.git"},
         {"type": "vcs", "url": "https://github.com/simai/larena-notification.git"},
         {"type": "vcs", "url": "https://github.com/simai/larena-property.git"},
+        {"type": "vcs", "url": "https://github.com/simai/larena-queue.git"},
+        {"type": "vcs", "url": "https://github.com/simai/larena-scheduler.git"},
         {"type": "vcs", "url": "https://github.com/simai/larena-setting.git"},
-        {"type": "vcs", "url": "https://github.com/simai/larena-ui.git"}
+        {"type": "vcs", "url": "https://github.com/simai/larena-ui.git"},
+        {"type": "vcs", "url": "https://github.com/simai/larena-update.git"}
     ],
     "extra": {
         "laravel": {

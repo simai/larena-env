@@ -92,6 +92,15 @@ ENV
 echo "== migrate" >>"$LOG"
 (cd "$APP" && php artisan package:discover && php artisan migrate --force && php artisan migrate --force && php artisan larena:env:area) >>"$LOG" 2>&1 || failed "migrate"
 
+# The panel updates and rolls itself back (larena/update) and takes the site copy first (larena/backup): an update runs
+# the old release's code, so every release carries these commands.
+echo "== update and backup commands" >>"$LOG"
+(cd "$APP" && php artisan list --raw) >"$WORK/commands.txt" 2>>"$LOG" || failed "command list"
+for command in larena:update:apply larena:update:rollback larena:backup:run; do
+  grep -q "^${command} " "$WORK/commands.txt" || failed "command ${command} missing"
+done
+(cd "$APP" && php artisan migrate:status) 2>>"$LOG" | grep -q "create_update_cycles_table" || failed "larena/update's migrations"
+
 echo "== routes" >>"$LOG"
 (cd "$APP" && php artisan route:list --json) >"$WORK/routes.json" 2>>"$LOG" || failed "route list"
 python3 - "$WORK/routes.json" <<'PY' || failed "routes"
@@ -168,8 +177,9 @@ children = {item["key"]: [row["key"] for row in item.get("children", []) if row.
 assert sorted(children["server"]) == ["env.dns", "env.firewall", "env.security", "env.server.overview", "env.services", "env.software", "env.software.php", "env.storages"], children
 # «Люди» is one row, the panel's people (roles study part 7, PX-67): no second «Пользователи» screen beside it.
 assert children["users"] == [] and next(item for item in items if item["key"] == "users").get("href") == "/admin/server/people", items
-# «Настройки» opens with the map of its sections and their values (study part 8, PX-81).
-assert sorted(children["settings"]) == ["admin.settings_general", "env.alerts.channel", "env.dns.connection", "env.mail", "env.panel.access", "env.settings", "env.update"], children
+# «Настройки» opens with the map of its sections and their values (study part 8, PX-81); larena/update's «Целостность
+# файлов» stands beside the updates, larena/backup's own screen is no row of the panel's.
+assert sorted(children["settings"]) == ["admin.integrity", "admin.settings_general", "env.alerts.channel", "env.dns.connection", "env.mail", "env.panel.access", "env.settings", "env.update"], children
 assert children["settings"][0] == "env.settings", children
 # Plain lists (the panel's UX audit): no group headings in any root.
 assert not [row for item in items for row in item.get("children", []) if row.get("kind") in ("heading", "divider")], "no group headings"

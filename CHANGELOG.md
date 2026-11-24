@@ -1,6 +1,15 @@
 # Changelog
 
-## Unreleased
+## 0.4.9 — built 2026-11-24 for the update test channel, not released (waits for the owner's acceptance)
+
+- The panel carries larena/update and larena/backup (Larena Server's letter msg-2b95bcc8): `larena:update:apply`,
+  `larena:update:rollback` and `larena:backup:run` are in every release from this one on, so the next version can be
+  put on by the old one's code, which first takes the site copy through larena/backup. Their own needs come with them:
+  larena/licensing (update), larena/queue and larena/scheduler (backup); no Storage. The assembly pins update 4c9504b,
+  backup 5739fce, licensing 7b8e0e3, queue 6662134, scheduler e76db56 and asks the server for ext-curl, ext-sodium and
+  ext-sqlite3. larena/update's «Целостность файлов» (/admin/integrity) stands in «Настройки» beside the updates;
+  larena/backup's own screen (/admin/backups) is no row of the panel's (its address still opens). `check-panel-install.sh`
+  now also fails without the three commands or without larena/update's migrations.
 
 - The panel's changes are declared Core operations (auditor msg-3ee29ace, point 4). `operations.yaml` (written by `composer run operations:write` from `EnvOperationCatalog` and the gateway's command table, checked by `declarations:check`) declares 122 operations, all `risk: external`, each with its own reversibility (93 reversible, 16 timed, 13 not; ENV's answers msg-18b666fb: a storage removed is reversible, restores are timed by the held backup of simai-env 1.65.3, the panel's update is not); `EnvOperationProvider` registers them in Core's registry and two handlers (`env.handler.gateway`, `env.handler.dns`) carry them out. The screens plan and start through `EnvOperations` by operation name: Core checks the operation's right on the plan and on the start, writes its own decision and result, and only then the gateway is asked. Without Core's runtime (no audit log) plans are now refused too, not only starts. `env.server.change_started` and `env.server.job_cancelled` carry `operation` and `reversible`; DNS's `env.dns.record_changed` carries `operation`. Reads stay outside Core; `file:download` stays outside Core.
 - Rights by group (option B): `env.sites.operate` splits into `env.sites.files`, `.database`, `.backup`, `.deploy`, `.remove`; `env.server.operate` into `env.server.software`, `.security`, `.access`, `.backup_storage`, `.update` — 16 rights. Routes keep their old rights; each operation's own right is in its route's group. Custom roles that held a broad right receive its split rights once, through Access (`AccessOperationRegistry::grantWith`, needs the matching larena/access); the editor preset holds the five site rights. `RightSplitTest` (before/after for presets and custom roles), `CoreOperationsTest`.
