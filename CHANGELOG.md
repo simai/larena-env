@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.10 — built 2026-11-24 for the update test channel, not released (waits for the owner's acceptance)
+
+- Nothing but the version: the release after 0.4.9, so that Larena Server's test channel can put a newer panel on one
+  that already carries larena/update and larena/backup, and take it back.
+
 ## 0.4.9 — built 2026-11-24 for the update test channel, not released (waits for the owner's acceptance)
 
 - The panel carries larena/update and larena/backup (Larena Server's letter msg-2b95bcc8): `larena:update:apply`,
