@@ -11,6 +11,10 @@
 - Trusted release keys come from `LARENA_UPDATE_TRUSTED_KEYS`: the panel checks an update's signature only against the
   keys the server sets there (simai-env `panel update-setup --trusted-keys`); no key is built into the release.
   `.env.example` names the variable, commented.
+- The build names the commit larena/env was archived from (`extra.larena-distribution.source_revision` of larena/env
+  in `vendor/composer/installed.json`). larena/env comes in as a path package without a Git reference, and a backup
+  needs an exact revision for every larena package: without it the first 0.4.11 build still failed its backups with
+  `backup_complete_snapshot_failed`. A `--allow-dirty` build names none, so its backups fail closed.
 
 ## 0.4.10 — built 2026-11-24 for the update test channel, not released (waits for the owner's acceptance)
 

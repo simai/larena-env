@@ -77,6 +77,27 @@ php -r '
   echo "[panel] ".count($larena)." larena packages, ".count($names)." packages in all\n";
 ' "${ENV_REPO}/assembly/build.json" "$APP"
 
+# larena/env comes in as a path package and so has no Git reference. A complete backup records the exact revision of
+# every installed larena package (larena/backup reads a missing one from extra.larena-distribution.source_revision, as
+# in Root's distribution), so the build names the commit it archived. A --allow-dirty build is not that commit: it
+# names none, and its backups fail closed.
+if [[ "$DIRTY" == no ]]; then
+  php -r '
+    $file = $argv[1]."/vendor/composer/installed.json";
+    $data = json_decode(file_get_contents($file), true, 512, JSON_THROW_ON_ERROR);
+    $found = false;
+    foreach ($data["packages"] as &$package) {
+        if ($package["name"] !== "larena/env") { continue; }
+        $package["extra"] = is_array($package["extra"] ?? null) ? $package["extra"] : [];
+        $package["extra"]["larena-distribution"] = ["source_revision" => $argv[2], "repository" => "https://github.com/simai/larena-env.git"];
+        $found = true;
+    }
+    unset($package);
+    if (!$found) { fwrite(STDERR, "larena/env is not installed\n"); exit(1); }
+    file_put_contents($file, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR)."\n");
+  ' "$APP" "$ENV_COMMIT"
+fi
+
 echo "[panel] Framework assets (Root's scripts at ${ROOT_REVISION:0:12})"
 git -C "$ROOT_CHECKOUT" archive -o "${WORK}/root-tools.tar" "$ROOT_REVISION" -- scripts release/developer-alpha-manifest.json
 tar -xf "${WORK}/root-tools.tar" -C "$TOOLS"; rm -f "${WORK}/root-tools.tar"
