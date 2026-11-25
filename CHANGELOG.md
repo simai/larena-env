@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.12 — built 2026-11-25 for the update test channel, not released (waits for the owner's acceptance)
+
+- Nothing but the version: the release after 0.4.11, so that Larena Server's test channel can update a panel that
+  already has these in it, and take the update back:
+  - backups record the installed package revisions;
+  - rollback restores the database on the previous code;
+  - trusted release keys come from `LARENA_UPDATE_TRUSTED_KEYS`.
+
 ## 0.4.11 — built 2026-11-25 for the update test channel, not released (waits for the owner's acceptance)
 
 - Backups record the installed package revisions: a site copy taken before an update now names the exact revision of
