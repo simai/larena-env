@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.4.11 — built 2026-11-25 for the update test channel, not released (waits for the owner's acceptance)
+
+- Backups record the installed package revisions: a site copy taken before an update now names the exact revision of
+  every larena package the panel carries, read from what was installed. Before, the panel had no list and every backup
+  failed with `backup_complete_snapshot_failed`, so an update stopped at its backup step. The assembly pins larena/backup
+  d2f4257.
+- Rollback restores the database on the previous code: a rollback first switches the panel back to the previous release
+  and only then puts the database copy back. The assembly pins larena/update 46e7c40.
+- Trusted release keys come from `LARENA_UPDATE_TRUSTED_KEYS`: the panel checks an update's signature only against the
+  keys the server sets there (simai-env `panel update-setup --trusted-keys`); no key is built into the release.
+  `.env.example` names the variable, commented.
+
 ## 0.4.10 — built 2026-11-24 for the update test channel, not released (waits for the owner's acceptance)
 
 - Nothing but the version: the release after 0.4.9, so that Larena Server's test channel can put a newer panel on one

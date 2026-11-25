@@ -169,7 +169,9 @@
     "tests/Unit/PreviewLinkTest.php",
     "operations.yaml",
     "tests/Unit/CoreOperationsTest.php",
-    "tests/Unit/RightSplitTest.php"
+    "tests/Unit/RightSplitTest.php",
+    "assembly/.env.example",
+    "assembly/build.json"
   ],
   "forbidden_files": [
     "../*"

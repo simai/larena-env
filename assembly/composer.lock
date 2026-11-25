@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "f0b67bbac9b5b73bf551f74a76e259b6",
+    "content-hash": "d2741f006958825c0518308e3f05be77",
     "packages": [
         {
             "name": "brick/math",
@@ -2058,12 +2058,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:simai/larena-backup.git",
-                "reference": "5739fce4c4c4574f6f76213785924a90824815ed"
+                "reference": "d2f42575502cf17b797a656d1e522c0548da6419"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-backup/zipball/5739fce4c4c4574f6f76213785924a90824815ed",
-                "reference": "5739fce4c4c4574f6f76213785924a90824815ed",
+                "url": "https://api.github.com/repos/simai/larena-backup/zipball/d2f42575502cf17b797a656d1e522c0548da6419",
+                "reference": "d2f42575502cf17b797a656d1e522c0548da6419",
                 "shasum": ""
             },
             "require": {
@@ -2120,6 +2120,7 @@
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/BackupReversibilityTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/CompleteBackupQueueConsumerTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/CompleteBackupRestoreRecordsTest.php",
+                    "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/CompleteBackupRevisionMapTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/DatabaseRecoveryManifestTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/DatabaseRecoveryAccessAuditTest.php",
                     "@php -d zend.assertions=1 -d assert.exception=1 tests/Unit/DatabaseRecoveryRehearsalTest.php",
@@ -2178,7 +2179,7 @@
                 "source": "https://github.com/simai/larena-backup/tree/main",
                 "issues": "https://github.com/simai/larena-backup/issues"
             },
-            "time": "2026-11-20T18:25:11+00:00"
+            "time": "2026-11-25T01:45:44+00:00"
         },
         {
             "name": "larena/core",
@@ -3537,12 +3538,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/simai/larena-update.git",
-                "reference": "4c9504bf5953d8b213f60782e193ce526329efda"
+                "reference": "46e7c40d9530eb8e5db2477a668e516f38452ad5"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simai/larena-update/zipball/4c9504bf5953d8b213f60782e193ce526329efda",
-                "reference": "4c9504bf5953d8b213f60782e193ce526329efda",
+                "url": "https://api.github.com/repos/simai/larena-update/zipball/46e7c40d9530eb8e5db2477a668e516f38452ad5",
+                "reference": "46e7c40d9530eb8e5db2477a668e516f38452ad5",
                 "shasum": ""
             },
             "require": {
@@ -3630,7 +3631,7 @@
                 "source": "https://github.com/simai/larena-update/tree/main",
                 "issues": "https://github.com/simai/larena-update/issues"
             },
-            "time": "2026-11-24T02:51:47+00:00"
+            "time": "2026-11-24T19:49:17+00:00"
         },
         {
             "name": "league/commonmark",
