@@ -87,3 +87,16 @@ nonclaims:
   production_ready: false
   frontend_complete: false
   all_packages_ready: false
+delivery:
+  publisher: simai
+  distribution: open
+  license: Apache-2.0
+  requires:
+    larena: dev-main
+    packages:
+      larena/access: dev-main
+      larena/audit: dev-main
+  capabilities: []
+  requires_capabilities: []
+  data_on_removal: kept_read_only
+  migrations_reversible: true

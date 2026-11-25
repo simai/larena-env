@@ -171,7 +171,8 @@
     "tests/Unit/CoreOperationsTest.php",
     "tests/Unit/RightSplitTest.php",
     "assembly/.env.example",
-    "assembly/build.json"
+    "assembly/build.json",
+    "scripts/check-delivery-manifest.php"
   ],
   "forbidden_files": [
     "../*"
