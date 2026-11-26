@@ -69,7 +69,7 @@ return [
         // larena/backup's own screen (/admin/backups) is the CMS's: the panel's backups are the server's, under «Сервер»; the
         // package serves the update's site copy through its larena:backup:* commands, and its address still opens.
         // «Возможности сайта» switches a CMS site's functions (owner 2026-11-25, variant A); the panel has none to switch.
-        'hidden_rows' => ['auth.diagnostics', 'auth.users', 'backup.safety_center', 'admin.settings_capabilities'],
+        'hidden_rows' => ['auth.diagnostics', 'auth.users', 'backup.safety_center', 'admin.settings_capabilities', 'admin.licence', 'admin.updates', 'admin.addons'],
         'folded_rows' => ['admin.site_backgrounds' => 'admin.settings_general'],
         // The bell's panel links to where the server's alerts are sent («Куда слать оповещения», C384).
         'notifications_settings' => 'larena.env.admin.alerts.channel',
